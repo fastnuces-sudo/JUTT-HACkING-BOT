@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_20", "ffmpeg", "yt-dlp", "python312"]
 
 [phases.install]
-cmds = ["cd AA-MD-Bot && npm install --omit=dev"]
+cmds = ["npm install --omit=dev"]
 
 [start]
-cmd = "node AA-MD-Bot/index.js"
+cmd = "node index.js"
