@@ -198,6 +198,18 @@ async function startServer() {
       return;
     }
 
+    // ── Static images ──────────────────────────────────────
+    if (p === '/banner.jpeg' || p === '/logo.jpeg' || p === '/favicon.svg') {
+      const imgPath = path.join(__dirname, p.slice(1));
+      try {
+        const data = await fs.readFile(imgPath);
+        const mime = p.endsWith('.svg') ? 'image/svg+xml' : 'image/jpeg';
+        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=3600' });
+        res.end(data);
+      } catch { res.writeHead(404); res.end('Not found'); }
+      return;
+    }
+
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
   });

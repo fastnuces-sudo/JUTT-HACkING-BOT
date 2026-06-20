@@ -2,290 +2,308 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AA MD Bot — Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>AA MD Bot Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0f1a;--card:#111827;--card2:#0d1525;--border:#1e2a3a;--green:#25d366;--green2:#128c7e;--text:#e0e6f0;--muted:#6b7280;--red:#ef4444;--yellow:#fbbf24;--blue:#3b82f6;--purple:#a855f7}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-button{cursor:pointer;font-family:inherit}
-input,select,textarea{font-family:inherit}
-a{text-decoration:none;color:inherit}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-/* ── SCREENS ── */
-#screen-connect{display:flex}
-#screen-dash{display:none}
+:root {
+  --bg: #0b0f1a;
+  --card: #111827;
+  --card2: #0d1525;
+  --border: #1e2a3a;
+  --green: #25d366;
+  --green2: #128c7e;
+  --text: #e0e6f0;
+  --muted: #6b7280;
+  --red: #ef4444;
+  --yellow: #fbbf24;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+button { cursor: pointer; font-family: inherit; }
+input { font-family: inherit; }
+a { text-decoration: none; color: inherit; }
 
 /* ── Connect Screen ── */
-.cs-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;background:radial-gradient(ellipse at 50% 0%,rgba(37,211,102,.07) 0%,transparent 65%);width:100%}
-.cs-logo{display:flex;align-items:center;gap:14px;margin-bottom:32px}
-.cs-logo-icon{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 28px rgba(37,211,102,.4)}
-.cs-logo-text{font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.cs-logo-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.cs-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.4)}
-.cs-title{font-size:20px;font-weight:800;margin-bottom:4px}
-.cs-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
-.mode-tabs{display:flex;background:#080d16;border-radius:10px;padding:4px;gap:4px;margin-bottom:20px}
-.mode-tab{flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:600;color:var(--muted);background:transparent;cursor:pointer;transition:all .18s}
-.mode-tab.active{background:var(--green);color:#fff}
-.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-.field-input{width:100%;background:#0d1525;border:1.5px solid var(--border);border-radius:10px;padding:13px 15px;font-size:15px;color:var(--text);outline:none;transition:border-color .18s}
-.field-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(37,211,102,.1)}
-.field-input::placeholder{color:#374151}
-.field-hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5}
-.qr-hint{background:#0d1525;border:1px solid #1e3a5f;border-radius:9px;padding:12px 14px;font-size:13px;color:#7eb8f7;line-height:1.75;margin-bottom:4px}
-.btn-connect{width:100%;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:11px;padding:14px;font-size:15px;font-weight:700;color:#fff;margin-top:16px;transition:opacity .18s,transform .1s;letter-spacing:.01em}
-.btn-connect:hover{opacity:.88;transform:translateY(-1px)}
-.btn-connect:disabled{opacity:.35;cursor:not-allowed;transform:none}
-.cs-error{background:#1a0909;border:1px solid rgba(239,68,68,.4);border-radius:8px;padding:10px 13px;font-size:13px;color:#fca5a5;margin-top:12px;display:none}
-.cs-error.show{display:block}
+.cs-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(37,211,102,.07) 0%, transparent 65%);
+}
+.cs-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+.cs-logo img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 28px rgba(37,211,102,.4); }
+.cs-logo-fallback { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green2)); display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 0 28px rgba(37,211,102,.4); }
+.cs-logo-text { font-size: 26px; font-weight: 900; background: linear-gradient(135deg, var(--green), var(--green2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.cs-logo-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.cs-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 32px; width: 100%; max-width: 440px; box-shadow: 0 24px 64px rgba(0,0,0,.4); }
+.cs-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.cs-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+.mode-tabs { display: flex; background: #080d16; border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 20px; }
+.mode-tab { flex: 1; padding: 9px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; transition: all .18s; }
+.mode-tab.active { background: var(--green); color: #fff; }
+
+.field-label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.field-input { width: 100%; background: #0d1525; border: 1.5px solid var(--border); border-radius: 10px; padding: 13px 15px; font-size: 15px; color: var(--text); outline: none; transition: border-color .18s; }
+.field-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(37,211,102,.1); }
+.field-input::placeholder { color: #374151; }
+.field-hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+
+.qr-hint { background: #0d1525; border: 1px solid #1e3a5f; border-radius: 9px; padding: 12px 14px; font-size: 13px; color: #7eb8f7; line-height: 1.75; margin-bottom: 4px; }
+
+.btn-connect { width: 100%; background: linear-gradient(135deg, var(--green), var(--green2)); border: none; border-radius: 11px; padding: 14px; font-size: 15px; font-weight: 700; color: #fff; margin-top: 16px; transition: opacity .18s, transform .1s; letter-spacing: .01em; }
+.btn-connect:hover { opacity: .88; transform: translateY(-1px); }
+.btn-connect:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+.cs-error { background: #1a0909; border: 1px solid rgba(239,68,68,.4); border-radius: 8px; padding: 10px 13px; font-size: 13px; color: #fca5a5; margin-top: 12px; display: none; }
+.cs-error.show { display: block; }
 
 /* Pairing code */
-.pair-box{text-align:center;background:#0d1525;border:2px solid rgba(37,211,102,.25);border-radius:14px;padding:24px 20px;margin:4px 0 12px}
-.pair-digits{font-family:'Courier New',monospace;font-size:38px;font-weight:700;letter-spacing:8px;color:var(--green);margin-bottom:14px}
-.pair-copy{background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer;transition:background .2s}
-.pair-copy:hover{background:rgba(37,211,102,.2)}
-.pair-steps{background:#0d1525;border:1px solid #1e3a5f;border-radius:9px;padding:12px 14px;font-size:12px;color:#7eb8f7;line-height:1.9;margin-top:10px}
-.pair-steps strong{color:#bfdbfe}
-.pair-status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-top:10px;justify-content:center}
-.pair-success{text-align:center;padding:24px 0}
-.pair-success-icon{font-size:56px;filter:drop-shadow(0 0 16px rgba(37,211,102,.5))}
-.pair-success-title{font-size:18px;font-weight:800;color:var(--green);margin-top:10px}
-.pair-success-sub{font-size:13px;color:var(--muted);margin-top:4px}
+.pair-box { text-align: center; background: #0d1525; border: 2px solid rgba(37,211,102,.25); border-radius: 14px; padding: 24px 20px; margin: 4px 0 12px; }
+.pair-digits { font-family: 'Courier New', monospace; font-size: 38px; font-weight: 700; letter-spacing: 8px; color: var(--green); margin-bottom: 14px; }
+.pair-copy { background: rgba(37,211,102,.12); border: 1px solid rgba(37,211,102,.3); border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 700; color: var(--green); transition: background .2s; }
+.pair-copy:hover { background: rgba(37,211,102,.2); }
+.pair-steps { background: #0d1525; border: 1px solid #1e3a5f; border-radius: 9px; padding: 12px 14px; font-size: 12px; color: #7eb8f7; line-height: 1.9; margin-top: 10px; }
+.pair-steps strong { color: #bfdbfe; }
+.pair-status { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); margin-top: 10px; justify-content: center; }
 
 /* QR */
-.qr-box-wrap{text-align:center;padding:8px 0 12px}
-.qr-wrap{background:#fff;border-radius:12px;padding:14px;display:inline-block;margin:8px 0}
-.qr-wrap img{width:180px;height:180px;border-radius:8px;display:block}
-.qr-placeholder{width:180px;height:180px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px;flex-direction:column;gap:8px}
+.qr-box { text-align: center; padding: 8px 0 12px; }
+.qr-img-wrap { background: #fff; border-radius: 12px; padding: 14px; display: inline-block; margin: 8px 0; }
+.qr-img-wrap img { width: 180px; height: 180px; border-radius: 8px; display: block; }
+.qr-placeholder { width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 13px; flex-direction: column; gap: 8px; }
 
-/* Dots / spinner */
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.dot-green{background:var(--green);box-shadow:0 0 6px var(--green)}
-.dot-yellow{background:var(--yellow);animation:blink 1.4s infinite}
-.dot-gray{background:#374151}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spinr .65s linear infinite;vertical-align:middle;margin-right:6px}
-@keyframes spinr{to{transform:rotate(360deg)}}
-.spin-dark{border-color:rgba(37,211,102,.2);border-top-color:var(--green)}
+/* Success */
+.pair-success { text-align: center; padding: 24px 0; }
+.pair-success-icon { font-size: 56px; filter: drop-shadow(0 0 16px rgba(37,211,102,.5)); }
+.pair-success-title { font-size: 18px; font-weight: 800; color: var(--green); margin-top: 10px; }
+.pair-success-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
-/* Back button */
-.btn-back{width:100%;margin-top:14px;background:transparent;border:1px solid var(--border);border-radius:9px;padding:9px;font-size:12px;color:var(--muted);cursor:pointer;transition:border-color .2s}
-.btn-back:hover{border-color:var(--green)}
+/* Back btn */
+.btn-back { width: 100%; margin-top: 14px; background: transparent; border: 1px solid var(--border); border-radius: 9px; padding: 9px; font-size: 12px; color: var(--muted); transition: border-color .2s; }
+.btn-back:hover { border-color: var(--green); }
 
-/* Channel button */
-.btn-channel{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;transition:opacity .2s,transform .1s;box-shadow:0 4px 16px rgba(37,211,102,.3);text-decoration:none}
-.btn-channel:hover{opacity:.88;transform:translateY(-1px)}
-.btn-channel-big{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:12px;padding:14px 28px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;transition:opacity .2s,transform .1s;box-shadow:0 6px 24px rgba(37,211,102,.35);text-decoration:none}
-.btn-channel-big:hover{opacity:.88;transform:translateY(-2px)}
+/* Spinner / dot */
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: spin .65s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot-yellow { background: var(--yellow); animation: blink 1.4s infinite; }
+.dot-gray { background: #374151; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 
-/* ── Dashboard Screen ── */
-.dash{min-height:100vh;background:var(--bg)}
-.dash-hero{position:relative;overflow:hidden}
-.dash-banner{width:100%;height:220px;object-fit:cover;display:block;background:linear-gradient(135deg,#0d1b2e,#1a3350)}
-.dash-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(11,15,26,.2) 0%,rgba(11,15,26,.85) 100%)}
-.dash-hero-content{position:absolute;bottom:0;left:0;right:0;padding:20px 24px 24px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.dash-hero-left{display:flex;align-items:center;gap:14px}
-.dash-logo{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--green);box-shadow:0 0 20px rgba(37,211,102,.4);flex-shrink:0}
-.dash-hero-title{font-size:22px;font-weight:900}
-.dash-hero-sub{font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;display:flex;align-items:center;gap:6px}
-.btn-disconnect{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:9px;padding:8px 14px;font-size:12px;color:#fca5a5;cursor:pointer;transition:all .2s}
-.btn-disconnect:hover{background:rgba(239,68,68,.2)}
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-green { background: rgba(37,211,102,.15); color: var(--green); border: 1px solid rgba(37,211,102,.25); }
+.badge-blue { background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.25); }
+.badge-yellow { background: rgba(251,191,36,.15); color: var(--yellow); border: 1px solid rgba(251,191,36,.25); }
+.badge-purple { background: rgba(168,85,247,.15); color: var(--purple); border: 1px solid rgba(168,85,247,.25); }
 
-/* Channel bar */
-.channel-bar{background:linear-gradient(135deg,rgba(37,211,102,.12),rgba(18,140,126,.12));border-bottom:1px solid rgba(37,211,102,.2);padding:12px 24px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
-.channel-bar-text{font-size:13px;color:rgba(37,211,102,.85);font-weight:500}
+/* Channel btn */
+.btn-channel { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--green), var(--green2)); border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700; color: #fff; transition: opacity .2s, transform .1s; box-shadow: 0 4px 16px rgba(37,211,102,.3); }
+.btn-channel:hover { opacity: .88; transform: translateY(-1px); }
+.btn-channel-big { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, var(--green), var(--green2)); border: none; border-radius: 12px; padding: 14px 28px; font-size: 15px; font-weight: 700; color: #fff; transition: opacity .2s, transform .1s; box-shadow: 0 6px 24px rgba(37,211,102,.35); }
+.btn-channel-big:hover { opacity: .88; transform: translateY(-2px); }
 
-/* Body */
-.dash-body{max-width:900px;margin:0 auto;padding:24px 20px 48px}
+/* ── Dashboard ── */
+.dash { min-height: 100vh; background: var(--bg); }
 
-/* Status cards */
-.status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
-.status-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;transition:border-color .2s}
-.status-card:hover{border-color:rgba(37,211,102,.3)}
-.sc-icon{font-size:20px;margin-bottom:7px}
-.sc-value{font-size:20px;font-weight:800}
-.sc-label{font-size:11px;color:var(--muted);font-weight:500;margin-top:3px}
+.dash-hero { position: relative; overflow: hidden; }
+.dash-banner { width: 100%; height: 220px; object-fit: cover; display: block; }
+.dash-banner-fallback { width: 100%; height: 220px; display: block; background: linear-gradient(135deg, #0a1628 0%, #0d2040 50%, #1a1060 100%); }
+.dash-hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(11,15,26,.2) 0%, rgba(11,15,26,.85) 100%); }
+.dash-hero-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 24px 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dash-hero-left { display: flex; align-items: center; gap: 14px; }
+.dash-logo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--green); box-shadow: 0 0 20px rgba(37,211,102,.4); flex-shrink: 0; }
+.dash-logo-fallback { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green2)); display: flex; align-items: center; justify-content: center; font-size: 22px; border: 2px solid var(--green); box-shadow: 0 0 20px rgba(37,211,102,.4); flex-shrink: 0; }
+.dash-hero-title { font-size: 22px; font-weight: 900; }
+.dash-hero-sub { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+.btn-disconnect { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: 9px; padding: 8px 14px; font-size: 12px; color: #fca5a5; transition: all .2s; }
+.btn-disconnect:hover { background: rgba(239,68,68,.2); }
+
+.channel-bar { background: linear-gradient(135deg, rgba(37,211,102,.12), rgba(18,140,126,.12)); border-bottom: 1px solid rgba(37,211,102,.2); padding: 12px 24px; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.channel-bar-text { font-size: 13px; color: rgba(37,211,102,.85); font-weight: 500; }
+
+.dash-body { max-width: 900px; margin: 0 auto; padding: 24px 20px 48px; }
+
+/* Status grid */
+.status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+.status-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; transition: border-color .2s; }
+.status-card:hover { border-color: rgba(37,211,102,.3); }
+.sc-icon { font-size: 20px; margin-bottom: 7px; }
+.sc-value { font-size: 20px; font-weight: 800; }
+.sc-label { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 3px; }
 
 /* Section */
-.section{margin-bottom:28px}
-.section-head{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.section-head::after{content:'';flex:1;height:1px;background:var(--border)}
-
-/* Sessions */
-.sess-card{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:.2s}
-.sess-card:hover{border-color:rgba(37,211,102,.3)}
-.sess-av{width:42px;height:42px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.sess-info{flex:1;min-width:0}
-.sess-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sess-num{font-size:11px;color:var(--muted);margin-top:1px}
-.btn-del{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;transition:.2s}
-.btn-del:hover{background:rgba(239,68,68,.25)}
-
-/* Connect panel in dashboard */
-.connect-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px}
-.conn-tabs{display:flex;background:#080d16;border-radius:10px;padding:4px;gap:4px;margin-bottom:18px}
-.conn-tab{flex:1;padding:9px 8px;text-align:center;border-radius:7px;cursor:pointer;font-size:13px;font-weight:700;color:var(--muted);border:none;background:none;transition:.2s}
-.conn-tab.active{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff}
-.conn-pane{display:none}
-.conn-pane.active{display:block}
-.alert-box{padding:11px 16px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:14px;display:none}
-.alert-box.show{display:block}
-.alert-ok{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);color:var(--green)}
-.alert-err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red)}
-.alert-inf{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:var(--blue)}
-.code-display{background:#0d1525;border:2px solid rgba(37,211,102,.25);border-radius:14px;padding:22px;text-align:center;animation:fadeIn .4s;margin-top:14px}
-.code-num{font-size:36px;font-weight:900;letter-spacing:10px;color:var(--green);font-family:monospace}
-.code-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
-.hint-box{background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--yellow);line-height:1.6;margin-top:14px}
-@keyframes fadeIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.section { margin-bottom: 28px; }
+.section-head { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 /* Quick commands */
-.cmd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:8px}
-.cmd-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer;transition:border-color .2s,background .2s}
-.cmd-card:hover{border-color:rgba(37,211,102,.4);background:rgba(37,211,102,.04)}
-.cmd-card code{color:var(--green);font-size:13px;font-weight:700;font-family:'Courier New',monospace;display:block;margin-bottom:2px}
-.cmd-card span{color:var(--muted);font-size:11px}
-.cmd-card.copied code{color:var(--yellow)}
+.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 8px; }
+.cmd-card { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 13px; cursor: pointer; transition: border-color .2s, background .2s; }
+.cmd-card:hover { border-color: rgba(37,211,102,.4); background: rgba(37,211,102,.04); }
+.cmd-card.copied { border-color: rgba(251,191,36,.4); }
+.cmd-card code { color: var(--green); font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace; display: block; margin-bottom: 2px; }
+.cmd-card.copied code { color: var(--yellow); }
+.cmd-card span { color: var(--muted); font-size: 11px; }
 
 /* Islamic */
-.islamic-card{background:linear-gradient(135deg,rgba(37,211,102,.06),rgba(18,140,126,.06));border:1px solid rgba(37,211,102,.2);border-radius:16px;padding:20px}
-.islamic-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.islamic-title{font-size:16px;font-weight:800}
-.islamic-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.islamic-sections{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
-.islamic-section{background:rgba(0,0,0,.25);border:1px solid rgba(37,211,102,.12);border-radius:10px;padding:12px 14px}
-.islamic-section-title{font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
-.isl-cmd{font-size:11px;font-family:'Courier New',monospace;color:rgba(37,211,102,.8);font-weight:600;padding:2px 0;cursor:pointer;transition:color .15s}
-.isl-cmd:hover{color:var(--green)}
-.isl-cmd-desc{color:var(--muted);font-size:10px;font-family:inherit}
+.islamic-card { background: linear-gradient(135deg, rgba(37,211,102,.06), rgba(18,140,126,.06)); border: 1px solid rgba(37,211,102,.2); border-radius: 16px; padding: 20px; }
+.islamic-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.islamic-title { font-size: 16px; font-weight: 800; }
+.islamic-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.islamic-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.islamic-section { background: rgba(0,0,0,.25); border: 1px solid rgba(37,211,102,.12); border-radius: 10px; padding: 12px 14px; }
+.islamic-section-title { font-size: 11px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+.isl-cmd { font-size: 11px; font-family: 'Courier New', monospace; color: rgba(37,211,102,.8); font-weight: 600; padding: 2px 0; cursor: pointer; transition: color .15s; }
+.isl-cmd:hover { color: var(--green); }
+.isl-cmd-desc { color: var(--muted); font-size: 10px; font-family: inherit; }
 
 /* Media flow */
-.media-flow{background:var(--card2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px}
-.media-flow-details{padding:14px 16px}
-.media-flow-title{font-size:13px;font-weight:700;margin-bottom:5px}
-.media-flow-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
-.media-flow-meta span{background:#080d16;border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:11px;color:var(--muted)}
-.media-flow-desc{font-size:11px;color:var(--muted);line-height:1.55}
-.media-flow-player{padding:12px 16px;background:#080d16;text-align:center;color:var(--muted);font-size:12px;border-top:1px dashed var(--border)}
+.media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.media-flow { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.media-flow-details { padding: 14px 16px; }
+.media-flow-title { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+.media-flow-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.media-flow-meta span { background: #080d16; border: 1px solid var(--border); border-radius: 5px; padding: 2px 8px; font-size: 11px; color: var(--muted); }
+.media-flow-desc { font-size: 11px; color: var(--muted); line-height: 1.55; }
+.media-flow-player { padding: 12px 16px; background: #080d16; text-align: center; color: var(--muted); font-size: 12px; border-top: 1px dashed var(--border); }
 
-/* Category grid */
-.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
-.cat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
-.cat-card-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px}
-.cat-icon{font-size:16px}
-.cat-cmds{display:flex;flex-wrap:wrap;gap:5px}
-.cat-cmd-chip{background:#080d16;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;font-family:'Courier New',monospace;color:var(--green);font-weight:700;cursor:pointer;transition:border-color .15s;user-select:all}
-.cat-cmd-chip:hover{border-color:rgba(37,211,102,.5)}
+/* Categories */
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.cat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+.cat-card-head { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 10px; }
+.cat-icon { font-size: 16px; }
+.cat-cmds { display: flex; flex-wrap: wrap; gap: 5px; }
+.cat-cmd-chip { background: #080d16; border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; font-size: 11px; font-family: 'Courier New', monospace; color: var(--green); font-weight: 700; cursor: pointer; transition: border-color .15s; }
+.cat-cmd-chip:hover { border-color: rgba(37,211,102,.5); }
 
 /* Mode cards */
-.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.mode-info-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:18px;cursor:pointer;transition:all .2s}
-.mode-info-card:hover{transform:translateY(-2px)}
-.mode-private:hover{border-color:#a855f7;box-shadow:0 4px 20px rgba(168,85,247,.15)}
-.mode-public:hover{border-color:var(--green);box-shadow:0 4px 20px rgba(37,211,102,.15)}
-.mode-info-icon{font-size:28px;margin-bottom:8px}
-.mode-info-title{font-size:15px;font-weight:800;margin-bottom:5px}
-.mode-private .mode-info-title{color:#c084fc}
-.mode-public .mode-info-title{color:var(--green)}
-.mode-info-desc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px}
-.mode-info-cmd{font-family:'Courier New',monospace;font-size:13px;font-weight:700;display:inline-block;padding:4px 10px;border-radius:7px}
-.mode-private .mode-info-cmd{background:rgba(168,85,247,.12);color:#c084fc;border:1px solid rgba(168,85,247,.25)}
-.mode-public .mode-info-cmd{background:rgba(37,211,102,.12);color:var(--green);border:1px solid rgba(37,211,102,.25)}
+.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mode-info-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 18px; cursor: pointer; transition: all .2s; }
+.mode-info-card:hover { transform: translateY(-2px); }
+.mode-private:hover { border-color: #a855f7; box-shadow: 0 4px 20px rgba(168,85,247,.15); }
+.mode-public:hover { border-color: var(--green); box-shadow: 0 4px 20px rgba(37,211,102,.15); }
+.mode-info-icon { font-size: 28px; margin-bottom: 8px; }
+.mode-info-title { font-size: 15px; font-weight: 800; margin-bottom: 5px; }
+.mode-private .mode-info-title { color: #c084fc; }
+.mode-public .mode-info-title { color: var(--green); }
+.mode-info-desc { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+.mode-info-cmd { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 700; display: inline-block; padding: 4px 10px; border-radius: 7px; }
+.mode-private .mode-info-cmd { background: rgba(168,85,247,.12); color: #c084fc; border: 1px solid rgba(168,85,247,.25); }
+.mode-public .mode-info-cmd { background: rgba(37,211,102,.12); color: var(--green); border: 1px solid rgba(37,211,102,.25); }
 
-/* Settings ref */
-.settings-ref{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
-.settings-grid-ref{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:14px}
-.setting-ref-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .2s}
-.setting-ref-item:hover{border-color:rgba(37,211,102,.3)}
-.setting-ref-cmd{font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px}
-.setting-ref-desc{font-size:11px;color:var(--muted);line-height:1.5}
-.setting-ref-example{font-family:'Courier New',monospace;font-size:10px;color:#4b5563;margin-top:4px}
+/* Settings */
+.settings-ref { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+.settings-grid-ref { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 14px; }
+.setting-ref-item { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: border-color .2s; }
+.setting-ref-item:hover { border-color: rgba(37,211,102,.3); }
+.setting-ref-cmd { font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700; color: var(--green); margin-bottom: 4px; }
+.setting-ref-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.setting-ref-example { font-family: 'Courier New', monospace; font-size: 10px; color: #4b5563; margin-top: 4px; }
 
 /* Channel section */
-.channel-section{background:linear-gradient(135deg,rgba(37,211,102,.08),rgba(18,140,126,.08));border:1px solid rgba(37,211,102,.2);border-radius:16px;padding:24px;text-align:center}
-.channel-icon{font-size:40px;margin-bottom:10px}
-.channel-title{font-size:18px;font-weight:800;margin-bottom:6px}
-.channel-desc{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.65}
+.channel-section { background: linear-gradient(135deg, rgba(37,211,102,.08), rgba(18,140,126,.08)); border: 1px solid rgba(37,211,102,.2); border-radius: 16px; padding: 24px; text-align: center; }
+.channel-icon { font-size: 40px; margin-bottom: 10px; }
+.channel-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+.channel-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.65; }
 
 /* About */
-.about-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.about-logo{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:28px;border:2px solid rgba(37,211,102,.4);box-shadow:0 0 18px rgba(37,211,102,.25);flex-shrink:0}
-.about-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-green{background:rgba(37,211,102,.15);color:var(--green);border:1px solid rgba(37,211,102,.25)}
-.badge-blue{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
-.badge-yellow{background:rgba(251,191,36,.15);color:var(--yellow);border:1px solid rgba(251,191,36,.25)}
-.badge-purple{background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.25)}
+.about-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.about-logo { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(37,211,102,.4); box-shadow: 0 0 18px rgba(37,211,102,.25); flex-shrink: 0; }
+.about-logo-fallback { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green2)); display: flex; align-items: center; justify-content: center; font-size: 26px; border: 2px solid rgba(37,211,102,.4); box-shadow: 0 0 18px rgba(37,211,102,.25); flex-shrink: 0; }
+.about-badges { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 
 /* Responsive */
-@media(max-width:700px){
-  .status-grid{grid-template-columns:repeat(2,1fr)}
-  .dash-hero-content{padding:16px}
-  .dash-body{padding:16px 14px 48px}
-  .channel-bar{padding:10px 14px}
-  .dash-banner{height:160px}
-  .cat-grid{grid-template-columns:1fr}
-  .mode-cards{grid-template-columns:1fr}
-  .islamic-sections{grid-template-columns:1fr 1fr}
-  .settings-grid-ref{grid-template-columns:1fr}
+@media (max-width: 600px) {
+  .status-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-hero-content { padding: 16px; }
+  .dash-body { padding: 16px 14px 48px; }
+  .channel-bar { padding: 10px 14px; }
+  .dash-banner, .dash-banner-fallback { height: 160px; }
+  .cat-grid { grid-template-columns: 1fr; }
+  .mode-cards { grid-template-columns: 1fr; }
+  .islamic-sections { grid-template-columns: 1fr 1fr; }
+  .settings-grid-ref { grid-template-columns: 1fr; }
 }
-@media(max-width:400px){
-  .status-grid{grid-template-columns:1fr 1fr}
-  .islamic-sections{grid-template-columns:1fr}
+@media (max-width: 400px) {
+  .status-grid { grid-template-columns: 1fr 1fr; }
+  .islamic-sections { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════ CONNECT SCREEN ══════════════════ -->
-<div id="screen-connect">
+<!-- ════════════════ CONNECT SCREEN ════════════════ -->
+<div id="screen-connect" style="display:none">
 <div class="cs-wrap">
+
   <div class="cs-logo">
-    <div class="cs-logo-icon">🤖</div>
+    <img src="/logo.jpeg" alt="AA MD Bot" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="cs-logo-fallback" style="display:none">🤖</div>
     <div>
       <div class="cs-logo-text">AA MD Bot</div>
       <div class="cs-logo-sub">by Ahsan Ali | AA Mods</div>
     </div>
   </div>
 
-  <div class="cs-card" id="cs-card">
+  <div class="cs-card">
 
-    <!-- Step: form -->
-    <div id="step-form">
+    <!-- FORM step -->
+    <div id="cs-form">
       <div class="cs-title">🤖 Connect WhatsApp Bot</div>
       <div class="cs-sub">Link your number to start the bot</div>
 
       <div class="mode-tabs">
-        <button class="mode-tab active" id="tab-pair" onclick="setMode('pair')">🔑 Pairing Code</button>
-        <button class="mode-tab" id="tab-qr" onclick="setMode('qr')">📷 QR Code</button>
+        <button class="mode-tab active" id="tab-pair" onclick="csMode('pair')">🔑 Pairing Code</button>
+        <button class="mode-tab" id="tab-qr" onclick="csMode('qr')">📷 QR Code</button>
       </div>
 
-      <div id="pair-fields">
+      <div id="pair-panel">
         <label class="field-label">WhatsApp Number</label>
         <input class="field-input" type="tel" id="cs-phone" placeholder="923001234567" maxlength="15">
         <p class="field-hint">Include country code, no + or spaces</p>
+        <div style="margin-top:14px">
+          <label class="field-label">Session Name <span style="font-weight:400;text-transform:none">(for multiple devices — optional)</span></label>
+          <input class="field-input" id="cs-sess-pair" placeholder="default" value="default" style="font-size:14px;padding:11px 14px">
+        </div>
       </div>
-      <div id="qr-fields" style="display:none">
-        <div class="qr-hint">📷 A QR code will appear after clicking Start.<br>Open <strong>WhatsApp → Linked Devices → Link a Device</strong> and scan it.</div>
-        <label class="field-label" style="margin-top:12px">Session Name</label>
-        <input class="field-input" id="cs-sess" placeholder="default" value="default">
+
+      <div id="qr-panel" style="display:none">
+        <div class="qr-hint">
+          📷 A QR code will appear after clicking Start.<br>
+          Open <strong>WhatsApp → Linked Devices → Link a Device</strong> and scan it.
+        </div>
+        <div style="margin-top:14px">
+          <label class="field-label">Session Name <span style="font-weight:400;text-transform:none">(for multiple devices — optional)</span></label>
+          <input class="field-input" id="cs-sess-qr" placeholder="default" value="default" style="font-size:14px;padding:11px 14px">
+        </div>
       </div>
 
       <div class="cs-error" id="cs-err"></div>
       <button class="btn-connect" id="cs-btn" onclick="csConnect()">Start Bot →</button>
     </div>
 
-    <!-- Step: pairing code -->
-    <div id="step-code" style="display:none">
+    <!-- CODE step -->
+    <div id="cs-code-step" style="display:none">
       <div class="cs-title">🔑 Enter Pairing Code</div>
       <div class="cs-sub">Open WhatsApp and enter this code</div>
       <div class="pair-box">
         <div class="pair-digits" id="cs-code">----</div>
-        <button class="pair-copy" onclick="csCopyCode()">📋 Copy Code</button>
+        <button class="pair-copy" id="cs-copy-btn" onclick="csCopy()">📋 Copy Code</button>
       </div>
       <div class="pair-steps">
         <strong>Step 1</strong> — Open WhatsApp on your phone<br>
@@ -297,152 +315,106 @@ a{text-decoration:none;color:inherit}
       <button class="btn-back" onclick="csReset()">← Start Over</button>
     </div>
 
-    <!-- Step: QR scan -->
-    <div id="step-qr" style="display:none">
+    <!-- QR step -->
+    <div id="cs-qr-step" style="display:none">
       <div class="cs-title">📷 Scan QR Code</div>
       <div class="cs-sub">Use WhatsApp camera to scan</div>
-      <div class="qr-box-wrap">
-        <div class="qr-wrap" id="cs-qr-box">
-          <div class="qr-placeholder"><span style="font-size:32px">⏳</span>QR Loading...</div>
+      <div class="qr-box">
+        <div class="qr-img-wrap" style="display:inline-block">
+          <div class="qr-placeholder" id="cs-qr-ph">
+            <span style="font-size:32px">⏳</span>
+            QR Loading...
+          </div>
+          <img id="cs-qr-img" src="" alt="QR" style="width:180px;height:180px;border-radius:8px;display:none">
         </div>
         <div class="pair-status"><span class="dot dot-yellow"></span> Waiting for scan...</div>
       </div>
       <button class="btn-back" onclick="csReset()">← Start Over</button>
     </div>
 
-    <!-- Step: done -->
-    <div id="step-done" style="display:none">
+    <!-- DONE step -->
+    <div id="cs-done-step" style="display:none">
       <div class="pair-success">
         <div class="pair-success-icon">✅</div>
         <div class="pair-success-title">Bot Connected!</div>
         <div class="pair-success-sub">Loading your dashboard...</div>
       </div>
     </div>
+
   </div>
 
+  <!-- Channel link below card -->
   <div style="margin-top:20px;text-align:center">
-    <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" class="btn-channel">
+    <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel">
       📢 Follow WhatsApp Channel
     </a>
     <div style="font-size:11px;color:var(--muted);margin-top:8px">Get updates, tips &amp; new features</div>
   </div>
+
 </div>
 </div>
 
-<!-- ══════════════════ DASHBOARD SCREEN ══════════════════ -->
-<div id="screen-dash">
+<!-- ════════════════ DASHBOARD SCREEN ════════════════ -->
+<div id="screen-dash" style="display:none">
 <div class="dash">
 
   <!-- Hero -->
   <div class="dash-hero">
-    <div class="dash-banner" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a1628 0%,#0d2040 40%,#1a1060 100%)">
-      <span style="font-size:72px;opacity:.18">🤖</span>
-    </div>
+    <img src="/banner.jpeg" alt="" class="dash-banner" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <div class="dash-banner-fallback" style="display:none"></div>
     <div class="dash-hero-overlay"></div>
     <div class="dash-hero-content">
       <div class="dash-hero-left">
-        <div class="dash-logo">🤖</div>
+        <img src="/logo.jpeg" alt="AA MD" class="dash-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="dash-logo-fallback" style="display:none">🤖</div>
         <div>
           <div class="dash-hero-title">AA MD Bot</div>
-          <div class="dash-hero-sub" id="dash-connected-info">
+          <div class="dash-hero-sub" id="hero-sub">
             <span class="dot dot-green"></span> Connected
           </div>
         </div>
       </div>
-      <button class="btn-disconnect" onclick="goConnect()">Disconnect</button>
+      <button class="btn-disconnect" onclick="goConnect()">Connect Another →</button>
     </div>
   </div>
 
   <!-- Channel bar -->
   <div class="channel-bar">
     <span class="channel-bar-text">📢 Stay updated with new features &amp; tips:</span>
-    <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" class="btn-channel">
+    <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel">
       📲 Follow WhatsApp Channel
     </a>
   </div>
 
   <div class="dash-body">
 
-    <!-- Stats -->
-    <div class="status-grid" style="margin-bottom:28px">
+    <!-- Status cards -->
+    <div class="status-grid">
       <div class="status-card">
         <div class="sc-icon">✅</div>
-        <div class="sc-value" style="color:var(--green)">Online</div>
+        <div class="sc-value" style="color:var(--green)" id="s-status">Online</div>
         <div class="sc-label">Bot Status</div>
       </div>
       <div class="status-card">
         <div class="sc-icon">⏱️</div>
-        <div class="sc-value" style="font-size:16px" id="d-uptime">--</div>
+        <div class="sc-value" style="font-size:16px" id="s-uptime">--</div>
         <div class="sc-label">Uptime</div>
       </div>
       <div class="status-card">
         <div class="sc-icon">📦</div>
-        <div class="sc-value" id="d-plugins">--</div>
+        <div class="sc-value" id="s-cmds">120+</div>
         <div class="sc-label">Commands</div>
-      </div>
-      <div class="status-card">
-        <div class="sc-icon">👤</div>
-        <div class="sc-value" id="d-users">--</div>
-        <div class="sc-label">Users</div>
-      </div>
-    </div>
-
-    <!-- Sessions -->
-    <div class="section">
-      <div class="section-head">📱 WhatsApp Sessions</div>
-      <div id="dash-sessions"><div style="color:var(--muted);font-size:13px">Loading...</div></div>
-    </div>
-
-    <!-- Add New Session -->
-    <div class="section">
-      <div class="section-head">🔗 Add Another Session</div>
-      <div class="connect-panel">
-        <div class="alert-box" id="d-al"></div>
-        <div style="margin-bottom:14px">
-          <label class="field-label">Session Name</label>
-          <input class="field-input" id="d-sess-name" placeholder="e.g. device2" value="default" style="padding:11px 14px;font-size:14px">
-        </div>
-        <div class="conn-tabs">
-          <button class="conn-tab active" id="dtab-qr" onclick="dShowTab('qr')">📷 QR Code</button>
-          <button class="conn-tab" id="dtab-pair" onclick="dShowTab('pair')">🔢 Pairing Code</button>
-        </div>
-
-        <!-- QR pane -->
-        <div class="conn-pane active" id="dpane-qr">
-          <div style="text-align:center;margin-bottom:12px">
-            <div class="qr-wrap" style="display:inline-block" id="d-qr-box">
-              <div class="qr-placeholder"><div class="spin spin-dark" style="width:20px;height:20px;border-color:rgba(37,211,102,.2);border-top-color:var(--green)"></div><br>Click Generate</div>
-            </div>
-            <div id="d-qr-info" style="font-size:12px;color:var(--muted);margin-top:8px">Scan with WhatsApp to connect</div>
-          </div>
-          <button class="btn-connect" id="d-btn-qr" onclick="dDoQR()" style="margin-top:0">📷 Generate QR Code</button>
-          <div class="hint-box">📌 WhatsApp → ⋮ → Linked Devices → Link a Device → Scan QR</div>
-        </div>
-
-        <!-- Pairing pane -->
-        <div class="conn-pane" id="dpane-pair">
-          <label class="field-label">Phone Number (with country code, no +)</label>
-          <input class="field-input" id="d-pair-phone" placeholder="923001234567" style="padding:11px 14px;font-size:14px;margin-bottom:12px">
-          <button class="btn-connect" id="d-btn-pair" onclick="dDoPair()" style="margin-top:0">🔢 Get Pairing Code</button>
-          <div id="d-code-wrap" style="display:none;margin-top:14px">
-            <div class="code-display">
-              <div class="code-num" id="d-code-val">——</div>
-              <div class="code-hint">Enter in WhatsApp → Linked Devices → Link with phone number</div>
-            </div>
-          </div>
-          <div class="hint-box" style="margin-top:14px">📌 WhatsApp → ⋮ → Linked Devices → Link a Device → Use phone number</div>
-        </div>
       </div>
     </div>
 
     <!-- Quick Start -->
     <div class="section">
       <div class="section-head">⚡ Quick Start Commands</div>
-      <div class="cmd-grid" id="quick-cmds"></div>
+      <div class="cmd-grid" id="quick-grid"></div>
       <p style="font-size:11px;color:var(--muted);margin-top:8px">💡 Click any command to copy it, then paste in WhatsApp</p>
     </div>
 
-    <!-- Islamic Commands -->
+    <!-- Islamic -->
     <div class="section">
       <div class="section-head">☪️ Islamic Commands</div>
       <div class="islamic-card">
@@ -452,7 +424,7 @@ a{text-decoration:none;color:inherit}
             <div class="islamic-title">Islamic Commands Panel</div>
             <div class="islamic-sub">Duas, Zikr, Hadiths, Kalimas, Adhkar &amp; more</div>
           </div>
-          <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" class="btn-channel" style="margin-left:auto;font-size:12px;padding:7px 14px">📢 Channel</a>
+          <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel" style="margin-left:auto;font-size:12px;padding:7px 14px">📢 Channel</a>
         </div>
         <div class="islamic-sections" id="islamic-grid"></div>
         <div style="margin-top:14px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
@@ -461,24 +433,24 @@ a{text-decoration:none;color:inherit}
       </div>
     </div>
 
-    <!-- Media Commands -->
+    <!-- Media -->
     <div class="section">
       <div class="section-head">🎬 Media Commands — Details First, Then File</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+      <div class="media-grid">
         <div class="media-flow">
           <div class="media-flow-details">
-            <div class="media-flow-title">🎵 Play Audio — .play / .song / .audio</div>
+            <div class="media-flow-title">🎵 Play Audio — .play / .song</div>
             <div class="media-flow-meta"><span>YouTube</span><span>yt-dlp</span><span>MP3</span></div>
-            <div class="media-flow-desc">Search by name or paste a YouTube URL. Bot fetches metadata first (title, artist, thumbnail), then sends the MP3. Alias: <strong style="color:var(--green)">.play</strong> works exactly the same.</div>
+            <div class="media-flow-desc">Search by name or paste a YouTube URL. Bot shows info card (title, duration, thumbnail) then sends the MP3. <strong style="color:var(--green)">.play</strong> and <strong style="color:var(--green)">.song</strong> are identical.</div>
             <div style="margin-top:8px;font-size:11px;color:var(--green)">.play Tum Hi Ho &nbsp;|&nbsp; .song Faded Alan Walker</div>
           </div>
-          <div class="media-flow-player">🎵 Audio plays here — details always come first</div>
+          <div class="media-flow-player">🎵 Audio plays here — info card always comes first</div>
         </div>
         <div class="media-flow">
           <div class="media-flow-details">
-            <div class="media-flow-title">📹 Video Download — .video / .yt / .ytmp4</div>
-            <div class="media-flow-meta"><span>Format: MP4</span><span>Max: 480p</span><span>Max: 64MB</span></div>
-            <div class="media-flow-desc">Bot first sends a <strong style="color:var(--text)">details message</strong> (title, size, duration, thumbnail), then sends the actual video file. Max 10 minutes.</div>
+            <div class="media-flow-title">📹 Video — .video / .yt / .ytmp4</div>
+            <div class="media-flow-meta"><span>MP4</span><span>Max 10 min</span><span>64 MB</span></div>
+            <div class="media-flow-desc">Bot sends a <strong style="color:var(--text)">details card</strong> (title, size, thumbnail) first, then the actual video file. Alias: <code style="color:var(--green)">.ytmp4</code> also works.</div>
           </div>
           <div class="media-flow-player">🎬 Video plays here — details always come first</div>
         </div>
@@ -486,7 +458,7 @@ a{text-decoration:none;color:inherit}
           <div class="media-flow-details">
             <div class="media-flow-title">👁️ Reveal View-Once — .reveal / .rv</div>
             <div class="media-flow-meta"><span>Images</span><span>Videos</span><span>Groups &amp; DMs</span></div>
-            <div class="media-flow-desc">Reply to any view-once message with <code style="color:var(--green)">.reveal</code> to get it as a normal photo/video. Auto-reveal also works via <code style="color:var(--green)">.antiviewonce on</code>.</div>
+            <div class="media-flow-desc">Reply to any view-once message with <code style="color:var(--green)">.reveal</code> to get it as normal media. Auto-reveal via <code style="color:var(--green)">.antiviewonce on</code>.</div>
           </div>
           <div class="media-flow-player">👁️ View-once revealed as normal media</div>
         </div>
@@ -503,23 +475,25 @@ a{text-decoration:none;color:inherit}
     <div class="section">
       <div class="section-head">🔀 Bot Mode — Private / Public</div>
       <div class="mode-cards">
-        <div class="mode-info-card mode-private" onclick="copyTxt('.mode private')" title="Click to copy">
+        <div class="mode-info-card mode-private" onclick="copyCmd('.mode private')" title="Click to copy">
           <div class="mode-info-icon">🔒</div>
           <div class="mode-info-title">Private Mode</div>
           <div class="mode-info-desc">Only <strong>You (self-chat)</strong> can use commands. Perfect for personal use — no one else can trigger the bot.</div>
           <code class="mode-info-cmd">.mode private</code>
         </div>
-        <div class="mode-info-card mode-public" onclick="copyTxt('.mode public')" title="Click to copy">
+        <div class="mode-info-card mode-public" onclick="copyCmd('.mode public')" title="Click to copy">
           <div class="mode-info-icon">🌐</div>
           <div class="mode-info-title">Public Mode</div>
           <div class="mode-info-desc">Everyone can use commands — any number that messages the bot gets a response. Current default.</div>
           <code class="mode-info-cmd">.mode public</code>
         </div>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin-top:8px">💡 In <strong style="color:var(--text)">Private mode</strong>, only your "Message yourself" (You) chat responds to commands. Click a card to copy the command.</p>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">
+        💡 In <strong style="color:var(--text)">Private mode</strong>, only your "Message yourself" (You) chat responds to commands — great for personal automation. Click a card to copy the command.
+      </p>
     </div>
 
-    <!-- Settings Reference -->
+    <!-- Settings -->
     <div class="section">
       <div class="section-head">⚙️ Bot Settings — Control via WhatsApp</div>
       <div class="settings-ref">
@@ -541,7 +515,7 @@ a{text-decoration:none;color:inherit}
           Get the latest updates, new commands, tips &amp; tricks, and announcements directly in WhatsApp.<br>
           Join thousands of AA MD Bot users on the official channel.
         </div>
-        <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" class="btn-channel-big">
+        <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel-big">
           📲 Follow Channel Now
         </a>
         <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.35)">
@@ -552,7 +526,8 @@ a{text-decoration:none;color:inherit}
 
     <!-- About -->
     <div class="about-card">
-      <div class="about-logo">🤖</div>
+      <img src="/logo.jpeg" alt="AA MD" class="about-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="about-logo-fallback" style="display:none">🤖</div>
       <div style="flex:1">
         <div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
           AA MD Bot v3.0
@@ -561,7 +536,7 @@ a{text-decoration:none;color:inherit}
           WhatsApp Multi-Device Bot — by <strong style="color:var(--text)">Ahsan Ali | AA Mods</strong>
         </div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">
-          120+ commands · Baileys MD · Node.js · Auto Status
+          120+ commands · Baileys MD · Node.js · Auto Status · Islamic 60+
         </div>
         <div class="about-badges">
           <span class="badge badge-green">v3.0 Multi-Device</span>
@@ -570,110 +545,111 @@ a{text-decoration:none;color:inherit}
           <span class="badge badge-purple">Islamic 60+</span>
         </div>
       </div>
-      <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" class="btn-channel" style="flex-shrink:0">📢 Channel</a>
+      <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel" style="flex-shrink:0">📢 Channel</a>
     </div>
 
-  </div><!-- /dash-body -->
-</div><!-- /dash -->
-</div><!-- /screen-dash -->
+  </div>
+</div>
+</div>
+
+<!-- Loading splash -->
+<div id="screen-loading" style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:var(--bg)">
+  <div style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div style="font-size:14px;color:var(--muted)">Connecting to bot...</div>
+</div>
 
 <script>
-const BASE = '';
 const CHANNEL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
-let sse = null;
-let csMode = 'pair';
-let csSessId = null;
-let csPollTimer = null;
-let copiedTimer = null;
+const BASE = '';
 
-// ─────────────────────────────────────────
-// Data
-// ─────────────────────────────────────────
+// ──────────────────────────────────────────────────────
+// Static Data
+// ──────────────────────────────────────────────────────
 const QUICK_CMDS = [
-  {cmd:'.menu',      desc:'All commands list'},
-  {cmd:'.play Tum Hi Ho', desc:'Play audio via YouTube'},
-  {cmd:'.video Faded Alan Walker', desc:'YouTube video download'},
-  {cmd:'.ai hello',  desc:'Chat with AI'},
-  {cmd:'.islamic_menu', desc:'Islamic commands panel'},
-  {cmd:'.tiktok <link>', desc:'TikTok download'},
-  {cmd:'.sticker',   desc:'Make sticker from image'},
-  {cmd:'.ping',      desc:'Bot ping / status'},
+  { cmd: '.menu',           desc: 'All commands list' },
+  { cmd: '.ai hello',       desc: 'Chat with AI' },
+  { cmd: '.islamic_menu',   desc: 'Islamic commands panel' },
+  { cmd: '.play Tum Hi Ho', desc: 'Play audio — YouTube' },
+  { cmd: '.yt <link>',      desc: 'YouTube video download' },
+  { cmd: '.tiktok <link>',  desc: 'TikTok download' },
+  { cmd: '.sticker',        desc: 'Make sticker from image' },
+  { cmd: '.ping',           desc: 'Bot ping / status' },
 ];
 
 const CATEGORIES = [
-  {icon:'☪️', label:'Islamic',  cmds:['islamic_menu','dua_forgiveness','dua_rizq','dua_health','dua_morning','dua_evening','zikr_subhanallah','zikr_alhamdulillah','hadith_smile','kalima_tayyiba','darood_sharif','morning_adhkar','evening_adhkar','asmaul_husna','jaffery_menu']},
-  {icon:'🤖', label:'AI',       cmds:['ai','imagine','gpt','gemini']},
-  {icon:'📥', label:'Download', cmds:['yt','ytmp3','tiktok','ig','fb','twitter','pinterest','spotify','soundcloud','mediafire','capcut']},
-  {icon:'🎬', label:'Media',    cmds:['play','song','audio','sticker','toimage','removebg','compress','resize','ptt','reveal']},
-  {icon:'🔍', label:'Search',   cmds:['google','lyrics','movie','wiki','ytsearch']},
-  {icon:'🎉', label:'Fun',      cmds:['joke','meme','quote','roast','truth','dare','love','ship','advice','prank','guess','compliment']},
-  {icon:'🔧', label:'Utility',  cmds:['weather','calc','currency','qr','password','translate','time','uptime','info','ping']},
-  {icon:'🛠️', label:'Tools',    cmds:['base64','tts','fontchanger','hash','id']},
-  {icon:'👥', label:'Group',    cmds:['kick','promote','demote','mute','unmute','tagall','antilink','antidelete','antiviewonce','antibot','welcome','warn','autostatus']},
-  {icon:'⚙️', label:'Settings', cmds:['bs','mode','anticall','statusview','statusreact','autostatus','autoread','autotyping','setprefix','setnewsletter']},
-  {icon:'📋', label:'General',  cmds:['menu','help','ping','uptime','balance','daily','leaderboard','profile','report','support','contact','owner']},
-  {icon:'👑', label:'Owner',    cmds:['broadcast','eval','shell','restart','addowner','setowner','maintenance','deldevice','adddevice']},
+  { icon: '☪️',  label: 'Islamic',   cmds: ['islamic_menu','dua_forgiveness','dua_rizq','dua_health','dua_morning','dua_evening','dua_sleep','zikr_subhanallah','zikr_alhamdulillah','hadith_smile','kalima_tayyiba','darood_sharif','morning_adhkar','evening_adhkar','asmaul_husna','jaffery_menu'] },
+  { icon: '🤖',  label: 'AI',        cmds: ['ai','imagine','gpt','gemini'] },
+  { icon: '📥',  label: 'Download',  cmds: ['yt','ytmp3','tiktok','ig','fb','twitter','pinterest','spotify','soundcloud','mediafire','capcut'] },
+  { icon: '🎬',  label: 'Media',     cmds: ['play','song','audio','sticker','toimage','removebg','compress','resize','ptt','reveal'] },
+  { icon: '🔍',  label: 'Search',    cmds: ['google','lyrics','movie','wiki','ytsearch','shazam'] },
+  { icon: '🎉',  label: 'Fun',       cmds: ['joke','meme','quote','roast','truth','dare','love','ship','advice','prank','guess','compliment','character'] },
+  { icon: '🔧',  label: 'Utility',   cmds: ['weather','calc','currency','qrgen','password','translate','speedtest','shorturl','timezone'] },
+  { icon: '🛠️',  label: 'Tools',     cmds: ['base64','tts','fontchanger','textstyle','stealsticker','readmore','hash'] },
+  { icon: '👥',  label: 'Group',     cmds: ['kick','promote','demote','mute','unmute','tagall','hidetag','antilink','antidelete','antiviewonce','antibot','welcome','goodbye','warn','groupinfo','link'] },
+  { icon: '⚙️',  label: 'Settings',  cmds: ['bs','mode','anticall','autostatus','statusview','statusreact','autoreply','autoread','autotyping','setprefix','setnewsletter'] },
+  { icon: '📋',  label: 'General',   cmds: ['menu','help','ping','uptime','balance','daily','leaderboard','profile','report','support','contact','owner'] },
+  { icon: '👑',  label: 'Owner',     cmds: ['broadcast','eval','shell','restart','addowner','setowner','maintenance'] },
 ];
 
-const ISLAMIC_SECTIONS = [
-  {title:'🤲 Duas', cmds:[['dua_forgiveness','Forgiveness'],['dua_rizq','Rizq / Provision'],['dua_guidance','Guidance'],['dua_health','Good Health'],['dua_morning','Morning'],['dua_evening','Evening'],['dua_sleep','Before Sleep'],['dua_travel','Travel'],['dua_food','Before Eating'],['dua_exam','Studies/Exam'],['dua_anxiety','Anxiety & Stress'],['dua_parents','Parents']]},
-  {title:'📿 Zikr', cmds:[['zikr_astaghfirullah','Astaghfirullah'],['zikr_alhamdulillah','Alhamdulillah'],['zikr_subhanallah','SubhanAllah'],['zikr_allahuakbar','Allahu Akbar'],['zikr_lailahaillallah','La Ilaha Illallah'],['zikr_lahawla','La Hawla'],['zikr_bismillah','Bismillah'],['zikr_hasbunallah','Hasbunallah']]},
-  {title:'📜 Hadiths', cmds:[['hadith_good_morals','Good Morals'],['hadith_cleanliness','Cleanliness'],['hadith_truth','Truth'],['hadith_patience','Patience (Sabr)'],['hadith_smile','Smiling is Sadaqah'],['hadith_knowledge','Knowledge'],['hadith_neighbour','Good Neighbour']]},
-  {title:'☪️ 6 Kalimas', cmds:[['kalima_tayyiba','1st — Tayyiba'],['kalima_shahadat','2nd — Shahadat'],['kalima_tamjeed','3rd — Tamjeed'],['kalima_tauheed','4th — Tauheed'],['kalima_astaghfar','5th — Astaghfar'],['kalima_radde_kufr','6th — Radde Kufr']]},
-  {title:'💚 Adhkar & Specials', cmds:[['darood_sharif','Durood Ibrahim'],['morning_adhkar','Morning Adhkar'],['evening_adhkar','Evening Adhkar'],['asmaul_husna','99 Names of Allah'],['islam_fact','Islamic Fact'],['quran_reminder','Daily Reminder'],['prayers_info','5 Daily Prayers']]},
-  {title:'🌹 Fikra-e-Jaffery (Ahl al-Bayt ع)', cmds:[['jaffery_menu','Full Jaffery Menu'],['dua_kumayl','Dua Kumayl — Imam Ali ع'],['dua_arafah','Dua Arafah — Imam Husain ع'],['dua_tawassul','Dua Tawassul'],['dua_imam_zaman','Dua — Imam Mahdi ع'],['dua_nudba','Dua Nudba'],['ziyarat_ashura','Ziyarat Ashura'],['ziyarat_imam_ali','Ziyarat Imam Ali ع'],['salawat_aal','Salawat Aal-e-Muhammad'],['masoomeen14','14 Masoomeen ع'],['nahjul_balagha','Nahjul Balagha Quote'],['ghadeer_info','Event of Ghadeer Khum']]},
+const ISLAMIC_SECS = [
+  { title: '🤲 Duas', cmds: [['dua_forgiveness','Forgiveness'],['dua_rizq','Rizq / Provision'],['dua_guidance','Guidance'],['dua_health','Good Health'],['dua_morning','Morning'],['dua_evening','Evening'],['dua_sleep','Before Sleep'],['dua_travel','Travel'],['dua_food','Before Eating'],['dua_exam','Studies/Exam'],['dua_anxiety','Anxiety & Stress'],['dua_parents','Parents']] },
+  { title: '📿 Zikr', cmds: [['zikr_astaghfirullah','Astaghfirullah'],['zikr_alhamdulillah','Alhamdulillah'],['zikr_subhanallah','SubhanAllah'],['zikr_allahuakbar','Allahu Akbar'],['zikr_lailahaillallah','La Ilaha Illallah'],['zikr_lahawla','La Hawla'],['zikr_bismillah','Bismillah'],['zikr_hasbunallah','Hasbunallah']] },
+  { title: '📜 Hadiths', cmds: [['hadith_good_morals','Good Morals'],['hadith_cleanliness','Cleanliness'],['hadith_truth','Truth'],['hadith_patience','Patience (Sabr)'],['hadith_smile','Smiling is Sadaqah'],['hadith_knowledge','Knowledge'],['hadith_neighbour','Good Neighbour']] },
+  { title: '☪️ 6 Kalimas', cmds: [['kalima_tayyiba','1st — Tayyiba'],['kalima_shahadat','2nd — Shahadat'],['kalima_tamjeed','3rd — Tamjeed'],['kalima_tauheed','4th — Tauheed'],['kalima_astaghfar','5th — Astaghfar'],['kalima_radde_kufr','6th — Radde Kufr']] },
+  { title: '💚 Adhkar & Specials', cmds: [['darood_sharif','Durood Ibrahim'],['morning_adhkar','Morning Adhkar'],['evening_adhkar','Evening Adhkar'],['asmaul_husna','99 Names of Allah'],['islam_fact','Islamic Fact'],['quran_reminder','Daily Reminder'],['prayers_info','5 Daily Prayers']] },
+  { title: '🌹 Fikra-e-Jaffery (Ahl al-Bayt ع)', cmds: [['jaffery_menu','Full Jaffery Menu'],['dua_kumayl','Dua Kumayl — Imam Ali ع'],['dua_arafah','Dua Arafah — Imam Husain ع'],['dua_tawassul','Dua Tawassul'],['dua_imam_zaman','Dua — Imam Mahdi ع'],['dua_nudba','Dua Nudba'],['ziyarat_ashura','Ziyarat Ashura'],['ziyarat_imam_ali','Ziyarat Imam Ali ع'],['salawat_aal','Salawat Aal-e-Muhammad'],['masoomeen14','14 Masoomeen ع'],['nahjul_balagha','Nahjul Balagha Quote'],['ghadeer_info','Ghadeer Khum']] },
 ];
 
 const SETTINGS_REF = [
-  {cmd:'.bs',              desc:'Full bot settings panel — all toggles in one place',           example:'.bs'},
-  {cmd:'.mode public',     desc:'PUBLIC: everyone can use commands',                             example:'.mode public'},
-  {cmd:'.mode private',    desc:'PRIVATE: only You (self-chat) can use commands',               example:'.mode private'},
-  {cmd:'.anticall on',     desc:'Reject all incoming calls',                                    example:'.anticall on'},
-  {cmd:'.antidelete on',   desc:'Anti-delete in groups AND DMs globally',                       example:'.antidelete on'},
-  {cmd:'.antiviewonce on', desc:'Reveal view-once in groups AND DMs globally',                  example:'.antiviewonce on'},
-  {cmd:'.autostatus on',   desc:'Auto save & forward statuses to your DM',                     example:'.autostatus on'},
-  {cmd:'.statusview on',   desc:'Auto view all statuses silently',                              example:'.statusview on'},
-  {cmd:'.statusreact on',  desc:'Auto react to all statuses with ❤️',                          example:'.statusreact on'},
-  {cmd:'.autoread on',     desc:'Mark all messages as read',                                    example:'.autoread on'},
-  {cmd:'.autotyping on',   desc:'Show typing indicator on commands',                            example:'.autotyping on'},
-  {cmd:'.setprefix !',     desc:'Change command prefix',                                        example:'.setprefix !'},
-  {cmd:'.setnewsletter',   desc:"Set Channel JID for real 'View channel' button on all replies", example:'.setnewsletter 120363xxx@newsletter'},
+  { cmd: '.bs',              desc: 'Full bot settings panel — all toggles in one place',                  example: '.bs' },
+  { cmd: '.mode public',     desc: 'PUBLIC: everyone can use commands',                                   example: '.mode public' },
+  { cmd: '.mode private',    desc: 'PRIVATE: only You (self-chat) can use commands',                     example: '.mode private' },
+  { cmd: '.anticall on',     desc: 'Reject all incoming calls',                                          example: '.anticall on' },
+  { cmd: '.antidelete on',   desc: 'Anti-delete in groups AND DMs globally',                             example: '.antidelete on' },
+  { cmd: '.antiviewonce on', desc: 'Reveal view-once in groups AND DMs globally',                        example: '.antiviewonce on' },
+  { cmd: '.autostatus on',   desc: 'Auto save & forward statuses to your DM',                           example: '.autostatus on' },
+  { cmd: '.statusview on',   desc: 'Auto view all statuses silently',                                    example: '.statusview on' },
+  { cmd: '.statusreact on',  desc: 'Auto react ❤️ to all statuses',                                     example: '.statusreact on' },
+  { cmd: '.autoread on',     desc: 'Mark all messages as read automatically',                            example: '.autoread on' },
+  { cmd: '.autotyping on',   desc: 'Show typing indicator while processing commands',                    example: '.autotyping on' },
+  { cmd: '.setprefix !',     desc: 'Change command prefix to any character',                             example: '.setprefix !' },
+  { cmd: '.setnewsletter',   desc: "Set Channel JID for real 'View channel' button on all replies",     example: '.setnewsletter 120363xxx@newsletter' },
 ];
 
-// ─────────────────────────────────────────
-// Init static content
-// ─────────────────────────────────────────
-function initStatic() {
+// ──────────────────────────────────────────────────────
+// Render static content
+// ──────────────────────────────────────────────────────
+function renderStatic() {
   // Quick commands
-  document.getElementById('quick-cmds').innerHTML = QUICK_CMDS.map(c =>
-    `<div class="cmd-card" onclick="copyTxt('${c.cmd.replace(/'/g,"\\'")}',this)" title="Click to copy">
+  document.getElementById('quick-grid').innerHTML = QUICK_CMDS.map(c =>
+    `<div class="cmd-card" onclick="copyCmd('${esc(c.cmd)}',this)" title="Click to copy">
       <code>${c.cmd}</code><span>${c.desc}</span>
     </div>`
   ).join('');
 
-  // Islamic grid
-  document.getElementById('islamic-grid').innerHTML = ISLAMIC_SECTIONS.map(s =>
+  // Islamic
+  document.getElementById('islamic-grid').innerHTML = ISLAMIC_SECS.map(s =>
     `<div class="islamic-section">
       <div class="islamic-section-title">${s.title}</div>
-      <div class="islamic-cmds">${s.cmds.map(([c,d]) =>
-        `<div class="isl-cmd" onclick="copyTxt('.${c}')" title="Click to copy">.${c} <span class="isl-cmd-desc">— ${d}</span></div>`
+      <div>${s.cmds.map(([c,d]) =>
+        `<div class="isl-cmd" onclick="copyCmd('.${c}')" title="Click to copy">.${c} <span class="isl-cmd-desc">— ${d}</span></div>`
       ).join('')}</div>
     </div>`
   ).join('');
 
-  // Category grid
+  // Categories
   document.getElementById('cat-grid').innerHTML = CATEGORIES.map(cat =>
     `<div class="cat-card">
       <div class="cat-card-head"><span class="cat-icon">${cat.icon}</span>${cat.label}</div>
       <div class="cat-cmds">${cat.cmds.map(c =>
-        `<span class="cat-cmd-chip" onclick="copyTxt('.${c}')" title="Click to copy">.${c}</span>`
+        `<span class="cat-cmd-chip" onclick="copyCmd('.${c}')" title="Click to copy">.${c}</span>`
       ).join('')}</div>
     </div>`
   ).join('');
 
-  // Settings grid
+  // Settings
   document.getElementById('settings-grid').innerHTML = SETTINGS_REF.map(s =>
-    `<div class="setting-ref-item" onclick="copyTxt('${s.example.replace(/'/g,"\\'")}')">
+    `<div class="setting-ref-item" onclick="copyCmd('${esc(s.example)}')">
       <div class="setting-ref-cmd">${s.cmd}</div>
       <div class="setting-ref-desc">${s.desc}</div>
       <div class="setting-ref-example">e.g. ${s.example}</div>
@@ -681,47 +657,76 @@ function initStatic() {
   ).join('');
 }
 
-function copyTxt(txt, el) {
-  navigator.clipboard.writeText(txt).catch(()=>{});
+function esc(s) { return s.replace(/'/g, "\\'"); }
+
+let _copyTimer = null;
+function copyCmd(txt, el) {
+  navigator.clipboard.writeText(txt).catch(() => {});
   if (el) {
-    el.classList.add('copied');
     const code = el.querySelector('code');
     const orig = code.textContent;
+    el.classList.add('copied');
     code.textContent = '✅ Copied!';
-    clearTimeout(copiedTimer);
-    copiedTimer = setTimeout(()=>{ el.classList.remove('copied'); code.textContent = orig; }, 1500);
+    clearTimeout(_copyTimer);
+    _copyTimer = setTimeout(() => { el.classList.remove('copied'); code.textContent = orig; }, 1500);
   }
 }
 
-// ─────────────────────────────────────────
-// Connect Screen logic
-// ─────────────────────────────────────────
-function setMode(m) {
-  csMode = m;
-  document.getElementById('tab-pair').classList.toggle('active', m==='pair');
-  document.getElementById('tab-qr').classList.toggle('active', m==='qr');
-  document.getElementById('pair-fields').style.display = m==='pair'?'':'none';
-  document.getElementById('qr-fields').style.display = m==='qr'?'':'none';
-}
-
-function csShowStep(s) {
-  ['form','code','qr','done'].forEach(id =>
-    document.getElementById('step-'+id).style.display = id===s?'':'none'
+// ──────────────────────────────────────────────────────
+// Screen management
+// ──────────────────────────────────────────────────────
+function show(id) {
+  ['screen-loading','screen-connect','screen-dash'].forEach(s =>
+    document.getElementById(s).style.display = s === id ? (id === 'screen-connect' ? 'block' : 'block') : 'none'
   );
 }
 
-function csError(msg) {
+function showDash(info) {
+  if (info) {
+    const sub = document.getElementById('hero-sub');
+    sub.innerHTML = `<span class="dot dot-green"></span>${info.phone ? '+'+info.phone+' — ' : ''}Connected`;
+  }
+  show('screen-dash');
+  loadStats();
+}
+
+function goConnect() {
+  csReset();
+  show('screen-connect');
+}
+
+// ──────────────────────────────────────────────────────
+// Connect screen logic
+// ──────────────────────────────────────────────────────
+let _csMode = 'pair';
+let _csSessId = null;
+let _csPoll = null;
+
+function csMode(m) {
+  _csMode = m;
+  document.getElementById('tab-pair').classList.toggle('active', m === 'pair');
+  document.getElementById('tab-qr').classList.toggle('active', m === 'qr');
+  document.getElementById('pair-panel').style.display = m === 'pair' ? '' : 'none';
+  document.getElementById('qr-panel').style.display = m === 'qr' ? '' : 'none';
+}
+
+function csStep(s) {
+  ['cs-form','cs-code-step','cs-qr-step','cs-done-step'].forEach(id =>
+    document.getElementById(id).style.display = id === s ? '' : 'none'
+  );
+}
+
+function csErr(msg) {
   const el = document.getElementById('cs-err');
   el.textContent = msg; el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'), 5000);
+  setTimeout(() => el.classList.remove('show'), 5000);
 }
 
 function csReset() {
-  clearInterval(csPollTimer);
-  csSessId = null;
-  csShowStep('form');
-  document.getElementById('cs-btn').disabled = false;
-  document.getElementById('cs-btn').textContent = 'Start Bot →';
+  clearInterval(_csPoll); _csSessId = null;
+  csStep('cs-form');
+  const btn = document.getElementById('cs-btn');
+  btn.disabled = false; btn.textContent = 'Start Bot →';
 }
 
 async function csConnect() {
@@ -729,245 +734,165 @@ async function csConnect() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span>Connecting...';
 
-  if (csMode === 'pair') {
-    const phone = document.getElementById('cs-phone').value.replace(/\D/g,'');
+  if (_csMode === 'pair') {
+    const phone = document.getElementById('cs-phone').value.replace(/\D/g, '');
+    const sess = (document.getElementById('cs-sess-pair').value.trim() || phone || 'default').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30) || 'default';
     if (phone.length < 7 || phone.length > 15) {
-      csError('Please enter a valid number with country code (e.g. 923001234567)');
+      csErr('Please enter a valid number with country code (e.g. 923001234567)');
       btn.disabled = false; btn.textContent = 'Start Bot →'; return;
     }
-    const sessId = phone;
-    csSessId = sessId;
+    _csSessId = sess;
     try {
-      const r = await fetch(BASE+'/api/session/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sessId,method:'pairing',phoneNumber:phone})});
+      const r = await fetch(BASE + '/api/session/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sess, method: 'pairing', phoneNumber: phone })
+      });
       const d = await r.json();
-      if (!d.ok) { csError('❌ '+(d.error||'Error')); btn.disabled=false; btn.textContent='Start Bot →'; return; }
-      csShowStep('code');
-      csPoll();
-    } catch(e) { csError('❌ '+e.message); btn.disabled=false; btn.textContent='Start Bot →'; }
+      if (!d.ok) { csErr('❌ ' + (d.error || 'Server error')); btn.disabled = false; btn.textContent = 'Start Bot →'; return; }
+      csStep('cs-code-step');
+      csPollStatus();
+    } catch(e) { csErr('❌ ' + e.message); btn.disabled = false; btn.textContent = 'Start Bot →'; }
   } else {
-    const sessId = (document.getElementById('cs-sess').value.trim()||'default');
-    csSessId = sessId;
-    document.getElementById('cs-qr-box').innerHTML = '<div class="qr-placeholder"><div class="spin spin-dark" style="width:20px;height:20px"></div><br>Loading QR...</div>';
-    csShowStep('qr');
+    const sess = (document.getElementById('cs-sess-qr').value.trim() || 'default').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30) || 'default';
+    _csSessId = sess;
+    csStep('cs-qr-step');
     try {
-      const r = await fetch(BASE+'/api/session/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sessId,method:'qr'})});
+      const r = await fetch(BASE + '/api/session/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sess, method: 'qr' })
+      });
       const d = await r.json();
-      if (!d.ok) { csError('❌ '+(d.error||'Error')); csReset(); return; }
-      csPoll();
-    } catch(e) { csError('❌ '+e.message); csReset(); }
+      if (!d.ok) { csErr('❌ ' + (d.error || 'Error')); csReset(); return; }
+      csPollStatus();
+    } catch(e) { csErr('❌ ' + e.message); csReset(); }
+    btn.disabled = false; btn.textContent = 'Start Bot →';
   }
-  btn.disabled=false; btn.textContent='Start Bot →';
 }
 
-function csPoll() {
-  clearInterval(csPollTimer);
-  csPollTimer = setInterval(async ()=>{
+function csPollStatus() {
+  clearInterval(_csPoll);
+  _csPoll = setInterval(async () => {
     try {
-      const r = await fetch(BASE+'/api/stats'); const d = await r.json();
-      const sess = (d.sessions||[]).find(s=>s.id===csSessId);
-      if (sess?.status==='connected') {
-        clearInterval(csPollTimer);
-        csShowStep('done');
-        document.getElementById('dash-connected-info').innerHTML = '<span class="dot dot-green"></span>+'+sess.phone+' — Connected';
-        setTimeout(()=>showDash(), 1000);
+      const r = await fetch(BASE + '/api/stats');
+      const d = await r.json();
+      const sess = (d.sessions || []).find(s => s.id === _csSessId || s.status === 'connected');
+      if (sess?.status === 'connected') {
+        clearInterval(_csPoll);
+        csStep('cs-done-step');
+        setTimeout(() => showDash(sess), 1000);
       }
-    } catch{}
-  }, 2000);
+    } catch {}
+  }, 1800);
 }
 
-function csCopyCode() {
-  const c = document.getElementById('cs-code').textContent;
-  navigator.clipboard.writeText(c.replace(/-/g,'')).catch(()=>{});
-  const btn = document.querySelector('.pair-copy');
-  btn.textContent='✅ Copied!'; setTimeout(()=>btn.textContent='📋 Copy Code',2000);
+function csCopy() {
+  const code = document.getElementById('cs-code').textContent;
+  navigator.clipboard.writeText(code.replace(/-/g, '')).catch(() => {});
+  const btn = document.getElementById('cs-copy-btn');
+  btn.textContent = '✅ Copied!';
+  setTimeout(() => btn.textContent = '📋 Copy Code', 2000);
 }
 
-// ─────────────────────────────────────────
-// Dashboard session connect panel
-// ─────────────────────────────────────────
-function dShowTab(t) {
-  document.querySelectorAll('.conn-tab').forEach(e=>e.classList.remove('active'));
-  document.querySelectorAll('.conn-pane').forEach(e=>e.classList.remove('active'));
-  document.getElementById('dtab-'+t).classList.add('active');
-  document.getElementById('dpane-'+t).classList.add('active');
-}
-
-function dAlert(type,msg) {
-  const el=document.getElementById('d-al');
-  el.className='alert-box alert-'+type+' show'; el.textContent=msg;
-  setTimeout(()=>el.className='alert-box',5000);
-}
-
-async function dDoQR() {
-  const sessId = document.getElementById('d-sess-name').value.trim()||'default';
-  const btn = document.getElementById('d-btn-qr');
-  btn.disabled=true;
-  document.getElementById('d-qr-box').innerHTML='<div class="qr-placeholder"><div class="spin spin-dark" style="width:20px;height:20px"></div><br>Connecting...</div>';
-  dAlert('inf','⏳ Creating session...');
-  try {
-    const r=await fetch(BASE+'/api/session/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sessId,method:'qr'})});
-    const d=await r.json();
-    if (!d.ok) dAlert('err','❌ '+(d.error||'Error'));
-  } catch(e) { dAlert('err','❌ '+e.message); }
-  setTimeout(()=>btn.disabled=false,3000);
-}
-
-async function dDoPair() {
-  const sessId=document.getElementById('d-sess-name').value.trim()||'default';
-  const phone=document.getElementById('d-pair-phone').value.replace(/\D/g,'');
-  if (!phone||phone.length<10) return dAlert('err','❌ Enter valid phone number');
-  const btn=document.getElementById('d-btn-pair');
-  btn.disabled=true;
-  document.getElementById('d-code-wrap').style.display='none';
-  dAlert('inf','⏳ Getting pairing code...');
-  try {
-    const r=await fetch(BASE+'/api/session/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sessId,method:'pairing',phoneNumber:phone})});
-    const d=await r.json();
-    if (!d.ok) { dAlert('err','❌ '+(d.error||'Error')); btn.disabled=false; }
-  } catch(e) { dAlert('err','❌ '+e.message); btn.disabled=false; }
-}
-
-async function delSession(id) {
-  if (!confirm('Remove session "'+id+'"?')) return;
-  await fetch(BASE+'/api/session/'+id,{method:'DELETE'});
-  loadStats();
-}
-
-// ─────────────────────────────────────────
-// Screen transitions
-// ─────────────────────────────────────────
-function showDash() {
-  document.getElementById('screen-connect').style.display='none';
-  document.getElementById('screen-dash').style.display='block';
-  loadStats();
-  connectSSE();
-}
-
-function goConnect() {
-  document.getElementById('screen-dash').style.display='none';
-  document.getElementById('screen-connect').style.display='flex';
-  csReset();
-  if (sse) { sse.close(); sse=null; }
-}
-
-// ─────────────────────────────────────────
-// Stats & SSE
-// ─────────────────────────────────────────
-function statusDot(s) {
-  const m={connected:'dot-green',qr:'dot-yellow',connecting:'dot-yellow',reconnecting:'dot-yellow',logged_out:'dot-gray',disconnected:'dot-gray'};
-  const lbl={connected:'Connected ✅',qr:'Waiting for QR scan...',connecting:'Connecting...',reconnecting:'Reconnecting...',logged_out:'Logged Out',disconnected:'Disconnected'};
-  return `<span class="dot ${m[s]||'dot-gray'}" style="display:inline-block;margin-right:5px"></span>${lbl[s]||s||'Unknown'}`;
-}
-
+// ──────────────────────────────────────────────────────
+// Stats polling
+// ──────────────────────────────────────────────────────
 async function loadStats() {
   try {
-    const r=await fetch(BASE+'/api/stats');
-    const d=await r.json();
-    document.getElementById('d-uptime').textContent=d.uptime||'--';
-    document.getElementById('d-plugins').textContent=(d.plugins||'--')+(d.plugins?'+':'');
-    document.getElementById('d-users').textContent=d.users||'0';
+    const r = await fetch(BASE + '/api/stats');
+    const d = await r.json();
+    const upEl = document.getElementById('s-uptime');
+    const cmEl = document.getElementById('s-cmds');
+    if (upEl) upEl.textContent = d.uptime || '--';
+    if (cmEl) cmEl.textContent = (d.plugins || 120) + '+';
 
-    const el=document.getElementById('dash-sessions');
-    if (!d.sessions?.length) {
-      el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:14px">📱 No sessions yet. Use the panel below to connect.</div>';
-    } else {
-      el.innerHTML=d.sessions.map(s=>`
-        <div class="sess-card">
-          <div class="sess-av">📱</div>
-          <div class="sess-info">
-            <div class="sess-name">${s.name||s.id}</div>
-            <div class="sess-num">${s.phone?'+'+s.phone:s.id}</div>
-            <div style="font-size:11px;display:flex;align-items:center;gap:4px;margin-top:3px">${statusDot(s.status)}</div>
-          </div>
-          <button class="btn-del" onclick="delSession('${s.id}')">🗑 Remove</button>
-        </div>`).join('');
+    // Update hero with first connected session info
+    const conn = (d.sessions || []).find(s => s.status === 'connected');
+    if (conn) {
+      document.getElementById('hero-sub').innerHTML =
+        `<span class="dot dot-green"></span>${conn.phone ? '+' + conn.phone + ' — ' : ''}Connected`;
     }
-
-    // If any session is connected, stay on dash
-    const connected=d.sessions?.some(s=>s.status==='connected');
-    if (document.getElementById('screen-dash').style.display==='none' && connected) showDash();
-  } catch{}
+  } catch {}
 }
+
+// ──────────────────────────────────────────────────────
+// SSE — real-time events
+// ──────────────────────────────────────────────────────
+let sse = null;
+let sseRetry = 1000;
 
 function connectSSE() {
-  if (sse) sse.close();
-  sse=new EventSource(BASE+'/api/events');
+  if (sse) { try { sse.close(); } catch {} }
+  sse = new EventSource(BASE + '/api/events');
 
-  sse.addEventListener('qr',e=>{
-    const {sessionId}=JSON.parse(e.data);
-    // Update QR image in dashboard connect panel
-    const img=document.createElement('img');
-    img.src=BASE+'/api/qr-image?session='+encodeURIComponent(sessionId)+'&t='+Date.now();
-    img.alt='QR Code'; img.style.cssText='width:180px;height:180px;border-radius:8px;display:block';
-    const box=document.getElementById('d-qr-box');
-    if (box) { box.innerHTML=''; box.appendChild(img); }
-    // Also update connect screen QR if visible
-    const csBox=document.getElementById('cs-qr-box');
-    if (csBox && document.getElementById('step-qr').style.display!=='none') {
-      const img2=img.cloneNode(); img2.src=img.src;
-      csBox.innerHTML=''; csBox.appendChild(img2);
-    }
-  });
-
-  sse.addEventListener('status',e=>{
-    const d=JSON.parse(e.data);
-    if (d.status==='connected') {
-      document.getElementById('dash-connected-info').innerHTML='<span class="dot dot-green"></span>'+(d.user?.name||'Connected');
-      // Auto-switch to dashboard if on connect screen
-      if (document.getElementById('screen-connect').style.display!=='none') {
-        clearInterval(csPollTimer);
-        csShowStep('done');
-        setTimeout(()=>showDash(),1000);
+  sse.addEventListener('qr', e => {
+    const { sessionId } = JSON.parse(e.data);
+    // Show QR image in connect screen
+    if (document.getElementById('screen-connect').style.display !== 'none') {
+      const ph = document.getElementById('cs-qr-ph');
+      const img = document.getElementById('cs-qr-img');
+      if (ph) ph.style.display = 'none';
+      if (img) {
+        img.src = BASE + '/api/qr-image?session=' + encodeURIComponent(sessionId) + '&t=' + Date.now();
+        img.style.display = 'block';
       }
-      dAlert('ok','✅ Connected! '+(d.user?.name||''));
     }
-    if (d.status==='reconnecting') dAlert('inf','🔄 Reconnecting...');
-    loadStats();
   });
 
-  sse.addEventListener('pairingCode',e=>{
-    const {code}=JSON.parse(e.data);
-    // Update connect screen code
-    document.getElementById('cs-code').textContent=code||'----';
-    // Update dashboard code
-    const dcode=document.getElementById('d-code-val');
-    if (dcode) { dcode.textContent=code; document.getElementById('d-code-wrap').style.display='block'; }
-    document.getElementById('d-btn-pair').disabled=false;
-    dAlert('ok','✅ Pairing code ready!');
+  sse.addEventListener('pairingCode', e => {
+    const { code } = JSON.parse(e.data);
+    const el = document.getElementById('cs-code');
+    if (el) el.textContent = code || '----';
   });
 
-  sse.addEventListener('pairingCodeError',e=>{
-    const {error}=JSON.parse(e.data);
-    csError('❌ '+error);
-    dAlert('err','❌ '+error);
-    document.getElementById('d-btn-pair').disabled=false;
+  sse.addEventListener('pairingCodeError', e => {
+    const { error } = JSON.parse(e.data);
+    csErr('❌ ' + error);
+    csReset();
   });
 
-  sse.onerror=()=>setTimeout(connectSSE,4000);
+  sse.addEventListener('status', e => {
+    const d = JSON.parse(e.data);
+    if (d.status === 'connected') {
+      // If on connect screen, auto-switch to dashboard
+      if (document.getElementById('screen-connect').style.display !== 'none') {
+        clearInterval(_csPoll);
+        csStep('cs-done-step');
+        setTimeout(() => showDash({ phone: d.user?.id?.replace(/@.+/,'') }), 900);
+      }
+      loadStats();
+    }
+  });
+
+  sse.onopen = () => { sseRetry = 1000; };
+  sse.onerror = () => {
+    try { sse.close(); } catch {}
+    sse = null;
+    sseRetry = Math.min(sseRetry * 1.5, 15000);
+    setTimeout(connectSSE, sseRetry);
+  };
 }
 
-// ─────────────────────────────────────────
-// Boot
-// ─────────────────────────────────────────
-initStatic();
+// ──────────────────────────────────────────────────────
+// Boot — check if already connected
+// ──────────────────────────────────────────────────────
+renderStatic();
 
-// Check if already connected on load
-(async()=>{
+(async () => {
   try {
-    const r=await fetch(BASE+'/api/stats');
-    const d=await r.json();
-    const connected=d.sessions?.some(s=>s.status==='connected');
-    if (connected) {
-      const sess=d.sessions.find(s=>s.status==='connected');
-      document.getElementById('dash-connected-info').innerHTML='<span class="dot dot-green"></span>'+(sess?.phone?'+'+sess.phone+' — ':'')+' Connected';
-      showDash();
+    const r = await fetch(BASE + '/api/stats');
+    const d = await r.json();
+    const conn = (d.sessions || []).find(s => s.status === 'connected');
+    if (conn) {
+      showDash(conn);
     } else {
-      connectSSE();
+      show('screen-connect');
     }
-  } catch { connectSSE(); }
+  } catch {
+    show('screen-connect');
+  }
+  connectSSE();
+  setInterval(loadStats, 10000);
 })();
-
-setInterval(loadStats, 8000);
 </script>
 </body>
 </html>
