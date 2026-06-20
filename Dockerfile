@@ -9,15 +9,15 @@ RUN apt-get update && apt-get install -y \
     && pip3 install yt-dlp --break-system-packages \
     && rm -rf /var/lib/apt/lists/*
 
-# Install node_modules to /pkg — completely outside /bot so volumes cannot touch them
-WORKDIR /pkg
-COPY AA-MD-Bot/package.json AA-MD-Bot/package-lock.json ./
-RUN npm install --omit=dev
-
 WORKDIR /bot
+COPY AA-MD-Bot/package.json AA-MD-Bot/package-lock.json ./
+
+# Pre-populate npm cache during build so runtime install is fast (~15s offline)
+RUN npm install --omit=dev && rm -rf node_modules
+
 COPY AA-MD-Bot/ .
 RUN mkdir -p session logs temp media
 
-# At startup: volumes mount BEFORE CMD runs.
-# If /bot/node_modules was wiped by a volume, symlink it back from /pkg instantly.
-CMD ["sh", "-c", "[ ! -d /bot/node_modules ] && ln -s /pkg/node_modules /bot/node_modules; node index.js"]
+# At runtime: volume mounts happen before CMD.
+# If node_modules missing (wiped by volume), reinstall from cache silently.
+CMD ["sh", "-c", "[ ! -d node_modules ] && npm install --omit=dev --prefer-offline --no-audit --silent; node index.js"]

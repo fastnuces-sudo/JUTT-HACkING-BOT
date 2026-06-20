@@ -1,0 +1,104 @@
+
+You reached the start of the range
+Jun 20, 2026, 10:48 PM
+Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/0994f327-3b0c-4c46-a5f3-55e101076ec5/vol_37yjwv5ygwbufqrm
+Starting Container
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+node:internal/modules/esm/resolve:873
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'fs-extra' imported from /bot/index.js
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+Node.js v20.20.2
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+node:internal/modules/esm/resolve:873
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+}
+        ^
+Node.js v20.20.2
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'fs-extra' imported from /bot/index.js
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/0994f327-3b0c-4c46-a5f3-55e101076ec5/vol_37yjwv5ygwbufqrm
+node:internal/modules/esm/resolve:873
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'fs-extra' imported from /bot/index.js
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Node.js v20.20.2
+Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/0994f327-3b0c-4c46-a5f3-55e101076ec5/vol_37yjwv5ygwbufqrm
+Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/0994f327-3b0c-4c46-a5f3-55e101076ec5/vol_37yjwv5ygwbufqrm
+}
+Node.js v20.20.2
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+node:internal/modules/esm/resolve:873
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+        ^
+  code: 'ERR_MODULE_NOT_FOUND'
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'fs-extra' imported from /bot/index.js
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+node:internal/modules/esm/resolve:873
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'fs-extra' imported from /bot/index.js
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Node.js v20.20.2
+Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/0994f327-3b0c-4c46-a5f3-55e101076ec5/vol_37yjwv5ygwbufqrm
+node:internal/modules/esm/resolve:873
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+        ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'fs-extra' imported from /bot/index.js
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Node.js v20.20.2
+Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/0994f327-3b0c-4c46-a5f3-55e101076ec5/vol_37yjwv5ygwbufqrm
+Mounting volume on: /var/lib/containers/railwayapp/bind-mounts/0994f327-3b0c-4c46-a5f3-55e101076ec5/vol_37yjwv5ygwbufqrm
+node:internal/modules/esm/resolve:873
+  throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'fs-extra' imported from /bot/index.js
