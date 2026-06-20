@@ -28,6 +28,8 @@ process.on('unhandledRejection', err => logger.error({ err: String(err) }, '💥
 
 // SSE clients
 const sseClients = new Set();
+const latestPairingCodes = new Map(); // sessionId → code
+
 function broadcast(event, data) {
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const res of sseClients) {
@@ -37,7 +39,10 @@ function broadcast(event, data) {
 
 botEvents.on('qr', d => broadcast('qr', d));
 botEvents.on('status', d => broadcast('status', d));
-botEvents.on('pairingCode', d => broadcast('pairingCode', d));
+botEvents.on('pairingCode', d => {
+  latestPairingCodes.set(d.sessionId, d.code);
+  broadcast('pairingCode', d);
+});
 botEvents.on('pairingCodeError', d => broadcast('pairingCodeError', d));
 
 // Helper: strip /api prefix
@@ -94,6 +99,10 @@ async function startServer() {
       for (const [sessionId, status] of sessionStatus) {
         res.write(`event: status\ndata: ${JSON.stringify({ sessionId, status })}\n\n`);
       }
+      // Send any cached pairing codes
+      for (const [sessionId, code] of latestPairingCodes) {
+        res.write(`event: pairingCode\ndata: ${JSON.stringify({ sessionId, code })}\n\n`);
+      }
 
       const keepAlive = setInterval(() => {
         try { res.write(':ping\n\n'); } catch { clearInterval(keepAlive); }
@@ -146,6 +155,15 @@ async function startServer() {
       return;
     }
 
+    // ── Latest pairing code per session (for polling) ─────
+    if (p === '/pairing-code') {
+      const sid = url.searchParams.get('session') || 'default';
+      const code = latestPairingCodes.get(sid);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ code: code || null }));
+      return;
+    }
+
     // ── Create Session ─────────────────────────────────────
     if (p === '/session/create' && req.method === 'POST') {
       let body = '';
@@ -161,7 +179,7 @@ async function startServer() {
             return;
           }
 
-          // If session already exists and connected, return early
+          // If session already exists and connected, return early; otherwise close it
           if (sessions.has(cleanId)) {
             const sock = sessions.get(cleanId);
             if (sock.ws?.readyState === 1) {
@@ -169,10 +187,12 @@ async function startServer() {
               res.end(JSON.stringify({ ok: true, sessionId: cleanId, info: 'Already connected' }));
               return;
             }
-            // Remove stale session first
+            // Close stale session cleanly before recreating
             sessions.delete(cleanId);
+            try { sock.end(new Error('restart')); } catch {}
           }
 
+          latestPairingCodes.delete(cleanId);
           await createSession(cleanId, method === 'pairing', phoneNumber);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, sessionId: cleanId, method }));

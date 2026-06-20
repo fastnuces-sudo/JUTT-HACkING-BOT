@@ -1,5 +1,7 @@
 {
-  "prefix": ["."],
+  "prefix": [
+    "."
+  ],
   "owners": [],
   "sudo": [],
   "maintenanceMode": false,
@@ -8,5 +10,6 @@
   "autoStatusView": false,
   "antiSpam": true,
   "welcomeMessage": true,
-  "antilink": false
+  "antilink": false,
+  "botMode": "private"
 }

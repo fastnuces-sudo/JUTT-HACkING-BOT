@@ -723,10 +723,50 @@ function csErr(msg) {
 }
 
 function csReset() {
-  clearInterval(_csPoll); _csSessId = null;
+  clearInterval(_csPoll); clearInterval(_qrPoll); clearInterval(_codePoll);
+  _csSessId = null;
   csStep('cs-form');
   const btn = document.getElementById('cs-btn');
   btn.disabled = false; btn.textContent = 'Start Bot →';
+}
+
+let _qrPoll = null;
+let _codePoll = null;
+
+function csLoadQR() {
+  if (!_csSessId) return;
+  const img = document.getElementById('cs-qr-img');
+  const ph  = document.getElementById('cs-qr-ph');
+  const url = BASE + '/api/qr-image?session=' + encodeURIComponent(_csSessId) + '&t=' + Date.now();
+  const tmp = new Image();
+  tmp.onload = () => {
+    if (img) { img.src = url; img.style.display = 'block'; }
+    if (ph)  { ph.style.display = 'none'; }
+  };
+  tmp.onerror = () => {};
+  tmp.src = url;
+}
+
+function csStartQRPoll() {
+  clearInterval(_qrPoll);
+  csLoadQR();
+  _qrPoll = setInterval(csLoadQR, 2000);
+}
+
+function csStartCodePoll() {
+  clearInterval(_codePoll);
+  const el = document.getElementById('cs-code');
+  _codePoll = setInterval(async () => {
+    if (!_csSessId) return;
+    try {
+      const r = await fetch(BASE + '/api/pairing-code?session=' + encodeURIComponent(_csSessId));
+      const d = await r.json();
+      if (d.code && el && el.textContent === '----') {
+        el.textContent = d.code;
+        clearInterval(_codePoll);
+      }
+    } catch {}
+  }, 1500);
 }
 
 async function csConnect() {
@@ -749,13 +789,18 @@ async function csConnect() {
       });
       const d = await r.json();
       if (!d.ok) { csErr('❌ ' + (d.error || 'Server error')); btn.disabled = false; btn.textContent = 'Start Bot →'; return; }
+      btn.disabled = false; btn.textContent = 'Start Bot →';
+      document.getElementById('cs-code').textContent = '----';
       csStep('cs-code-step');
+      csStartCodePoll();
       csPollStatus();
     } catch(e) { csErr('❌ ' + e.message); btn.disabled = false; btn.textContent = 'Start Bot →'; }
   } else {
     const sess = (document.getElementById('cs-sess-qr').value.trim() || 'default').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30) || 'default';
     _csSessId = sess;
     csStep('cs-qr-step');
+    document.getElementById('cs-qr-img').style.display = 'none';
+    document.getElementById('cs-qr-ph').style.display = '';
     try {
       const r = await fetch(BASE + '/api/session/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -763,6 +808,7 @@ async function csConnect() {
       });
       const d = await r.json();
       if (!d.ok) { csErr('❌ ' + (d.error || 'Error')); csReset(); return; }
+      csStartQRPoll();
       csPollStatus();
     } catch(e) { csErr('❌ ' + e.message); csReset(); }
     btn.disabled = false; btn.textContent = 'Start Bot →';
@@ -775,9 +821,11 @@ function csPollStatus() {
     try {
       const r = await fetch(BASE + '/api/stats');
       const d = await r.json();
-      const sess = (d.sessions || []).find(s => s.id === _csSessId || s.status === 'connected');
-      if (sess?.status === 'connected') {
+      const sess = (d.sessions || []).find(s => s.id === _csSessId && s.status === 'connected');
+      if (sess) {
         clearInterval(_csPoll);
+        clearInterval(_qrPoll);
+        clearInterval(_codePoll);
         csStep('cs-done-step');
         setTimeout(() => showDash(sess), 1000);
       }
@@ -826,38 +874,47 @@ function connectSSE() {
 
   sse.addEventListener('qr', e => {
     const { sessionId } = JSON.parse(e.data);
-    // Show QR image in connect screen
     if (document.getElementById('screen-connect').style.display !== 'none') {
-      const ph = document.getElementById('cs-qr-ph');
-      const img = document.getElementById('cs-qr-img');
-      if (ph) ph.style.display = 'none';
-      if (img) {
-        img.src = BASE + '/api/qr-image?session=' + encodeURIComponent(sessionId) + '&t=' + Date.now();
-        img.style.display = 'block';
+      // If this QR is for the session we're connecting, load it
+      if (!_csSessId || _csSessId === sessionId) {
+        if (!_csSessId) _csSessId = sessionId;
+        const step = document.getElementById('cs-qr-step');
+        if (step && step.style.display !== 'none') {
+          const ph  = document.getElementById('cs-qr-ph');
+          const img = document.getElementById('cs-qr-img');
+          const src = BASE + '/api/qr-image?session=' + encodeURIComponent(sessionId) + '&t=' + Date.now();
+          if (ph) ph.style.display = 'none';
+          if (img) { img.src = src; img.style.display = 'block'; }
+        }
       }
     }
   });
 
   sse.addEventListener('pairingCode', e => {
-    const { code } = JSON.parse(e.data);
-    const el = document.getElementById('cs-code');
-    if (el) el.textContent = code || '----';
+    const { sessionId, code } = JSON.parse(e.data);
+    if (!_csSessId || _csSessId === sessionId) {
+      const el = document.getElementById('cs-code');
+      if (el && code) { el.textContent = code; clearInterval(_codePoll); }
+    }
   });
 
   sse.addEventListener('pairingCodeError', e => {
-    const { error } = JSON.parse(e.data);
-    csErr('❌ ' + error);
-    csReset();
+    const { sessionId, error } = JSON.parse(e.data);
+    if (!_csSessId || _csSessId === sessionId) {
+      csErr('❌ ' + error);
+      csReset();
+    }
   });
 
   sse.addEventListener('status', e => {
     const d = JSON.parse(e.data);
     if (d.status === 'connected') {
-      // If on connect screen, auto-switch to dashboard
       if (document.getElementById('screen-connect').style.display !== 'none') {
-        clearInterval(_csPoll);
-        csStep('cs-done-step');
-        setTimeout(() => showDash({ phone: d.user?.id?.replace(/@.+/,'') }), 900);
+        if (!_csSessId || _csSessId === d.sessionId) {
+          clearInterval(_csPoll); clearInterval(_qrPoll); clearInterval(_codePoll);
+          csStep('cs-done-step');
+          setTimeout(() => showDash({ phone: d.user?.id?.replace(/@.+/,'') }), 900);
+        }
       }
       loadStats();
     }
