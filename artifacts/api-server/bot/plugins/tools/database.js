@@ -5,7 +5,7 @@ export default {
   alias: ['database', 'dbinfo'],
   description: 'Show database statistics',
   category: 'tools',
-  sudoOnly: true,
+  ownerOnly: true,
   async execute({ reply, args }) {
     if (args[0] === 'reload') {
       db.reload();

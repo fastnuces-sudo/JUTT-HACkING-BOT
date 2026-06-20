@@ -1,21 +1,21 @@
 export default {
-  command: 'delsudo',
-  alias: ['removesudo'],
-  description: 'Remove a sudo user (owner only)',
+  command: 'delowner',
+  alias: ['delsudo', 'delop', 'removeowner'],
+  description: 'Remove a bot owner',
   category: 'owner',
   ownerOnly: true,
   async execute({ reply, args, msg, db }) {
     const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const targets = mentions.length ? mentions.map(j => j.split('@')[0]) : args;
-    if (!targets.length) return reply('❌ Usage: .delsudo @user or .delsudo number');
+    if (!targets.length) return reply('❌ Usage: .delowner @user\nor .delowner 923001234567');
     const settings = db.settings.get();
-    let sudo = settings.sudo || [];
+    let owners = settings.owners || [];
     const removed = [];
     for (const t of targets) {
-      const num = t.split('@')[0].replace(/[^0-9]/g, '');
-      if (sudo.includes(num)) { sudo = sudo.filter(s => s !== num); removed.push(num); }
+      const num = t.replace(/[^0-9]/g, '');
+      if (num && owners.includes(num)) { owners = owners.filter(o => o !== num); removed.push(num); }
     }
-    db.settings.setValue('sudo', sudo);
-    reply(`✅ *Sudo Updated*\n\n➖ Removed: ${removed.map(n => `+${n}`).join(', ') || 'none found'}\n👑 Remaining Sudo: ${sudo.length}`);
+    db.settings.setValue('owners', owners);
+    reply(`✅ *Owner Removed!*\n\n👑 Removed: +${removed.join(', +')||'none found'}\n👑 Remaining Owners: ${owners.length}`);
   },
 };

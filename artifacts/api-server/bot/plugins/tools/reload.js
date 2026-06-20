@@ -5,7 +5,7 @@ export default {
   alias: ['reloadplugins', 'refreshplugins'],
   description: 'Reload all bot plugins',
   category: 'tools',
-  sudoOnly: true,
+  ownerOnly: true,
   async execute({ reply }) {
     await reply('⏳ Reloading plugins...');
     try {

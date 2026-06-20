@@ -3,7 +3,7 @@ export default {
   alias: ['addowner'],
   description: 'Add a permanent bot owner',
   category: 'owner',
-  sudoOnly: true,
+  ownerOnly: true,
   async execute({ reply, args, msg, db }) {
     const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const targets = mentions.length ? mentions.map(j => j.split('@')[0]) : args;

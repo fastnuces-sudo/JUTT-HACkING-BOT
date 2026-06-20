@@ -6,7 +6,7 @@ export default {
   alias: ['sysinfo', 'server'],
   description: 'Show system resource usage',
   category: 'tools',
-  sudoOnly: true,
+  ownerOnly: true,
   async execute({ reply }) {
     const totalMem = os.totalmem();
     const freeMem = os.freemem();

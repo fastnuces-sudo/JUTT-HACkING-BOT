@@ -7,7 +7,7 @@ export default {
   alias: ['sessions', 'allsessions'],
   description: 'Show all connected WhatsApp sessions',
   category: 'owner',
-  sudoOnly: true,
+  ownerOnly: true,
   async execute({ reply }) {
     const allSessions = getAllSessions();
     if (!allSessions.length) return reply('📱 No active sessions found.');

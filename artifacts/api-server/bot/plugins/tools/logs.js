@@ -10,7 +10,7 @@ export default {
   alias: ['log', 'viewlogs'],
   description: 'View recent bot logs',
   category: 'tools',
-  sudoOnly: true,
+  ownerOnly: true,
   async execute({ reply, args }) {
     const lines = Math.min(parseInt(args[0]) || 20, 50);
     try {

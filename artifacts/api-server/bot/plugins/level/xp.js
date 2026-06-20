@@ -3,7 +3,7 @@ export default {
   alias: ['givexp', 'addxp'],
   description: 'Give XP to a user (sudo only)',
   category: 'level',
-  sudoOnly: true,
+  ownerOnly: true,
   async execute({ reply, msg, args, db }) {
     const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     if (!mentions.length || !args[1]) return reply('❌ Usage: .xp @user [amount]');

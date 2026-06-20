@@ -5,7 +5,6 @@ export const config = {
   version: '3.0.0',
   prefix: ['.', '!', '#'],
   owners: [],
-  sudo: [],
   sessionDir: './bot/session',
   databaseDir: './bot/database',
   logsDir: './bot/logs',

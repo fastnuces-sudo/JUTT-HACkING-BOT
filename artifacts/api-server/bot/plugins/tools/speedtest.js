@@ -5,7 +5,7 @@ export default {
   alias: ['speed', 'netspeed'],
   description: 'Test bot internet speed',
   category: 'tools',
-  sudoOnly: true,
+  ownerOnly: true,
   async execute({ reply }) {
     await reply('⏳ Running speed test...');
     const testUrl = 'https://speed.cloudflare.com/__down?bytes=1000000';

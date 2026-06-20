@@ -1,21 +1,21 @@
 export default {
-  command: 'addsudo',
-  alias: ['addowner'],
-  description: 'Add a sudo user (owner only)',
+  command: 'addowner',
+  alias: ['addsudo', 'addop'],
+  description: 'Add a bot owner',
   category: 'owner',
   ownerOnly: true,
   async execute({ reply, args, msg, db }) {
     const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const targets = mentions.length ? mentions.map(j => j.split('@')[0]) : args;
-    if (!targets.length) return reply('❌ Usage: .addsudo @user or .addsudo number');
+    if (!targets.length) return reply('❌ Usage: .addowner @user\nor .addowner 923001234567');
     const settings = db.settings.get();
-    const sudo = settings.sudo || [];
+    const owners = settings.owners || [];
     const added = [];
     for (const t of targets) {
-      const num = t.split('@')[0].replace(/[^0-9]/g, '');
-      if (!sudo.includes(num)) { sudo.push(num); added.push(num); }
+      const num = t.replace(/[^0-9]/g, '');
+      if (num && !owners.includes(num)) { owners.push(num); added.push(num); }
     }
-    db.settings.setValue('sudo', sudo);
-    reply(`✅ *Sudo Users Updated*\n\n➕ Added: ${added.map(n => `+${n}`).join(', ') || 'none (already sudo)'}\n👑 Total Sudo: ${sudo.length}`);
+    db.settings.setValue('owners', owners);
+    reply(`✅ *Owner Added!*\n\n👑 +${added.join(', +')} added as owner\n👑 Total Owners: ${owners.length}\n\nThey now have full bot access.`);
   },
 };

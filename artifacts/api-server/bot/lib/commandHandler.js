@@ -1,4 +1,4 @@
-import { parseCommand, isGroup, sleep } from './helper.js';
+import { parseCommand, isGroup } from './helper.js';
 import { getPlugin } from './pluginLoader.js';
 import { db } from './database.js';
 import { logger } from './logger.js';
@@ -7,16 +7,11 @@ import config from '../config.js';
 const cooldowns = new Map();
 const spamTracker = new Map();
 
-function isOwner(jid) {
+export function isOwner(jid) {
   const settings = db.settings.get();
-  const owners = settings.owners || [];
-  return owners.includes(jid.split('@')[0]) || owners.includes(jid);
-}
-
-function isSudo(jid) {
-  const settings = db.settings.get();
-  const sudo = settings.sudo || [];
-  return sudo.includes(jid.split('@')[0]) || sudo.includes(jid) || isOwner(jid);
+  const owners = settings.owners || config.owners || [];
+  const num = jid.split('@')[0];
+  return owners.includes(num) || owners.includes(jid);
 }
 
 function isBanned(jid) {
@@ -28,15 +23,12 @@ function checkSpam(jid) {
   const now = Date.now();
   const window = config.spamInterval * 1000;
   const entry = spamTracker.get(jid) || { count: 0, first: now };
-
   if (now - entry.first > window) {
     spamTracker.set(jid, { count: 1, first: now });
     return false;
   }
-
   entry.count++;
   spamTracker.set(jid, entry);
-
   return entry.count > config.spamMax;
 }
 
@@ -44,11 +36,9 @@ function checkCooldown(jid, command) {
   const key = `${jid}:${command}`;
   const now = Date.now();
   const lastUsed = cooldowns.get(key);
-
   if (lastUsed && now - lastUsed < config.cooldown * 1000) {
     return config.cooldown - Math.floor((now - lastUsed) / 1000);
   }
-
   cooldowns.set(key, now);
   return 0;
 }
@@ -56,7 +46,6 @@ function checkCooldown(jid, command) {
 export async function getMessageText(msg) {
   const m = msg.message;
   if (!m) return '';
-
   return (
     m.conversation ||
     m.extendedTextMessage?.text ||
@@ -99,8 +88,9 @@ export async function handleMessage(sock, msg, sessionId) {
   const fromMe = msg.key.fromMe;
   const isGroupMsg = isGroup(jid);
   const settings = db.settings.get();
+  const owner = isOwner(senderJid);
 
-  if (settings.maintenanceMode && !isSudo(senderJid)) {
+  if (settings.maintenanceMode && !owner) {
     if (fromMe) return;
     await reply(sock, msg, config.maintenanceMsg).catch(() => {});
     return;
@@ -116,8 +106,7 @@ export async function handleMessage(sock, msg, sessionId) {
   const parsed = parseCommand(text);
   if (!parsed) {
     if (!fromMe) {
-      const { addXP } = db.users;
-      const result = db.users.addXP(senderJid, config.xpPerMessage);
+      db.users.addXP(senderJid, config.xpPerMessage);
       db.users.set(senderJid, { lastSeen: Date.now(), deviceSource: sessionId });
     }
     return;
@@ -125,14 +114,14 @@ export async function handleMessage(sock, msg, sessionId) {
 
   const { command, args, text: argText } = parsed;
 
-  if (isBanned(senderJid) && !isSudo(senderJid)) {
+  if (isBanned(senderJid) && !owner) {
     await reply(sock, msg, '❌ You are banned from using this bot.').catch(() => {});
     return;
   }
 
-  if (!isSudo(senderJid) && settings.antiSpam) {
+  if (!owner && settings.antiSpam) {
     if (checkSpam(senderJid)) {
-      await reply(sock, msg, '⚠️ Slow down! You are sending commands too fast.').catch(() => {});
+      await reply(sock, msg, '⚠️ Slow down! Too many commands at once.').catch(() => {});
       return;
     }
   }
@@ -141,18 +130,13 @@ export async function handleMessage(sock, msg, sessionId) {
   if (!plugin) return;
 
   const cooldownLeft = checkCooldown(senderJid, command);
-  if (cooldownLeft > 0 && !isSudo(senderJid)) {
-    await reply(sock, msg, `⏳ Please wait *${cooldownLeft}s* before using this command again.`).catch(() => {});
+  if (cooldownLeft > 0 && !owner) {
+    await reply(sock, msg, `⏳ Wait *${cooldownLeft}s* before using this command again.`).catch(() => {});
     return;
   }
 
-  if (plugin.ownerOnly && !isOwner(senderJid)) {
-    await reply(sock, msg, '🔒 This command is restricted to bot owners only.').catch(() => {});
-    return;
-  }
-
-  if (plugin.sudoOnly && !isSudo(senderJid)) {
-    await reply(sock, msg, '🔒 This command is restricted to sudo users.').catch(() => {});
+  if (plugin.ownerOnly && !owner) {
+    await reply(sock, msg, '🔒 This command is for bot owners only.').catch(() => {});
     return;
   }
 
@@ -172,7 +156,7 @@ export async function handleMessage(sock, msg, sessionId) {
       const admins = groupMeta.participants
         .filter(p => p.admin)
         .map(p => p.id);
-      if (!admins.includes(senderJid) && !isSudo(senderJid)) {
+      if (!admins.includes(senderJid) && !owner) {
         await reply(sock, msg, '👮 This command is for group admins only.').catch(() => {});
         return;
       }
@@ -194,8 +178,8 @@ export async function handleMessage(sock, msg, sessionId) {
     args,
     text: argText,
     sessionId,
-    isOwner: isOwner(senderJid),
-    isSudo: isSudo(senderJid),
+    isOwner: owner,
+    isSudo: owner,
     reply: (text, opts) => reply(sock, msg, text, opts),
     react: (emoji) => react(sock, msg, emoji),
     send: (text, opts) => sendMsg(sock, jid, text, opts),
@@ -208,7 +192,6 @@ export async function handleMessage(sock, msg, sessionId) {
   try {
     logger.info({ command, sessionId, sender: senderJid.split('@')[0] }, 'Command executed');
     await plugin.execute(ctx);
-
     db.users.addXP(senderJid, config.xpPerCommand);
     db.users.set(senderJid, {
       commandsUsed: (db.users.get(senderJid).commandsUsed || 0) + 1,
@@ -226,4 +209,4 @@ export async function handleMessage(sock, msg, sessionId) {
   }
 }
 
-export default { handleMessage, reply, sendMsg, react, getMessageText, isOwner, isSudo };
+export default { handleMessage, reply, sendMsg, react, getMessageText, isOwner };
