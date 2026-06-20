@@ -1,1 +1,32 @@
-{}
+{
+  "149534051196996@lid": {
+    "id": "149534051196996@lid",
+    "name": "AAKWB",
+    "xp": 10,
+    "level": 1,
+    "balance": 1000,
+    "commandsUsed": 1,
+    "lastDaily": null,
+    "dailyStreak": 0,
+    "warnings": 0,
+    "banned": false,
+    "createdAt": 1781949273027,
+    "inventory": [],
+    "lastSeen": 1781949273041
+  },
+  "74565564784701@lid": {
+    "id": "74565564784701@lid",
+    "name": "AA Mods Services",
+    "xp": 30,
+    "level": 1,
+    "balance": 1000,
+    "commandsUsed": 3,
+    "lastDaily": null,
+    "dailyStreak": 0,
+    "warnings": 0,
+    "banned": false,
+    "createdAt": 1781949387216,
+    "inventory": [],
+    "lastSeen": 1781949476795
+  }
+}
