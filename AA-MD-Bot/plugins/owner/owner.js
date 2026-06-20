@@ -13,25 +13,22 @@ export default {
   usage: '.owner',
 
   async execute({ reply, sock, jid, msg }) {
-    const ownerNum = (config.ownerNumber?.[0] || '').replace(/\D/g, '');
-    const waLink   = ownerNum ? `wa.me/${ownerNum}` : 'Not set';
+    const ownerNum = (config.superOwner || config.ownerNumber?.[0] || '').replace(/\D/g, '');
+    const waLink   = ownerNum ? `https://wa.me/${ownerNum}` : 'Not set';
+    const waNum    = ownerNum ? `+${ownerNum}` : 'Not set';
 
     const text =
-      `👑 *Bot Owner / Developer*\n\n` +
+      `╔══════════════════════════╗\n` +
+      `║  👑 *AA MD Bot — Owner*  ║\n` +
+      `╚══════════════════════════╝\n\n` +
       `👤 *Name:* ${config.ownerName || config.developer}\n` +
       `🏢 *Brand:* ${config.brand}\n` +
-      `📱 *WhatsApp:* ${waLink}\n` +
-      `🤖 *Bot:* ${config.botName}\n` +
-      `🔖 *Version:* ${config.version}\n\n` +
-      `💬 Contact the owner for support, features, or custom bots!\n\n` +
-      `🌐 ${config.channelLink || 'https://aa-mods.vercel.app/'}`;
+      `📱 *Number:* ${waNum}\n` +
+      `🔗 *WhatsApp:* ${waLink}\n` +
+      `🤖 *Bot:* ${config.botName} v${config.version}\n\n` +
+      `💬 _Contact for support, custom bots & features_\n\n` +
+      `🌐 https://aa-mods.vercel.app/`;
 
-    await sock.sendMessage(jid, {
-      text,
-      contextInfo: {
-        forwardingScore: 1,
-        isForwarded: true,
-      },
-    }, { quoted: msg });
+    await reply(text);
   },
 };

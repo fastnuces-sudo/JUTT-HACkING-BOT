@@ -157,8 +157,12 @@ a { text-decoration: none; color: inherit; }
 
 /* Section */
 .section { margin-bottom: 28px; }
-.section-head { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.section-head { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.section-head:hover { color: var(--text); }
 .section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.section-toggle { font-size: 10px; margin-left: 2px; opacity: .6; transition: transform .25s; flex-shrink: 0; }
+.section-body { overflow: hidden; transition: max-height .3s ease, opacity .25s ease; }
+.section-body.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
 
 /* Quick commands */
 .cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 8px; }
@@ -426,100 +430,112 @@ a { text-decoration: none; color: inherit; }
 
     <!-- Quick Start -->
     <div class="section">
-      <div class="section-head">⚡ Quick Start Commands</div>
-      <div class="cmd-grid" id="quick-grid"></div>
-      <p style="font-size:11px;color:var(--muted);margin-top:8px">💡 Click any command to copy it, then paste in WhatsApp</p>
+      <div class="section-head" onclick="toggleSection('quick-body')">⚡ Quick Start Commands <span class="section-toggle" id="toggle-quick-body">▼</span></div>
+      <div class="section-body" id="quick-body" style="max-height:600px">
+        <div class="cmd-grid" id="quick-grid"></div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">💡 Click any command to copy it, then paste in WhatsApp</p>
+      </div>
     </div>
 
     <!-- Islamic -->
     <div class="section">
-      <div class="section-head">☪️ Islamic Commands</div>
-      <div class="islamic-card">
-        <div class="islamic-head">
-          <span style="font-size:28px">☪️</span>
-          <div>
-            <div class="islamic-title">Islamic Commands Panel</div>
-            <div class="islamic-sub">Duas, Zikr, Hadiths, Kalimas, Adhkar &amp; more</div>
+      <div class="section-head" onclick="toggleSection('islamic-body')">☪️ Islamic Commands <span class="section-toggle" id="toggle-islamic-body">▼</span></div>
+      <div class="section-body collapsed" id="islamic-body" style="max-height:1200px">
+        <div class="islamic-card">
+          <div class="islamic-head">
+            <span style="font-size:28px">☪️</span>
+            <div>
+              <div class="islamic-title">Islamic Commands Panel</div>
+              <div class="islamic-sub">Duas, Zikr, Hadiths, Kalimas, Adhkar &amp; more</div>
+            </div>
+            <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel" style="margin-left:auto;font-size:12px;padding:7px 14px">📢 Channel</a>
           </div>
-          <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel" style="margin-left:auto;font-size:12px;padding:7px 14px">📢 Channel</a>
-        </div>
-        <div class="islamic-sections" id="islamic-grid"></div>
-        <div style="margin-top:14px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
-          <span>💡</span> Type <code style="color:var(--green);font-size:11px">.islamic_menu</code> in WhatsApp to see the full list with a banner image
+          <div class="islamic-sections" id="islamic-grid"></div>
+          <div style="margin-top:14px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
+            <span>💡</span> Type <code style="color:var(--green);font-size:11px">.islamic_menu</code> in WhatsApp for full list
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Media -->
     <div class="section">
-      <div class="section-head">🎬 Media Commands — Details First, Then File</div>
-      <div class="media-grid">
-        <div class="media-flow">
-          <div class="media-flow-details">
-            <div class="media-flow-title">🎵 Play Audio — .play / .song</div>
-            <div class="media-flow-meta"><span>YouTube</span><span>yt-dlp</span><span>MP3</span></div>
-            <div class="media-flow-desc">Search by name or paste a YouTube URL. Bot shows info card (title, duration, thumbnail) then sends the MP3. <strong style="color:var(--green)">.play</strong> and <strong style="color:var(--green)">.song</strong> are identical.</div>
-            <div style="margin-top:8px;font-size:11px;color:var(--green)">.play Tum Hi Ho &nbsp;|&nbsp; .song Faded Alan Walker</div>
+      <div class="section-head" onclick="toggleSection('media-body')">🎬 Media Commands <span class="section-toggle" id="toggle-media-body">▼</span></div>
+      <div class="section-body collapsed" id="media-body" style="max-height:800px">
+        <div class="media-grid">
+          <div class="media-flow">
+            <div class="media-flow-details">
+              <div class="media-flow-title">🎵 Play Audio — .play / .song</div>
+              <div class="media-flow-meta"><span>YouTube</span><span>yt-dlp</span><span>MP3</span></div>
+              <div class="media-flow-desc">Search by name or paste a YouTube URL. Bot shows info card then sends the MP3. <strong style="color:var(--green)">.play</strong> and <strong style="color:var(--green)">.song</strong> are identical.</div>
+              <div style="margin-top:8px;font-size:11px;color:var(--green)">.play Tum Hi Ho &nbsp;|&nbsp; .song Faded Alan Walker</div>
+            </div>
+            <div class="media-flow-player">🎵 Audio plays here — info card first</div>
           </div>
-          <div class="media-flow-player">🎵 Audio plays here — info card always comes first</div>
-        </div>
-        <div class="media-flow">
-          <div class="media-flow-details">
-            <div class="media-flow-title">📹 Video — .video / .yt / .ytmp4</div>
-            <div class="media-flow-meta"><span>MP4</span><span>Max 10 min</span><span>64 MB</span></div>
-            <div class="media-flow-desc">Bot sends a <strong style="color:var(--text)">details card</strong> (title, size, thumbnail) first, then the actual video file. Alias: <code style="color:var(--green)">.ytmp4</code> also works.</div>
+          <div class="media-flow">
+            <div class="media-flow-details">
+              <div class="media-flow-title">📹 Video — .video / .yt / .ytmp4</div>
+              <div class="media-flow-meta"><span>MP4</span><span>Max 10 min</span><span>64 MB</span></div>
+              <div class="media-flow-desc">Bot sends a <strong style="color:var(--text)">details card</strong> (title, size, thumbnail) first, then the actual video file.</div>
+            </div>
+            <div class="media-flow-player">🎬 Video plays here — details first</div>
           </div>
-          <div class="media-flow-player">🎬 Video plays here — details always come first</div>
-        </div>
-        <div class="media-flow">
-          <div class="media-flow-details">
-            <div class="media-flow-title">👁️ Reveal View-Once — .reveal / .rv</div>
-            <div class="media-flow-meta"><span>Images</span><span>Videos</span><span>Groups &amp; DMs</span></div>
-            <div class="media-flow-desc">Reply to any view-once message with <code style="color:var(--green)">.reveal</code> to get it as normal media. Auto-reveal via <code style="color:var(--green)">.antiviewonce on</code>.</div>
+          <div class="media-flow">
+            <div class="media-flow-details">
+              <div class="media-flow-title">👁️ Reveal View-Once — .reveal / .rv</div>
+              <div class="media-flow-meta"><span>Images</span><span>Videos</span><span>Groups &amp; DMs</span></div>
+              <div class="media-flow-desc">Reply to any view-once message with <code style="color:var(--green)">.reveal</code> to get it as normal media.</div>
+            </div>
+            <div class="media-flow-player">👁️ View-once revealed as normal media</div>
           </div>
-          <div class="media-flow-player">👁️ View-once revealed as normal media</div>
         </div>
       </div>
     </div>
 
     <!-- All Categories -->
     <div class="section">
-      <div class="section-head">📦 All Command Categories</div>
-      <div class="cat-grid" id="cat-grid"></div>
+      <div class="section-head" onclick="toggleSection('cats-body')">📦 All Command Categories <span class="section-toggle" id="toggle-cats-body">▼</span></div>
+      <div class="section-body collapsed" id="cats-body" style="max-height:2000px">
+        <div class="cat-grid" id="cat-grid"></div>
+      </div>
     </div>
 
     <!-- Bot Mode -->
     <div class="section">
-      <div class="section-head">🔀 Bot Mode — Private / Public</div>
-      <div class="mode-cards">
-        <div class="mode-info-card mode-private" onclick="copyCmd('.mode private')" title="Click to copy">
-          <div class="mode-info-icon">🔒</div>
-          <div class="mode-info-title">Private Mode</div>
-          <div class="mode-info-desc">Only <strong>You (self-chat)</strong> can use commands. Perfect for personal use — no one else can trigger the bot.</div>
-          <code class="mode-info-cmd">.mode private</code>
+      <div class="section-head" onclick="toggleSection('mode-body')">🔀 Bot Mode <span class="section-toggle" id="toggle-mode-body">▼</span></div>
+      <div class="section-body collapsed" id="mode-body" style="max-height:400px">
+        <div class="mode-cards">
+          <div class="mode-info-card mode-private" onclick="copyCmd('.mode private')" title="Click to copy">
+            <div class="mode-info-icon">🔒</div>
+            <div class="mode-info-title">Private Mode</div>
+            <div class="mode-info-desc">Only <strong>You (self-chat)</strong> can use commands. Perfect for personal use.</div>
+            <code class="mode-info-cmd">.mode private</code>
+          </div>
+          <div class="mode-info-card mode-public" onclick="copyCmd('.mode public')" title="Click to copy">
+            <div class="mode-info-icon">🌐</div>
+            <div class="mode-info-title">Public Mode</div>
+            <div class="mode-info-desc">Everyone can use commands — any number that messages the bot gets a response.</div>
+            <code class="mode-info-cmd">.mode public</code>
+          </div>
         </div>
-        <div class="mode-info-card mode-public" onclick="copyCmd('.mode public')" title="Click to copy">
-          <div class="mode-info-icon">🌐</div>
-          <div class="mode-info-title">Public Mode</div>
-          <div class="mode-info-desc">Everyone can use commands — any number that messages the bot gets a response. Current default.</div>
-          <code class="mode-info-cmd">.mode public</code>
-        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">
+          💡 In <strong style="color:var(--text)">Private mode</strong>, only your "You" chat responds. Click a card to copy the command.
+        </p>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin-top:8px">
-        💡 In <strong style="color:var(--text)">Private mode</strong>, only your "Message yourself" (You) chat responds to commands — great for personal automation. Click a card to copy the command.
-      </p>
     </div>
 
     <!-- Settings -->
     <div class="section">
-      <div class="section-head">⚙️ Bot Settings — Control via WhatsApp</div>
-      <div class="settings-ref">
-        <div style="font-size:13px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-          <span>ℹ️</span>
-          All settings are controlled <strong style="color:var(--text)">directly via WhatsApp commands</strong> — no separate admin panel needed.
-          Type <code style="color:var(--green);font-size:12px">.bs</code> in WhatsApp for the full settings panel.
+      <div class="section-head" onclick="toggleSection('settings-body')">⚙️ Bot Settings <span class="section-toggle" id="toggle-settings-body">▼</span></div>
+      <div class="section-body collapsed" id="settings-body" style="max-height:1200px">
+        <div class="settings-ref">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            <span>ℹ️</span>
+            All settings controlled <strong style="color:var(--text)">via WhatsApp commands</strong>.
+            Type <code style="color:var(--green);font-size:12px">.bs</code> for full settings panel.
+          </div>
+          <div class="settings-grid-ref" id="settings-grid"></div>
         </div>
-        <div class="settings-grid-ref" id="settings-grid"></div>
       </div>
     </div>
 
@@ -676,6 +692,20 @@ function renderStatic() {
 }
 
 function esc(s) { return s.replace(/'/g, "\\'"); }
+
+function toggleSection(bodyId) {
+  const body = document.getElementById(bodyId);
+  const arrow = document.getElementById('toggle-' + bodyId);
+  if (!body) return;
+  const isCollapsed = body.classList.contains('collapsed');
+  if (isCollapsed) {
+    body.classList.remove('collapsed');
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
+  } else {
+    body.classList.add('collapsed');
+    if (arrow) arrow.style.transform = 'rotate(-90deg)';
+  }
+}
 
 let _copyTimer = null;
 function copyCmd(txt, el) {

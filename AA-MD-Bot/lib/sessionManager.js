@@ -290,6 +290,15 @@ export async function deleteSession(sessionId) {
 
 export function getSession(id = 'default') { return sessions.get(id); }
 
+export function isConnectedSessionOwner(jid) {
+  const num = jid?.split('@')[0]?.split(':')[0];
+  for (const [, sock] of sessions.entries()) {
+    const sessNum = sock.user?.id?.split('@')[0]?.split(':')[0];
+    if (sessNum && sessNum === num) return true;
+  }
+  return false;
+}
+
 export function getAllSessions() {
   // Merge live sessions + any known sessions currently reconnecting/connecting
   const all = new Map();

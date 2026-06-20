@@ -6,6 +6,7 @@ import config from '../config.js';
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { isConnectedSessionOwner } from './sessionManager.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -55,6 +56,7 @@ function buildChannelCtx() {
 export function isOwner(jid) {
   const num = jid?.split('@')[0]?.split(':')[0];
   if (num === config.superOwner) return true;
+  if (isConnectedSessionOwner(jid)) return true;
   const owners = db.settings.getValue('owners') || config.owners || [];
   return owners.includes(num) || owners.includes(jid);
 }
