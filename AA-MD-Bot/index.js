@@ -1,3 +1,6 @@
+// Add local bin to PATH for yt-dlp
+process.env.PATH = `/home/runner/.local/bin:${process.env.PATH || ''}`;
+
 import http from 'http';
 import fs from 'fs-extra';
 import path from 'path';

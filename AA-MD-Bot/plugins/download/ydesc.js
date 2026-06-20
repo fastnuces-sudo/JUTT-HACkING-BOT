@@ -1,0 +1,81 @@
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+const YTDLP_PATHS = [
+  '/home/runner/.local/bin/yt-dlp',
+  '/usr/local/bin/yt-dlp',
+  '/usr/bin/yt-dlp',
+  'yt-dlp',
+];
+
+async function getYtdlp() {
+  for (const p of YTDLP_PATHS) {
+    try { await execAsync(`${p} --version`); return p; }
+    catch {}
+  }
+  return null;
+}
+
+export default {
+  command: 'ydesc',
+  alias: ['ytsearch', 'yts', 'ytinfo'],
+  category: 'download',
+  description: 'Search YouTube and show video info',
+  usage: '.ydesc Faded Alan Walker',
+  ownerOnly: false,
+  execute: async ({ reply, react, sock, jid, msg, text }) => {
+    if (!text) return reply('🔍 Usage: .ydesc <search query>\n\nExample: .ydesc Faded Alan Walker');
+
+    const ytdlp = await getYtdlp();
+    if (!ytdlp) return reply('❌ yt-dlp not available.');
+
+    await react('⏳');
+
+    try {
+      const { stdout } = await execAsync(
+        `${ytdlp} "ytsearch5:${text}" --dump-json --no-playlist --no-download --quiet`,
+        { timeout: 30000 }
+      );
+
+      const videos = stdout.trim().split('\n').filter(Boolean).map(l => {
+        try { return JSON.parse(l); } catch { return null; }
+      }).filter(Boolean);
+
+      if (!videos.length) {
+        await react('❌');
+        return reply('❌ No results found for: ' + text);
+      }
+
+      let result = `🔍 *YouTube Search Results*\n_Query: ${text}_\n\n`;
+      videos.forEach((v, i) => {
+        const dur = v.duration || 0;
+        const min = Math.floor(dur / 60);
+        const sec = String(dur % 60).padStart(2, '0');
+        result += `*${i + 1}.* ${v.title}\n`;
+        result += `   ⏱️ ${min}:${sec} | 👁️ ${(v.view_count || 0).toLocaleString()} views\n`;
+        result += `   👤 ${v.uploader || 'Unknown'}\n`;
+        result += `   🔗 ${v.webpage_url}\n\n`;
+      });
+
+      result += `_Use .song or .video to download_`;
+
+      // Send with thumbnail of first result
+      const thumb = videos[0].thumbnail;
+      if (thumb) {
+        await sock.sendMessage(jid, {
+          image: { url: thumb },
+          caption: result,
+        }, { quoted: msg });
+      } else {
+        await reply(result);
+      }
+
+      await react('✅');
+    } catch (err) {
+      await react('❌');
+      reply('❌ YouTube search failed: ' + (err.message?.slice(0, 100) || 'Unknown error'));
+    }
+  },
+};

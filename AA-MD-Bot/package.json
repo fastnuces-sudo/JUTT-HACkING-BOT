@@ -8,7 +8,12 @@
     "start": "node index.js",
     "dev": "node index.js"
   },
-  "keywords": ["whatsapp", "bot", "md", "baileys"],
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "md",
+    "baileys"
+  ],
   "author": "Ahsan Ali Wadani (AA Mods)",
   "license": "MIT",
   "dependencies": {
@@ -24,6 +29,7 @@
     "node-cache": "^5.1.2",
     "pino": "^9.4.0",
     "qrcode": "^1.5.4",
-    "qrcode-terminal": "^0.12.0"
+    "qrcode-terminal": "^0.12.0",
+    "yt-dlp-wrap": "^2.3.12"
   }
 }
