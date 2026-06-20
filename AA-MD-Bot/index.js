@@ -74,10 +74,22 @@ async function startServer() {
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost`);
-    const p = stripApi(url.pathname);
 
     // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // ── Bare /api → health (for deployment healthcheck) ────
+    if (url.pathname === '/api' || url.pathname === '/api/') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'ok', bot: config.botName, version: config.version,
+        uptime: formatDuration(Date.now() - startTime),
+        sessions: getAllSessions().length, plugins: plugins.size,
+      }));
+      return;
+    }
+
+    const p = stripApi(url.pathname);
 
     // ── Dashboard HTML ─────────────────────────────────────
     if (p === '/' || p === '' || p === '/dashboard') {
