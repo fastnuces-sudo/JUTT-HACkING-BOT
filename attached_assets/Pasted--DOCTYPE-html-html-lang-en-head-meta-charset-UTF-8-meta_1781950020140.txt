@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AA MD Bot</title>
+<style>
+:root{--bg:#0b0f1a;--card:#111827;--border:#1e2a3a;--green:#25d366;--green2:#128c7e;--text:#e0e6f0;--muted:#6b7280;--red:#ef4444;--yellow:#fbbf24;--blue:#3b82f6;--sidebar:220px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button{cursor:pointer;font-family:inherit}
+input,select,textarea{font-family:inherit}
+
+/* ── Connect / Landing Screen ── */
+.connect-screen{min-height:100vh;display:flex;align-items:stretch}
+
+/* About panel — full width by default on ALL devices */
+.connect-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:60px 48px;background:radial-gradient(ellipse at 20% 50%,#0d2a1a 0%,var(--bg) 65%)}
+.connect-logo{display:flex;align-items:center;gap:14px;margin-bottom:32px}
+.connect-logo img{width:56px;height:56px;border-radius:50%;object-fit:cover;box-shadow:0 0 24px rgba(37,211,102,.45)}
+.connect-logo-title{font-size:24px;font-weight:800;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.connect-hero h1{font-size:44px;font-weight:900;line-height:1.12;margin-bottom:16px}
+.connect-hero h1 span{background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.connect-hero p{font-size:15px;color:var(--muted);line-height:1.75;margin-bottom:36px;max-width:480px}
+.features-list{display:flex;flex-direction:column;gap:10px}
+.feature-item{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.feature-icon{width:30px;height:30px;background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+
+/* CTA button — visible on ALL devices */
+.btn-cta-connect{display:flex;margin-top:40px;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:14px;padding:16px 36px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;transition:opacity .2s,transform .15s;box-shadow:0 8px 28px rgba(37,211,102,.35);align-items:center;gap:10px;width:fit-content}
+.btn-cta-connect:hover{opacity:.9;transform:translateY(-2px)}
+
+/* Connect form panel — HIDDEN by default on ALL devices */
+.connect-right{display:none}
+
+/* ── Panel Open: hide About, show Connect form — ALL devices ── */
+.connect-screen.panel-open{background:radial-gradient(ellipse at 50% 40%,#0d2a1a 0%,var(--bg) 65%);justify-content:center}
+.connect-screen.panel-open .connect-left{display:none!important}
+.connect-screen.panel-open .connect-right{display:flex!important;flex-direction:column;justify-content:center;min-height:100vh;width:100%;padding:40px 24px}
+
+/* Back button — hidden until panel-open */
+.btn-back-to-about{display:none}
+.connect-screen.panel-open .btn-back-to-about{display:inline-flex!important;align-items:center;gap:6px;background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0;margin-bottom:28px;transition:color .2s}
+.connect-screen.panel-open .btn-back-to-about:hover{color:var(--text)}
+
+/* Connect card — centered, max width */
+.connect-card{width:100%;max-width:480px;margin:0 auto}
+.connect-card h2{font-size:20px;font-weight:800;margin-bottom:4px}
+.connect-card .sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.mode-toggle{display:flex;background:#1a2233;border-radius:10px;padding:4px;margin-bottom:20px;gap:4px}
+.mode-btn{flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);background:transparent;transition:all .2s}
+.mode-btn.active{background:var(--green);color:#fff;font-weight:700}
+.form-label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.form-input{width:100%;background:#1a2233;border:1px solid var(--border);border-radius:10px;padding:13px 15px;font-size:15px;color:var(--text);outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(37,211,102,.1)}
+.form-input::placeholder{color:#374151}
+.form-hint{font-size:12px;color:var(--muted);margin-top:5px}
+.qr-note{background:#0d1525;border:1px solid #1e3a5f;border-radius:9px;padding:12px 14px;font-size:13px;color:#93c5fd;line-height:1.8}
+.btn-connect{width:100%;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;color:#fff;margin-top:16px;transition:opacity .2s,transform .1s}
+.btn-connect:hover{opacity:.9;transform:translateY(-1px)}
+.btn-connect:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.connect-error{background:#1a0909;border:1px solid #7f1d1d;border-radius:8px;padding:10px 13px;font-size:13px;color:#fca5a5;margin-top:12px;display:none}
+
+/* ── Pairing step ── */
+.step-pair{display:none}
+.code-box{text-align:center;background:#0d1525;border:2px solid rgba(37,211,102,.25);border-radius:14px;padding:24px 20px;margin:16px 0}
+.code-digits{font-family:'Courier New',monospace;font-size:36px;font-weight:700;letter-spacing:7px;color:var(--green);margin-bottom:14px}
+.copy-code-btn{background:var(--green);border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;color:#fff;transition:background .2s}
+.copy-code-btn:hover{background:var(--green2)}
+.copy-code-btn.copied{background:#34d399}
+.steps-info{background:#0d1525;border:1px solid #1e3a5f;border-radius:9px;padding:12px 14px;font-size:12px;color:#93c5fd;line-height:1.9;margin-top:12px}
+.steps-info strong{color:#bfdbfe}
+.pair-status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-top:12px;justify-content:center}
+
+/* ── QR step ── */
+.step-qr{display:none;text-align:center}
+.qr-wrap{background:#fff;border-radius:12px;padding:14px;display:inline-block;margin:12px 0}
+.qr-placeholder{width:200px;height:200px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:13px}
+#c-qr-img{width:200px;height:200px;border-radius:6px;display:none}
+
+/* ── Redesigned Success Screen ── */
+.success-screen{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;background:radial-gradient(ellipse at 50% -5%,#0d2a1a 0%,var(--bg) 50%);overflow-y:auto;display:none}
+.suc-outer{width:100%;max-width:500px;padding:0 0 48px}
+.suc-banner{background:linear-gradient(160deg,#0d2a1a 0%,#071a0f 60%,var(--bg) 100%);padding:40px 24px 32px;text-align:center;border-bottom:1px solid var(--border)}
+.suc-banner-inner{display:flex;flex-direction:column;align-items:center;gap:6px}
+.suc-logo{width:64px;height:64px;border-radius:50%;object-fit:cover;box-shadow:0 0 28px rgba(37,211,102,.45);margin-bottom:6px}
+.suc-check{font-size:48px;line-height:1;filter:drop-shadow(0 0 14px rgba(37,211,102,.5))}
+.suc-title{font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-top:4px}
+.suc-subtitle{font-size:13px;color:var(--muted);margin-top:2px}
+.suc-num-hl{color:var(--green);font-weight:700}
+.suc-body{padding:16px}
+.suc-section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.suc-section-head{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px}
+.suc-sess-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.suc-sess-info{display:flex;align-items:center;gap:10px}
+.suc-sess-num{font-weight:700;font-size:15px}
+.suc-sess-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.cmd-chip{background:#080d16;border:1px solid var(--border);border-radius:9px;padding:10px 12px;transition:border-color .2s}
+.cmd-chip:hover{border-color:rgba(37,211,102,.35)}
+.cmd-chip code{color:var(--green);font-size:12px;font-weight:700;display:block;margin-bottom:2px;font-family:'Courier New',monospace}
+.cmd-chip span{color:var(--muted);font-size:11px}
+.suc-tip{margin-top:10px;background:#070d1e;border:1px solid #1e3a5f;border-radius:8px;padding:9px 12px;font-size:12px;color:#7eb8f7;line-height:1.65}
+.suc-toggle-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--border)}
+.suc-toggle-row:last-of-type{border-bottom:none;padding-bottom:0}
+.suc-tgl-label{font-size:13px;font-weight:600;color:var(--text)}
+.suc-tgl-sub{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5;max-width:260px}
+.btn-wa{width:100%;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;color:#fff;margin-bottom:8px;transition:opacity .2s,transform .1s}
+.btn-wa:hover{opacity:.87;transform:translateY(-1px)}
+.btn-back-full{width:100%;background:transparent;border:1px solid var(--border);border-radius:12px;padding:12px;font-size:13px;color:var(--muted);transition:all .2s}
+.btn-back-full:hover{border-color:var(--green);color:var(--text)}
+
+/* ── Admin Panel ── */
+.admin-panel{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar);min-height:100vh;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:transform .3s}
+.sidebar-logo{display:flex;align-items:center;gap:12px;padding:20px 18px;border-bottom:1px solid var(--border)}
+.sidebar-logo-icon img{width:36px;height:36px;border-radius:50%;object-fit:cover}
+.sidebar-title{font-size:14px;font-weight:800;color:var(--text)}
+.sidebar-sub{font-size:11px;color:var(--muted)}
+.nav-menu{flex:1;padding:12px 8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:#1a2233;color:var(--text)}
+.nav-item.active{background:linear-gradient(135deg,rgba(37,211,102,.15),rgba(18,140,126,.15));color:var(--green);font-weight:700}
+.nav-icon{font-size:15px;width:20px;text-align:center}
+.sidebar-footer{padding:14px 18px;border-top:1px solid var(--border)}
+.bot-status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:10px}
+.logout-btn{width:100%;background:transparent;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:12px;color:var(--muted);transition:all .2s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+.main-content{margin-left:var(--sidebar);flex:1;display:flex;flex-direction:column}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:50}
+.top-bar h2{font-size:18px;font-weight:700}
+.top-bar-right{display:flex;align-items:center;gap:10px}
+.uptime-badge{background:#1a2233;border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--muted)}
+.refresh-btn{background:#1a2233;border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:14px;color:var(--muted);transition:all .2s}
+.refresh-btn:hover{border-color:var(--green);color:var(--green)}
+.content-area{padding:24px 28px;flex:1}
+.menu-toggle{display:none;align-items:center;justify-content:center;width:36px;height:36px;background:#1a2233;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:18px;color:var(--text)}
+
+/* ── Stats ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .2s}
+.stat-card:hover{border-color:rgba(37,211,102,.3)}
+.stat-icon{font-size:24px;margin-bottom:8px}
+.stat-value{font-size:28px;font-weight:800}
+.stat-label{font-size:12px;color:var(--muted);font-weight:500;margin-top:4px}
+.section-title{font-size:14px;font-weight:700;margin-bottom:12px}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#0d1525;padding:11px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#0d1525}
+tbody td{padding:11px 14px;vertical-align:middle}
+.td-num{font-weight:600;color:var(--green);font-family:monospace;font-size:13px}
+.td-name{color:var(--text)}
+.td-muted{color:var(--muted);font-size:12px}
+
+/* ── Badges / Dots ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:rgba(37,211,102,.15);color:var(--green)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-yellow{background:rgba(251,191,36,.15);color:var(--yellow)}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--blue)}
+.badge-gray{background:#1a2233;color:var(--muted)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-green{background:var(--green);box-shadow:0 0 5px var(--green)}
+.dot-yellow{background:var(--yellow);animation:pulse 1.4s infinite}
+.dot-red{background:var(--red)}
+.dot-gray{background:#374151}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Buttons ── */
+.btn-primary{background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:9px;padding:9px 18px;font-size:13px;font-weight:700;color:#fff;transition:opacity .2s}
+.btn-primary:hover{opacity:.85}
+.btn-ghost{background:transparent;border:1px solid var(--border);border-radius:9px;padding:9px 16px;font-size:13px;color:var(--muted);transition:all .2s}
+.btn-ghost:hover{border-color:var(--text);color:var(--text)}
+.btn-danger{background:transparent;border:1px solid rgba(239,68,68,.4);border-radius:9px;padding:7px 14px;font-size:12px;color:var(--red);transition:all .2s}
+.btn-danger:hover{background:rgba(239,68,68,.1)}
+.qa-btn{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text);cursor:pointer;transition:all .2s;text-align:left}
+.qa-btn:hover{border-color:rgba(37,211,102,.5);background:rgba(37,211,102,.06)}
+.qa-btn.qa-danger{color:var(--red);border-color:rgba(239,68,68,.3)}
+.qa-btn.qa-danger:hover{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.6)}
+.ov-toggle-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;gap:8px}
+.ov-toggle-item .toggle-label{font-size:12px;font-weight:600}
+.ov-toggle-item .toggle-sub{font-size:10px;color:var(--muted)}
+.btn-ban{background:transparent;border:1px solid rgba(239,68,68,.4);border-radius:7px;padding:5px 11px;font-size:12px;color:var(--red);cursor:pointer;transition:all .2s}
+.btn-ban:hover{background:rgba(239,68,68,.1)}
+.btn-unban{background:transparent;border:1px solid rgba(37,211,102,.4);border-radius:7px;padding:5px 11px;font-size:12px;color:var(--green);cursor:pointer;transition:all .2s}
+.btn-unban:hover{background:rgba(37,211,102,.1)}
+
+/* ── Tab header / Search ── */
+.tab-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.search-input{background:#1a2233;border:1px solid var(--border);border-radius:9px;padding:9px 14px;font-size:13px;color:var(--text);outline:none;width:280px;transition:border-color .2s}
+.search-input:focus{border-color:var(--green)}
+.search-input::placeholder{color:#374151}
+
+/* ── Log Feed ── */
+.filter-btns{display:flex;gap:6px}
+.filter-btn{background:transparent;border:1px solid var(--border);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--muted);transition:all .2s}
+.filter-btn.active{background:var(--green);border-color:var(--green);color:#fff}
+.logs-feed{background:#080d16;border:1px solid var(--border);border-radius:12px;padding:4px;height:520px;overflow-y:auto}
+.log-entry{display:flex;gap:10px;padding:6px 10px;border-radius:6px;align-items:flex-start;font-family:'Courier New',monospace;font-size:12px}
+.log-entry:hover{background:#0d1525}
+.log-time{color:#374151;flex-shrink:0;width:60px;padding-top:1px}
+.log-type{flex-shrink:0;width:52px;font-size:10px;font-weight:700;text-transform:uppercase;padding-top:2px}
+.log-type-cmd{color:var(--green)}
+.log-type-sys{color:var(--blue)}
+.log-msg{color:var(--text);word-break:break-word;flex:1}
+.log-num{color:var(--yellow);font-weight:700}
+.log-cmd{color:var(--green);font-weight:700}
+
+/* ── Settings ── */
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+.settings-section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px}
+.settings-section-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px}
+.setting-row{margin-bottom:14px}
+.setting-row label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.setting-input{width:100%;background:#1a2233;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;transition:border-color .2s}
+.setting-input:focus{border-color:var(--green)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:13px;font-weight:600;color:var(--text)}
+.toggle-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle-switch{position:relative;display:inline-block;width:46px;height:25px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#374151;border-radius:25px;transition:.25s}
+.slider:before{content:"";position:absolute;height:19px;width:19px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s}
+input:checked+.slider{background:var(--green)}
+input:checked+.slider:before{transform:translateX(21px)}
+.api-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.api-row:last-child{border-bottom:none}
+.api-row>div{font-size:13px}
+.api-badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.api-ok{background:rgba(37,211,102,.15);color:var(--green)}
+.api-no{background:rgba(239,68,68,.15);color:var(--red)}
+.settings-msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px}
+.msg-ok{background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.3);color:var(--green)}
+.msg-err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+
+/* ── Overview sessions ── */
+.session-mini{display:flex;align-items:center;gap:10px;background:#0d1525;border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:8px}
+.session-mini-num{font-weight:700;font-size:14px}
+.session-mini-status{font-size:12px;color:var(--muted)}
+.empty-state{text-align:center;color:var(--muted);font-size:13px;padding:32px;border:1px solid var(--border);border-radius:12px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pagination{display:flex;align-items:center;gap:6px;margin-top:14px;flex-wrap:wrap}
+.page-btn{background:#1a2233;border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .2s}
+.page-btn:hover,.page-btn.active{background:var(--green);border-color:var(--green);color:#fff}
+
+/* ── Responsive ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:90;display:none}
+.overlay.show{display:block}
+
+/* ── Mobile About Panel Adjustments ── */
+@media(max-width:900px){
+  .connect-left{padding:40px 28px}
+  .connect-hero h1{font-size:30px}
+  .connect-hero p{font-size:14px}
+  .btn-cta-connect{width:100%;justify-content:center;padding:16px}
+}
+@media(max-width:540px){
+  .connect-left{padding:28px 20px}
+  .connect-hero h1{font-size:24px}
+  .connect-logo img{width:44px;height:44px}
+  .connect-logo-title{font-size:20px}
+  .features-list{flex-direction:row;flex-wrap:wrap;gap:7px}
+  .feature-item{font-size:11px;background:rgba(37,211,102,.06);border:1px solid rgba(37,211,102,.15);border-radius:8px;padding:5px 10px}
+  .feature-icon{width:22px;height:22px;font-size:12px}
+  .btn-cta-connect{font-size:15px}
+}
+/* ── Mobile Connect Form Adjustments ── */
+@media(max-width:540px){
+  .connect-screen.panel-open .connect-right{padding:28px 16px}
+  .connect-card h2{font-size:18px}
+}
+
+/* ── Mobile: Admin Panel ── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main-content{margin-left:0}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat-card{padding:14px}
+  .stat-value{font-size:22px}
+  .top-bar{padding:12px 14px}
+  .top-bar h2{font-size:15px}
+  .content-area{padding:12px}
+  .menu-toggle{display:flex}
+  .search-input{width:100%}
+  .tab-header{flex-direction:column;align-items:flex-start;gap:8px}
+  .filter-btns{flex-wrap:wrap;gap:4px}
+  .logs-feed{height:360px}
+  .settings-grid{grid-template-columns:1fr}
+  .uptime-badge{font-size:11px;padding:4px 8px}
+  thead th{font-size:10px;padding:8px 10px}
+  tbody td{padding:8px 10px;font-size:12px}
+  .code-digits{font-size:26px;letter-spacing:4px}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .stat-card{padding:12px}
+  .stat-value{font-size:20px}
+  .stat-label{font-size:11px}
+  .content-area{padding:10px}
+  .top-bar{padding:10px 12px}
+}
+@media(min-width:769px){.menu-toggle{display:none!important}}
+
+/* ── Mobile: Success Screen ── */
+@media(max-width:540px){
+  .suc-banner{padding:28px 16px 24px}
+  .suc-logo{width:52px;height:52px}
+  .suc-check{font-size:40px}
+  .suc-title{font-size:22px}
+  .suc-body{padding:12px}
+  .suc-section{padding:14px 14px;border-radius:12px}
+  .cmd-grid{grid-template-columns:1fr 1fr}
+  .cmd-chip code{font-size:11px}
+  .suc-tgl-sub{max-width:200px;font-size:10px}
+  .btn-wa{font-size:14px;padding:13px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- CONNECT / LANDING SCREEN                          -->
+<!-- ══════════════════════════════════════════════════ -->
+<div id="connect-screen" class="connect-screen">
+
+  <!-- Left: Branding + About -->
+  <div class="connect-left">
+    <div class="connect-logo">
+      <img src="/logo.png" alt="AA MD Bot"/>
+      <div>
+        <div class="connect-logo-title">AA MD Bot</div>
+        <div style="font-size:11px;color:var(--muted)">by Ahsan Ali | AA Mods</div>
+      </div>
+    </div>
+    <div class="connect-hero">
+      <h1>Your Smart<br/><span>WhatsApp Assistant</span></h1>
+      <p>Connect your WhatsApp number to activate the bot. Get access to 100+ commands, AI chat, media downloads, group management, and more — right in your WhatsApp.</p>
+    </div>
+    <div class="features-list">
+      <div class="feature-item"><div class="feature-icon">📥</div> <span><strong style="color:var(--text)">Downloader</strong> — YouTube, TikTok, Instagram &amp; more</span></div>
+      <div class="feature-item"><div class="feature-icon">👥</div> <span><strong style="color:var(--text)">Group Tools</strong> — Admin commands, welcome, anti-spam</span></div>
+      <div class="feature-item"><div class="feature-icon">🎮</div> <span><strong style="color:var(--text)">Games &amp; Economy</strong> — Fun commands, coins, leaderboards</span></div>
+      <div class="feature-item"><div class="feature-icon">🛡️</div> <span><strong style="color:var(--text)">Auto Protection</strong> — Anti-link, anti-badword, anti-delete</span></div>
+      <div class="feature-item"><div class="feature-icon">⚡</div> <span><strong style="color:var(--text)">Smart Automation</strong> — Auto-react, auto-read, auto-reply</span></div>
+    </div>
+    <!-- Desktop CTA — hidden on mobile via CSS -->
+    <button class="btn-cta-connect" onclick="desktopOpenConnect()">
+      <span style="font-size:20px">📱</span> Connect WhatsApp →
+    </button>
+  </div>
+
+  <!-- Right: Connect Form (hidden until CTA clicked on ALL devices) -->
+  <div class="connect-right">
+    <div class="connect-card">
+
+      <!-- Firebase Admin Login (hidden — tiny 🔐 icon at bottom reveals it) -->
+      <div id="fb-login-panel" style="display:none">
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:42px;margin-bottom:10px">🔐</div>
+          <h2 style="font-size:19px;font-weight:800;margin:0">Admin Panel</h2>
+          <p style="color:var(--muted);font-size:12px;margin-top:8px">Login with your Firebase Auth email &amp; password</p>
+        </div>
+        <form onsubmit="event.preventDefault();doFirebaseLogin()" autocomplete="on">
+          <div style="margin-bottom:12px">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="fb-email" name="email" class="form-input" placeholder="admin@example.com"
+              autocomplete="email"/>
+          </div>
+          <div style="margin-bottom:16px">
+            <label class="form-label">Password</label>
+            <input type="password" id="fb-pw" name="password" class="form-input" placeholder="Firebase password"
+              autocomplete="current-password"/>
+          </div>
+          <div id="fb-err" class="connect-error"></div>
+          <button type="submit" class="btn-connect" id="fb-btn">🔓 Login to Admin Panel</button>
+        </form>
+        <button onclick="hideAdminLogin()" style="width:100%;background:transparent;border:none;color:var(--muted);font-size:12px;margin-top:8px;cursor:pointer;padding:6px">← Back to Connect</button>
+      </div>
+
+      <!-- Step 1: WhatsApp Connect (shown by default) -->
+      <div id="c-s1">
+        <button class="btn-back-to-about" onclick="desktopGoBack()">← Back to About</button>
+        <h2>Connect WhatsApp</h2>
+        <p class="sub">Choose a method to link your number to the bot</p>
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="c-btn-pair" onclick="cMode('pair')">🔑 Pairing Code</button>
+          <button class="mode-btn"        id="c-btn-qr"   onclick="cMode('qr')">📷 QR Code</button>
+        </div>
+        <div id="c-pair-f">
+          <label class="form-label">Phone Number (with country code)</label>
+          <input class="form-input" type="tel" id="c-phone" placeholder="923xxxxxxxxx" maxlength="15" onkeydown="if(event.key==='Enter')cStart()"/>
+          <p class="form-hint">No + or spaces — e.g. Pakistan: <strong>923001234567</strong> · UK: <strong>447911123456</strong></p>
+          <div class="qr-note" style="margin-top:10px;font-size:12px;line-height:2">
+            <strong>📋 How to link with pairing code:</strong><br>
+            1️⃣ Open <strong>WhatsApp</strong> on your phone<br>
+            2️⃣ Tap ⋮ menu → <strong>Linked Devices</strong><br>
+            3️⃣ Tap <strong>"Link a Device"</strong> → <strong>"Link with phone number instead"</strong><br>
+            4️⃣ Enter the <strong>8-digit code</strong> shown on the next screen
+          </div>
+        </div>
+        <div id="c-qr-note" style="display:none" class="qr-note">
+          <strong>📷 How to link with QR code:</strong><br><br>
+          1️⃣ Open <strong>WhatsApp</strong> on your phone<br>
+          2️⃣ Tap ⋮ menu → <strong>Linked Devices</strong> → <strong>"Link a Device"</strong><br>
+          3️⃣ Point your camera at the QR code shown on screen<br>
+          4️⃣ Hold steady — WhatsApp confirms automatically ✅
+        </div>
+        <div class="connect-error" id="c-err"></div>
+        <button class="btn-connect" id="c-start-btn" onclick="cStart()">Get Started →</button>
+        <div style="text-align:center;margin-top:18px">
+          <span onclick="showAdminLogin()" title="Admin Panel" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.38);cursor:pointer;border:1px solid rgba(255,255,255,0.13);border-radius:20px;padding:5px 14px;transition:all .25s" onmouseover="this.style.color='rgba(255,255,255,0.85)';this.style.borderColor='rgba(255,255,255,0.4)'" onmouseout="this.style.color='rgba(255,255,255,0.38)';this.style.borderColor='rgba(255,255,255,0.13)'">🔐 Admin Login</span>
+        </div>
+      </div>
+
+      <!-- Step 2a: Pairing Code -->
+      <div class="step-pair" id="c-s2-pair">
+        <h2 style="margin-bottom:4px">Enter Pairing Code</h2>
+        <p class="sub">Open WhatsApp and link your device using this code</p>
+        <div class="code-box">
+          <div class="code-digits" id="c-code">----</div>
+          <button class="copy-code-btn" id="c-copy-btn" onclick="cCopy()">📋 Copy Code</button>
+        </div>
+        <div class="steps-info">
+          <strong>Enter this code in WhatsApp:</strong><br>
+          1️⃣ Open <strong>WhatsApp</strong> → tap ⋮ menu<br>
+          2️⃣ Go to <strong>Linked Devices</strong> → <strong>Link a Device</strong><br>
+          3️⃣ Tap <strong>"Link with phone number instead"</strong><br>
+          4️⃣ Type the code above ↑ — it expires in 60 seconds
+        </div>
+        <div class="pair-status"><span class="dot dot-yellow"></span> Waiting for you to enter the code...</div>
+        <button class="btn-ghost" style="width:100%;margin-top:14px" onclick="cBack()">← Try Again</button>
+      </div>
+
+      <!-- Step 2b: QR Code -->
+      <div class="step-qr" id="c-s2-qr">
+        <h2 style="margin-bottom:4px">Scan QR Code</h2>
+        <p class="sub">Scan this code with WhatsApp to link your number</p>
+        <div class="qr-wrap">
+          <div id="c-qr-ph" class="qr-placeholder">⏳ Generating...</div>
+          <img id="c-qr-img" src="" alt="QR"/>
+        </div>
+        <div class="steps-info" style="text-align:left;font-size:12px;line-height:2">
+          📱 <strong>Steps:</strong><br>
+          1️⃣ Open WhatsApp on your phone<br>
+          2️⃣ Tap ⋮ → <strong>Linked Devices</strong> → <strong>Link a Device</strong><br>
+          3️⃣ Point your camera at the QR code above ↑<br>
+          4️⃣ Hold steady — WhatsApp will auto-confirm ✅
+        </div>
+        <div class="pair-status"><span class="dot dot-yellow"></span> Waiting for scan...</div>
+        <button class="btn-ghost" style="width:100%;margin-top:14px" onclick="cBack()">← Try Again</button>
+      </div>
+
+      <!-- Step 3: Connecting... -->
+      <div id="c-s3" style="display:none;text-align:center;padding:20px 0">
+        <div style="font-size:52px;margin-bottom:16px">🔗</div>
+        <h2>Connecting...</h2>
+        <p style="color:var(--muted);font-size:14px;margin-top:8px">Pairing successful! Setting up your bot...</p>
+        <div style="margin-top:20px"><span class="spin"></span> <span style="color:var(--muted);font-size:13px">Checking your number...</span></div>
+      </div>
+
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- SUCCESS SCREEN (non-owner connected)              -->
+<!-- ══════════════════════════════════════════════════ -->
+<div id="success-screen" class="success-screen">
+  <div class="suc-outer">
+
+    <!-- ── Banner ── -->
+    <div class="suc-banner">
+      <div class="suc-banner-inner">
+        <img src="/logo.png" class="suc-logo" alt="AA MD Bot"/>
+        <div class="suc-check">✅</div>
+        <div class="suc-title">Bot Connected!</div>
+        <div class="suc-subtitle">Your number <span class="suc-num-hl">+<span id="suc-num"></span></span> is now live 🎉</div>
+      </div>
+    </div>
+
+    <div class="suc-body">
+
+      <!-- ── Active Session ── -->
+      <div class="suc-section">
+        <div class="suc-section-head">📱 Active Session</div>
+        <div class="suc-sess-row" id="suc-session-row">
+          <div class="suc-sess-info">
+            <span class="dot dot-green"></span>
+            <div>
+              <div class="suc-sess-num">+<span id="suc-sess-num"></span></div>
+              <div class="suc-sess-sub" id="suc-sess-status">Connected · AA MD Bot running</div>
+            </div>
+          </div>
+          <button class="btn-ban" id="suc-disc-btn" onclick="sucDisconnect()">Disconnect</button>
+        </div>
+      </div>
+
+      <!-- ── Quick Commands ── -->
+      <div class="suc-section">
+        <div class="suc-section-head">⚡ Quick Start Commands</div>
+        <div class="cmd-grid">
+          <div class="cmd-chip"><code>.menu</code><span>Full commands list</span></div>
+          <div class="cmd-chip"><code>.ai hello</code><span>Chat with Gemini AI</span></div>
+          <div class="cmd-chip"><code>.yt &lt;link&gt;</code><span>Download YouTube</span></div>
+          <div class="cmd-chip"><code>.tiktok &lt;link&gt;</code><span>Download TikTok</span></div>
+          <div class="cmd-chip"><code>.sticker</code><span>Reply to image/video</span></div>
+          <div class="cmd-chip"><code>.help</code><span>Get help &amp; info</span></div>
+        </div>
+        <div class="suc-tip">💡 Use commands in your own <strong style="color:var(--text)">"You"</strong> chat, any group, or any private message</div>
+      </div>
+
+      <!-- ── My Bot Settings ── -->
+      <div class="suc-section" id="suc-settings-box">
+        <div class="suc-section-head">⚙️ My Bot Settings</div>
+
+        <div class="suc-toggle-row">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">🔒 Private Mode</div>
+            <div class="suc-tgl-sub">ON = only you can use your bot · OFF = everyone can send commands</div>
+          </div>
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="suc-privateMode">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="suc-toggle-row">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">👋 Welcome New Users</div>
+            <div class="suc-tgl-sub">Auto-greet people who message your bot for the first time</div>
+          </div>
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="suc-publicWelcome" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="suc-toggle-row">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">📸 Auto-Save Status</div>
+            <div class="suc-tgl-sub">Automatically save & forward contacts' WhatsApp statuses to your DM</div>
+          </div>
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="suc-autoStatus">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="suc-toggle-row">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">👁️ Auto-View Status</div>
+            <div class="suc-tgl-sub">Automatically mark contacts' statuses as viewed</div>
+          </div>
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="suc-autoStatusView">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="suc-toggle-row">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">❤️ Auto-React to Status</div>
+            <div class="suc-tgl-sub">Send an emoji reaction to every status you view</div>
+          </div>
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="suc-autoStatusReact">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="suc-toggle-row">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">📵 Anti-Call</div>
+            <div class="suc-tgl-sub">Automatically reject all incoming WhatsApp calls</div>
+          </div>
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="suc-antiCall">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="suc-toggle-row" id="suc-anticallmsg-row" style="display:none">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">💬 Anti-Call Reply Message</div>
+            <div class="suc-tgl-sub">Message sent to caller when their call is rejected (leave blank for silent)</div>
+          </div>
+          <input type="text" id="suc-antiCallMsg" placeholder="e.g. Sorry, calls are disabled" style="margin-left:12px;width:200px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;flex-shrink:0">
+        </div>
+
+        <div class="suc-toggle-row">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">👁️‍🗨️ Anti-View-Once</div>
+            <div class="suc-tgl-sub">Automatically reveal view-once photos & videos sent to you</div>
+          </div>
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="suc-antiviewonce">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="suc-toggle-row">
+          <div style="flex:1;min-width:0">
+            <div class="suc-tgl-label">🎙️ Auto-Recording</div>
+            <div class="suc-tgl-sub">Show recording indicator while the bot processes commands</div>
+          </div>
+          <label class="toggle-switch" style="flex-shrink:0">
+            <input type="checkbox" id="suc-autoRecording">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <button class="btn-primary" style="width:100%;margin-top:14px;border-radius:10px;padding:11px;font-size:13px" onclick="sucSaveSettings()">💾 Save My Settings</button>
+        <div id="suc-settings-msg" style="display:none;margin-top:8px" class="settings-msg"></div>
+      </div>
+
+      <!-- ── Action Buttons ── -->
+      <button class="btn-wa" onclick="sucOpenWA()">📱 Open WhatsApp Now →</button>
+      <button class="btn-back-full" onclick="showConnect()">← Connect Another Number</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- ADMIN PANEL                                       -->
+<!-- ══════════════════════════════════════════════════ -->
+<div id="admin-panel" class="admin-panel" style="display:none">
+  <div class="overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon"><img src="/logo.png" alt="AA MD"/></div>
+      <div><div class="sidebar-title">AA MD Bot</div><div class="sidebar-sub">Admin Panel</div></div>
+    </div>
+    <div class="nav-menu">
+      <div class="nav-item active" data-tab="overview" onclick="switchTab('overview')"><span class="nav-icon">📊</span> Overview</div>
+      <div class="nav-item"       data-tab="sessions"  onclick="switchTab('sessions')"><span class="nav-icon">📱</span> Sessions</div>
+      <div class="nav-item"       data-tab="users"     onclick="switchTab('users')"><span class="nav-icon">👥</span> Users</div>
+      <div class="nav-item"       data-tab="logs"      onclick="switchTab('logs')"><span class="nav-icon">📝</span> Live Logs</div>
+      <div class="nav-item"       data-tab="settings"  onclick="switchTab('settings')"><span class="nav-icon">⚙️</span> Settings</div>
+      <div class="nav-item"       data-tab="groups"    onclick="switchTab('groups')"><span class="nav-icon">🏘️</span> Groups</div>
+      <div class="nav-item"       data-tab="broadcast" onclick="switchTab('broadcast')"><span class="nav-icon">📢</span> Broadcast</div>
+      <div class="nav-item"       data-tab="about"     onclick="switchTab('about')"><span class="nav-icon">ℹ️</span> About Bot</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="bot-status"><span class="dot dot-gray" id="bot-dot"></span><span id="bot-status-txt">Loading...</span></div>
+      <button class="logout-btn" onclick="adminLogout()">🚪 Logout</button>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="menu-toggle" onclick="toggleSidebar()">☰</div>
+        <h2 id="page-title">Overview</h2>
+      </div>
+      <div class="top-bar-right">
+        <div class="uptime-badge" id="uptime-display">⏱ --</div>
+        <button class="refresh-btn" onclick="refreshCurrentTab()">🔄</button>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- OVERVIEW -->
+      <div id="tab-overview" class="tab-content">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="s-users">--</div><div class="stat-label">Total Users</div></div>
+          <div class="stat-card"><div class="stat-icon">📱</div><div class="stat-value" id="s-sessions">--</div><div class="stat-label">Active Sessions</div></div>
+          <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-value" id="s-cmds">--</div><div class="stat-label">Commands Today</div></div>
+          <div class="stat-card"><div class="stat-icon">⏱</div><div class="stat-value" id="s-uptime" style="font-size:20px">--</div><div class="stat-label">Uptime</div></div>
+          <div class="stat-card"><div class="stat-icon">🚫</div><div class="stat-value" id="s-banned">--</div><div class="stat-label">Banned Users</div></div>
+          <div class="stat-card"><div class="stat-icon">💾</div><div class="stat-value" id="s-ram">--</div><div class="stat-label">RAM Usage</div></div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="section-title">⚡ Quick Actions</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:28px">
+          <button class="qa-btn" onclick="switchTab('broadcast')">📢 Broadcast Message</button>
+          <button class="qa-btn" onclick="switchTab('sessions')">📱 Manage Sessions</button>
+          <button class="qa-btn" onclick="switchTab('users')">👥 Manage Users</button>
+          <button class="qa-btn" onclick="switchTab('settings')">⚙️ Bot Settings</button>
+          <button class="qa-btn" onclick="switchTab('logs')">📝 Live Logs</button>
+          <button class="qa-btn qa-danger" onclick="doDeleteAllExceptOwner()">🗑️ Clear All Users</button>
+        </div>
+
+        <!-- Bot Status Toggles -->
+        <div class="section-title">🤖 Bot Quick Toggles</div>
+        <div id="ov-quick-toggles" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:28px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px" id="ov-toggle-grid">
+            <div style="color:var(--muted);font-size:13px;padding:8px">Loading settings...</div>
+          </div>
+          <div id="ov-toggle-msg" style="display:none;margin-top:10px" class="settings-msg"></div>
+        </div>
+
+        <div class="section-title">📱 Active Sessions</div>
+        <div id="ov-sessions" style="margin-bottom:28px"></div>
+        <div class="section-title">📜 Recent Commands</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Number</th><th>Name</th><th>Command</th><th>Chat</th></tr></thead>
+            <tbody id="ov-cmds"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SESSIONS -->
+      <div id="tab-sessions" class="tab-content" style="display:none">
+        <div class="tab-header">
+          <div style="font-size:13px;color:var(--muted)" id="sess-count">--</div>
+          <button class="btn-primary" onclick="openAddSession()">➕ Connect New</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Number</th><th>Status</th><th>Session ID</th><th>Actions</th></tr></thead>
+            <tbody id="sess-tbody"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <!-- Inline connect form for admin sessions tab -->
+        <div id="add-session-box" style="display:none;margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px">Connect Another Session</div>
+          <div class="mode-toggle" style="max-width:320px">
+            <button class="mode-btn active" id="as-btn-pair" onclick="asMode('pair')">🔑 Pairing Code</button>
+            <button class="mode-btn"        id="as-btn-qr"   onclick="asMode('qr')">📷 QR Code</button>
+          </div>
+          <div id="as-pair-f" style="max-width:320px">
+            <label class="form-label">Phone Number</label>
+            <input class="form-input" type="tel" id="as-phone" placeholder="923xxxxxxxxx" maxlength="15"/>
+            <p class="form-hint">Country code, no + or spaces</p>
+          </div>
+          <div id="as-qr-note" style="display:none;max-width:320px" class="qr-note">📷 QR will appear after clicking Start.</div>
+          <div id="as-code-wrap" style="display:none;margin-top:14px">
+            <div class="code-box" style="max-width:320px">
+              <div class="code-digits" id="as-code">----</div>
+              <button class="copy-code-btn" onclick="asCopy()">📋 Copy</button>
+            </div>
+            <div class="pair-status"><span class="dot dot-yellow"></span> Waiting for code entry...</div>
+          </div>
+          <div id="as-qr-wrap" style="display:none;margin-top:14px;text-align:center">
+            <div class="qr-wrap" style="display:inline-block">
+              <div id="as-qr-ph" class="qr-placeholder" style="width:160px;height:160px">⏳</div>
+              <img id="as-qr-img" src="" style="width:160px;height:160px;border-radius:6px;display:none"/>
+            </div>
+            <div class="pair-status" style="justify-content:center"><span class="dot dot-yellow"></span> Waiting for scan...</div>
+          </div>
+          <div id="as-ok" style="display:none;text-align:center;padding:12px 0">
+            <div style="font-size:40px">✅</div>
+            <p style="margin-top:8px;font-size:14px;color:var(--muted)">Session connected!</p>
+          </div>
+          <div class="connect-error" id="as-err" style="max-width:320px"></div>
+          <div style="display:flex;gap:10px;margin-top:14px">
+            <button class="btn-primary" id="as-start-btn" onclick="asStart()">Start →</button>
+            <button class="btn-ghost" onclick="closeAddSession()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div id="tab-users" class="tab-content" style="display:none">
+        <div class="tab-header">
+          <input class="search-input" id="user-search" placeholder="🔍 Search number or name..." oninput="filterUsers()"/>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div style="font-size:12px;color:var(--muted)" id="user-count">Loading...</div>
+            <button class="btn-danger" style="white-space:nowrap;padding:7px 14px" onclick="doDeleteAllExceptOwner()">🗑️ Delete All Except Owner</button>
+          </div>
+        </div>
+        <div id="bulk-del-msg" style="display:none;margin-bottom:12px" class="settings-msg"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Number</th><th>Name</th><th>Level</th><th>Cmds</th><th>Balance</th><th>Last Seen</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="users-tbody"><tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div id="users-pages" class="pagination"></div>
+      </div>
+
+      <!-- LOGS -->
+      <div id="tab-logs" class="tab-content" style="display:none">
+        <div class="tab-header">
+          <div class="filter-btns">
+            <button class="filter-btn active" data-f="all"    onclick="setLF('all')">All</button>
+            <button class="filter-btn"        data-f="cmd"    onclick="setLF('cmd')">⚡ Commands</button>
+            <button class="filter-btn"        data-f="system" onclick="setLF('system')">🔧 System</button>
+          </div>
+          <button class="btn-danger" onclick="clearLogs()">🗑 Clear</button>
+        </div>
+        <div class="logs-feed" id="logs-feed"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="tab-settings" class="tab-content" style="display:none">
+        <div class="settings-grid">
+
+          <div class="settings-section">
+            <div class="settings-section-title">🤖 Bot Identity</div>
+            <div class="setting-row"><label>Bot Name</label><input type="text" id="s-botName" class="setting-input" placeholder="AA MD Bot"/></div>
+            <div class="setting-row"><label>Owner Name</label><input type="text" id="s-ownerName" class="setting-input"/></div>
+            <div class="setting-row"><label>Command Prefix</label><input type="text" id="s-prefix" class="setting-input" maxlength="5" style="width:90px"/></div>
+            <div class="setting-row"><label>Owner Number (read-only)</label><input type="text" id="s-ownerNum" class="setting-input" readonly style="opacity:.5"/></div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">⚙️ Behavior</div>
+            <div class="toggle-row"><div><div class="toggle-label">Auto Read Messages</div><div class="toggle-sub">Mark all messages as read</div></div><label class="toggle-switch"><input type="checkbox" id="s-autoRead"><span class="slider"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Auto Typing</div><div class="toggle-sub">Show typing indicator on commands</div></div><label class="toggle-switch"><input type="checkbox" id="s-autoTyping"><span class="slider"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">Auto Reply</div><div class="toggle-sub">Reply to non-command messages in DMs</div></div><label class="toggle-switch"><input type="checkbox" id="s-autoReply"><span class="slider"></span></label></div>
+            <div class="setting-row" style="margin-top:14px"><label>Auto Reply Message</label><input type="text" id="s-autoReplyMsg" class="setting-input" placeholder="Hello! Send .menu for commands."/></div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">❤️ Auto React & Status</div>
+            <div class="toggle-row"><div><div class="toggle-label">Auto React to Messages</div><div class="toggle-sub">React to every incoming message with emoji</div></div><label class="toggle-switch"><input type="checkbox" id="s-autoReact"><span class="slider"></span></label></div>
+            <div class="setting-row" style="margin-top:10px">
+              <label>Message React Emoji</label>
+              <input type="text" id="s-reactEmoji" class="setting-input" maxlength="8" style="width:100px" placeholder="❤️"/>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Any emoji — e.g. ❤️ 👍 🔥 😂</p>
+            </div>
+            <div class="toggle-row" style="margin-top:10px"><div><div class="toggle-label">👁️ Auto View Statuses</div><div class="toggle-sub">Silently view all contact statuses</div></div><label class="toggle-switch"><input type="checkbox" id="s-autoStatusView"><span class="slider"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">❤️ Auto React to Statuses</div><div class="toggle-sub">React to all statuses with emoji</div></div><label class="toggle-switch"><input type="checkbox" id="s-autoStatusReact"><span class="slider"></span></label></div>
+            <div class="toggle-row"><div><div class="toggle-label">📸 Auto Save Statuses</div><div class="toggle-sub">Forward all contact statuses to your DM</div></div><label class="toggle-switch"><input type="checkbox" id="s-autoStatus"><span class="slider"></span></label></div>
+            <div class="setting-row" style="margin-top:8px">
+              <label>Status React Emoji</label>
+              <input type="text" id="s-statusEmoji" class="setting-input" maxlength="8" style="width:100px" placeholder="❤️"/>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Emoji used for reacting to statuses</p>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">🔒 Bot Access Mode</div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Private Mode</div>
+                <div class="toggle-sub">ON = only you + groups · OFF = everyone (public) — use <code style="color:var(--green)">.mode public/private</code></div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="s-privateMode">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">Welcome New Users</div>
+                <div class="toggle-sub">Send a greeting when someone messages for the first time — <code style="color:var(--green)">.setwelcome on/off</code> or <code style="color:var(--green)">.pw on/off</code></div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="s-publicWelcome">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">🛡️ Protection Features</div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">📵 Anti Call</div>
+                <div class="toggle-sub">Automatically reject all incoming calls — <code style="color:var(--green)">.anticall on/off</code></div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="s-antiCall"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">✏️ Anti Edit</div>
+                <div class="toggle-sub">Detect when someone edits a message, show original — <code style="color:var(--green)">.antiedit on/off</code></div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="s-antiEdit"><span class="slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="toggle-label">🎙️ Auto Recording</div>
+                <div class="toggle-sub">Show "recording…" indicator while bot processes commands — <code style="color:var(--green)">.recording on/off</code></div>
+              </div>
+              <label class="toggle-switch"><input type="checkbox" id="s-autoRecording"><span class="slider"></span></label>
+            </div>
+            <div class="setting-row" style="margin-top:14px">
+              <label>Anti-Call Message</label>
+              <input type="text" id="s-antiCallMsg" class="setting-input" placeholder="Sorry, I can't receive calls right now."/>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Sent to caller when call is rejected — <code style="color:var(--green)">.anticallmsg &lt;text&gt;</code></p>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">🛡️ Spam & Cooldown</div>
+            <div class="setting-row">
+              <label>Command Cooldown (ms)</label>
+              <input type="number" id="s-cooldown" class="setting-input" min="0" max="60000" style="width:130px" placeholder="3000"/>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Time between commands per user</p>
+            </div>
+            <div class="setting-row">
+              <label>Spam Limit (msgs / 10s)</label>
+              <input type="number" id="s-spamLimit" class="setting-input" min="1" max="50" style="width:100px" placeholder="5"/>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Max commands before spam block</p>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">🔐 Admin Login Credentials</div>
+            <div style="background:#080d16;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;font-size:12px;line-height:2;margin-bottom:14px">
+              📧 <strong style="color:#bfdbfe">Current Email:</strong> <code id="admin-email-show" style="color:var(--green)">Loading...</code><br>
+              🔒 <strong style="color:#bfdbfe">Password:</strong> <code style="color:var(--muted)">stored securely in Firebase DB (hashed)</code>
+            </div>
+            <div class="setting-row">
+              <label>Current Password <span style="color:var(--danger);font-size:11px">*required</span></label>
+              <input type="password" id="cp-current" class="setting-input" placeholder="Enter current password" autocomplete="current-password"/>
+            </div>
+            <div class="setting-row">
+              <label>New Email <span style="color:var(--muted);font-size:11px">(leave blank to keep current)</span></label>
+              <input type="email" id="cp-email" class="setting-input" placeholder="new@email.com" autocomplete="off"/>
+            </div>
+            <div class="setting-row">
+              <label>New Password <span style="color:var(--muted);font-size:11px">(leave blank to keep current)</span></label>
+              <input type="password" id="cp-new" class="setting-input" placeholder="New password" autocomplete="new-password"/>
+            </div>
+            <div class="setting-row">
+              <label>Confirm New Password</label>
+              <input type="password" id="cp-confirm" class="setting-input" placeholder="Repeat new password" autocomplete="new-password"/>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;align-items:center">
+              <button class="btn-primary" onclick="changeAdminPassword()">🔑 Update Credentials</button>
+              <button class="btn-danger" onclick="adminLogout()">🚪 Logout</button>
+            </div>
+            <div id="cp-msg" style="display:none;margin-top:10px" class="settings-msg"></div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">🔑 API Keys & Firebase</div>
+            <div class="api-row"><div>🤖 Gemini AI</div><span id="gemini-badge" class="api-badge">--</span></div>
+            <div class="api-row"><div>🔥 Firebase Realtime DB</div><span id="firebase-badge" class="api-badge">--</span></div>
+            <div style="margin-top:14px;font-size:12px;color:var(--muted);line-height:2">
+              Set these in the <strong style="color:var(--text)">Secrets</strong> tab in Replit:<br>
+              <code style="color:var(--green)">GEMINI_API_KEY</code> — AI commands<br>
+              <code style="color:var(--yellow)">FIREBASE_DB_URL</code> — your DB URL<br>
+              <code style="color:var(--yellow)">FIREBASE_DB_SECRET</code> — DB secret key<br>
+            </div>
+            <div id="firebase-url-row" style="margin-top:10px">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:4px">FIREBASE_DB_URL (current)</div>
+              <div id="firebase-url-val" style="font-size:12px;color:var(--muted);font-family:monospace;word-break:break-all">Not configured</div>
+            </div>
+          </div>
+
+        </div>
+
+        </div>
+
+        <div style="margin-top:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+          <div style="font-size:12px;color:var(--muted)">Changes apply instantly — no reconnect needed.</div>
+        </div>
+        <div id="settings-msg" style="display:none" class="settings-msg"></div>
+
+        <!-- Firebase Rules Editor -->
+        <div style="margin-top:28px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">🔥 Firebase Database Security Rules</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px">Control who can read/write your Firebase database</div>
+            </div>
+            <button class="btn-ghost" onclick="loadFirebaseRules()" style="font-size:12px">🔄 Load Current Rules</button>
+          </div>
+          <div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:7px">
+            <button class="btn-ghost" onclick="setPresetRules('secure')" style="font-size:12px">🔒 Secure (Recommended)</button>
+            <button class="btn-ghost" onclick="setPresetRules('open')" style="font-size:12px">🔓 Open (Testing)</button>
+          </div>
+          <textarea id="fb-rules-editor" class="setting-input" rows="10" style="font-family:monospace;font-size:13px;resize:vertical;line-height:1.6;width:100%;background:#080d16;color:#93c5fd;border-color:#1e3a5f">{
+  "rules": {
+    ".read": false,
+    ".write": false
+  }
+}</textarea>
+          <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn-primary" onclick="saveFirebaseRules()" id="fb-rules-save-btn">💾 Save Rules to Firebase</button>
+            <div style="font-size:11px;color:var(--muted)">Rules take effect instantly in Firebase</div>
+          </div>
+          <div id="fb-rules-msg" style="display:none;margin-top:10px" class="settings-msg"></div>
+          <div style="margin-top:12px;background:#080d16;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;font-size:12px;color:#93c5fd;line-height:2">
+            🔒 <strong style="color:#bfdbfe">Recommended Rules:</strong> <code style="color:var(--green)">false/false</code> — blocks all public access. Your bot connects using a secret key which bypasses these rules automatically.
+          </div>
+        </div>
+      </div>
+
+      <!-- BROADCAST -->
+      <div id="tab-broadcast" class="tab-content" style="display:none">
+        <div style="max-width:640px">
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px">📢 Send Broadcast Message</div>
+            <div class="setting-row">
+              <label>Session to use</label>
+              <select id="bc-session" class="setting-input" style="width:100%;background:#1a2233;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text)">
+                <option value="">— Auto (first active session) —</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label>Message</label>
+              <textarea id="bc-msg" class="setting-input" rows="6" placeholder="Type your broadcast message...&#10;&#10;WhatsApp formatting:&#10;*bold*  _italic_  ~strikethrough~" style="resize:vertical;line-height:1.6;width:100%;background:#1a2233;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);outline:none"></textarea>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px">Sent to all non-banned users who have interacted with the bot</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px">
+              <button class="btn-primary" id="bc-btn" onclick="sendBroadcast()">📤 Send Broadcast</button>
+              <div style="font-size:12px;color:var(--muted)" id="bc-count">Loading user count...</div>
+            </div>
+            <div id="bc-result" style="display:none;margin-top:14px" class="settings-msg"></div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">⚠️ Guidelines</div>
+            <ul style="font-size:13px;color:var(--muted);line-height:2.2;padding-left:18px">
+              <li>Only sends to users who have previously messaged the bot</li>
+              <li>Banned users are automatically excluded</li>
+              <li>A short delay is added between each message to avoid rate limits</li>
+              <li>Sending too many broadcasts can risk your WhatsApp number</li>
+              <li>Use <code style="color:var(--green)">*bold*</code>, <code style="color:var(--green)">_italic_</code>, <code style="color:var(--green)">~strike~</code> for formatting</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- GROUPS -->
+      <div id="tab-groups" class="tab-content" style="display:none">
+        <div class="tab-header">
+          <div style="font-size:13px;color:var(--muted)" id="groups-count">Loading...</div>
+          <button class="btn-primary" onclick="loadGroups()">🔄 Refresh</button>
+        </div>
+        <div style="background:var(--card);border:1px solid #1e3a5f;border-radius:10px;padding:12px 16px;font-size:12px;color:#93c5fd;margin-bottom:16px;line-height:1.8">
+          📌 <strong>Tip:</strong> Use <code style="color:var(--green)">.antidelete on</code> and <code style="color:var(--green)">.antiviewonce on</code> inside a group to enable per-group protection.
+          Group Welcome: <code style="color:var(--green)">.welcome on</code> &nbsp;|&nbsp; Anti-link: <code style="color:var(--green)">.antilink on</code>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Group Name</th><th>Members</th><th>Created</th><th>Description</th></tr></thead>
+            <tbody id="groups-tbody"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Loading groups...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ABOUT -->
+      <div id="tab-about" class="tab-content" style="display:none">
+        <div style="max-width:700px">
+
+          <!-- Bot Identity Card -->
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+            <img src="/logo.png" style="width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 0 24px rgba(37,211,102,.35);flex-shrink:0"/>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">AA MD Bot</div>
+              <div style="font-size:13px;color:var(--muted);margin-top:4px">WhatsApp Multi-Device Bot — by <strong style="color:var(--text)">Ahsan Ali | AA Mods</strong></div>
+              <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                <span class="badge badge-green">v2.0 Multi-Device</span>
+                <span class="badge badge-blue">Baileys MD</span>
+                <span class="badge badge-yellow" id="ab-fb-badge">🔥 Firebase</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Stats -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-bottom:20px" id="ab-stats-grid">
+            <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-value" id="ab-plugins">100+</div><div class="stat-label">Commands</div></div>
+            <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value" id="ab-users">--</div><div class="stat-label">Total Users</div></div>
+            <div class="stat-card"><div class="stat-icon">📱</div><div class="stat-value" id="ab-sessions">--</div><div class="stat-label">Sessions</div></div>
+            <div class="stat-card"><div class="stat-icon">⏱</div><div class="stat-value" id="ab-uptime" style="font-size:16px">--</div><div class="stat-label">Uptime</div></div>
+          </div>
+
+          <!-- Features -->
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">✨ Features</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">🤖</div><span>AI Chat (Gemini)</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">📥</div><span>YouTube / TikTok Download</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">👥</div><span>Group Management</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">🛡️</div><span>Anti-Link / Anti-Spam</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">🎮</div><span>Games &amp; Economy</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">❤️</div><span>Auto React / Auto Read</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">📢</div><span>Broadcast Messages</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">🔥</div><span>Firebase Cloud Database</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">📊</div><span>Web Dashboard</span></div>
+              <div class="feature-item" style="background:#0d1525;border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div class="feature-icon">⚡</div><span>Multi-Session Support</span></div>
+            </div>
+          </div>
+
+          <!-- Commands Quick Reference -->
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">⚡ Quick Commands</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px">
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.menu</code> <span style="color:var(--muted);font-size:12px">— all commands</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.ai &lt;text&gt;</code> <span style="color:var(--muted);font-size:12px">— Gemini AI</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.yt &lt;link&gt;</code> <span style="color:var(--muted);font-size:12px">— YouTube download</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.tiktok &lt;link&gt;</code> <span style="color:var(--muted);font-size:12px">— TikTok</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.kick @user</code> <span style="color:var(--muted);font-size:12px">— remove from group</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.ban @user</code> <span style="color:var(--muted);font-size:12px">— ban user</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.antilink</code> <span style="color:var(--muted);font-size:12px">— toggle anti-link</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.sticker</code> <span style="color:var(--muted);font-size:12px">— make sticker</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.weather</code> <span style="color:var(--muted);font-size:12px">— weather info</span></div>
+              <div style="background:#0d1525;border-radius:8px;padding:8px 12px;font-size:13px"><code style="color:var(--green)">.help</code> <span style="color:var(--muted);font-size:12px">— get help</span></div>
+            </div>
+          </div>
+
+          <!-- Tech Stack -->
+          <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px">🛠 Tech Stack</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span class="badge badge-green">Node.js</span>
+              <span class="badge badge-blue">Baileys MD</span>
+              <span class="badge badge-yellow">🔥 Firebase RTDB</span>
+              <span class="badge badge-green">Express.js</span>
+              <span class="badge badge-blue">Gemini AI</span>
+              <span class="badge badge-gray">Replit / Railway</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+<!-- HISTORY MODAL                                     -->
+<!-- ══════════════════════════════════════════════════ -->
+<div id="history-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+  <div style="background:#0d1525;border:1px solid var(--border);border-radius:16px;width:min(560px,94vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:700;font-size:15px" id="hist-title">Command History</div>
+        <div style="font-size:11px;color:var(--muted)" id="hist-sub">+-- • -- commands</div>
+      </div>
+      <button onclick="closeHistory()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="hist-body" style="overflow-y:auto;flex:1;padding:16px">
+      <div style="text-align:center;padding:30px;color:var(--muted)"><span class="spin"></span> Loading...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+let adminToken = null, currentTab = 'overview', refreshTimer = null;
+let allUsers = [], filteredUsers = [], usersPage = 1;
+const PER_PAGE = 50;
+let logFilter = 'all';
+let cmode = 'pair', cSessId = null, cPollT = null;
+let sucSessId = null;
+let asmode = 'pair', asSessId = null, asPollT = null;
+
+// ════════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  adminToken = localStorage.getItem('adminToken');
+  if (adminToken) {
+    verifyToken().then(ok => ok ? showAdmin() : showConnect());
+  } else {
+    showConnect();
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+// SCREEN VISIBILITY
+// ════════════════════════════════════════════════════════════
+function desktopOpenConnect() {
+  document.getElementById('connect-screen').classList.add('panel-open');
+}
+function desktopGoBack() {
+  document.getElementById('connect-screen').classList.remove('panel-open');
+  cReset();
+}
+function showConnect() {
+  document.getElementById('connect-screen').style.display  = 'flex';
+  document.getElementById('success-screen').style.display  = 'none';
+  document.getElementById('admin-panel').style.display     = 'none';
+  document.getElementById('connect-screen').classList.remove('panel-open');
+  cReset();
+}
+async function showSuccess(num, sessId) {
+  sucSessId = sessId || cSessId || null;
+  document.getElementById('connect-screen').style.display  = 'none';
+  document.getElementById('success-screen').style.display  = 'flex';
+  document.getElementById('admin-panel').style.display     = 'none';
+  document.getElementById('suc-num').textContent     = num || '';
+  document.getElementById('suc-sess-num').textContent = num || '';
+  document.getElementById('suc-sess-status').textContent = 'Connected · AA MD Bot running';
+  // Show/hide anticall message row based on toggle
+  document.getElementById('suc-antiCall').addEventListener('change', function() {
+    document.getElementById('suc-anticallmsg-row').style.display = this.checked ? 'flex' : 'none';
+  });
+  // Load this session's settings so toggles reflect saved state
+  if (sucSessId) {
+    try {
+      const d = await fetch('/api/bot/session-settings/' + sucSessId).then(r => r.json());
+      if (d.success && d.settings) {
+        const s = d.settings;
+        document.getElementById('suc-privateMode').checked      = (s.botMode || 'public') === 'private';
+        document.getElementById('suc-publicWelcome').checked    = s.publicWelcome !== false;
+        document.getElementById('suc-autoStatus').checked       = !!s.autoStatus;
+        document.getElementById('suc-autoStatusView').checked   = !!s.autoStatusView;
+        document.getElementById('suc-autoStatusReact').checked  = !!s.autoStatusReact;
+        document.getElementById('suc-antiCall').checked         = !!s.antiCall;
+        document.getElementById('suc-antiCallMsg').value        = s.antiCallMsg || '';
+        document.getElementById('suc-anticallmsg-row').style.display = s.antiCall ? 'flex' : 'none';
+        document.getElementById('suc-antiviewonce').checked     = !!s.antiviewonce;
+        document.getElementById('suc-autoRecording').checked    = !!s.autoRecording;
+      }
+    } catch {}
+  }
+}
+
+async function sucSaveSettings() {
+  if (!sucSessId) return;
+  const btn = document.querySelector('#suc-settings-box .btn-primary');
+  const msg = document.getElementById('suc-settings-msg');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  msg.style.display = 'none';
+  try {
+    const antiCallMsg = document.getElementById('suc-antiCallMsg').value.trim();
+    const payload = {
+      botMode:         document.getElementById('suc-privateMode').checked ? 'private' : 'public',
+      publicWelcome:   document.getElementById('suc-publicWelcome').checked,
+      autoStatus:      document.getElementById('suc-autoStatus').checked,
+      autoStatusView:  document.getElementById('suc-autoStatusView').checked,
+      autoStatusReact: document.getElementById('suc-autoStatusReact').checked,
+      antiCall:        document.getElementById('suc-antiCall').checked,
+      antiCallMsg:     antiCallMsg,
+      antiviewonce:    document.getElementById('suc-antiviewonce').checked,
+      autoRecording:   document.getElementById('suc-autoRecording').checked,
+    };
+    const d = await fetch('/api/bot/session-settings/' + sucSessId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).then(r => r.json());
+    msg.textContent  = d.success ? '✅ Settings saved!' : '❌ ' + (d.error || 'Failed');
+    msg.className    = 'settings-msg ' + (d.success ? 'msg-ok' : 'msg-err');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 4000);
+  } catch {
+    msg.textContent = '❌ Network error'; msg.className = 'settings-msg msg-err'; msg.style.display = 'block';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Save My Settings'; }
+  }
+}
+
+function sucOpenWA() {
+  const num = document.getElementById('suc-num')?.textContent || '';
+  // Try to open WhatsApp deep link to "You" chat
+  if (num) window.open('https://wa.me/' + num.replace(/\D/g, ''), '_blank');
+  else window.open('whatsapp://', '_blank');
+}
+
+async function sucDisconnect() {
+  if (!sucSessId) return;
+  if (!confirm('Disconnect this session? The bot will stop on your number.')) return;
+  const btn = document.getElementById('suc-disc-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting...'; }
+  try {
+    await fetch('/api/bot/disconnect/' + sucSessId, { method: 'DELETE' }).then(r => r.json());
+    const row = document.getElementById('suc-session-row');
+    if (row) {
+      const dot = row.querySelector('.dot');
+      if (dot) dot.className = 'dot dot-gray';
+    }
+    document.getElementById('suc-sess-status').textContent = 'Disconnected';
+    document.getElementById('suc-settings-box').style.display = 'none';
+    if (btn) { btn.disabled = true; btn.textContent = 'Disconnected'; }
+    sucSessId = null;
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Disconnect'; }
+  }
+}
+function showAdmin() {
+  document.getElementById('connect-screen').style.display  = 'none';
+  document.getElementById('success-screen').style.display  = 'none';
+  document.getElementById('admin-panel').style.display     = 'flex';
+  switchTab('overview');
+  startAutoRefresh();
+}
+
+// ════════════════════════════════════════════════════════════
+// CONNECT FLOW (landing page)
+// ════════════════════════════════════════════════════════════
+function cMode(m) {
+  cmode = m;
+  document.getElementById('c-btn-pair').classList.toggle('active', m === 'pair');
+  document.getElementById('c-btn-qr').classList.toggle('active',   m === 'qr');
+  document.getElementById('c-pair-f').style.display  = m === 'pair' ? 'block' : 'none';
+  document.getElementById('c-qr-note').style.display = m === 'qr'   ? 'block' : 'none';
+}
+
+function showAdminLogin() {
+  document.getElementById('c-s1').style.display           = 'none';
+  document.getElementById('fb-login-panel').style.display = 'block';
+  const e = document.getElementById('fb-err'); if (e) e.style.display = 'none';
+}
+function hideAdminLogin() {
+  document.getElementById('fb-login-panel').style.display = 'none';
+  document.getElementById('c-s1').style.display           = 'block';
+}
+
+function cReset() {
+  clearInterval(cPollT); cSessId = null;
+  ['c-s2-pair','c-s2-qr','c-s3'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  document.getElementById('c-code').textContent = '----';
+  const qi = document.getElementById('c-qr-img'); if (qi) { qi.style.display = 'none'; qi.src = ''; }
+  const qp = document.getElementById('c-qr-ph');  if (qp) qp.style.display = 'flex';
+  document.getElementById('c-err').style.display = 'none';
+  document.getElementById('c-start-btn').innerHTML = 'Get Started →';
+  document.getElementById('c-start-btn').disabled = false;
+  document.getElementById('fb-login-panel').style.display = 'none';
+  document.getElementById('c-s1').style.display           = 'block';
+  cMode('pair');
+}
+
+function cBack() { cReset(); }
+
+async function cStart() {
+  const errEl = document.getElementById('c-err');
+  errEl.style.display = 'none';
+  const phone = document.getElementById('c-phone').value.replace(/\D/g, '');
+  if (cmode === 'pair' && (phone.length < 7 || phone.length > 15)) {
+    errEl.textContent = '❌ Enter a valid number with country code';
+    errEl.style.display = 'block'; return;
+  }
+  const btn = document.getElementById('c-start-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Connecting...';
+  try {
+    const d = await fetch('/api/bot/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneNumber: phone, useQR: cmode === 'qr' })
+    }).then(r => r.json());
+    if (!d.success) {
+      errEl.textContent = '❌ ' + (d.error || 'Failed');
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.innerHTML = 'Get Started →'; return;
+    }
+    cSessId = d.sessionId;
+    document.getElementById('c-s1').style.display = 'none';
+    document.getElementById(cmode === 'pair' ? 'c-s2-pair' : 'c-s2-qr').style.display = 'block';
+    cPoll();
+  } catch {
+    errEl.textContent = '❌ Server error'; errEl.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = 'Get Started →';
+  }
+}
+
+function cPoll() {
+  clearInterval(cPollT);
+  cPollT = setInterval(async () => {
+    if (!cSessId) return;
+    try {
+      const d = await fetch('/api/bot/status/' + cSessId).then(r => r.json());
+      if (d.pairingCode) document.getElementById('c-code').textContent = d.pairingCode;
+      if (d.qrDataUrl) {
+        document.getElementById('c-qr-ph').style.display = 'none';
+        const img = document.getElementById('c-qr-img');
+        img.src = d.qrDataUrl; img.style.display = 'block';
+      }
+      if (d.status === 'connected') {
+        clearInterval(cPollT);
+        ['c-s2-pair', 'c-s2-qr'].forEach(id => document.getElementById(id).style.display = 'none');
+        document.getElementById('c-s3').style.display = 'block';
+        // Bot connected → show success. Admin panel access is via Firebase Auth tab.
+        showSuccess(d.botNumber || '', cSessId);
+      }
+    } catch {}
+  }, 1500);
+}
+
+function cCopy() {
+  const txt = document.getElementById('c-code').textContent;
+  if (!txt || txt === '----') return;
+  navigator.clipboard.writeText(txt.replace(/-/g, '')).then(() => {
+    const b = document.getElementById('c-copy-btn');
+    b.textContent = '✅ Copied!'; b.classList.add('copied');
+    setTimeout(() => { b.textContent = '📋 Copy Code'; b.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// ADMIN AUTH — Firebase Auth (email + password)
+// ════════════════════════════════════════════════════════════
+async function doFirebaseLogin() {
+  const email = (document.getElementById('fb-email')?.value || '').trim();
+  const pw    = (document.getElementById('fb-pw')?.value   || '').trim();
+  const errEl = document.getElementById('fb-err');
+  const btn   = document.getElementById('fb-btn');
+  errEl.style.display = 'none';
+  if (!email) { errEl.textContent = '❌ Enter your email address'; errEl.style.display = 'block'; return; }
+  if (!pw)    { errEl.textContent = '❌ Enter your password';       errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = '⏳ Verifying...';
+  try {
+    const r = await fetch('/api/admin/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw })
+    }).then(r => r.json());
+    if (r.success && r.token) {
+      adminToken = r.token;
+      localStorage.setItem('adminToken', adminToken);
+      showAdmin();
+    } else {
+      errEl.textContent = r.error || '❌ Login failed — check email & password';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = '🔓 Login to Admin Panel';
+    }
+  } catch {
+    errEl.textContent = '❌ Server error — try again';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '🔓 Login to Admin Panel';
+  }
+}
+
+
+async function verifyToken() {
+  try {
+    const r = await fetch('/api/admin/verify', { headers: { 'x-admin-token': adminToken || '' } });
+    if (r.status === 401) return false;
+    const d = await r.json();
+    return d.ok === true;
+  } catch { return false; }
+}
+
+function adminLogout() {
+  localStorage.removeItem('adminToken'); adminToken = null;
+  clearInterval(refreshTimer);
+  showConnect();
+}
+
+// ════════════════════════════════════════════════════════════
+// API HELPERS
+// ════════════════════════════════════════════════════════════
+async function apiGet(url) {
+  const r = await fetch(url, { headers: { 'x-admin-token': adminToken || '' } });
+  if (r.status === 401) { adminLogout(); throw new Error('Unauthorized'); }
+  return r.json();
+}
+async function apiPost(url, data) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken || '' }, body: JSON.stringify(data) });
+  if (r.status === 401) { adminLogout(); throw new Error('Unauthorized'); }
+  return r.json();
+}
+async function apiDel(url) {
+  return fetch(url, { method: 'DELETE', headers: { 'x-admin-token': adminToken || '' } }).then(r => r.json());
+}
+
+// ════════════════════════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════════════════════════
+const TAB_TITLES = { overview: 'Overview', sessions: 'Sessions', users: 'Users', logs: 'Live Logs', settings: 'Settings', groups: 'Groups', broadcast: 'Broadcast', about: 'About Bot' };
+function switchTab(name) {
+  currentTab = name;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.tab === name));
+  document.querySelectorAll('.tab-content').forEach(el => el.style.display = el.id === `tab-${name}` ? 'block' : 'none');
+  document.getElementById('page-title').textContent = TAB_TITLES[name] || name;
+  closeSidebar();
+  ({ overview: loadOverview, sessions: loadSessions, users: loadUsers, logs: loadLogs, settings: loadSettings, groups: loadGroups, broadcast: loadBroadcast, about: loadAbout })[name]?.();
+}
+function refreshCurrentTab() { ({ overview: loadOverview, sessions: loadSessions, users: loadUsers, logs: loadLogs, settings: loadSettings, groups: loadGroups, broadcast: loadBroadcast, about: loadAbout })[currentTab]?.(); }
+function startAutoRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    if (currentTab === 'overview') loadOverview();
+    if (currentTab === 'logs')     loadLogs();
+  }, 3000);
+}
+
+// ════════════════════════════════════════════════════════════
+// MOBILE SIDEBAR
+// ════════════════════════════════════════════════════════════
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sb-overlay').classList.toggle('show'); }
+function closeSidebar()  { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sb-overlay').classList.remove('show'); }
+
+// ════════════════════════════════════════════════════════════
+// OVERVIEW
+// ════════════════════════════════════════════════════════════
+async function loadOverview() {
+  // Stats
+  try {
+    const d = await apiGet('/api/admin/stats');
+    document.getElementById('s-users').textContent    = d.totalUsers ?? '--';
+    document.getElementById('s-sessions').textContent = d.activeSessions ?? '--';
+    document.getElementById('s-cmds').textContent     = d.cmdToday ?? '--';
+    document.getElementById('s-uptime').textContent   = d.uptime ?? '--';
+    document.getElementById('uptime-display').textContent = '⏱ ' + (d.uptime || '--');
+    // Banned users & RAM
+    document.getElementById('s-banned').textContent = d.bannedUsers ?? '--';
+    document.getElementById('s-ram').textContent = d.ramUsed ? d.ramUsed + ' MB' : '--';
+    const active = (d.activeSessions || 0) > 0;
+    document.getElementById('bot-dot').className = 'dot ' + (active ? 'dot-green' : 'dot-gray');
+    document.getElementById('bot-status-txt').textContent = active ? `${d.activeSessions} connected` : 'Disconnected';
+    const ov = document.getElementById('ov-sessions');
+    if (!d.sessions?.length) { ov.innerHTML = '<div class="empty-state">No sessions yet. Go to Sessions tab to connect.</div>'; }
+    else {
+      ov.innerHTML = d.sessions.map(s => {
+        const dc = s.status === 'connected' ? 'dot-green' : s.status === 'reconnecting' ? 'dot-yellow' : 'dot-red';
+        const connectedSince = s.connectedAt ? `Connected since ${new Date(s.connectedAt).toLocaleTimeString()}` : s.status;
+        return `<div class="session-mini"><span class="dot ${dc}"></span><div><div class="session-mini-num">+${s.phoneNumber || s.sessionId}</div><div class="session-mini-status">${connectedSince}</div></div></div>`;
+      }).join('');
+    }
+  } catch {}
+  // Quick toggles
+  try {
+    const d = await apiGet('/api/admin/settings');
+    const TOGGLES = [
+      { key:'autoRead',     label:'👁️ Auto Read',       sub:'Mark messages as read' },
+      { key:'autoTyping',   label:'⌨️ Auto Typing',     sub:'Show typing indicator' },
+      { key:'autoReply',    label:'💬 Auto Reply',       sub:'Reply to DMs' },
+      { key:'autoReactMessages', label:'❤️ Auto React', sub:'React to messages' },
+      { key:'autoStatusView',    label:'👁️ Status View', sub:'View statuses silently' },
+      { key:'autoStatusReact',   label:'❤️ Status React',sub:'React to statuses' },
+      { key:'autoStatus',        label:'📸 Status Save', sub:'Forward statuses to DM' },
+      { key:'antiCall',          label:'📵 Anti Call',      sub:'Reject incoming calls' },
+      { key:'antiEdit',          label:'✏️ Anti Edit',      sub:'Show original on edit' },
+      { key:'autoRecording',     label:'🎙️ Auto Recording', sub:'Show recording indicator' },
+    ];
+    const grid = document.getElementById('ov-toggle-grid');
+    grid.innerHTML = TOGGLES.map(t => `
+      <div class="ov-toggle-item">
+        <div><div class="toggle-label">${t.label}</div><div class="toggle-sub">${t.sub}</div></div>
+        <label class="toggle-switch" style="transform:scale(.8);transform-origin:right">
+          <input type="checkbox" data-key="${t.key}" ${d[t.key] ? 'checked' : ''} onchange="ovToggle(this)">
+          <span class="slider"></span>
+        </label>
+      </div>`).join('');
+  } catch {}
+  // Recent commands
+  try {
+    const d = await apiGet('/api/admin/logs?filter=cmd&limit=20');
+    const tbody = document.getElementById('ov-cmds');
+    if (!d.logs?.length) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">No commands yet</td></tr>`; return; }
+    tbody.innerHTML = d.logs.map(l => `<tr>
+      <td class="td-muted">${fmtTime(l.ts)}</td>
+      <td class="td-num">+${l.number === 'SELF' ? 'You' : l.number}</td>
+      <td class="td-name">${esc(l.name || '')}</td>
+      <td><span class="badge badge-green">${esc(l.command || '')}${l.args ? ' ' + esc(l.args) : ''}</span></td>
+      <td class="td-muted">${l.chat === 'group' ? '👥' : '💬'}</td>
+    </tr>`).join('');
+  } catch {}
+}
+async function ovToggle(el) {
+  const key = el.dataset.key;
+  const val  = el.checked;
+  const msg  = document.getElementById('ov-toggle-msg');
+  try {
+    const d = await apiPost('/api/admin/settings', { [key]: val });
+    msg.textContent = `✅ ${key} → ${val ? 'ON' : 'OFF'} — ${d.firebaseOk ? 'Saved to Firebase' : 'Saved in memory'}`;
+    msg.className = 'settings-msg ' + (d.firebaseOk === false ? 'msg-err' : 'msg-ok');
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 3000);
+  } catch {
+    el.checked = !val;
+    msg.textContent = '❌ Failed to save setting'; msg.className = 'settings-msg msg-err'; msg.style.display = 'block';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// SESSIONS (admin)
+// ════════════════════════════════════════════════════════════
+async function loadSessions() {
+  closeAddSession();
+  try {
+    const d = await fetch('/api/bot/sessions').then(r => r.json());
+    document.getElementById('sess-count').textContent = `${d.sessions?.length || 0} session(s) total`;
+    const tbody = document.getElementById('sess-tbody');
+    if (!d.sessions?.length) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">No sessions yet. Click "Connect New".</td></tr>`; return; }
+    tbody.innerHTML = d.sessions.map(s => {
+      const dc = s.status === 'connected' ? 'dot-green' : s.status === 'reconnecting' ? 'dot-yellow' : 'dot-red';
+      const bl = s.status === 'connected' ? 'badge-green' : s.status === 'reconnecting' ? 'badge-yellow' : 'badge-red';
+      return `<tr>
+        <td class="td-num">+${s.phoneNumber || s.sessionId}</td>
+        <td><span class="badge ${bl}"><span class="dot ${dc}" style="width:6px;height:6px"></span> ${s.status}</span></td>
+        <td class="td-muted" style="font-size:11px">${s.sessionId}</td>
+        <td style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn-ban" onclick="doDisconnect('${s.sessionId}')">Disconnect</button>
+          <button class="btn-ban" style="border-color:rgba(239,68,68,.7)" onclick="doDeleteSession('${s.sessionId}')">🗑 Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch {}
+}
+async function doDisconnect(id) {
+  if (!confirm('Disconnect this session? Bot will stop on that number.')) return;
+  await fetch('/api/bot/disconnect/' + id, { method: 'DELETE' });
+  loadSessions();
+}
+async function doDeleteSession(id) {
+  if (!confirm('Delete this session permanently? This removes all session files and cannot be undone.')) return;
+  await apiDel('/api/admin/sessions/' + id);
+  loadSessions();
+}
+function openAddSession() {
+  document.getElementById('add-session-box').style.display = 'block';
+  document.getElementById('as-code-wrap').style.display = 'none';
+  document.getElementById('as-qr-wrap').style.display   = 'none';
+  document.getElementById('as-ok').style.display        = 'none';
+  document.getElementById('as-err').style.display       = 'none';
+  document.getElementById('as-start-btn').innerHTML     = 'Start →';
+  document.getElementById('as-start-btn').disabled      = false;
+}
+function closeAddSession() {
+  clearInterval(asPollT); asSessId = null;
+  document.getElementById('add-session-box').style.display = 'none';
+}
+function asMode(m) {
+  asmode = m;
+  document.getElementById('as-btn-pair').classList.toggle('active', m === 'pair');
+  document.getElementById('as-btn-qr').classList.toggle('active',   m === 'qr');
+  document.getElementById('as-pair-f').style.display  = m === 'pair' ? 'block' : 'none';
+  document.getElementById('as-qr-note').style.display = m === 'qr'   ? 'block' : 'none';
+}
+async function asStart() {
+  const errEl = document.getElementById('as-err');
+  errEl.style.display = 'none';
+  const phone = document.getElementById('as-phone').value.replace(/\D/g, '');
+  if (asmode === 'pair' && (phone.length < 7 || phone.length > 15)) { errEl.textContent = '❌ Valid number required'; errEl.style.display = 'block'; return; }
+  const btn = document.getElementById('as-start-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  try {
+    const d = await fetch('/api/bot/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phoneNumber: phone, useQR: asmode === 'qr' })
+    }).then(r => r.json());
+    if (!d.success) { errEl.textContent = '❌ ' + (d.error || 'Failed'); errEl.style.display = 'block'; btn.disabled = false; btn.innerHTML = 'Start →'; return; }
+    asSessId = d.sessionId;
+    document.getElementById(asmode === 'pair' ? 'as-code-wrap' : 'as-qr-wrap').style.display = 'block';
+    asPoll();
+  } catch { errEl.textContent = '❌ Server error'; errEl.style.display = 'block'; btn.disabled = false; btn.innerHTML = 'Start →'; }
+}
+function asPoll() {
+  clearInterval(asPollT);
+  asPollT = setInterval(async () => {
+    if (!asSessId) return;
+    try {
+      const d = await fetch('/api/bot/status/' + asSessId).then(r => r.json());
+      if (d.pairingCode) document.getElementById('as-code').textContent = d.pairingCode;
+      if (d.qrDataUrl) {
+        document.getElementById('as-qr-ph').style.display = 'none';
+        const img = document.getElementById('as-qr-img');
+        img.src = d.qrDataUrl; img.style.display = 'block';
+      }
+      if (d.status === 'connected') {
+        clearInterval(asPollT);
+        document.getElementById('as-code-wrap').style.display = 'none';
+        document.getElementById('as-qr-wrap').style.display   = 'none';
+        document.getElementById('as-ok').style.display        = 'block';
+        document.getElementById('as-start-btn').style.display = 'none';
+        loadSessions();
+      }
+    } catch {}
+  }, 1500);
+}
+function asCopy() {
+  const txt = document.getElementById('as-code').textContent;
+  if (!txt || txt === '----') return;
+  navigator.clipboard.writeText(txt.replace(/-/g, '')).catch(() => {});
+}
+
+// ════════════════════════════════════════════════════════════
+// USERS
+// ════════════════════════════════════════════════════════════
+async function loadUsers() {
+  document.getElementById('users-tbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)"><span class="spin"></span> Loading...</td></tr>`;
+  try {
+    const d = await apiGet('/api/admin/users');
+    allUsers = d.users || []; filteredUsers = [...allUsers]; usersPage = 1; renderUsers();
+  } catch { document.getElementById('users-tbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">Failed to load</td></tr>`; }
+}
+function filterUsers() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  filteredUsers = q ? allUsers.filter(u => u.number.includes(q) || (u.name || '').toLowerCase().includes(q)) : [...allUsers];
+  usersPage = 1; renderUsers();
+}
+function renderUsers() {
+  const total = filteredUsers.length;
+  document.getElementById('user-count').textContent = `${total} user${total !== 1 ? 's' : ''}`;
+  const start = (usersPage - 1) * PER_PAGE;
+  const page  = filteredUsers.slice(start, start + PER_PAGE);
+  const tbody = document.getElementById('users-tbody');
+  if (!page.length) { tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">No users found</td></tr>`; renderPages(0); return; }
+  tbody.innerHTML = page.map((u, i) => `<tr>
+    <td class="td-muted">${start + i + 1}</td>
+    <td class="td-num">+${u.number}</td>
+    <td class="td-name">${esc(u.name || 'Unknown')}</td>
+    <td><span class="badge badge-blue">Lv ${u.level}</span></td>
+    <td class="td-muted">${u.commandsUsed}</td>
+    <td class="td-muted">💰 ${u.balance ?? 0}</td>
+    <td class="td-muted" style="font-size:11px">${timeAgo(u.lastSeen)}</td>
+    <td>${u.banned ? '<span class="badge badge-red">Banned</span>' : u.premium ? '<span class="badge badge-yellow">⭐ Premium</span>' : '<span class="badge badge-green">Active</span>'}</td>
+    <td style="display:flex;gap:5px;flex-wrap:wrap">${u.banned
+      ? `<button class="btn-unban" onclick="doUnban('${u.jid}')">Unban</button>`
+      : `<button class="btn-ban" onclick="doBan('${u.jid}')">Ban</button>`}
+      ${u.premium ? '' : `<button class="btn-unban" style="font-size:11px" onclick="doPremium('${u.jid}',true)">⭐</button>`}
+      <button class="btn-unban" style="font-size:11px;background:#1e3a5f;color:#93c5fd" onclick="openHistory('${u.jid}','${esc(u.name||u.number)}')">📋</button>
+      <button class="btn-ban" style="font-size:11px;border-color:rgba(239,68,68,.7)" onclick="doDeleteUser('${u.jid}')">🗑</button>
+    </td>
+  </tr>`).join('');
+  renderPages(total);
+}
+function renderPages(total) {
+  const pages = Math.ceil(total / PER_PAGE);
+  const el = document.getElementById('users-pages');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = Array.from({ length: pages }, (_, i) => `<button class="page-btn${usersPage === i + 1 ? ' active' : ''}" onclick="goPage(${i + 1})">${i + 1}</button>`).join('');
+}
+function goPage(p) { usersPage = p; renderUsers(); }
+async function doDeleteAllExceptOwner() {
+  const msg = document.getElementById('bulk-del-msg');
+  if (!confirm('⚠️ DELETE ALL USERS EXCEPT OWNER?\n\nThis will permanently remove all user data from the database (except the owner number). This cannot be undone.\n\nContinue?')) return;
+  msg.textContent = '⏳ Deleting all users except owner...';
+  msg.className = 'settings-msg msg-ok'; msg.style.display = 'block';
+  try {
+    const d = await fetch('/api/admin/users', {
+      method: 'DELETE',
+      headers: { 'x-admin-token': adminToken || '' }
+    }).then(r => r.json());
+    if (d.success) {
+      msg.textContent = `✅ Deleted ${d.deleted} user(s). Owner numbers kept: +${(d.kept||[]).join(', +')}`;
+      msg.className = 'settings-msg msg-ok';
+      setTimeout(() => loadUsers(), 1000);
+    } else {
+      msg.textContent = '❌ ' + (d.error || 'Failed');
+      msg.className = 'settings-msg msg-err';
+    }
+  } catch {
+    msg.textContent = '❌ Network error'; msg.className = 'settings-msg msg-err';
+  }
+  setTimeout(() => { msg.style.display = 'none'; }, 6000);
+}
+
+async function doBan(jid) {
+  if (!confirm(`Ban +${jid.split('@')[0]}?`)) return;
+  await apiPost(`/api/admin/users/${encodeURIComponent(jid)}/ban`, {});
+  const u = allUsers.find(x => x.jid === jid); if (u) u.banned = true; renderUsers();
+}
+async function doUnban(jid) {
+  await apiPost(`/api/admin/users/${encodeURIComponent(jid)}/unban`, {});
+  const u = allUsers.find(x => x.jid === jid); if (u) u.banned = false; renderUsers();
+}
+async function doDeleteUser(jid) {
+  const num = '+' + jid.split('@')[0];
+  if (!confirm(`Delete user ${num} and all their data? This cannot be undone.`)) return;
+  try {
+    const d = await apiDel(`/api/admin/users/${encodeURIComponent(jid)}`);
+    if (d.success) {
+      allUsers = allUsers.filter(x => x.jid !== jid);
+      filteredUsers = filteredUsers.filter(x => x.jid !== jid);
+      renderUsers();
+    } else {
+      alert('❌ Delete failed: ' + (d.error || 'Unknown error'));
+    }
+  } catch { alert('❌ Network error'); }
+}
+
+// ── User command history modal ─────────────────────────────
+async function openHistory(jid, name) {
+  const modal = document.getElementById('history-modal');
+  const body  = document.getElementById('hist-body');
+  const title = document.getElementById('hist-title');
+  const sub   = document.getElementById('hist-sub');
+  title.textContent = `📋 History — ${name || jid.split('@')[0]}`;
+  sub.textContent   = `+${jid.split('@')[0]}`;
+  body.innerHTML    = `<div style="text-align:center;padding:30px;color:var(--muted)"><span class="spin"></span> Loading...</div>`;
+  modal.style.display = 'flex';
+  try {
+    const d = await apiGet(`/api/admin/users/${encodeURIComponent(jid)}/history`);
+    const hist = d.history || [];
+    sub.textContent = `+${jid.split('@')[0]} • ${hist.length} command${hist.length !== 1 ? 's' : ''} recorded`;
+    if (!hist.length) {
+      body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--muted)">No commands recorded yet.<br><small>Commands are tracked in real-time after the bot restarts.</small></div>`;
+      return;
+    }
+    body.innerHTML = hist.map(h => `
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;color:var(--green)">${esc(h.cmd)}${h.args ? ' <span style="color:var(--muted);font-weight:400;font-size:12px">' + esc(h.args) + '</span>' : ''}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${h.chat === 'group' ? '👥 Group' : '💬 DM'} • ${fmtDate(h.ts)}</div>
+        </div>
+        <span class="badge badge-blue" style="flex-shrink:0;font-size:10px">${h.chat}</span>
+      </div>`).join('');
+  } catch(e) {
+    body.innerHTML = `<div style="text-align:center;padding:30px;color:#f87171">❌ Failed to load history</div>`;
+  }
+}
+function closeHistory() {
+  document.getElementById('history-modal').style.display = 'none';
+}
+// Close modal on backdrop click
+document.addEventListener('click', e => {
+  const m = document.getElementById('history-modal');
+  if (e.target === m) closeHistory();
+});
+async function doPremium(jid, val) {
+  await apiPost(`/api/admin/users/${encodeURIComponent(jid)}/premium`, { premium: val });
+  const u = allUsers.find(x => x.jid === jid); if (u) u.premium = val; renderUsers();
+}
+
+// ════════════════════════════════════════════════════════════
+// LOGS
+// ════════════════════════════════════════════════════════════
+async function loadLogs() {
+  try {
+    const d = await apiGet(`/api/admin/logs?filter=${logFilter}&limit=200`);
+    const el = document.getElementById('logs-feed');
+    if (!d.logs?.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No logs yet...</div>'; return; }
+    const atBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 60;
+    el.innerHTML = d.logs.map(l => {
+      const t = fmtTime(l.ts);
+      if (l.type === 'cmd') return `<div class="log-entry"><span class="log-time">${t}</span><span class="log-type log-type-cmd">CMD</span><span class="log-msg"><span class="log-num">+${l.number === 'SELF' ? 'You' : l.number}</span> <span style="color:var(--muted)">${esc(l.name || '')}</span> → <span class="log-cmd">${esc(l.command || '')}${l.args ? ' ' + esc(l.args) : ''}</span> <span style="color:#374151;font-size:10px">${l.chat === 'group' ? '[group]' : '[dm]'}</span></span></div>`;
+      return `<div class="log-entry"><span class="log-time">${t}</span><span class="log-type log-type-sys">SYS</span><span class="log-msg" style="color:var(--muted)">${esc(l.message || '')}</span></div>`;
+    }).join('');
+    if (atBottom) el.scrollTop = el.scrollHeight;
+  } catch {}
+}
+function setLF(f) {
+  logFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+  loadLogs();
+}
+async function clearLogs() {
+  if (!confirm('Clear all logs?')) return;
+  await apiDel('/api/admin/logs');
+  document.getElementById('logs-feed').innerHTML = '';
+}
+
+// ════════════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════════════
+async function loadSettings() {
+  try {
+    const d = await apiGet('/api/admin/settings');
+    document.getElementById('s-botName').value      = d.botName || '';
+    document.getElementById('s-ownerName').value    = d.ownerName || '';
+    document.getElementById('s-prefix').value       = d.prefix || '.';
+    document.getElementById('s-ownerNum').value     = d.ownerNumber || '';
+    document.getElementById('s-autoRead').checked          = !!d.autoRead;
+    document.getElementById('s-autoTyping').checked        = !!d.autoTyping;
+    document.getElementById('s-autoReply').checked         = !!d.autoReply;
+    document.getElementById('s-autoReplyMsg').value        = d.autoReplyMessage || '';
+    document.getElementById('s-autoReact').checked         = !!d.autoReactMessages;
+    document.getElementById('s-reactEmoji').value          = d.autoReactEmoji || '❤️';
+    document.getElementById('s-autoStatusView').checked    = !!d.autoStatusView;
+    document.getElementById('s-autoStatusReact').checked   = !!d.autoStatusReact;
+    document.getElementById('s-autoStatus').checked        = !!d.autoStatus;
+    document.getElementById('s-statusEmoji').value         = d.statusEmoji || '❤️';
+    document.getElementById('s-cooldown').value            = d.cooldown ?? 3000;
+    document.getElementById('s-spamLimit').value           = d.spamLimit ?? 5;
+    document.getElementById('s-privateMode').checked       = (d.botMode || 'public') === 'private';
+    document.getElementById('s-publicWelcome').checked     = d.publicWelcome !== false;
+    document.getElementById('s-antiCall').checked           = !!d.antiCall;
+    document.getElementById('s-antiEdit').checked           = !!d.antiEdit;
+    document.getElementById('s-autoRecording').checked      = !!d.autoRecording;
+    document.getElementById('s-antiCallMsg').value          = d.antiCallMsg || '';
+    const gb = document.getElementById('gemini-badge');
+    gb.textContent = d.geminiConfigured ? '✅ Configured' : '❌ Not Set';
+    gb.className = 'api-badge ' + (d.geminiConfigured ? 'api-ok' : 'api-no');
+    const fb = document.getElementById('firebase-badge');
+    fb.textContent = d.firebaseConfigured ? '✅ Connected' : '❌ Not Set';
+    fb.className = 'api-badge ' + (d.firebaseConfigured ? 'api-ok' : 'api-no');
+    document.getElementById('firebase-url-val').textContent = d.firebaseDbUrl || 'Not configured';
+  } catch {}
+  // Load admin email from Firebase (secure display)
+  try {
+    const cr = await apiGet('/api/admin/credentials');
+    if (cr.email) document.getElementById('admin-email-show').textContent = cr.email;
+  } catch {}
+}
+async function saveSettings() {
+  const msg = document.getElementById('settings-msg');
+  msg.style.display = 'none';
+  try {
+    const d = await apiPost('/api/admin/settings', {
+      botName:            document.getElementById('s-botName').value,
+      ownerName:          document.getElementById('s-ownerName').value,
+      prefix:             document.getElementById('s-prefix').value || '.',
+      autoRead:           document.getElementById('s-autoRead').checked,
+      autoTyping:         document.getElementById('s-autoTyping').checked,
+      autoReply:          document.getElementById('s-autoReply').checked,
+      autoReplyMessage:   document.getElementById('s-autoReplyMsg').value,
+      autoReactMessages:  document.getElementById('s-autoReact').checked,
+      autoReactEmoji:     document.getElementById('s-reactEmoji').value || '❤️',
+      autoStatusView:     document.getElementById('s-autoStatusView').checked,
+      autoStatusReact:    document.getElementById('s-autoStatusReact').checked,
+      autoStatus:         document.getElementById('s-autoStatus').checked,
+      statusEmoji:        document.getElementById('s-statusEmoji').value || '❤️',
+      cooldown:           parseInt(document.getElementById('s-cooldown').value) || 3000,
+      spamLimit:          parseInt(document.getElementById('s-spamLimit').value) || 5,
+      botMode:            document.getElementById('s-privateMode').checked ? 'private' : 'public',
+      publicWelcome:      document.getElementById('s-publicWelcome').checked,
+      antiCall:           document.getElementById('s-antiCall').checked,
+      antiEdit:           document.getElementById('s-antiEdit').checked,
+      autoRecording:      document.getElementById('s-autoRecording').checked,
+      antiCallMsg:        document.getElementById('s-antiCallMsg').value,
+    });
+    msg.textContent = d.note || '✅ Settings saved!';
+    msg.className = 'settings-msg ' + (d.firebaseOk === false ? 'msg-err' : 'msg-ok');
+    msg.style.display = 'block';
+    setTimeout(() => msg.style.display = 'none', 7000);
+  } catch {
+    msg.textContent = '❌ Failed to save settings';
+    msg.className = 'settings-msg msg-err'; msg.style.display = 'block';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// CHANGE ADMIN CREDENTIALS
+// ════════════════════════════════════════════════════════════
+async function changeAdminPassword() {
+  const msg       = document.getElementById('cp-msg');
+  const current   = document.getElementById('cp-current').value;
+  const newEmail  = document.getElementById('cp-email').value.trim();
+  const newPass   = document.getElementById('cp-new').value;
+  const confirm   = document.getElementById('cp-confirm').value;
+  msg.style.display = 'none';
+
+  if (!current) {
+    msg.textContent = '❌ Current password is required.';
+    msg.className = 'settings-msg msg-err'; msg.style.display = 'block'; return;
+  }
+  if (!newPass && !newEmail) {
+    msg.textContent = '❌ Enter a new password or new email (or both).';
+    msg.className = 'settings-msg msg-err'; msg.style.display = 'block'; return;
+  }
+  if (newPass && newPass !== confirm) {
+    msg.textContent = '❌ New passwords do not match.';
+    msg.className = 'settings-msg msg-err'; msg.style.display = 'block'; return;
+  }
+  if (newPass && newPass.length < 6) {
+    msg.textContent = '❌ New password must be at least 6 characters.';
+    msg.className = 'settings-msg msg-err'; msg.style.display = 'block'; return;
+  }
+
+  msg.textContent = '⏳ Updating credentials in Firebase...';
+  msg.className = 'settings-msg msg-ok'; msg.style.display = 'block';
+
+  try {
+    const d = await apiPost('/api/admin/change-password', {
+      currentPassword: current,
+      newEmail:        newEmail  || undefined,
+      newPassword:     newPass   || undefined,
+    });
+    if (d.success) {
+      msg.textContent = '✅ ' + (d.message || 'Credentials updated! Logging out...');
+      msg.className = 'settings-msg msg-ok';
+      ['cp-current','cp-email','cp-new','cp-confirm'].forEach(id => { document.getElementById(id).value = ''; });
+      setTimeout(() => adminLogout(), 2500);
+    } else {
+      msg.textContent = d.error || '❌ Failed to update credentials.';
+      msg.className = 'settings-msg msg-err';
+    }
+  } catch {
+    msg.textContent = '❌ Network error — try again.';
+    msg.className = 'settings-msg msg-err';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// BROADCAST
+// ════════════════════════════════════════════════════════════
+async function loadBroadcast() {
+  try {
+    // Populate session dropdown
+    const sel = document.getElementById('bc-session');
+    if (sel) {
+      const ss = await apiGet('/api/admin/sessions');
+      // Keep first "auto" option, rebuild the rest
+      while (sel.options.length > 1) sel.remove(1);
+      (ss.sessions || []).forEach(s => {
+        if (s.status === 'connected') {
+          const opt = document.createElement('option');
+          opt.value = s.sessionId;
+          opt.textContent = (s.number ? '+' + s.number + ' — ' : '') + s.sessionId;
+          sel.appendChild(opt);
+        }
+      });
+    }
+    // Show user count
+    const users = await apiGet('/api/admin/users');
+    const active = (users.users || []).filter(u => !u.banned);
+    const cnt = document.getElementById('bc-count');
+    if (cnt) cnt.textContent = active.length + ' user' + (active.length !== 1 ? 's' : '') + ' will receive this';
+  } catch(e) {
+    const cnt = document.getElementById('bc-count');
+    if (cnt) cnt.textContent = '— could not load user count';
+  }
+}
+
+async function sendBroadcast() {
+  const msg   = document.getElementById('bc-msg');
+  const btn   = document.getElementById('bc-btn');
+  const res   = document.getElementById('bc-result');
+  const sessEl = document.getElementById('bc-session');
+  if (!msg || !msg.value.trim()) {
+    res.textContent = '❌ Please type a message before sending.';
+    res.className = 'settings-msg msg-err'; res.style.display = 'block';
+    return;
+  }
+  btn.disabled = true; btn.textContent = '⏳ Sending...';
+  res.style.display = 'none';
+  try {
+    const d = await apiPost('/api/admin/broadcast', {
+      message: msg.value.trim(),
+      sessionId: sessEl ? sessEl.value : '',
+    });
+    if (d.success) {
+      res.textContent = `✅ Sent to ${d.sent} user${d.sent !== 1 ? 's' : ''} (${d.failed} failed, ${d.total} total)`;
+      res.className = 'settings-msg msg-ok';
+      msg.value = '';
+    } else {
+      res.textContent = '❌ ' + (d.error || 'Broadcast failed');
+      res.className = 'settings-msg msg-err';
+    }
+    res.style.display = 'block';
+  } catch(e) {
+    res.textContent = '❌ Network error — is the bot connected?';
+    res.className = 'settings-msg msg-err'; res.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = '📤 Send Broadcast';
+    setTimeout(() => { res.style.display = 'none'; }, 8000);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// ABOUT TAB
+// ════════════════════════════════════════════════════════════
+async function loadAbout() {
+  try {
+    const d = await apiGet('/api/admin/stats');
+    document.getElementById('ab-users').textContent    = d.totalUsers ?? '--';
+    document.getElementById('ab-sessions').textContent = d.activeSessions ?? '--';
+    document.getElementById('ab-uptime').textContent   = d.uptime ?? '--';
+  } catch {}
+}
+
+// ════════════════════════════════════════════════════════════
+// GROUPS
+// ════════════════════════════════════════════════════════════
+async function loadGroups() {
+  const tbody = document.getElementById('groups-tbody');
+  const count = document.getElementById('groups-count');
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)"><span class="spin"></span> Loading groups...</td></tr>`;
+  try {
+    const d = await apiGet('/api/admin/groups');
+    const groups = d.groups || [];
+    count.textContent = d.error
+      ? `⚠️ ${d.error}`
+      : `${groups.length} group${groups.length !== 1 ? 's' : ''}`;
+    if (!groups.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted)">${d.error ? '❌ ' + esc(d.error) : 'Bot is not in any groups yet.'}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = groups.map((g, i) => `<tr>
+      <td class="td-muted">${i + 1}</td>
+      <td style="font-weight:600;color:var(--text)">${esc(g.subject)}</td>
+      <td class="td-muted"><span class="badge badge-blue">👥 ${g.participants}</span></td>
+      <td class="td-muted" style="font-size:11px">${g.creation ? fmtDate(g.creation * 1000) : '—'}</td>
+      <td class="td-muted" style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(g.desc)}">${esc(g.desc) || '<span style="color:#374151">—</span>'}</td>
+    </tr>`).join('');
+  } catch(e) {
+    count.textContent = 'Error';
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:#f87171">❌ Failed to load groups — is the bot connected?</td></tr>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// FIREBASE RULES
+// ════════════════════════════════════════════════════════════
+const FB_RULES_SECURE = JSON.stringify({ rules: { ".read": false, ".write": false } }, null, 2);
+const FB_RULES_OPEN   = JSON.stringify({ rules: { ".read": true,  ".write": true  } }, null, 2);
+
+function setPresetRules(type) {
+  document.getElementById('fb-rules-editor').value = type === 'open' ? FB_RULES_OPEN : FB_RULES_SECURE;
+}
+
+async function loadFirebaseRules() {
+  const msg = document.getElementById('fb-rules-msg');
+  msg.style.display = 'none';
+  try {
+    const d = await apiGet('/api/admin/firebase-rules');
+    if (d.success) {
+      document.getElementById('fb-rules-editor').value = JSON.stringify(d.rules, null, 2);
+    } else {
+      msg.textContent = '❌ ' + (d.error || 'Failed to load rules');
+      msg.className = 'settings-msg msg-err'; msg.style.display = 'block';
+    }
+  } catch(e) {
+    msg.textContent = '❌ Network error';
+    msg.className = 'settings-msg msg-err'; msg.style.display = 'block';
+  }
+}
+
+async function saveFirebaseRules() {
+  const msg = document.getElementById('fb-rules-msg');
+  const btn = document.getElementById('fb-rules-save-btn');
+  msg.style.display = 'none';
+  let rules;
+  try {
+    rules = JSON.parse(document.getElementById('fb-rules-editor').value);
+  } catch {
+    msg.textContent = '❌ Invalid JSON — check your rules format';
+    msg.className = 'settings-msg msg-err'; msg.style.display = 'block'; return;
+  }
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const d = await apiPost('/api/admin/firebase-rules', { rules });
+    if (d.success) {
+      msg.textContent = '✅ Firebase rules saved successfully!';
+      msg.className = 'settings-msg msg-ok';
+    } else {
+      msg.textContent = '❌ ' + (d.error || 'Failed');
+      msg.className = 'settings-msg msg-err';
+    }
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 5000);
+  } catch {
+    msg.textContent = '❌ Network error'; msg.className = 'settings-msg msg-err'; msg.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Save Rules to Firebase';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function fmtTime(ts) {
+  if (!ts) return '--';
+  return new Date(ts).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+function fmtDate(ts) {
+  if (!ts) return '--';
+  return new Date(ts).toLocaleString('en-PK', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true });
+}
+function timeAgo(ts) {
+  if (!ts) return 'Never';
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'Just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+</script>
+</body>
+</html>
