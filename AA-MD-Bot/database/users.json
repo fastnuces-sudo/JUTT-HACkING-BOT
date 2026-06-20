@@ -17,17 +17,17 @@
   "74565564784701@lid": {
     "id": "74565564784701@lid",
     "name": "AA Mods Services",
-    "xp": 30,
+    "xp": 80,
     "level": 1,
     "balance": 1000,
-    "commandsUsed": 3,
+    "commandsUsed": 8,
     "lastDaily": null,
     "dailyStreak": 0,
     "warnings": 0,
     "banned": false,
     "createdAt": 1781949387216,
     "inventory": [],
-    "lastSeen": 1781949476795
+    "lastSeen": 1781952629572
   },
   "51200858837098@lid": {
     "id": "51200858837098@lid",

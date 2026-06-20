@@ -10,27 +10,38 @@ export const plugins = new Map();
 export const aliases = new Map();
 export const categories = new Map();
 
+function registerPlugin(plugin) {
+  if (!plugin?.command) return false;
+  const cmds = Array.isArray(plugin.command) ? plugin.command : [plugin.command];
+  cmds.forEach(cmd => plugins.set(cmd.toLowerCase(), plugin));
+  if (plugin.alias) {
+    const arr = Array.isArray(plugin.alias) ? plugin.alias : [plugin.alias];
+    arr.forEach(a => aliases.set(a.toLowerCase(), cmds[0].toLowerCase()));
+  }
+  const cat = plugin.category || 'misc';
+  if (!categories.has(cat)) categories.set(cat, []);
+  const catArr = categories.get(cat);
+  if (!catArr.includes(cmds[0])) catArr.push(cmds[0]);
+  return true;
+}
+
 export async function loadPlugin(filePath) {
   try {
     const url = pathToFileURL(filePath).href + `?t=${Date.now()}`;
     const mod = await import(url);
-    const plugin = mod.default || mod;
-    if (!plugin?.command) return null;
+    const exported = mod.default || mod;
 
-    const cmds = Array.isArray(plugin.command) ? plugin.command : [plugin.command];
-    cmds.forEach(cmd => plugins.set(cmd.toLowerCase(), plugin));
-
-    if (plugin.alias) {
-      const arr = Array.isArray(plugin.alias) ? plugin.alias : [plugin.alias];
-      arr.forEach(a => aliases.set(a.toLowerCase(), cmds[0].toLowerCase()));
+    // Support array of plugins (e.g. Islamic plugin exports an array)
+    if (Array.isArray(exported)) {
+      let count = 0;
+      for (const plugin of exported) {
+        if (registerPlugin(plugin)) count++;
+      }
+      return count > 0 ? exported[0] : null;
     }
 
-    const cat = plugin.category || 'misc';
-    if (!categories.has(cat)) categories.set(cat, []);
-    const catArr = categories.get(cat);
-    if (!catArr.includes(cmds[0])) catArr.push(cmds[0]);
-
-    return plugin;
+    // Single plugin object
+    return registerPlugin(exported) ? exported : null;
   } catch (err) {
     logger.warn({ err: err.message, filePath: path.basename(filePath) }, 'Plugin load failed');
     return null;

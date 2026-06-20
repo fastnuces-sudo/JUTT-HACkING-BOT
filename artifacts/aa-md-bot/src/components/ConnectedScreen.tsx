@@ -41,8 +41,9 @@ const CATEGORIES = [
 ];
 
 const SETTINGS_REF = [
-  { cmd: ".bs",             desc: "Full bot settings panel",           example: ".bs" },
-  { cmd: ".mode public",    desc: "Set bot mode (public/private)",      example: ".mode private" },
+  { cmd: ".bs",             desc: "Full bot settings panel — all toggles in one place", example: ".bs" },
+  { cmd: ".mode public",    desc: "PUBLIC: everyone can use commands",  example: ".mode public" },
+  { cmd: ".mode private",   desc: "PRIVATE: only You (self-chat) can use commands", example: ".mode private" },
   { cmd: ".anticall on",    desc: "Reject all incoming calls",          example: ".anticall on" },
   { cmd: ".antidelete on",  desc: "Anti-delete: show deleted messages", example: ".antidelete on" },
   { cmd: ".antiviewonce on",desc: "View once messages bypass",          example: ".antiviewonce on" },
@@ -53,7 +54,6 @@ const SETTINGS_REF = [
   { cmd: ".autoread on",    desc: "Mark all messages as read",          example: ".autoread on" },
   { cmd: ".autotyping on",  desc: "Show typing indicator on commands",  example: ".autotyping on" },
   { cmd: ".recording on",   desc: "Show recording indicator",           example: ".recording on" },
-  { cmd: ".welcomenew on",  desc: "Welcome new users to bot",           example: ".welcomenew on" },
   { cmd: ".setprefix !",    desc: "Change command prefix",              example: ".setprefix !" },
 ];
 
@@ -219,7 +219,26 @@ export default function ConnectedScreen({ session, onDisconnect }: Props) {
               <div className="islamic-section">
                 <div className="islamic-section-title">🌹 Fikra-e-Jaffery (Ahl al-Bayt ع)</div>
                 <div className="islamic-cmds">
-                  {[["jaffery_menu","Full Shia Menu"],["dua_kumayl","Dua Kumayl"],["dua_arafah","Imam Husain ع (Arafah)"],["dua_tawassul","Dua Tawassul"],["dua_imam_zaman","Imam Mahdi ع"],["ziyarat_ashura","Ziyarat Ashura"],["salawat_aal","Salawat Aal-e-Muhammad"],["masoomeen14","14 Masoomeen ع"]].map(([c, d]) => (
+                  {[
+                    ["jaffery_menu","Full Jaffery Menu"],
+                    ["dua_kumayl","Dua Kumayl — Imam Ali ع"],
+                    ["dua_arafah","Dua Arafah — Imam Husain ع"],
+                    ["dua_tawassul","Dua Tawassul"],
+                    ["dua_imam_zaman","Dua — Imam Mahdi ع"],
+                    ["dua_nudba","Dua Nudba"],
+                    ["dua_sabah","Dua Sabah — Imam Ali ع"],
+                    ["dua_joshan","Dua Joshan Kabeer"],
+                    ["ziyarat_ashura","Ziyarat Ashura"],
+                    ["ziyarat_warith","Ziyarat Warith"],
+                    ["ziyarat_imam_ali","Ziyarat Imam Ali ع"],
+                    ["ziyarat_imam_raza","Ziyarat Imam Raza ع"],
+                    ["salawat_aal","Salawat Aal-e-Muhammad"],
+                    ["salawat_shaban","Salawat Shabaniyya"],
+                    ["masoomeen14","14 Masoomeen ع"],
+                    ["karbala_info","Event of Karbala"],
+                    ["nahjul_balagha","Nahjul Balagha Quote"],
+                    ["ghadeer_info","Event of Ghadeer Khum"],
+                  ].map(([c, d]) => (
                     <div key={c} className="isl-cmd" onClick={() => copyCmd(PREFIX + c)} style={{ cursor: "pointer" }} title="Click to copy">
                       {PREFIX}{c} <span className="isl-cmd-desc">— {d}</span>
                     </div>
@@ -280,6 +299,29 @@ export default function ConnectedScreen({ session, onDisconnect }: Props) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Bot Mode */}
+        <div className="section">
+          <div className="section-head">🔀 Bot Mode — Private / Public</div>
+          <div className="mode-cards">
+            <div className="mode-info-card mode-private" onClick={() => copyCmd(".mode private")} title="Click to copy">
+              <div className="mode-info-icon">🔒</div>
+              <div className="mode-info-title">Private Mode</div>
+              <div className="mode-info-desc">Only <strong>You (self-chat)</strong> can use commands. Perfect for personal use — no one else can trigger the bot.</div>
+              <code className="mode-info-cmd">.mode private</code>
+            </div>
+            <div className="mode-info-card mode-public" onClick={() => copyCmd(".mode public")} title="Click to copy">
+              <div className="mode-info-icon">🌐</div>
+              <div className="mode-info-title">Public Mode</div>
+              <div className="mode-info-desc">Everyone can use commands — any number that messages the bot gets a response. Current default.</div>
+              <code className="mode-info-cmd">.mode public</code>
+            </div>
+          </div>
+          <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>
+            💡 In <strong style={{ color: "var(--text)" }}>Private mode</strong>, only your "Message yourself" (You) chat responds to commands — great for personal automation.
+            Click a card to copy the command, then paste in WhatsApp.
+          </p>
         </div>
 
         {/* Bot Settings */}

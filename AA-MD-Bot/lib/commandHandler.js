@@ -7,6 +7,9 @@ import config from '../config.js';
 const cooldowns = new Map();
 const spamTracker = new Map();
 
+const CHANNEL_URL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
+const WATERMARK = `\n\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*\n📢 *Channel:* ${CHANNEL_URL}`;
+
 export function isOwner(jid) {
   const owners = db.settings.getValue('owners') || config.owners || [];
   const num = jid?.split('@')[0];
@@ -45,12 +48,15 @@ async function react(sock, msg, emoji) {
   await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }).catch(() => {});
 }
 
+// All text replies automatically get the watermark + channel link
 async function reply(sock, msg, text, options = {}) {
-  return sock.sendMessage(msg.key.remoteJid, { text, ...options }, { quoted: msg });
+  const fullText = typeof text === 'string' ? text + WATERMARK : text;
+  return sock.sendMessage(msg.key.remoteJid, { text: fullText, ...options }, { quoted: msg });
 }
 
 async function sendMsg(sock, jid, text, options = {}) {
-  return sock.sendMessage(jid, { text, ...options });
+  const fullText = typeof text === 'string' ? text + WATERMARK : text;
+  return sock.sendMessage(jid, { text: fullText, ...options });
 }
 
 export async function handleMessage(sock, msg, sessionId) {
@@ -60,9 +66,19 @@ export async function handleMessage(sock, msg, sessionId) {
     const fromMe = msg.key.fromMe;
     const isGroupMsg = isGroup(jid);
     const settings = db.settings.get();
-    const owner = isOwner(senderJid);
 
-    if (settings.maintenanceMode && !owner && !fromMe) {
+    // fromMe = self-chat ("You" tab) — always treated as owner
+    const owner = isOwner(senderJid) || fromMe;
+
+    // ── Bot Mode: private / public ──────────────────────────
+    // private → only works in self-chat (fromMe) or if sender is a registered owner
+    // public  → works for everyone (default)
+    const botMode = settings.botMode || 'public';
+    if (botMode === 'private' && !owner && !fromMe) {
+      return; // silently ignore non-owner messages in private mode
+    }
+
+    if (settings.maintenanceMode && !owner) {
       await reply(sock, msg, config.maintenanceMsg).catch(() => {});
       return;
     }
@@ -146,11 +162,13 @@ export async function handleMessage(sock, msg, sessionId) {
       logger,
     });
 
-    db.users.addXP(senderJid, config.xpPerCommand);
-    db.users.set(senderJid, {
-      commandsUsed: (db.users.get(senderJid).commandsUsed || 0) + 1,
-      lastSeen: Date.now(), name: msg.pushName || '',
-    });
+    if (!fromMe) {
+      db.users.addXP(senderJid, config.xpPerCommand);
+      db.users.set(senderJid, {
+        commandsUsed: (db.users.get(senderJid).commandsUsed || 0) + 1,
+        lastSeen: Date.now(), name: msg.pushName || '',
+      });
+    }
 
     if (settings.autoTyping) {
       await sock.sendPresenceUpdate('paused', jid).catch(() => {});
