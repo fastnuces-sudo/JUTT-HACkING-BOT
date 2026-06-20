@@ -21,6 +21,8 @@ let _bannerThumb = null;
 function getBannerThumb() {
   if (_bannerThumb) return _bannerThumb;
   const paths = [
+    join(__dirname, '../banner.jpeg'),
+    join(__dirname, '../banner.jpg'),
     join(__dirname, '../assets/banner.jpg'),
     join(__dirname, '../../artifacts/aa-md-bot/public/banner.jpeg'),
   ];

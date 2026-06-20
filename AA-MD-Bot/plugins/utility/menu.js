@@ -1,9 +1,9 @@
 // ============================================
-// AA MD Bot - Menu Plugin
+// AA MD Bot - Main Menu Plugin
 // Developer: Ahsan Ali | AA Mods
 // ============================================
 
-import { getCategories, plugins } from '../../lib/pluginLoader.js';
+import { plugins } from '../../lib/pluginLoader.js';
 import config from '../../config.js';
 import { db } from '../../lib/database.js';
 import fs from 'fs';
@@ -13,14 +13,11 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Banner image - look in bot root first, then artifact public
 const BANNER_PATHS = [
   path.join(__dirname, '../../banner.jpeg'),
   path.join(__dirname, '../../banner.jpg'),
   path.join(__dirname, '../../assets/banner.jpg'),
-  path.join(__dirname, '../../assets/banner.jpeg'),
 ];
-
 function getBanner() {
   for (const p of BANNER_PATHS) {
     try { if (fs.existsSync(p)) return fs.readFileSync(p); } catch {}
@@ -28,10 +25,9 @@ function getBanner() {
   return null;
 }
 
-const CHANNEL_URL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
+const CHANNEL_URL  = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
 const CHANNEL_NAME = 'AA MD Bot';
 
-// Build the "View Channel" contextInfo — uses newsletter JID if set, else externalAdReply
 function getCtx() {
   const newsletterJid = global._AA_NEWSLETTER_JID;
   if (newsletterJid) {
@@ -62,72 +58,73 @@ function getCtx() {
 }
 
 const catEmoji = {
-  islamic: '☪️', general: '📋', ai: '🤖', download: '📥',
+  islamic: '☪️', general: '📋', download: '📥',
   media: '🎬', search: '🔍', fun: '🎉', utility: '🔧',
   tools: '🛠️', group: '👥', admin: '🛡️', settings: '⚙️',
   owner: '👑', support: '📞', economy: '💰', level: '⭐', misc: '📌',
 };
 
 const CAT_ORDER = {
-  islamic: 0, general: 1, ai: 2, download: 3, media: 4,
-  search: 5, fun: 6, utility: 7, tools: 8, economy: 9,
-  level: 10, group: 11, admin: 12, settings: 13, owner: 90, support: 99,
+  islamic: 0, general: 1, download: 2, media: 3,
+  search: 4, fun: 5, utility: 6, tools: 7, economy: 8,
+  level: 9, group: 10, admin: 11, settings: 12, owner: 90, support: 99,
 };
 
-const SKIP_CATS  = new Set(['settings']);
+// Categories hidden from full menu (have their own sub-menu commands)
+const SKIP_CATS  = new Set(['settings', 'ai']);
 const OWNER_CATS = new Set(['owner']);
+
+// Islamic shown only as a summary (has its own .islamicmenu)
+const SUMMARY_CATS = new Set(['islamic']);
 
 export default {
   command: 'menu',
   alias: ['help', 'commands', 'cmds'],
   description: 'Show all available commands',
   category: 'utility',
-  usage: '.menu',
+  usage: '.menu | .menu <category>',
 
   async execute({ sock, jid, msg, isOwner, args }) {
-    const settings = db.settings.get();
-    const pushName = msg.pushName || 'User';
-    const pref     = (settings.prefix ?? config.prefix)[0] ?? '.';
-    const mode     = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
-    const role     = isOwner ? '👑 Owner' : '👤 User';
+    const settings  = db.settings.get();
+    const pushName  = msg.pushName || 'User';
+    const pref      = (settings.prefix ?? config.prefix)[0] ?? '.';
+    const mode      = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
+    const role      = isOwner ? '👑 Owner' : '👤 User';
 
     const upSec = Math.floor(process.uptime());
     const upH   = Math.floor(upSec / 3600);
     const upM   = Math.floor((upSec % 3600) / 60);
     const upS   = upSec % 60;
-    const uptime = upH > 0
-      ? `${upH}h ${upM}m ${upS}s`
-      : upM > 0 ? `${upM}m ${upS}s` : `${upS}s`;
-
+    const uptime = upH > 0 ? `${upH}h ${upM}m` : upM > 0 ? `${upM}m ${upS}s` : `${upS}s`;
     const usedMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
 
-    // Deduplicate & categorise plugins
+    // Deduplicate & categorise
     const seen       = new Set();
     const categories = {};
     for (const plugin of plugins.values()) {
       const fileKey = plugin.file || plugin.command;
       if (seen.has(fileKey)) continue;
       seen.add(fileKey);
-      const cat  = (plugin.category || 'general').toLowerCase();
-      const cmds = [].concat(plugin.command);
+      const cat     = (plugin.category || 'general').toLowerCase();
+      const cmds    = [].concat(plugin.command);
       const aliases = [].concat(plugin.alias || []);
-      const main   = cmds[0];
-      const short  = aliases.find(a => a.length <= 4) || aliases[0] || null;
-      const desc   = (plugin.description || '').slice(0, 32);
+      const main    = cmds[0];
+      const short   = aliases.find(a => a.length <= 4) || aliases[0] || null;
+      const desc    = (plugin.description || '').slice(0, 32);
       if (!categories[cat]) categories[cat] = [];
       categories[cat].push({ main, short, desc });
     }
     const totalCmds = seen.size;
-
     const contextInfo = getCtx();
 
-    // ── Category-specific view (.menu download) ──────────
+    // ── Category-specific view ────────────────────────────
     if (args[0]) {
       const cat  = args[0].toLowerCase();
       const cmds = categories[cat];
       if (!cmds) {
+        const list = Object.keys(categories).filter(c => !SKIP_CATS.has(c)).map(c => `${catEmoji[c] || '📌'} ${c}`).join('\n');
         return sock.sendMessage(jid,
-          { text: `❌ Category *${cat}* not found.\n\nAvailable:\n${Object.keys(categories).map(c => `${catEmoji[c]||'📌'} ${c}`).join('\n')}`, contextInfo },
+          { text: `❌ Category *${cat}* not found.\n\n📦 *Available:*\n${list}`, contextInfo },
           { quoted: msg }
         );
       }
@@ -136,10 +133,8 @@ export default {
       text    += `║  ${emoji} *${cat.toUpperCase()} COMMANDS*\n`;
       text    += `╚══════════════════════════════╝\n\n`;
       for (const { main, short, desc } of cmds) {
-        const label = short
-          ? `${pref}${main} / ${pref}${short}`
-          : `${pref}${main}`;
-        text += `▸ *${label}*${desc ? `\n  ╰ ${desc}` : ''}\n`;
+        const label = short ? `*${pref}${main}* / *${pref}${short}*` : `*${pref}${main}*`;
+        text += `▸ ${label}${desc ? `\n  ╰ ${desc}` : ''}\n`;
       }
       text += `\n📢 ${CHANNEL_URL}`;
       return sock.sendMessage(jid, { text, contextInfo }, { quoted: msg });
@@ -147,28 +142,25 @@ export default {
 
     // ── Full Menu ─────────────────────────────────────────
     const greeting = isOwner
-      ? `🌟 *Assalamualaikum Ahsan Bhai!* 🌟`
-      : `✨ *Assalamualaikum ${pushName}!* ✨`;
+      ? `🌟 *Assalamualaikum, Ahsan Bhai!* 🌟`
+      : `✨ *Assalamualaikum, ${pushName}!* ✨`;
 
-    // Header
-    let menu = `╔══════════════════════════════╗\n`;
-    menu    += `║   🤖  *AA MD Bot*  •  v3.0   ║\n`;
-    menu    += `║   👨‍💻 *Ahsan Ali | AA Mods*  ║\n`;
-    menu    += `╚══════════════════════════════╝\n\n`;
-    menu    += `${greeting}\n\n`;
+    let menu  = `╔══════════════════════════════╗\n`;
+    menu     += `║   🤖 *AA MD Bot*  •  v3.0    ║\n`;
+    menu     += `║  👨‍💻 *Ahsan Ali | AA Mods*   ║\n`;
+    menu     += `╚══════════════════════════════╝\n\n`;
+    menu     += `${greeting}\n\n`;
 
-    // Bot Status
-    menu += `┌─────── 📊 *BOT STATUS* ───────┐\n`;
-    menu += `│ 🟢 Status   : Online\n`;
-    menu += `│ ⏱️ Uptime   : ${uptime}\n`;
-    menu += `│ 💾 RAM      : ${usedMB} MB\n`;
-    menu += `│ 📦 Commands : ${totalCmds}+\n`;
-    menu += `│ 🔑 Prefix   : ${pref}\n`;
-    menu += `│ 🤖 Mode     : ${mode}\n`;
-    menu += `│ 👤 Role     : ${role}\n`;
-    menu += `└───────────────────────────────┘\n`;
+    menu += `┌───────── 📊 *BOT INFO* ─────────┐\n`;
+    menu += `│ 🟢 Status    : *Online*\n`;
+    menu += `│ ⏱️ Uptime    : *${uptime}*\n`;
+    menu += `│ 💾 RAM       : *${usedMB} MB*\n`;
+    menu += `│ 📦 Commands  : *${totalCmds}+*\n`;
+    menu += `│ 🔑 Prefix    : *${pref}*\n`;
+    menu += `│ 🤖 Mode      : *${mode}*\n`;
+    menu += `│ ${role.split(' ')[0]} Role      : *${role}*\n`;
+    menu += `└─────────────────────────────────┘\n`;
 
-    // Sort and build categories
     const sorted = Object.entries(categories).sort(([a], [b]) =>
       (CAT_ORDER[a] ?? 50) - (CAT_ORDER[b] ?? 50) || a.localeCompare(b)
     );
@@ -178,6 +170,15 @@ export default {
       if (OWNER_CATS.has(cat) && !isOwner) continue;
 
       const emoji = catEmoji[cat] || '📌';
+
+      // Islamic: show short summary, refer to .islamicmenu
+      if (SUMMARY_CATS.has(cat)) {
+        menu += `\n╔═══ ${emoji} *ISLAMIC* (${cmds.length}) ═══\n`;
+        menu += `│ ▸ *${pref}islamicmenu*  — Full Islamic menu\n`;
+        menu += `│  Duas • Zikr • Hadith • Kalimas • Adhkar\n`;
+        continue;
+      }
+
       menu += `\n╔═══ ${emoji} *${cat.toUpperCase()}* (${cmds.length}) ═══\n`;
       for (const { main, short, desc } of cmds) {
         const label = short
@@ -187,27 +188,20 @@ export default {
       }
     }
 
-    // Owner quick settings
     if (isOwner) {
-      menu += `\n╔═══ ⚙️ *QUICK SETTINGS* ═══\n`;
+      menu += `\n╔═══ ⚙️ *SETTINGS & OWNER* ═══\n`;
+      menu += `│ ▸ *${pref}settings* / *${pref}bs*  — Bot settings panel\n`;
       menu += `│ ▸ *${pref}mode* public/private\n`;
       menu += `│ ▸ *${pref}anticall* on/off\n`;
       menu += `│ ▸ *${pref}antidelete* on/off\n`;
-      menu += `│ ▸ *${pref}antiviewonce* on/off\n`;
-      menu += `│ ▸ *${pref}statusview* on/off\n`;
-      menu += `│ ▸ *${pref}statusreact* on/off\n`;
-      menu += `│ ▸ *${pref}autostatus* on/off\n`;
       menu += `│ ▸ *${pref}setprefix* <symbol>\n`;
       menu += `│ ▸ *${pref}setnewsletter* <jid>\n`;
     }
 
-    // Footer
     menu += `\n╚══════════════════════════════╝\n`;
-    menu += `📢 *Join our WhatsApp Channel*\n`;
-    menu += `${CHANNEL_URL}\n`;
-    menu += `╚══════════════════════════════╝`;
+    menu += `📢 *Join: ${CHANNEL_URL}*\n`;
+    menu += `💡 *${pref}menu <category>* for full category list`;
 
-    // Send with banner image + contextInfo (View Channel button)
     const banner = getBanner();
     try {
       if (banner) {

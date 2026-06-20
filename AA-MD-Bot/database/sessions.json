@@ -3,7 +3,14 @@
     "id": "AAKWB",
     "jid": "923346741532:27@s.whatsapp.net",
     "connected": true,
-    "connectedAt": 1781956298603,
+    "connectedAt": 1781957130296,
     "name": "AAKWB"
+  },
+  "Bussenies": {
+    "id": "Bussenies",
+    "jid": "923316041183:7@s.whatsapp.net",
+    "name": "AA Mods Services",
+    "connected": true,
+    "connectedAt": 1781957131686
   }
 }

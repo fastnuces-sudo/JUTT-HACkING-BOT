@@ -139,7 +139,16 @@ a { text-decoration: none; color: inherit; }
 .dash-body { max-width: 900px; margin: 0 auto; padding: 24px 20px 48px; }
 
 /* Status grid */
-.status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+.status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+.sessions-list { display: flex; flex-direction: column; gap: 8px; }
+.sess-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+.sess-row:hover { border-color: rgba(37,211,102,.3); }
+.sess-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sess-info { flex: 1; min-width: 0; }
+.sess-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.sess-id { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.sess-badge { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.btn-connect-more { background: rgba(37,211,102,.15); color: var(--green); border: 1px solid rgba(37,211,102,.3); border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .status-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; transition: border-color .2s; }
 .status-card:hover { border-color: rgba(37,211,102,.3); }
 .sc-icon { font-size: 20px; margin-bottom: 7px; }
@@ -230,6 +239,7 @@ a { text-decoration: none; color: inherit; }
 /* Responsive */
 @media (max-width: 600px) {
   .status-grid { grid-template-columns: repeat(2, 1fr); }
+  .sess-row { padding: 10px 12px; }
   .dash-hero-content { padding: 16px; }
   .dash-body { padding: 16px 14px 48px; }
   .channel-bar { padding: 10px 14px; }
@@ -404,6 +414,20 @@ a { text-decoration: none; color: inherit; }
         <div class="sc-icon">📦</div>
         <div class="sc-value" id="s-cmds">120+</div>
         <div class="sc-label">Commands</div>
+      </div>
+      <div class="status-card" id="s-sessions-card">
+        <div class="sc-icon">📱</div>
+        <div class="sc-value" style="color:var(--green)" id="s-sessions-count">0</div>
+        <div class="sc-label">Sessions</div>
+      </div>
+    </div>
+
+    <!-- Connected Sessions List -->
+    <div class="section" id="sessions-section" style="display:none">
+      <div class="section-head">📱 Connected Sessions</div>
+      <div id="sessions-list" class="sessions-list"></div>
+      <div style="margin-top:10px;text-align:right">
+        <button class="btn-connect-more" onclick="goConnect()">➕ Connect Another Number</button>
       </div>
     </div>
 
@@ -682,10 +706,6 @@ function show(id) {
 }
 
 function showDash(info) {
-  if (info) {
-    const sub = document.getElementById('hero-sub');
-    sub.innerHTML = `<span class="dot dot-green"></span>${info.phone ? '+'+info.phone+' — ' : ''}Connected`;
-  }
   show('screen-dash');
   loadStats();
 }
@@ -848,16 +868,53 @@ async function loadStats() {
   try {
     const r = await fetch(BASE + '/api/stats');
     const d = await r.json();
-    const upEl = document.getElementById('s-uptime');
-    const cmEl = document.getElementById('s-cmds');
+    const upEl  = document.getElementById('s-uptime');
+    const cmEl  = document.getElementById('s-cmds');
+    const scEl  = document.getElementById('s-sessions-count');
     if (upEl) upEl.textContent = d.uptime || '--';
     if (cmEl) cmEl.textContent = (d.plugins || 120) + '+';
 
-    // Update hero with first connected session info
-    const conn = (d.sessions || []).find(s => s.status === 'connected');
-    if (conn) {
-      document.getElementById('hero-sub').innerHTML =
-        `<span class="dot dot-green"></span>${conn.phone ? '+' + conn.phone + ' — ' : ''}Connected`;
+    const sessions = d.sessions || [];
+    const connected = sessions.filter(s => s.status === 'connected');
+
+    if (scEl) scEl.textContent = connected.length;
+
+    // Update hero subtitle
+    const heroSub = document.getElementById('hero-sub');
+    if (heroSub) {
+      if (connected.length === 0) {
+        heroSub.innerHTML = `<span class="dot" style="background:#e53e3e"></span> No sessions connected`;
+      } else if (connected.length === 1) {
+        const s = connected[0];
+        heroSub.innerHTML = `<span class="dot dot-green"></span>${s.phone ? '+'+s.phone+' — ' : ''}Connected`;
+      } else {
+        heroSub.innerHTML = `<span class="dot dot-green"></span>${connected.length} Numbers Connected`;
+      }
+    }
+
+    // Sessions list section
+    const sec  = document.getElementById('sessions-section');
+    const list = document.getElementById('sessions-list');
+    if (sec && list) {
+      sec.style.display = sessions.length > 0 ? '' : 'none';
+      list.innerHTML = sessions.map(s => {
+        const isConn = s.status === 'connected';
+        const dotColor = isConn ? '#48bb78' : s.status === 'connecting' ? '#ed8936' : '#718096';
+        const label = s.phone ? `+${s.phone}` : s.name || s.id;
+        const badge = s.status === 'connected' ? '🟢 Connected'
+                    : s.status === 'connecting' ? '🟡 Connecting'
+                    : s.status === 'qr'         ? '📱 Scan QR'
+                    : s.status === 'reconnecting' ? '🔄 Reconnecting'
+                    : '⚪ Disconnected';
+        return `<div class="sess-row">
+          <div class="sess-dot" style="background:${dotColor}"></div>
+          <div class="sess-info">
+            <div class="sess-name">${label}</div>
+            <div class="sess-id">${s.id}</div>
+          </div>
+          <div class="sess-badge">${badge}</div>
+        </div>`;
+      }).join('');
     }
   } catch {}
 }
