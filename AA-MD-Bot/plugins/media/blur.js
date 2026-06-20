@@ -1,0 +1,48 @@
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs-extra';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { generateId } from '../../lib/helper.js';
+
+const execAsync = promisify(exec);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const tmpDir = path.join(__dirname, '../../temp');
+
+export default {
+  command: 'blur',
+  alias: ['blurimage'],
+  description: 'Blur an image',
+  category: 'media',
+  async execute({ reply, sock, jid, msg, args }) {
+    const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const hasImage = quoted?.imageMessage || msg.message?.imageMessage;
+    if (!hasImage) return reply('❌ Reply to an *image* with .blur [level 1-20]');
+
+    const blurLevel = Math.min(Math.max(parseInt(args[0]) || 5, 1), 20);
+    await reply('⏳ Blurring image...');
+    fs.ensureDirSync(tmpDir);
+    const id = generateId();
+
+    try {
+      const buffer = await sock.downloadMediaMessage({
+        message: quoted ? { imageMessage: hasImage } : msg.message,
+        key: msg.key,
+      });
+
+      const inputPath = path.join(tmpDir, `${id}_input.jpg`);
+      const outputPath = path.join(tmpDir, `${id}_blur.jpg`);
+
+      await fs.writeFile(inputPath, buffer);
+      await execAsync(`ffmpeg -i "${inputPath}" -vf "boxblur=${blurLevel}:${blurLevel}" "${outputPath}"`, { timeout: 15000 });
+
+      const resultBuffer = await fs.readFile(outputPath);
+      await sock.sendMessage(jid, { image: resultBuffer, caption: `🌫️ Blurred (Level ${blurLevel})` }, { quoted: msg });
+
+      await fs.remove(inputPath).catch(() => {});
+      await fs.remove(outputPath).catch(() => {});
+    } catch (err) {
+      reply(`❌ Blur failed: ${err.message}`);
+    }
+  },
+};

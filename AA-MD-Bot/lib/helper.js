@@ -1,0 +1,77 @@
+import fs from 'fs-extra';
+import path from 'path';
+import crypto from 'crypto';
+import moment from 'moment-timezone';
+import { fileURLToPath } from 'url';
+import config from '../config.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export function getPrefix(text) {
+  for (const p of config.prefix) {
+    if (text.startsWith(p)) return p;
+  }
+  return null;
+}
+
+export function parseCommand(text) {
+  const prefix = getPrefix(text);
+  if (!prefix) return null;
+  const withoutPrefix = text.slice(prefix.length).trim();
+  if (!withoutPrefix) return null;
+  const [cmd, ...args] = withoutPrefix.split(/\s+/);
+  return { prefix, command: cmd.toLowerCase(), args, text: args.join(' ') };
+}
+
+export function formatDuration(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ${h % 24}h ${m % 60}m`;
+  if (h > 0) return `${h}h ${m % 60}m ${s % 60}s`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
+
+export function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+}
+
+export function getTime(tz = config.timezone) { return moment().tz(tz).format('HH:mm:ss'); }
+export function getDate(tz = config.timezone) { return moment().tz(tz).format('DD/MM/YYYY'); }
+export function randomChoice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+export function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+export function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+export function isGroup(jid) { return jid?.endsWith('@g.us'); }
+export function generateId() { return crypto.randomBytes(8).toString('hex'); }
+
+export function tempFile(ext = 'tmp') {
+  const dir = path.join(__dirname, '../temp');
+  fs.ensureDirSync(dir);
+  return path.join(dir, `${generateId()}.${ext}`);
+}
+
+export async function cleanTemp() {
+  const dir = path.join(__dirname, '../temp');
+  const files = await fs.readdir(dir).catch(() => []);
+  const now = Date.now();
+  for (const file of files) {
+    const fp = path.join(dir, file);
+    const stat = await fs.stat(fp).catch(() => null);
+    if (stat && now - stat.mtimeMs > 30 * 60 * 1000) await fs.remove(fp).catch(() => {});
+  }
+}
+
+export async function getBuffer(url, options = {}) {
+  const { default: axios } = await import('axios');
+  const res = await axios.get(url, { responseType: 'arraybuffer', ...options });
+  return Buffer.from(res.data);
+}
+
+export default { getPrefix, parseCommand, formatDuration, formatBytes, getTime, getDate,
+  randomChoice, randomInt, sleep, isGroup, generateId, tempFile, cleanTemp, getBuffer };

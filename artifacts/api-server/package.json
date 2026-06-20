@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && node ./bot/index.js",
-    "build": "node ./build.mjs",
-    "start": "node ./bot/index.js",
+    "dev": "export NODE_ENV=development && cd ../../AA-MD-Bot && npm install --prefer-offline 2>/dev/null; node index.js",
+    "build": "echo ok",
+    "start": "cd ../../AA-MD-Bot && node index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
