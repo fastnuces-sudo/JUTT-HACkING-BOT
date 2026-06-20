@@ -2,17 +2,17 @@
   "149534051196996@lid": {
     "id": "149534051196996@lid",
     "name": "AAKWB",
-    "xp": 10,
+    "xp": 20,
     "level": 1,
     "balance": 1000,
-    "commandsUsed": 1,
+    "commandsUsed": 2,
     "lastDaily": null,
     "dailyStreak": 0,
     "warnings": 0,
     "banned": false,
     "createdAt": 1781949273027,
     "inventory": [],
-    "lastSeen": 1781949273041
+    "lastSeen": 1781951626815
   },
   "74565564784701@lid": {
     "id": "74565564784701@lid",
@@ -28,5 +28,21 @@
     "createdAt": 1781949387216,
     "inventory": [],
     "lastSeen": 1781949476795
+  },
+  "51200858837098@lid": {
+    "id": "51200858837098@lid",
+    "name": "~",
+    "xp": 15,
+    "level": 1,
+    "balance": 1000,
+    "commandsUsed": 0,
+    "lastDaily": null,
+    "dailyStreak": 0,
+    "warnings": 0,
+    "banned": false,
+    "createdAt": 1781951776572,
+    "inventory": [],
+    "lastSeen": 1781951823393,
+    "deviceSource": "default"
   }
 }
