@@ -1,5 +1,8 @@
-// Add local bin to PATH for yt-dlp
-process.env.PATH = `/home/runner/.local/bin:${process.env.PATH || ''}`;
+// Ensure common binary locations are in PATH (works on Replit, Railway, VPS, etc.)
+const extraPaths = ['/home/runner/.local/bin', '/usr/local/bin', '/usr/bin'];
+for (const p of extraPaths) {
+  if (!process.env.PATH?.includes(p)) process.env.PATH = `${p}:${process.env.PATH || ''}`;
+}
 
 import http from 'http';
 import fs from 'fs-extra';

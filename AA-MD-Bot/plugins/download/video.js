@@ -8,12 +8,25 @@ import { generateId, getBuffer, getBestThumb } from '../../lib/helper.js';
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const YTDLP = '/home/runner/.local/bin/yt-dlp';
+const YTDLP_PATHS = [
+  '/home/runner/.local/bin/yt-dlp',
+  '/usr/local/bin/yt-dlp',
+  '/usr/bin/yt-dlp',
+  'yt-dlp',
+];
 
-async function ytSearch(query) {
+async function getYtdlp() {
+  for (const p of YTDLP_PATHS) {
+    try { await execAsync(`${p} --version`, { timeout: 5000 }); return p; }
+    catch {}
+  }
+  return null;
+}
+
+async function ytSearch(query, ytdlp) {
   const cmd = query.startsWith('http')
-    ? `${YTDLP} "${query}" --dump-json --no-playlist --no-download --quiet`
-    : `${YTDLP} "ytsearch1:${query}" --dump-json --no-playlist --no-download --quiet`;
+    ? `${ytdlp} "${query}" --dump-json --no-playlist --no-download --quiet`
+    : `${ytdlp} "ytsearch1:${query}" --dump-json --no-playlist --no-download --quiet`;
   const { stdout } = await execAsync(cmd, { timeout: 30000 });
   return JSON.parse(stdout.trim().split('\n')[0]);
 }
@@ -28,6 +41,9 @@ export default {
   execute: async ({ reply, react, sock, jid, msg, text }) => {
     if (!text) return reply('🎬 Usage: .video <name or URL>\n\nExample: .video Faded Alan Walker');
 
+    const ytdlp = await getYtdlp();
+    if (!ytdlp) return reply('❌ yt-dlp not available on this server.');
+
     await react('⏳');
 
     const tempDir = path.join(__dirname, '../../temp');
@@ -35,7 +51,7 @@ export default {
     const uid = generateId();
 
     try {
-      const info = await ytSearch(text).catch(() => null);
+      const info = await ytSearch(text, ytdlp).catch(() => null);
       if (!info) { await react('❌'); return reply('❌ No video found for: ' + text); }
 
       const title    = info.title    || 'video';
@@ -65,9 +81,7 @@ export default {
         `⏳ _Downloading video..._`;
 
       let thumbBuf = null;
-      if (thumbUrl) {
-        try { thumbBuf = await getBuffer(thumbUrl); } catch {}
-      }
+      if (thumbUrl) { try { thumbBuf = await getBuffer(thumbUrl); } catch {} }
 
       if (thumbBuf) {
         await sock.sendMessage(jid, { image: thumbBuf, caption }, { quoted: msg });
@@ -77,7 +91,7 @@ export default {
 
       const outTemplate = path.join(tempDir, `${uid}.%(ext)s`);
       await execAsync(
-        `${YTDLP} "${url}" ` +
+        `${ytdlp} "${url}" ` +
         `-f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]" ` +
         `--merge-output-format mp4 ` +
         `--postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" ` +
