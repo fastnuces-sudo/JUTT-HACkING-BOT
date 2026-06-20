@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && cd ../../AA-MD-Bot && npm install --prefer-offline 2>/dev/null; node index.js",
+    "dev": "export NODE_ENV=development && mkdir -p /home/runner/.local/bin && ([ -f /home/runner/.local/bin/yt-dlp ] || (curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /home/runner/.local/bin/yt-dlp && chmod +x /home/runner/.local/bin/yt-dlp)) && cd ../../AA-MD-Bot && npm install --prefer-offline 2>/dev/null; node index.js",
     "build": "echo ok",
     "start": "cd ../../AA-MD-Bot && node index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"

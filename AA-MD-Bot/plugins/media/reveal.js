@@ -17,7 +17,7 @@ export default {
   command: 'reveal',
   alias: ['rv', 'unviewonce', 'viewonce'],
   description: 'Reveal a view-once photo or video (reply to it)',
-  category: 'Media',
+  category: 'media',
   usage: '.reveal (reply to a view-once message)',
 
   async execute({ sock, jid, reply, getQuoted }) {

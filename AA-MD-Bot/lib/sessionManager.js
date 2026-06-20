@@ -154,19 +154,30 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       });
       if (connectionHandler) connectionHandler(sessionId, sock, 'open');
 
-      // Send connection confirmation to own self-chat
+      // Send connection confirmation to own self-chat (You tab)
       setTimeout(async () => {
         try {
-          const selfJid = sock.user?.id;
-          if (!selfJid) return;
+          if (!phone) return;
+          // selfJid must be bare number @s.whatsapp.net (no device suffix :0)
+          const selfJid = `${phone}@s.whatsapp.net`;
           const now = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' });
-          const infoText = `✅ *AA MD Bot Connected!*\n\n` +
+          const dashboard = process.env.REPLIT_DEV_DOMAIN
+            ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+            : 'http://localhost:5000';
+          const infoText =
+            `╔══════════════════════════════╗\n` +
+            `║  ✅ *AA MD Bot Connected!*   ║\n` +
+            `╚══════════════════════════════╝\n\n` +
             `📱 *Number:* +${phone}\n` +
             `🆔 *Session:* ${sessionId}\n` +
             `🕐 *Time:* ${now}\n` +
-            `🌐 *Dashboard:* ${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'http://localhost:5000'}\n\n` +
-            `🤖 *Bot is ready!* Type *.menu* to see all commands.\n\n` +
-            `🌐 https://aa-mods.vercel.app/\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*`;
+            `🌐 *Dashboard:* ${dashboard}\n\n` +
+            `📦 *Commands:* Type *.menu* to see all commands\n` +
+            `👑 *Owner Panel:* Type *.smenu* for dev tools\n` +
+            `⚙️ *Settings:* Type *.bs* for bot settings\n\n` +
+            `🌐 https://aa-mods.vercel.app/\n` +
+            `🤖 *Powered by AA MD Bot v3.0*\n` +
+            `👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
           const bannerPaths = [
             path.join(__dirname, '../banner.jpeg'),
@@ -187,7 +198,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             await sock.sendMessage(selfJid, { text: infoText }).catch(() => {});
           }
         } catch {}
-      }, 3000);
+      }, 3500);
     }
 
     if (connection === 'connecting') {
