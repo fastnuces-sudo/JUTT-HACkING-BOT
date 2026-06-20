@@ -1,4 +1,3 @@
-import { getDateTime } from '../../lib/helper.js';
 
 export default {
   command: 'groupinfo',
