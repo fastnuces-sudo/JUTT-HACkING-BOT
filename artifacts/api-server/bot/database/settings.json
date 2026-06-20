@@ -1,0 +1,12 @@
+{
+  "prefix": ["."],
+  "owners": [],
+  "sudo": [],
+  "maintenanceMode": false,
+  "autoRead": true,
+  "autoTyping": true,
+  "autoStatusView": false,
+  "antiSpam": true,
+  "welcomeMessage": true,
+  "antilink": false
+}

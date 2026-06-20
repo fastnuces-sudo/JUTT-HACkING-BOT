@@ -1,45 +1,58 @@
-# [Project name]
+# AA MD Bot
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A production-ready multi-device WhatsApp bot with 109+ plugins, multi-session support, economy system, XP/levels, media processing, and full owner/sudo control.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/api-server run dev` — start AA MD Bot (shows QR in console)
+- Bot health: `GET /api/healthz` — returns bot status JSON
+- Bot stats: `GET /api/stats` — detailed stats
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspaces, Node.js 24, JavaScript (ESM)
+- WhatsApp: @whiskeysockets/baileys (Multi-Device)
+- DB: JSON-based (fs-extra), upgrade-ready structure
+- Packages: axios, chalk, fs-extra, moment, pino, qrcode-terminal, jimp
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/api-server/bot/index.js` — main entry point
+- `artifacts/api-server/bot/config.js` — bot configuration (owners, prefix, etc.)
+- `artifacts/api-server/bot/lib/` — core engine (sessions, commands, plugins, database)
+- `artifacts/api-server/bot/plugins/` — 109+ plugins in 11 categories
+- `artifacts/api-server/bot/database/` — JSON databases (users, groups, settings, sessions)
+- `artifacts/api-server/bot/session/` — WhatsApp session files (auto-created)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Plugin-based architecture: each command is a separate ESM file, hot-reloadable with `.reload`
+- Multi-session: each WhatsApp number gets its own session folder under `bot/session/`
+- Shared database: all sessions share the same JSON databases for XP, economy, and settings
+- Health HTTP server runs on PORT alongside the bot for Replit's proxy routing
+- Command handler uses permission levels: owner > sudo > admin > user
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+AA MD Bot is a powerful WhatsApp Multi-Device bot with 109 plugins across 11 categories:
+admin (kick/promote/warn/antilink), download (yt/tiktok/instagram), economy (coins/daily/gamble/shop), fun (jokes/memes/trivia/hangman), group management, level/XP system, media processing (stickers/blur/flip), owner tools (eval/shell/broadcast), search (wiki/anime/recipes/lyrics), tools (system/speedtest/backup), and utility (calc/weather/translate/qr).
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Bot name: AA MD Bot
+- Developer: Ahsan Ali Wadani
+- Brand: AA Mods
+- Default prefix: `.`
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Must scan QR code in console on first run to connect WhatsApp
+- ffmpeg must be installed for media plugins (sticker/blur/flip/grayscale/resize/toaudio)
+- Add owner number to `bot/config.js` before running for full control
+- Sessions are stored in `bot/session/[session_name]/` — don't delete while running
+- Use `.reload` to hot-reload plugins without restarting
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See `artifacts/api-server/bot/README.md` for full command reference
+- See the `pnpm-workspace` skill for workspace structure details
