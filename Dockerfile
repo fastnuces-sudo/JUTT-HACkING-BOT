@@ -11,12 +11,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /bot
 COPY AA-MD-Bot/package.json AA-MD-Bot/package-lock.json ./
-
-# Pre-populate npm cache so runtime install is fast (offline)
-RUN npm install --omit=dev && rm -rf node_modules
+RUN npm install --omit=dev
 
 COPY AA-MD-Bot/ .
 RUN mkdir -p session logs temp media
 
-# Check actual package presence (not just directory) — handles volume-mounted empty dirs
-CMD ["sh", "-c", "[ ! -f node_modules/fs-extra/package.json ] && npm install --omit=dev --prefer-offline --no-audit --silent; node index.js"]
+EXPOSE 5000
+
+CMD ["node", "index.js"]
