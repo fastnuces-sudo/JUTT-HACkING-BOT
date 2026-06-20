@@ -130,8 +130,10 @@ a { text-decoration: none; color: inherit; }
 .dash-logo-fallback { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green2)); display: flex; align-items: center; justify-content: center; font-size: 22px; border: 2px solid var(--green); box-shadow: 0 0 20px rgba(37,211,102,.4); flex-shrink: 0; }
 .dash-hero-title { font-size: 22px; font-weight: 900; }
 .dash-hero-sub { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 2px; display: flex; align-items: center; gap: 6px; }
-.btn-disconnect { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: 9px; padding: 8px 14px; font-size: 12px; color: #fca5a5; transition: all .2s; }
-.btn-disconnect:hover { background: rgba(239,68,68,.2); }
+.btn-disconnect { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: 9px; padding: 8px 14px; font-size: 12px; color: #fca5a5; cursor: pointer; transition: all .2s; }
+.btn-disconnect:hover { background: rgba(239,68,68,.25); border-color: rgba(239,68,68,.5); }
+#toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1e2a1f; border: 1px solid rgba(37,211,102,.4); color: #e2ffe8; padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: 600; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,.5); opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; }
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 .channel-bar { background: linear-gradient(135deg, rgba(37,211,102,.12), rgba(18,140,126,.12)); border-bottom: 1px solid rgba(37,211,102,.2); padding: 12px 24px; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .channel-bar-text { font-size: 13px; color: rgba(37,211,102,.85); font-weight: 500; }
@@ -739,6 +741,22 @@ function goConnect() {
   show('screen-connect');
 }
 
+async function disconnectSession(id) {
+  if (!confirm(`Disconnect session "${id}"?\n\nThe bot will stop sending/receiving on this number.`)) return;
+  try {
+    const r = await fetch(BASE + '/session/' + encodeURIComponent(id), { method: 'DELETE' });
+    const d = await r.json();
+    if (d.ok) {
+      showToast(`✅ Session "${id}" disconnected`);
+      setTimeout(loadStats, 1200);
+    } else {
+      showToast('❌ ' + (d.error || 'Disconnect failed'));
+    }
+  } catch (e) {
+    showToast('❌ Error: ' + e.message);
+  }
+}
+
 // ──────────────────────────────────────────────────────
 // Connect screen logic
 // ──────────────────────────────────────────────────────
@@ -937,6 +955,7 @@ async function loadStats() {
             <div class="sess-id">${s.id}</div>
           </div>
           <div class="sess-badge">${badge}</div>
+          <button class="btn-disconnect" onclick="disconnectSession('${s.id}')" title="Disconnect this session">🔌 Disconnect</button>
         </div>`;
       }).join('');
     }
@@ -1031,6 +1050,17 @@ renderStatic();
   connectSSE();
   setInterval(loadStats, 10000);
 })();
+
+let _toastTimer = null;
+function showToast(msg, duration = 3000) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
 </script>
+<div id="toast"></div>
 </body>
 </html>
