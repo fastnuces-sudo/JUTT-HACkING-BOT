@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { getBestThumb } from '../../lib/helper.js';
 
 const execAsync = promisify(exec);
 
@@ -62,10 +63,10 @@ export default {
       result += `_Use .song or .video to download_`;
 
       // Send with thumbnail of first result
-      const thumb = videos[0].thumbnail;
-      if (thumb) {
+      const thumbUrl = getBestThumb(videos[0]);
+      if (thumbUrl) {
         await sock.sendMessage(jid, {
-          image: { url: thumb },
+          image: { url: thumbUrl },
           caption: result,
         }, { quoted: msg });
       } else {

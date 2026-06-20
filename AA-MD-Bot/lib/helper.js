@@ -69,9 +69,28 @@ export async function cleanTemp() {
 
 export async function getBuffer(url, options = {}) {
   const { default: axios } = await import('axios');
-  const res = await axios.get(url, { responseType: 'arraybuffer', ...options });
+  const res = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 10000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+    },
+    ...options,
+  });
   return Buffer.from(res.data);
 }
 
+export function getBestThumb(info) {
+  const videoId = info.id || (info.webpage_url || '').match(/(?:v=|youtu\.be\/)([^&?/]+)/)?.[1];
+  if (videoId) return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  if (info.thumbnail) return info.thumbnail;
+  if (Array.isArray(info.thumbnails) && info.thumbnails.length) {
+    const sorted = [...info.thumbnails].sort((a, b) => ((b.width || 0) * (b.height || 0)) - ((a.width || 0) * (a.height || 0)));
+    return sorted[0]?.url || null;
+  }
+  return null;
+}
+
 export default { getPrefix, parseCommand, formatDuration, formatBytes, getTime, getDate,
-  randomChoice, randomInt, sleep, isGroup, generateId, tempFile, cleanTemp, getBuffer };
+  randomChoice, randomInt, sleep, isGroup, generateId, tempFile, cleanTemp, getBuffer, getBestThumb };

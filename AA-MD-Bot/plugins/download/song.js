@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateId, getBuffer } from '../../lib/helper.js';
+import { generateId, getBuffer, getBestThumb } from '../../lib/helper.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -60,7 +60,7 @@ export default {
       const duration = info.duration  || 0;
       const uploader = info.uploader  || 'Unknown';
       const views    = info.view_count ? info.view_count.toLocaleString() : '—';
-      const thumb    = info.thumbnail;
+      const thumbUrl = getBestThumb(info);
       const url      = info.webpage_url || text;
       const mins     = Math.floor(duration / 60);
       const secs     = String(duration % 60).padStart(2, '0');
@@ -69,7 +69,6 @@ export default {
         return reply(`❌ Audio too long! (${mins}min)\nMax: 15 minutes`);
       }
 
-      // Send info card first
       const caption =
         `╔═════════•∞•═╗\n` +
         `│⿻ *AA MD Bot*\n` +
@@ -82,19 +81,17 @@ export default {
         `⦿ *Url* : ${url}\n\n` +
         `⏳ _Downloading audio..._`;
 
-      if (thumb) {
-        let thumbBuf = null;
-        try { thumbBuf = await getBuffer(thumb); } catch {}
-        if (thumbBuf) {
-          await sock.sendMessage(jid, { image: thumbBuf, caption }, { quoted: msg });
-        } else {
-          await reply(caption);
-        }
+      let thumbBuf = null;
+      if (thumbUrl) {
+        try { thumbBuf = await getBuffer(thumbUrl); } catch {}
+      }
+
+      if (thumbBuf) {
+        await sock.sendMessage(jid, { image: thumbBuf, caption }, { quoted: msg });
       } else {
         await reply(caption);
       }
 
-      // Download best audio and convert to mp3
       await execAsync(
         `${ytdlp} "${url}" -f "bestaudio[ext=m4a]/bestaudio/best" -x --audio-format mp3 --audio-quality 128K -o "${path.join(tempDir, uid + '.%(ext)s')}" --no-playlist --quiet --no-warnings`,
         { timeout: 120000 }
@@ -110,13 +107,10 @@ export default {
 
       if (!finalFile) return reply('❌ Download failed. Try another song.');
 
-      const stat  = await fs.stat(finalFile);
+      const stat   = await fs.stat(finalFile);
       const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
-      const mime  = finalFile.endsWith('.m4a') ? 'audio/mp4' : 'audio/mpeg';
-      const ext   = path.extname(finalFile).slice(1);
-
-      let thumbBuf = null;
-      try { if (thumb) thumbBuf = await getBuffer(thumb); } catch {}
+      const mime   = finalFile.endsWith('.m4a') ? 'audio/mp4' : 'audio/mpeg';
+      const ext    = path.extname(finalFile).slice(1);
 
       await sock.sendMessage(jid, {
         audio: await fs.readFile(finalFile),
@@ -125,9 +119,9 @@ export default {
         contextInfo: {
           externalAdReply: {
             title,
-            body: uploader,
+            body: `${uploader} • ${mins}:${secs} • ${sizeMB} MB`,
             renderLargerThumbnail: true,
-            thumbnailUrl: thumb,
+            thumbnailUrl: thumbUrl || undefined,
             mediaType: 1,
             ...(thumbBuf ? { thumbnail: thumbBuf } : {}),
             sourceUrl: url,

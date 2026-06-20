@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateId, getBuffer } from '../../lib/helper.js';
+import { generateId, getBuffer, getBestThumb } from '../../lib/helper.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -42,21 +42,39 @@ export default {
       const duration = info.duration || 0;
       const uploader = info.uploader || 'Unknown';
       const views    = info.view_count ? info.view_count.toLocaleString() : '—';
-      const thumb    = info.thumbnail;
       const url      = info.webpage_url || text;
       const mins     = Math.floor(duration / 60);
       const secs     = String(duration % 60).padStart(2, '0');
+      const thumbUrl = getBestThumb(info);
 
       if (duration > 600) {
         await react('❌');
         return reply(`❌ Video too long (${mins} min). Max: 10 minutes.`);
       }
 
-      await sock.sendMessage(jid, {
-        text: `📥 *Downloading:* ${title}\n👤 ${uploader}\n⏱️ ${mins}:${secs}\n👁️ ${views} views`,
-      }, { quoted: msg });
+      const caption =
+        `╔═════════•∞•═╗\n` +
+        `│⿻ *AA MD Bot*\n` +
+        `│  *YouTube Video* 🎬\n` +
+        `│⿻ *Title:* ${title}\n` +
+        `│⿻ *Duration:* ${mins}:${secs}\n` +
+        `│⿻ *Views:* ${views}\n` +
+        `│⿻ *Author:* ${uploader}\n` +
+        `╚═•∞•═════════╝\n` +
+        `⦿ *Url* : ${url}\n\n` +
+        `⏳ _Downloading video..._`;
 
-      // Download with yt-dlp — force H.264/AAC for WhatsApp compatibility
+      let thumbBuf = null;
+      if (thumbUrl) {
+        try { thumbBuf = await getBuffer(thumbUrl); } catch {}
+      }
+
+      if (thumbBuf) {
+        await sock.sendMessage(jid, { image: thumbBuf, caption }, { quoted: msg });
+      } else {
+        await sock.sendMessage(jid, { text: caption }, { quoted: msg });
+      }
+
       const outTemplate = path.join(tempDir, `${uid}.%(ext)s`);
       await execAsync(
         `${YTDLP} "${url}" ` +
@@ -67,7 +85,6 @@ export default {
         { timeout: 180000 }
       );
 
-      // Find downloaded file
       const files  = await fs.readdir(tempDir);
       const dlFile = files
         .map(f => path.join(tempDir, f))
@@ -87,21 +104,17 @@ export default {
         return reply(`❌ File too large (${sizeMB} MB). Try a shorter video (max ~64MB).`);
       }
 
-      let thumbBuf = null;
-      try { if (thumb) thumbBuf = await getBuffer(thumb); } catch {}
-
-      const caption =
+      const videoCaption =
         `🎬 *${title}*\n` +
         `👤 ${uploader}\n` +
         `⏱️ ${mins}:${secs}  📁 ${sizeMB} MB\n` +
-        `👁️ ${views} views\n` +
-        `🔗 ${url}`;
+        `👁️ ${views} views`;
 
       await sock.sendMessage(jid, {
         video: await fs.readFile(dlFile),
         mimetype: 'video/mp4',
         fileName: `${title}.mp4`,
-        caption,
+        caption: videoCaption,
         ...(thumbBuf ? { jpegThumbnail: thumbBuf } : {}),
       }, { quoted: msg });
 
