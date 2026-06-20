@@ -32,7 +32,7 @@
   "51200858837098@lid": {
     "id": "51200858837098@lid",
     "name": "~",
-    "xp": 40,
+    "xp": 60,
     "level": 1,
     "balance": 1000,
     "commandsUsed": 0,
@@ -42,7 +42,7 @@
     "banned": false,
     "createdAt": 1781951776572,
     "inventory": [],
-    "lastSeen": 1781953417550,
+    "lastSeen": 1781954864866,
     "deviceSource": "default"
   }
 }

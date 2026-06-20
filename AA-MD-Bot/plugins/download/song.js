@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { generateId } from '../../lib/helper.js';
+import { generateId, getBuffer } from '../../lib/helper.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -24,22 +24,23 @@ async function getYtdlp() {
 }
 
 async function ytSearch(query, ytdlp) {
-  const { stdout } = await execAsync(
-    `${ytdlp} "ytsearch1:${query}" --dump-json --no-playlist --no-download --quiet`,
-    { timeout: 30000 }
-  );
+  const cmd = query.startsWith('http')
+    ? `${ytdlp} "${query}" --dump-json --no-playlist --no-download --quiet`
+    : `${ytdlp} "ytsearch1:${query}" --dump-json --no-playlist --no-download --quiet`;
+  const { stdout } = await execAsync(cmd, { timeout: 30000 });
   return JSON.parse(stdout.trim().split('\n')[0]);
 }
 
 export default {
   command: 'song',
-  alias: ['audio', 'music', 'mp3', 'yta'],
+  alias: ['play', 'audio', 'music', 'mp3', 'yta'],
   category: 'download',
   description: 'Download YouTube audio/song as MP3',
-  usage: '.song Faded Alan Walker',
+  usage: '.song Faded Alan Walker | .play <song name>',
   ownerOnly: false,
+
   execute: async ({ reply, react, sock, jid, msg, text }) => {
-    if (!text) return reply('🎵 Usage: .song <search query or YouTube URL>\n\nExample: .song Faded Alan Walker');
+    if (!text) return reply('🎵 Usage: .song <search query or YouTube URL>\n\nExample: .song Faded Alan Walker\n.play Back in Black');
 
     const ytdlp = await getYtdlp();
     if (!ytdlp) return reply('❌ yt-dlp not available on this server.');
@@ -52,21 +53,46 @@ export default {
     const outFile = path.join(tempDir, `${uid}.mp3`);
 
     try {
-      const info = await ytSearch(text.startsWith('http') ? text : text, ytdlp).catch(() => null);
+      const info = await ytSearch(text, ytdlp).catch(() => null);
       if (!info) return reply('❌ No results for: ' + text);
 
-      const title = info.title || 'audio';
-      const duration = info.duration || 0;
-      const uploader = info.uploader || 'Unknown';
-      const thumb = info.thumbnail;
+      const title    = info.title     || 'audio';
+      const duration = info.duration  || 0;
+      const uploader = info.uploader  || 'Unknown';
+      const views    = info.view_count ? info.view_count.toLocaleString() : '—';
+      const thumb    = info.thumbnail;
+      const url      = info.webpage_url || text;
+      const mins     = Math.floor(duration / 60);
+      const secs     = String(duration % 60).padStart(2, '0');
 
       if (duration > 900) {
-        return reply(`❌ Audio too long! (${Math.floor(duration / 60)}min)\nMax: 15 minutes`);
+        return reply(`❌ Audio too long! (${mins}min)\nMax: 15 minutes`);
       }
 
-      await reply(`🎵 Downloading: *${title}*\n👤 ${uploader}\n⏱️ ${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')}`);
+      // Send info card first
+      const caption =
+        `╔═════════•∞•═╗\n` +
+        `│⿻ *AA MD Bot*\n` +
+        `│  *Youtube Player* ✨\n` +
+        `│⿻ *Title:* ${title}\n` +
+        `│⿻ *Duration:* ${mins}:${secs}\n` +
+        `│⿻ *Viewers:* ${views}\n` +
+        `│⿻ *Author:* ${uploader}\n` +
+        `╚═•∞•═════════╝\n` +
+        `⦿ *Url* : ${url}\n\n` +
+        `⏳ _Downloading audio..._`;
 
-      const url = info.webpage_url || text;
+      if (thumb) {
+        let thumbBuf = null;
+        try { thumbBuf = await getBuffer(thumb); } catch {}
+        if (thumbBuf) {
+          await sock.sendMessage(jid, { image: thumbBuf, caption }, { quoted: msg });
+        } else {
+          await reply(caption);
+        }
+      } else {
+        await reply(caption);
+      }
 
       // Download best audio and convert to mp3
       await execAsync(
@@ -74,42 +100,43 @@ export default {
         { timeout: 120000 }
       );
 
-      if (!await fs.pathExists(outFile)) {
-        // Sometimes saved as .m4a, check
-        const m4aFile = outFile.replace('.mp3', '.m4a');
-        const webmFile = outFile.replace('.mp3', '.webm');
-        const alt = await fs.pathExists(m4aFile) ? m4aFile : await fs.pathExists(webmFile) ? webmFile : null;
-        if (!alt) return reply('❌ Download failed. Try another song.');
+      const altM4a  = outFile.replace('.mp3', '.m4a');
+      const altWebm = outFile.replace('.mp3', '.webm');
 
-        await sock.sendMessage(jid, {
-          audio: await fs.readFile(alt),
-          mimetype: 'audio/mp4',
-          fileName: `${title}.m4a`,
-        }, { quoted: msg });
-        await react('✅');
-        fs.remove(alt).catch(() => {});
-        return;
-      }
+      let finalFile = null;
+      if (await fs.pathExists(outFile)) finalFile = outFile;
+      else if (await fs.pathExists(altM4a)) finalFile = altM4a;
+      else if (await fs.pathExists(altWebm)) finalFile = altWebm;
 
-      const stat = await fs.stat(outFile);
+      if (!finalFile) return reply('❌ Download failed. Try another song.');
+
+      const stat  = await fs.stat(finalFile);
       const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
+      const mime  = finalFile.endsWith('.m4a') ? 'audio/mp4' : 'audio/mpeg';
+      const ext   = path.extname(finalFile).slice(1);
+
+      let thumbBuf = null;
+      try { if (thumb) thumbBuf = await getBuffer(thumb); } catch {}
 
       await sock.sendMessage(jid, {
-        audio: await fs.readFile(outFile),
-        mimetype: 'audio/mpeg',
-        fileName: `${title}.mp3`,
+        audio: await fs.readFile(finalFile),
+        mimetype: mime,
+        fileName: `${title}.${ext}`,
+        contextInfo: {
+          externalAdReply: {
+            title,
+            body: uploader,
+            renderLargerThumbnail: true,
+            thumbnailUrl: thumb,
+            mediaType: 1,
+            ...(thumbBuf ? { thumbnail: thumbBuf } : {}),
+            sourceUrl: url,
+          },
+        },
       }, { quoted: msg });
 
-      // Also send info card with thumbnail
-      if (thumb) {
-        await sock.sendMessage(jid, {
-          image: { url: thumb },
-          caption: `🎵 *${title}*\n👤 ${uploader}\n⏱️ ${Math.floor(duration / 60)}:${String(duration % 60).padStart(2, '0')}\n📁 ${sizeMB} MB\n🔗 ${url}\n\n_AA MD Bot_`,
-        }, { quoted: msg });
-      }
-
       await react('✅');
-      fs.remove(outFile).catch(() => {});
+      fs.remove(finalFile).catch(() => {});
     } catch (err) {
       await react('❌');
       reply('❌ Song download failed: ' + (err.message?.slice(0, 100) || 'Unknown error'));

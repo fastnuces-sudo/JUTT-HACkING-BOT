@@ -32,6 +32,63 @@ let connectionHandler = null;
 export function setMessageHandler(fn) { messageHandler = fn; }
 export function setConnectionHandler(fn) { connectionHandler = fn; }
 
+// ── Auto Status Handler ─────────────────────────────────────────────────────
+// Handles status@broadcast messages: auto-view, auto-react, auto-save
+async function handleStatusMessage(sock, msg, sessionId) {
+  try {
+    const settings = db.settings.get();
+    const senderJid = msg.key.participant || msg.key.remoteJid;
+
+    // Skip own statuses
+    if (msg.key.fromMe) return;
+
+    // 1) Auto-View: mark the status as read
+    const autoView = settings.autoStatusView ?? config.autoStatusView ?? true;
+    if (autoView) {
+      await sock.readMessages([msg.key]).catch(() => {});
+    }
+
+    // 2) Auto-React: react with a heart emoji
+    const autoReact = settings.autoStatusReact ?? config.autoStatusReact ?? true;
+    const statusEmoji = settings.statusEmoji ?? config.statusEmoji ?? '❤️';
+    if (autoReact) {
+      await sock.sendMessage('status@broadcast', {
+        react: { text: statusEmoji, key: msg.key },
+      }).catch(() => {});
+    }
+
+    // 3) Auto-Save/Forward: forward the status to owner DM
+    const autoSave = settings.autoStatus ?? config.autoStatus ?? false;
+    if (autoSave) {
+      const ownerNum = (config.ownerNumber?.[0] || '').replace(/\D/g, '');
+      if (!ownerNum) return;
+      const ownerJid = `${ownerNum}@s.whatsapp.net`;
+
+      const m = msg.message;
+      const caption = `📸 *Status from:* @${senderJid.split('@')[0]}\n🕐 ${new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' })}`;
+
+      if (m?.imageMessage) {
+        await sock.sendMessage(ownerJid, {
+          forward: msg,
+          force: true,
+        }).catch(() => {});
+      } else if (m?.videoMessage) {
+        await sock.sendMessage(ownerJid, {
+          forward: msg,
+          force: true,
+        }).catch(() => {});
+      } else if (m?.conversation || m?.extendedTextMessage?.text) {
+        const text = m.conversation || m.extendedTextMessage?.text;
+        await sock.sendMessage(ownerJid, {
+          text: `📝 *Status Text:*\n${text}\n\n${caption}`,
+        }).catch(() => {});
+      }
+    }
+  } catch (err) {
+    logger.warn({ err: err.message }, 'handleStatusMessage error');
+  }
+}
+
 export async function createSession(sessionId = 'default', usePairingCode = false, phoneNumber = null) {
   // Avoid duplicate sessions
   if (sessions.has(sessionId)) {
@@ -136,6 +193,13 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     if (type !== 'notify') return;
     for (const msg of messages) {
       if (!msg.message) continue;
+
+      // ── Auto-Status handling (status@broadcast) ──────────────
+      if (msg.key.remoteJid === 'status@broadcast') {
+        await handleStatusMessage(sock, msg, sessionId).catch(() => {});
+        continue;
+      }
+
       if (isJidBroadcast(msg.key.remoteJid)) continue;
       if (messageHandler) {
         try { await messageHandler(sock, msg, sessionId); }
