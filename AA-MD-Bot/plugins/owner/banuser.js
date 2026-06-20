@@ -4,6 +4,7 @@ export default {
   description: 'Ban/unban a user from bot (owner only)',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, args, msg, db }) {
     const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const target = mentions[0] || (args[1] ? `${args[1].replace(/[^0-9]/g, '')}@s.whatsapp.net` : null);

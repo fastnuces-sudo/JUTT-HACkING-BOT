@@ -4,6 +4,7 @@ export default {
   description: 'Evaluate JavaScript code (owner only)',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, text, sock, db, config }) {
     if (!text) return reply('❌ Usage: .eval [code]');
     try {

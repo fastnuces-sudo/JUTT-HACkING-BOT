@@ -6,6 +6,7 @@ export default {
   description: 'Broadcast message to all groups/DMs',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, sock, text, args }) {
     if (!text) return reply('❌ Usage: .broadcast [message]\nFlags: --groups (groups only), --dm (DMs only)');
     const toGroups = !args.includes('--dm');

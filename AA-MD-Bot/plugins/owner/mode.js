@@ -6,6 +6,7 @@ export default {
   description: 'Set bot mode: public (everyone) or private (only You chat)',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ args, reply }) {
     const mode = args[0]?.toLowerCase();
 

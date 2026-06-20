@@ -11,6 +11,7 @@ export default {
   description: 'Set WhatsApp Channel JID for View Channel button',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   usage: '.setnewsletter <jid@newsletter> [Channel Name]',
 
   async execute({ reply, args }) {

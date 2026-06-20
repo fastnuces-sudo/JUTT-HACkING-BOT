@@ -9,6 +9,7 @@ export default {
   description: 'Execute shell command (owner only)',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, text }) {
     if (!text) return reply('❌ Usage: .shell [command]');
     try {

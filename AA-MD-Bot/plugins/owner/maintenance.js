@@ -4,6 +4,7 @@ export default {
   description: 'Toggle bot maintenance mode',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, args, db }) {
     const action = args[0]?.toLowerCase();
     if (action === 'on') {

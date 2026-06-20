@@ -4,6 +4,7 @@ export default {
   description: 'Remove a bot owner',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, args, msg, db }) {
     const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     const targets = mentions.length ? mentions.map(j => j.split('@')[0]) : args;

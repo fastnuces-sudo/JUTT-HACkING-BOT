@@ -25,6 +25,8 @@ botEvents.setMaxListeners(100);
 
 export const sessionQRs = new Map();
 export const sessionStatus = new Map();
+// Persist last-known session info so dashboard stays stable during reconnects
+export const sessionInfo = new Map();
 
 let messageHandler = null;
 let connectionHandler = null;
@@ -142,6 +144,8 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       wasRegistered = true;
       sessionQRs.delete(sessionId);
       sessionStatus.set(sessionId, 'connected');
+      const phone = sock.user?.id?.split('@')[0]?.split(':')[0] || '';
+      sessionInfo.set(sessionId, { id: sessionId, jid: sock.user?.id, name: sock.user?.name, phone });
       botEvents.emit('status', { sessionId, status: 'connected', user: sock.user });
       logger.info({ sessionId, name: sock.user?.name }, '✅ WhatsApp Connected!');
       db.sessions.set(sessionId, {
@@ -149,6 +153,41 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         connected: true, connectedAt: Date.now(),
       });
       if (connectionHandler) connectionHandler(sessionId, sock, 'open');
+
+      // Send connection confirmation to own self-chat
+      setTimeout(async () => {
+        try {
+          const selfJid = sock.user?.id;
+          if (!selfJid) return;
+          const now = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' });
+          const infoText = `✅ *AA MD Bot Connected!*\n\n` +
+            `📱 *Number:* +${phone}\n` +
+            `🆔 *Session:* ${sessionId}\n` +
+            `🕐 *Time:* ${now}\n` +
+            `🌐 *Dashboard:* ${process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : 'http://localhost:5000'}\n\n` +
+            `🤖 *Bot is ready!* Type *.menu* to see all commands.\n\n` +
+            `🌐 https://aa-mods.vercel.app/\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*`;
+
+          const bannerPaths = [
+            path.join(__dirname, '../banner.jpeg'),
+            path.join(__dirname, '../banner.jpg'),
+          ];
+          let bannerBuf = null;
+          for (const p of bannerPaths) {
+            try { if (fs.existsSync(p)) { bannerBuf = fs.readFileSync(p); break; } } catch {}
+          }
+
+          if (bannerBuf) {
+            await sock.sendMessage(selfJid, {
+              image: bannerBuf,
+              caption: infoText,
+              mimetype: 'image/jpeg',
+            }).catch(() => {});
+          } else {
+            await sock.sendMessage(selfJid, { text: infoText }).catch(() => {});
+          }
+        } catch {}
+      }, 3000);
     }
 
     if (connection === 'connecting') {
@@ -252,15 +291,40 @@ export async function deleteSession(sessionId) {
 export function getSession(id = 'default') { return sessions.get(id); }
 
 export function getAllSessions() {
-  return Array.from(sessions.entries()).map(([id, sock]) => ({
-    id,
-    jid: sock.user?.id,
-    name: sock.user?.name || id,
-    phone: sock.user?.id?.split('@')[0]?.split(':')[0],
-    connected: sock.ws?.readyState === 1,
-    status: sessionStatus.get(id) || 'unknown',
-    hasQR: sessionQRs.has(id),
-  }));
+  // Merge live sessions + any known sessions currently reconnecting/connecting
+  const all = new Map();
+
+  // Start with persisted info for all known sessions (stable baseline)
+  for (const [id, info] of sessionInfo.entries()) {
+    const status = sessionStatus.get(id) || 'reconnecting';
+    const sock = sessions.get(id);
+    all.set(id, {
+      id,
+      jid: sock?.user?.id || info.jid,
+      name: sock?.user?.name || info.name || id,
+      phone: sock?.user?.id?.split('@')[0]?.split(':')[0] || info.phone,
+      connected: sock?.ws?.readyState === 1,
+      status,
+      hasQR: sessionQRs.has(id),
+    });
+  }
+
+  // Add any live sessions not yet in sessionInfo
+  for (const [id, sock] of sessions.entries()) {
+    if (!all.has(id)) {
+      all.set(id, {
+        id,
+        jid: sock.user?.id,
+        name: sock.user?.name || id,
+        phone: sock.user?.id?.split('@')[0]?.split(':')[0],
+        connected: sock.ws?.readyState === 1,
+        status: sessionStatus.get(id) || 'unknown',
+        hasQR: sessionQRs.has(id),
+      });
+    }
+  }
+
+  return Array.from(all.values());
 }
 
 export async function initAllSessions() {

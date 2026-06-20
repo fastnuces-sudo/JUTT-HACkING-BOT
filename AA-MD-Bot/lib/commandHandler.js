@@ -14,7 +14,7 @@ const spamTracker = new Map();
 
 const CHANNEL_URL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
 const CHANNEL_NAME = 'AA MD Bot';
-const WATERMARK = `\n\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*`;
+const WATERMARK = `\n\n🌐 https://aa-mods.vercel.app/\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
 // Load banner thumbnail once for channel button
 let _bannerThumb = null;
@@ -34,9 +34,8 @@ function getBannerThumb() {
   return _bannerThumb;
 }
 
-// Build contextInfo that adds the "View channel" button to every bot reply.
-// If global._AA_NEWSLETTER_JID is set (owner ran .setnewsletter), uses the
-// real newsletter forward header. Otherwise falls back to externalAdReply.
+// Build contextInfo — only when a newsletter JID is set via .setnewsletter.
+// No fallback external ad reply so messages don't show a channel follow button.
 function buildChannelCtx() {
   const newsletterJid = global._AA_NEWSLETTER_JID;
   if (newsletterJid) {
@@ -50,26 +49,19 @@ function buildChannelCtx() {
       },
     };
   }
-  const thumb = getBannerThumb();
-  return {
-    forwardingScore: 999,
-    isForwarded: true,
-    externalAdReply: {
-      title: CHANNEL_NAME,
-      body: 'Join our WhatsApp Channel',
-      mediaType: 1,
-      renderLargerThumbnail: false,
-      showAdAttribution: true,
-      sourceUrl: CHANNEL_URL,
-      ...(thumb ? { thumbnail: thumb } : {}),
-    },
-  };
+  return null;
 }
 
 export function isOwner(jid) {
+  const num = jid?.split('@')[0]?.split(':')[0];
+  if (num === config.superOwner) return true;
   const owners = db.settings.getValue('owners') || config.owners || [];
-  const num = jid?.split('@')[0];
   return owners.includes(num) || owners.includes(jid);
+}
+
+export function isSuperOwner(jid) {
+  const num = jid?.split('@')[0]?.split(':')[0];
+  return num === config.superOwner;
 }
 
 function isBanned(jid) { return db.users.get(jid)?.banned === true; }
@@ -104,36 +96,33 @@ async function react(sock, msg, emoji) {
   await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }).catch(() => {});
 }
 
-// All text replies automatically get the watermark + "View channel" button
+// All text replies automatically get the watermark. Newsletter "lid" button only
+// appears when owner has run .setnewsletter — no fallback channel ad.
 async function reply(sock, msg, text, options = {}) {
   const fullText = typeof text === 'string' ? text + WATERMARK : text;
-  const contextInfo = buildChannelCtx();
-  return sock.sendMessage(
-    msg.key.remoteJid,
-    { text: fullText, contextInfo, ...options },
-    { quoted: msg }
-  );
+  const ctx = buildChannelCtx();
+  const payload = ctx ? { text: fullText, contextInfo: ctx, ...options } : { text: fullText, ...options };
+  return sock.sendMessage(msg.key.remoteJid, payload, { quoted: msg });
 }
 
 async function sendMsg(sock, jid, content, options = {}) {
+  const ctx = buildChannelCtx();
   if (typeof content === 'string') {
     const fullText = content + WATERMARK;
-    const contextInfo = buildChannelCtx();
-    return sock.sendMessage(jid, { text: fullText, contextInfo, ...options });
+    const payload = ctx ? { text: fullText, contextInfo: ctx, ...options } : { text: fullText, ...options };
+    return sock.sendMessage(jid, payload);
   }
-  // Non-text messages (image/audio/video/sticker): add contextInfo to caption if present
-  const contextInfo = buildChannelCtx();
-  if (content.caption) {
-    if (!content.caption.includes('AA MD Bot')) content.caption += WATERMARK;
-  }
-  return sock.sendMessage(jid, { contextInfo, ...content, ...options });
+  // Non-text messages (image/audio/video/sticker): append watermark to caption if present
+  if (content.caption && !content.caption.includes('AA MD Bot')) content.caption += WATERMARK;
+  const payload = ctx ? { contextInfo: ctx, ...content, ...options } : { ...content, ...options };
+  return sock.sendMessage(jid, payload);
 }
 
-// sendMedia — for plugins that send audio/image/video directly (bypassing the text wrapper)
-// Appends the channel contextInfo so media messages also carry the View Channel button.
+// sendMedia — for plugins that send audio/image/video directly
 async function sendMedia(sock, jid, content) {
-  const contextInfo = buildChannelCtx();
-  return sock.sendMessage(jid, { contextInfo, ...content });
+  const ctx = buildChannelCtx();
+  const payload = ctx ? { contextInfo: ctx, ...content } : { ...content };
+  return sock.sendMessage(jid, payload);
 }
 
 export async function handleMessage(sock, msg, sessionId) {
@@ -189,6 +178,11 @@ export async function handleMessage(sock, msg, sessionId) {
     const cooldownLeft = checkCooldown(senderJid, command);
     if (cooldownLeft > 0 && !owner) {
       await reply(sock, msg, `⏳ Wait *${cooldownLeft}s* before using this again.`).catch(() => {});
+      return;
+    }
+
+    if (plugin.superOwnerOnly && !isSuperOwner(senderJid)) {
+      await reply(sock, msg, '👑 This command is reserved for the main developer only.').catch(() => {});
       return;
     }
 
