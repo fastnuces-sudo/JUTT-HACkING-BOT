@@ -17,22 +17,22 @@
   "74565564784701@lid": {
     "id": "74565564784701@lid",
     "name": "AA Mods Services",
-    "xp": 80,
-    "level": 1,
+    "xp": 100,
+    "level": 2,
     "balance": 1000,
-    "commandsUsed": 8,
+    "commandsUsed": 10,
     "lastDaily": null,
     "dailyStreak": 0,
     "warnings": 0,
     "banned": false,
     "createdAt": 1781949387216,
     "inventory": [],
-    "lastSeen": 1781952629572
+    "lastSeen": 1781953144780
   },
   "51200858837098@lid": {
     "id": "51200858837098@lid",
     "name": "~",
-    "xp": 15,
+    "xp": 40,
     "level": 1,
     "balance": 1000,
     "commandsUsed": 0,
@@ -42,7 +42,7 @@
     "banned": false,
     "createdAt": 1781951776572,
     "inventory": [],
-    "lastSeen": 1781951823393,
+    "lastSeen": 1781953417550,
     "deviceSource": "default"
   }
 }

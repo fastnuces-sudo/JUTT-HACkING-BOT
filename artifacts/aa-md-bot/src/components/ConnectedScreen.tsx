@@ -19,24 +19,24 @@ const QUICK_CMDS = [
   { cmd: ".menu",        desc: "All commands list" },
   { cmd: ".ai hello",   desc: "Chat with Gemini AI" },
   { cmd: ".islamic_menu", desc: "Islamic commands" },
-  { cmd: ".yt <link>",  desc: "YouTube download" },
+  { cmd: ".play Tum Hi Ho", desc: "Play audio — Invidious → yt-dlp" },
+  { cmd: ".yt <link>",  desc: "YouTube video download" },
   { cmd: ".tiktok <link>", desc: "TikTok download" },
   { cmd: ".sticker",    desc: "Make sticker" },
   { cmd: ".ping",       desc: "Bot ping / status" },
-  { cmd: ".help",       desc: "Help info" },
 ];
 
 const CATEGORIES = [
   { icon: "☪️",  label: "Islamic",   cmds: ["islamic_menu","dua_forgiveness","dua_rizq","dua_health","dua_morning","dua_evening","dua_sleep","zikr_subhanallah","zikr_alhamdulillah","hadith_smile","kalima_tayyiba","darood_sharif","morning_adhkar","evening_adhkar","asmaul_husna","jaffery_menu"] },
   { icon: "🤖",  label: "AI",        cmds: ["ai","imagine","gpt","gemini","dalle"] },
   { icon: "📥",  label: "Download",  cmds: ["yt","ytmp3","tiktok","ig","fb","twitter","pinterest","spotify","soundcloud","mediafire","capcut"] },
-  { icon: "🎬",  label: "Media",     cmds: ["sticker","toimage","removebg","compress","resize","gifmaker","ptt","screenshot","play","playvideo"] },
+  { icon: "🎬",  label: "Media",     cmds: ["play","song","audio","reveal","sticker","toimage","removebg","compress","resize","gifmaker","ptt","screenshot"] },
   { icon: "🔍",  label: "Search",    cmds: ["google","imgsearch","lyrics","movie","shazam","wiki","ytsearch"] },
   { icon: "🎉",  label: "Fun",       cmds: ["joke","meme","quote","roast","truth","dare","love","ship","advice","prank","guess","compliment","character"] },
   { icon: "🔧",  label: "Utility",   cmds: ["weather","calc","currency","qrgen","qrread","password","tempmail","speedtest","shorturl","timezone","randomnum","gdrive","apkdownload"] },
   { icon: "🛠️",  label: "Tools",     cmds: ["base64","tts","fontchanger","textstyle","stealsticker","readmore","fileupload"] },
-  { icon: "👥",  label: "Group",     cmds: ["kick","promote","demote","mute","unmute","tagall","hidetag","antilink","antispam","antibadword","antidelete","welcome","goodbye","setname","setdesc","groupinfo","clear","warn","warnings"] },
-  { icon: "⚙️",  label: "Settings",  cmds: ["bs","mode","anticall","antiviewonce","statusview","statusreact","savestatus","autoreply","autoread","autotyping","recording","setprefix","prefix"] },
+  { icon: "👥",  label: "Group",     cmds: ["kick","promote","demote","mute","unmute","tagall","hidetag","antilink","antispam","antibadword","antidelete","antiviewonce","antibot","welcome","goodbye","setname","setdesc","groupinfo","link","clear","warn"] },
+  { icon: "⚙️",  label: "Settings",  cmds: ["bs","mode","anticall","autostatus","statusview","statusreact","autoreply","autoread","autotyping","recording","setprefix","setnewsletter"] },
   { icon: "📋",  label: "General",   cmds: ["menu","help","ping","uptime","balance","daily","leaderboard","profile","info","report","support","contact","feedback"] },
 ];
 
@@ -45,16 +45,16 @@ const SETTINGS_REF = [
   { cmd: ".mode public",    desc: "PUBLIC: everyone can use commands",  example: ".mode public" },
   { cmd: ".mode private",   desc: "PRIVATE: only You (self-chat) can use commands", example: ".mode private" },
   { cmd: ".anticall on",    desc: "Reject all incoming calls",          example: ".anticall on" },
-  { cmd: ".antidelete on",  desc: "Anti-delete: show deleted messages", example: ".antidelete on" },
-  { cmd: ".antiviewonce on",desc: "View once messages bypass",          example: ".antiviewonce on" },
+  { cmd: ".antidelete on",  desc: "Anti-delete in groups AND DMs globally", example: ".antidelete on" },
+  { cmd: ".antiviewonce on",desc: "Reveal view-once in groups AND DMs globally", example: ".antiviewonce on" },
+  { cmd: ".autostatus on",  desc: "Auto save & forward statuses to your DM", example: ".autostatus on" },
   { cmd: ".statusview on",  desc: "Auto view all statuses silently",    example: ".statusview on" },
   { cmd: ".statusreact on", desc: "Auto react to all statuses",         example: ".statusreact on" },
-  { cmd: ".savestatus on",  desc: "Auto save statuses to DM",           example: ".savestatus on" },
   { cmd: ".autoreply on",   desc: "Auto reply to DMs",                  example: ".autoreply on" },
   { cmd: ".autoread on",    desc: "Mark all messages as read",          example: ".autoread on" },
   { cmd: ".autotyping on",  desc: "Show typing indicator on commands",  example: ".autotyping on" },
-  { cmd: ".recording on",   desc: "Show recording indicator",           example: ".recording on" },
   { cmd: ".setprefix !",    desc: "Change command prefix",              example: ".setprefix !" },
+  { cmd: ".setnewsletter",  desc: "Set Channel JID for real 'View channel' button on all replies", example: ".setnewsletter 120363xxx@newsletter" },
 ];
 
 export default function ConnectedScreen({ session, onDisconnect }: Props) {
@@ -254,8 +254,23 @@ export default function ConnectedScreen({ session, onDisconnect }: Props) {
 
         {/* Media Download Guide */}
         <div className="section">
-          <div className="section-head">🎬 Media Download — Details First, Then File</div>
+          <div className="section-head">🎬 Media Commands — Details First, Then File</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 10 }}>
+            <div className="media-flow">
+              <div className="media-flow-details">
+                <div className="media-flow-title">🎵 Play Audio — .play / .song / .audio</div>
+                <div className="media-flow-meta">
+                  <span>SoundCloud</span><span>Invidious</span><span>yt-dlp</span>
+                </div>
+                <div className="media-flow-desc">
+                  Search by name or paste a YouTube URL. Bot fetches metadata first (title, artist, thumbnail), then sends the MP3. <strong style={{ color: "var(--green)" }}>Three fallback sources</strong> for best results.
+                </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: "var(--green)" }}>
+                  .play Tum Hi Ho &nbsp;|&nbsp; .play https://youtu.be/...
+                </div>
+              </div>
+              <div className="media-flow-player">🎵 Audio plays here — details always come first</div>
+            </div>
             <div className="media-flow">
               <div className="media-flow-details">
                 <div className="media-flow-title">📹 Video Download — .yt / .tiktok / .ig / .fb</div>
@@ -268,13 +283,15 @@ export default function ConnectedScreen({ session, onDisconnect }: Props) {
             </div>
             <div className="media-flow">
               <div className="media-flow-details">
-                <div className="media-flow-title">🎵 Audio Download — .ytmp3 / .spotify / .soundcloud</div>
+                <div className="media-flow-title">👁️ Reveal View-Once — .reveal / .rv</div>
                 <div className="media-flow-meta">
-                  <span>Format: MP3</span><span>Quality: 320kbps</span><span>Max: 50MB</span>
+                  <span>Images</span><span>Videos</span><span>Groups &amp; DMs</span>
                 </div>
-                <div className="media-flow-desc">Bot first sends a <strong style={{ color: "var(--text)" }}>details message</strong> (title, artist, duration, thumbnail), then sends the actual audio file.</div>
+                <div className="media-flow-desc">
+                  Reply to any view-once message with <code style={{ color: "var(--green)" }}>.reveal</code> to get it as a normal photo/video. Auto-reveal also works via <code style={{ color: "var(--green)" }}>.antiviewonce on</code>.
+                </div>
               </div>
-              <div className="media-flow-player">🎵 Audio plays here — details always come first</div>
+              <div className="media-flow-player">👁️ View-once revealed as normal media</div>
             </div>
           </div>
         </div>

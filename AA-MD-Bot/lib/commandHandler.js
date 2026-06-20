@@ -3,12 +3,66 @@ import { getPlugin } from './pluginLoader.js';
 import { db } from './database.js';
 import { logger } from './logger.js';
 import config from '../config.js';
+import { readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const cooldowns = new Map();
 const spamTracker = new Map();
 
 const CHANNEL_URL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
-const WATERMARK = `\n\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*\n📢 *Channel:* ${CHANNEL_URL}`;
+const CHANNEL_NAME = 'AA MD Bot';
+const WATERMARK = `\n\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*`;
+
+// Load banner thumbnail once for channel button
+let _bannerThumb = null;
+function getBannerThumb() {
+  if (_bannerThumb) return _bannerThumb;
+  const paths = [
+    join(__dirname, '../assets/banner.jpg'),
+    join(__dirname, '../../artifacts/aa-md-bot/public/banner.jpeg'),
+  ];
+  for (const p of paths) {
+    try {
+      if (existsSync(p)) { _bannerThumb = readFileSync(p); break; }
+    } catch (_) {}
+  }
+  return _bannerThumb;
+}
+
+// Build contextInfo that adds the "View channel" button to every bot reply.
+// If global._AA_NEWSLETTER_JID is set (owner ran .setnewsletter), uses the
+// real newsletter forward header. Otherwise falls back to externalAdReply.
+function buildChannelCtx() {
+  const newsletterJid = global._AA_NEWSLETTER_JID;
+  if (newsletterJid) {
+    return {
+      forwardingScore: 999,
+      isForwarded: true,
+      forwardedNewsletterMessageInfo: {
+        newsletterJid,
+        newsletterName: global._AA_NEWSLETTER_NAME || CHANNEL_NAME,
+        serverMessageId: Math.floor(Math.random() * 99999) + 1,
+      },
+    };
+  }
+  const thumb = getBannerThumb();
+  return {
+    forwardingScore: 999,
+    isForwarded: true,
+    externalAdReply: {
+      title: CHANNEL_NAME,
+      body: 'Join our WhatsApp Channel',
+      mediaType: 1,
+      renderLargerThumbnail: false,
+      showAdAttribution: true,
+      sourceUrl: CHANNEL_URL,
+      ...(thumb ? { thumbnail: thumb } : {}),
+    },
+  };
+}
 
 export function isOwner(jid) {
   const owners = db.settings.getValue('owners') || config.owners || [];
@@ -48,15 +102,36 @@ async function react(sock, msg, emoji) {
   await sock.sendMessage(msg.key.remoteJid, { react: { text: emoji, key: msg.key } }).catch(() => {});
 }
 
-// All text replies automatically get the watermark + channel link
+// All text replies automatically get the watermark + "View channel" button
 async function reply(sock, msg, text, options = {}) {
   const fullText = typeof text === 'string' ? text + WATERMARK : text;
-  return sock.sendMessage(msg.key.remoteJid, { text: fullText, ...options }, { quoted: msg });
+  const contextInfo = buildChannelCtx();
+  return sock.sendMessage(
+    msg.key.remoteJid,
+    { text: fullText, contextInfo, ...options },
+    { quoted: msg }
+  );
 }
 
-async function sendMsg(sock, jid, text, options = {}) {
-  const fullText = typeof text === 'string' ? text + WATERMARK : text;
-  return sock.sendMessage(jid, { text: fullText, ...options });
+async function sendMsg(sock, jid, content, options = {}) {
+  if (typeof content === 'string') {
+    const fullText = content + WATERMARK;
+    const contextInfo = buildChannelCtx();
+    return sock.sendMessage(jid, { text: fullText, contextInfo, ...options });
+  }
+  // Non-text messages (image/audio/video/sticker): add contextInfo to caption if present
+  const contextInfo = buildChannelCtx();
+  if (content.caption) {
+    if (!content.caption.includes('AA MD Bot')) content.caption += WATERMARK;
+  }
+  return sock.sendMessage(jid, { contextInfo, ...content, ...options });
+}
+
+// sendMedia — for plugins that send audio/image/video directly (bypassing the text wrapper)
+// Appends the channel contextInfo so media messages also carry the View Channel button.
+async function sendMedia(sock, jid, content) {
+  const contextInfo = buildChannelCtx();
+  return sock.sendMessage(jid, { contextInfo, ...content });
 }
 
 export async function handleMessage(sock, msg, sessionId) {
@@ -70,13 +145,8 @@ export async function handleMessage(sock, msg, sessionId) {
     // fromMe = self-chat ("You" tab) — always treated as owner
     const owner = isOwner(senderJid) || fromMe;
 
-    // ── Bot Mode: private / public ──────────────────────────
-    // private → only works in self-chat (fromMe) or if sender is a registered owner
-    // public  → works for everyone (default)
     const botMode = settings.botMode || 'public';
-    if (botMode === 'private' && !owner && !fromMe) {
-      return; // silently ignore non-owner messages in private mode
-    }
+    if (botMode === 'private' && !owner && !fromMe) return;
 
     if (settings.maintenanceMode && !owner) {
       await reply(sock, msg, config.maintenanceMsg).catch(() => {});
@@ -157,6 +227,7 @@ export async function handleMessage(sock, msg, sessionId) {
       reply: (t, opts) => reply(sock, msg, t, opts),
       react: (e) => react(sock, msg, e),
       send: (t, opts) => sendMsg(sock, jid, t, opts),
+      sendMedia: (content) => sendMedia(sock, jid, content),
       db, config,
       getQuoted: () => msg.message?.extendedTextMessage?.contextInfo?.quotedMessage || null,
       logger,
