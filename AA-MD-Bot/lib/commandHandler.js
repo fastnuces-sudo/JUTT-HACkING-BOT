@@ -183,7 +183,10 @@ export async function handleMessage(sock, msg, sessionId) {
       return;
     }
 
-    if (plugin.superOwnerOnly && !isSuperOwner(senderJid)) {
+    // superOwnerOnly: allow if senderJid matches superOwner OR if fromMe on superOwner's own session
+    const sessionPhone = sock.user?.id?.split('@')[0]?.split(':')[0];
+    const isSuperOwnerSelf = fromMe && sessionPhone === config.superOwner;
+    if (plugin.superOwnerOnly && !isSuperOwner(senderJid) && !isSuperOwnerSelf) {
       await reply(sock, msg, '👑 This command is reserved for the main developer only.').catch(() => {});
       return;
     }

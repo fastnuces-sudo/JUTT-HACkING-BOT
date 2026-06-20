@@ -1,0 +1,201 @@
+// ============================================
+// AA MD Bot - Temp Mail Plugin
+// Developer: Ahsan Ali | AA Mods
+// Uses: mail.tm free API
+// ============================================
+
+const axios = require("axios");
+
+// In-memory store: jid -> { address, password, token, tokenExpires }
+const mailSessions = new Map();
+
+const API = "https://api.mail.tm";
+const UA = { "User-Agent": "Mozilla/5.0 (AA-MD-Bot)", "Content-Type": "application/json" };
+
+// Generate a random username
+function randStr(len = 10) {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+// Get available domains from mail.tm
+async function getDomain() {
+  const res = await axios.get(`${API}/domains?page=1`, { headers: UA, timeout: 10000 });
+  const items = res.data?.["hydra:member"] || [];
+  if (!items.length) throw new Error("No domains available");
+  return items[0].domain;
+}
+
+// Create a new mail.tm account
+async function createAccount(jid) {
+  const domain = await getDomain();
+  const username = `aabot${randStr(7)}`;
+  const password = randStr(12);
+  const address = `${username}@${domain}`;
+
+  await axios.post(`${API}/accounts`, { address, password }, { headers: UA, timeout: 12000 });
+
+  // Get auth token
+  const tokenRes = await axios.post(`${API}/token`, { address, password }, { headers: UA, timeout: 12000 });
+  const token = tokenRes.data?.token;
+  if (!token) throw new Error("Failed to get auth token");
+
+  const session = { address, password, token, created: Date.now() };
+  mailSessions.set(jid, session);
+  return session;
+}
+
+// Get or refresh token for existing session
+async function getToken(session) {
+  try {
+    const tokenRes = await axios.post(`${API}/token`,
+      { address: session.address, password: session.password },
+      { headers: UA, timeout: 10000 }
+    );
+    session.token = tokenRes.data?.token || session.token;
+    return session.token;
+  } catch (_) {
+    return session.token;
+  }
+}
+
+// Check inbox
+async function checkInbox(session) {
+  const token = await getToken(session);
+  const res = await axios.get(`${API}/messages?page=1`, {
+    headers: { ...UA, Authorization: `Bearer ${token}` },
+    timeout: 12000,
+  });
+  return res.data?.["hydra:member"] || [];
+}
+
+// Read a specific message
+async function readMessage(session, msgId) {
+  const token = await getToken(session);
+  const res = await axios.get(`${API}/messages/${msgId}`, {
+    headers: { ...UA, Authorization: `Bearer ${token}` },
+    timeout: 12000,
+  });
+  return res.data;
+}
+
+module.exports = {
+  command: ["tempmail", "tmail", "tmpmail"],
+  description: "Create and check a temporary email address",
+  category: "Utility",
+  usage: ".tempmail | .tempmail new | .tempmail check | .tempmail read <number>",
+
+  async execute({ sock, ctx, args }) {
+    const { from, senderJid } = ctx;
+    const sub = (args[0] || "").toLowerCase();
+    const session = mailSessions.get(senderJid);
+
+    // ── .tempmail new — create new email ─────────────────────────
+    if (sub === "new" || (!sub && !session)) {
+      await sock.sendMessage(from, { text: "📧 Creating your temporary email address..." });
+      try {
+        const s = await createAccount(senderJid);
+        await sock.sendMessage(from, {
+          text:
+            `┌─────────────────────────┐\n` +
+            `📧 *Temporary Email Created!*\n` +
+            `└─────────────────────────┘\n\n` +
+            `📬 *Email:*\n\`${s.address}\`\n\n` +
+            `🔑 *Password:* \`${s.password}\`\n\n` +
+            `━━━━━━━━━━━━━━━━━━\n` +
+            `📥 Send emails to this address and check inbox with:\n` +
+            `*${".tempmail check"}*\n\n` +
+            `📖 Read a specific email:\n` +
+            `*${".tempmail read 1"}*\n\n` +
+            `⚠️ This address expires when bot restarts.\n` +
+            `🔄 Create new: *.tempmail new*`,
+        });
+      } catch (err) {
+        await sock.sendMessage(from, { text: `❌ Failed to create temp email: ${err.message}` });
+      }
+      return;
+    }
+
+    // ── .tempmail (show existing) ─────────────────────────────────
+    if (!sub && session) {
+      await sock.sendMessage(from, {
+        text:
+          `📧 *Your Temp Email*\n\n` +
+          `📬 Address: \`${session.address}\`\n` +
+          `⏰ Created: ${new Date(session.created).toLocaleString()}\n\n` +
+          `• *.tempmail check* — Check inbox\n` +
+          `• *.tempmail read 1* — Read first email\n` +
+          `• *.tempmail new* — Create new address`,
+      });
+      return;
+    }
+
+    // ── .tempmail check — check inbox ────────────────────────────
+    if (sub === "check" || sub === "inbox") {
+      if (!session) {
+        return sock.sendMessage(from, { text: "❌ No temp email found. Create one with *.tempmail*" });
+      }
+      await sock.sendMessage(from, { text: `📥 Checking inbox for *${session.address}*...` });
+      try {
+        const messages = await checkInbox(session);
+        if (!messages.length) {
+          return sock.sendMessage(from, {
+            text: `📭 *Inbox Empty*\n\nNo emails received yet for:\n\`${session.address}\`\n\nEmails may take a minute to arrive.`,
+          });
+        }
+        let text = `📬 *Inbox — ${session.address}*\n`;
+        text += `📩 ${messages.length} email(s) received:\n\n`;
+        messages.slice(0, 10).forEach((msg, i) => {
+          const date = new Date(msg.createdAt).toLocaleString();
+          text += `*${i + 1}.* 📧 ${msg.subject || "(No Subject)"}\n`;
+          text += `   👤 From: ${msg.from?.address || "Unknown"}\n`;
+          text += `   🕐 ${date}\n\n`;
+        });
+        text += `\n📖 Read email: *.tempmail read <number>*\ne.g. *.tempmail read 1*`;
+        // Store message IDs for easy reading
+        session._messages = messages.map(m => m.id);
+        await sock.sendMessage(from, { text });
+      } catch (err) {
+        await sock.sendMessage(from, { text: `❌ Failed to check inbox: ${err.message}` });
+      }
+      return;
+    }
+
+    // ── .tempmail read <n> — read specific email ──────────────────
+    if (sub === "read") {
+      if (!session) {
+        return sock.sendMessage(from, { text: "❌ No temp email found. Create one with *.tempmail*" });
+      }
+      const idx = parseInt(args[1] || "1", 10) - 1;
+      if (!session._messages || !session._messages[idx]) {
+        return sock.sendMessage(from, { text: "❌ No email at that index. Use *.tempmail check* first." });
+      }
+      await sock.sendMessage(from, { text: "📖 Loading email..." });
+      try {
+        const msg = await readMessage(session, session._messages[idx]);
+        const body = msg.text || msg.html?.replace(/<[^>]+>/g, " ").trim() || "(Empty body)";
+        const text =
+          `📧 *Email #${idx + 1}*\n\n` +
+          `📋 *Subject:* ${msg.subject || "(No Subject)"}\n` +
+          `👤 *From:* ${msg.from?.address || "Unknown"}\n` +
+          `📅 *Date:* ${new Date(msg.createdAt).toLocaleString()}\n\n` +
+          `━━━━━━━━━━━━━━━━━━\n\n` +
+          body.substring(0, 3000) + (body.length > 3000 ? "\n\n... (truncated)" : "");
+        await sock.sendMessage(from, { text });
+      } catch (err) {
+        await sock.sendMessage(from, { text: `❌ Failed to read email: ${err.message}` });
+      }
+      return;
+    }
+
+    // Fallback
+    await sock.sendMessage(from, {
+      text:
+        `📧 *Temp Mail Commands*\n\n` +
+        `• *.tempmail* — Show your email or create one\n` +
+        `• *.tempmail new* — Create new temp email\n` +
+        `• *.tempmail check* — Check inbox\n` +
+        `• *.tempmail read 1* — Read first email`,
+    });
+  },
+};

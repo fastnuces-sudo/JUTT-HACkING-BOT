@@ -1,0 +1,62 @@
+// ============================================
+// AA MD Bot - Push-to-Talk (Voice Note) Plugin
+// Developer: Ahsan Ali | AA Mods
+// Converts audio to WhatsApp voice note (ptt)
+// ============================================
+
+const { downloadMediaToFile } = require("../../lib/utils");
+const { exec } = require("child_process");
+const fs = require("fs-extra");
+const path = require("path");
+const config = require("../../config");
+
+module.exports = {
+  command: ["ptt", "voicenote", "voice2"],
+  description: "Convert an audio message to a voice note",
+  category: "Media",
+  usage: ".ptt (reply to audio message)",
+  cooldown: 10000,
+
+  async execute({ sock, ctx }) {
+    const { from, quoted, message, messageType } = ctx;
+
+    let audioMsg = null;
+    if (messageType === "audioMessage") {
+      audioMsg = message.audioMessage;
+    } else if (quoted?.message?.audioMessage) {
+      audioMsg = quoted.message.audioMessage;
+    }
+
+    if (!audioMsg) {
+      return sock.sendMessage(from, {
+        text: "⚠️ Reply to an *audio message* with .ptt to convert it to a voice note.",
+      });
+    }
+
+    try {
+      const tmpIn = await downloadMediaToFile(audioMsg, "audio", "mp3");
+      const tmpOut = path.join(config.tempPath, `ptt_${Date.now()}.ogg`);
+
+      // Convert to opus/ogg for proper WhatsApp voice note playback
+      await new Promise((resolve, reject) => {
+        exec(
+          `ffmpeg -i "${tmpIn}" -c:a libopus -b:a 64k -ar 48000 -ac 1 "${tmpOut}" -y`,
+          { timeout: 30000 },
+          (err) => (err ? reject(err) : resolve())
+        );
+      });
+
+      const audioBuffer = await fs.readFile(tmpOut);
+      await sock.sendMessage(from, {
+        audio: audioBuffer,
+        mimetype: "audio/ogg; codecs=opus",
+        ptt: true,
+      });
+
+      await fs.remove(tmpIn).catch(() => {});
+      await fs.remove(tmpOut).catch(() => {});
+    } catch (err) {
+      await sock.sendMessage(from, { text: `❌ Conversion failed: ${err.message}` });
+    }
+  },
+};

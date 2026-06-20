@@ -1,57 +1,104 @@
-import axios from 'axios';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs-extra';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { generateId } from '../../lib/helper.js';
+
+const execAsync = promisify(exec);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const YTDLP = '/home/runner/.local/bin/yt-dlp';
 
 export default {
   command: 'ringtone',
-  alias: ['rt', 'tone'],
+  alias: ['rt', 'tone', 'ring'],
   category: 'download',
-  description: 'Download ringtone by name',
-  usage: '.ringtone back in black',
-  ownerOnly: false,
+  description: 'Download a ringtone by name (max 2 min)',
+  usage: '.ringtone iphone | .ringtone nokia ringtone',
+
   execute: async ({ reply, react, sock, jid, msg, text }) => {
-    if (!text) return reply('🎵 Usage: .ringtone <song name>\n\nExample: .ringtone iphone ringtone');
+    if (!text) return reply('🎵 Usage: .ringtone <name>\n\nExamples:\n• .ringtone iphone ringtone\n• .ringtone nokia tune\n• .ringtone samsung galaxy');
 
     await react('⏳');
 
+    const tempDir = path.join(__dirname, '../../temp');
+    fs.ensureDirSync(tempDir);
+    const uid = generateId();
+
     try {
-      const searchRes = await axios.get(`https://www.zedge.net/api/ringtones/search`, {
-        params: { q: text, limit: 10 },
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-        timeout: 15000,
-      }).catch(() => null);
+      // Search for the ringtone on YouTube (short clips, max 120s)
+      const searchQuery = `${text} ringtone`;
+      const infoCmd = `${YTDLP} "ytsearch3:${searchQuery}" --dump-json --no-playlist --no-download --quiet --match-filter "duration < 200"`;
+      let info = null;
 
-      // Fallback: use Zedge public search
-      const zedgeUrl = `https://www.zedge.net/ringtones/?q=${encodeURIComponent(text)}`;
+      try {
+        const { stdout } = await execAsync(infoCmd, { timeout: 25000 });
+        const lines = stdout.trim().split('\n').filter(Boolean);
+        for (const line of lines) {
+          try {
+            const candidate = JSON.parse(line);
+            if ((candidate.duration || 999) <= 180) { info = candidate; break; }
+          } catch {}
+        }
+      } catch {}
 
-      // Use free ringtone API
-      const res = await axios.get(`https://api.myinstants.com/v1/instants/search/?name=${encodeURIComponent(text)}&format=json`, {
-        timeout: 12000,
-      });
+      // If match-filter failed, try without it
+      if (!info) {
+        const cmd2 = `${YTDLP} "ytsearch5:${searchQuery}" --dump-json --no-playlist --no-download --quiet`;
+        const { stdout } = await execAsync(cmd2, { timeout: 25000 });
+        const lines = stdout.trim().split('\n').filter(Boolean);
+        for (const line of lines) {
+          try {
+            const c = JSON.parse(line);
+            if ((c.duration || 999) <= 180) { info = c; break; }
+          } catch {}
+        }
+      }
 
-      const results = res.data?.results;
-      if (!results?.length) {
+      if (!info) {
         await react('❌');
         return reply(`❌ No ringtone found for: *${text}*\n\nTry: .ringtone iphone, .ringtone nokia, .ringtone samsung`);
       }
 
-      const pick = results[Math.floor(Math.random() * Math.min(5, results.length))];
-      const audioUrl = pick.sound_url || pick.url;
-      const title = pick.name || text;
+      const title    = info.title || text;
+      const duration = info.duration || 0;
+      const url      = info.webpage_url || info.url;
+      const mins     = Math.floor(duration / 60);
+      const secs     = String(duration % 60).padStart(2, '0');
 
-      if (!audioUrl) {
+      await sock.sendMessage(jid, {
+        text: `🎵 *Downloading:* ${title}\n⏱️ ${mins}:${secs}`,
+      }, { quoted: msg });
+
+      const outFile = path.join(tempDir, `${uid}.mp3`);
+      await execAsync(
+        `${YTDLP} "${url}" -x --audio-format mp3 --audio-quality 128K -o "${outFile.replace('.mp3', '.%(ext)s')}" --no-playlist --quiet --no-warnings`,
+        { timeout: 90000 }
+      );
+
+      // Find actual output file
+      const files = await fs.readdir(tempDir);
+      const base  = uid;
+      const dlFile = files.map(f => path.join(tempDir, f)).find(f => path.basename(f).startsWith(base));
+
+      if (!dlFile || !await fs.pathExists(dlFile)) {
         await react('❌');
-        return reply('❌ Ringtone link not available. Try another name.');
+        return reply('❌ Download failed. Try another ringtone name.');
       }
 
       await sock.sendMessage(jid, {
-        audio: { url: audioUrl.startsWith('//') ? 'https:' + audioUrl : audioUrl },
+        audio: await fs.readFile(dlFile),
         mimetype: 'audio/mpeg',
         fileName: `${title}.mp3`,
       }, { quoted: msg });
 
       await react('✅');
-    } catch (e) {
+      fs.remove(dlFile).catch(() => {});
+
+    } catch (err) {
       await react('❌');
-      reply('❌ Ringtone download failed: ' + e.message);
+      reply('❌ Ringtone download failed. Try a different name.\n_' + (err.message?.slice(0, 80) || '') + '_');
     }
   },
 };
