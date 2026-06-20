@@ -1,0 +1,11 @@
+AA-MD-Bot/node_modules
+AA-MD-Bot/session
+AA-MD-Bot/logs
+AA-MD-Bot/temp
+*.log
+.env
+.git
+.local
+.cache
+.agents
+attached_assets
