@@ -260,7 +260,15 @@ async function startServer() {
     res.end(JSON.stringify({ error: 'Not found' }));
   });
 
-  server.listen(port, () => {
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.error({ port }, `❌ Port ${port} already in use — another bot instance is running. Exiting so workflow can restart cleanly.`);
+      process.exit(1);
+    }
+    throw err;
+  });
+
+  server.listen(port, '0.0.0.0', () => {
     logger.info({ port }, '🌐 Dashboard server listening');
     console.log(chalk.green(`\n🌐 Dashboard: http://localhost:${port}/\n`));
   });

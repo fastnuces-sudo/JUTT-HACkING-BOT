@@ -1,0 +1,651 @@
+
+up to date, audited 198 packages in 2s
+
+28 packages are looking for funding
+  run `npm fund` for details
+
+2 high severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+{"level":"INFO","time":"2026-06-21T05:58:58.401Z","jid":"120363428609538858@newsletter","msg":"📢 Newsletter JID restored from db"}
+
+╔══════════════════════════════════════╗
+║       AA MD BOT  v3.0.0           ║
+║   Developer: Ahsan Ali Wadani       ║
+║        Brand: AA Mods               ║
+║   Multi-Device WhatsApp Bot         ║
+╚══════════════════════════════════════╝
+{"level":"INFO","time":"2026-06-21T05:58:58.403Z","msg":"🚀 Starting AA MD Bot..."}
+{"level":"INFO","time":"2026-06-21T05:58:58.406Z","msg":"📦 Loading plugins..."}
+{"level":"ERROR","time":"2026-06-21T05:58:58.406Z","err":"listen EADDRINUSE: address already in use 0.0.0.0:5000","msg":"💥 Uncaught Exception"}
+📦 Loaded 130 plugins: admin(10), download(13), economy(8), fun(15), group(11), owner(18), islamic(61), level(5), media(12), search(8), tools(10), utility(18)
+{"level":"INFO","time":"2026-06-21T05:58:58.689Z","msg":"📡 Initializing WhatsApp sessions..."}
+{"level":"INFO","time":"2026-06-21T05:58:58.690Z","count":1,"msg":"Loading existing sessions"}
+{"level":"INFO","time":"2026-06-21T05:58:58.949Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+
+✨ AA MD Bot is ready!
+
+{"level":"INFO","time":"2026-06-21T05:59:02.270Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+{"level":"WARN","time":"2026-06-21T05:59:07.472Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T05:59:07.472Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T05:59:12.673Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T05:59:14.165Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    Bfc2DYTL2IXWpF52KDxrrJFMRv0bp7TvsWN4RWGaqGp1: { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 f7 36 0d 84 cb d8 85 d6 a4 5e 76 28 3c 6b ac 91 4c 46 fd 1b a7 b4 ef b1 63 78 45 61 9a a8 6a 75>,
+      privKey: <Buffer 18 fe a3 44 fc 71 73 b1 3d 1b 70 db 4f 44 e0 f6 42 5a 29 ea fe a2 c6 c4 51 c8 9e 9f ae 8c 51 49>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 70 84 9d 34 31 05 cc 96 77 25 33 cf ee 6c 5e 5d 70 1b 9c cb eb c6 f9 b8 14 af e8 33 1b 39 5b 62>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 70 f5 51 81 14 e7 04 25 22 2b 2b fc a6 8a 06 b9 ad f4 fd 62 9f a5 17 f9 a7 98 b8 24 e7 6d 44 5b>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021552835,
+    created: 1782021552835,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 70 f5 51 81 14 e7 04 25 22 2b 2b fc a6 8a 06 b9 ad f4 fd 62 9f a5 17 f9 a7 98 b8 24 e7 6d 44 5b>,
+    preKeyId: 4458277
+  }
+}
+{"level":"WARN","time":"2026-06-21T05:59:19.722Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T05:59:19.722Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T05:59:24.924Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T05:59:26.432Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'BYUgy5CJEDeQBRdFiCZ6v08mFORW2fe8maqvLkAf1yA/': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 85 20 cb 90 89 10 37 90 05 17 45 88 26 7a bf 4f 26 14 e4 56 d9 f7 bc 99 aa af 2e 40 1f d7 20 3f>,
+      privKey: <Buffer 98 96 98 c2 c4 88 33 e8 12 3c 37 0b 92 e2 25 55 e6 cf cf d1 84 cb b7 87 00 a3 da 9e b2 03 c5 47>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 8f 61 2e 6c cb 58 49 76 23 37 17 1d 1c e5 91 c4 b3 dd 6b c3 f4 29 f2 ff 88 ec ea 1f 95 12 5f 63>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 fb dd b6 06 24 8a 0f f3 63 ae 93 4a fa 3e 16 92 99 7c a7 bd fc 5c 56 06 2c 11 50 4e e7 1b e5 44>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021564975,
+    created: 1782021564975,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 fb dd b6 06 24 8a 0f f3 63 ae 93 4a fa 3e 16 92 99 7c a7 bd fc 5c 56 06 2c 11 50 4e e7 1b e5 44>,
+    preKeyId: 4458238
+  }
+}
+{"level":"WARN","time":"2026-06-21T05:59:31.988Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T05:59:31.989Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T05:59:37.189Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T05:59:38.964Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'BawQpQW5+i2EdTYBsCT0WTGbo9F7w6f59jIfYVRuRuo9': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 ac 10 a5 05 b9 fa 2d 84 75 36 01 b0 24 f4 59 31 9b a3 d1 7b c3 a7 f9 f6 32 1f 61 54 6e 46 ea 3d>,
+      privKey: <Buffer 50 d0 2e 8b 01 a2 b0 73 3d f8 a2 ff d5 4b a4 aa 61 eb 07 fe 95 01 b2 36 bb 78 d1 1b 7f 0f c4 54>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer b8 a5 18 0b a5 05 4c 6d 7e 8b be 97 cc b7 1f 1a 20 f4 50 5d 9e bf 80 6b e4 bf 43 51 ef 4d 4d a9>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 66 3b 03 3d b4 45 d6 d6 27 77 62 a9 d4 e6 2d ae 9a 5c d4 98 8c 86 28 2b f3 71 68 09 29 37 2f 58>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021577336,
+    created: 1782021577336,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 66 3b 03 3d b4 45 d6 d6 27 77 62 a9 d4 e6 2d ae 9a 5c d4 98 8c 86 28 2b f3 71 68 09 29 37 2f 58>,
+    preKeyId: 4458108
+  }
+}
+{"level":"WARN","time":"2026-06-21T05:59:45.228Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T05:59:45.228Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T05:59:50.430Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T05:59:53.105Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+{"level":"WARN","time":"2026-06-21T05:59:58.812Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T05:59:58.812Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:00:04.013Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:00:06.299Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    BSf6XwKqHqrJ93ad59CEV26k17KDU8ajERM6IarBFVky: { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 27 fa 5f 02 aa 1e aa c9 f7 76 9d e7 d0 84 57 6e a4 d7 b2 83 53 c6 a3 11 13 3a 21 aa c1 15 59 32>,
+      privKey: <Buffer 78 ff 01 67 66 1b 98 94 34 85 4a ae 21 a0 37 d1 78 0d 9d 0a 02 c3 21 49 40 ad 56 c2 97 7c 05 7c>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 4e 91 5a f9 e5 ef 79 17 60 c8 11 b4 7f 3d 6a c6 d2 00 52 46 06 62 a5 58 2f 25 cc cc ec 05 65 4b>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 5d 7b 29 f3 9d e3 c7 f2 86 15 fc ae af be fc 02 e5 1c 77 b2 e6 74 c4 97 62 7a a7 c3 eb e9 0e 1e>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021590784,
+    created: 1782021590784,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 5d 7b 29 f3 9d e3 c7 f2 86 15 fc ae af be fc 02 e5 1c 77 b2 e6 74 c4 97 62 7a a7 c3 eb e9 0e 1e>,
+    preKeyId: 4458213
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:00:12.180Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:00:12.180Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:00:17.385Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:00:19.193Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'Ba35zNYeXu0T+5HJkXelfptK1tVK/YNsJiqnnZPxH6YK': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 ad f9 cc d6 1e 5e ed 13 fb 91 c9 91 77 a5 7e 9b 4a d6 d5 4a fd 83 6c 26 2a a7 9d 93 f1 1f a6 0a>,
+      privKey: <Buffer a8 f5 01 64 e4 51 0d 22 c3 c0 f2 fd d5 c6 fe ce 7c 1f 9a ca cc 4f dc 8c d5 a4 9f c7 14 c2 eb 78>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 51 20 3f 05 62 e6 a0 2e 08 8f f4 ed 03 ca ce 96 6e 28 e4 6f b4 ad 8e b5 67 66 bf 18 07 15 b8 19>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 8b 99 03 4e 37 67 98 6b 68 08 e5 0f 52 06 d7 b5 c8 7b 38 ff c2 12 e0 e0 dc 80 4f b4 2b b6 8e 74>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021617761,
+    created: 1782021617761,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 8b 99 03 4e 37 67 98 6b 68 08 e5 0f 52 06 d7 b5 c8 7b 38 ff c2 12 e0 e0 dc 80 4f b4 2b b6 8e 74>,
+    preKeyId: 4457807
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:00:24.970Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:00:24.970Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:00:30.178Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:00:33.221Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+{"level":"WARN","time":"2026-06-21T06:00:38.317Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:00:38.317Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:00:43.518Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:00:45.091Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'Ba7shRYXhd2ZkkCcGjuyzwxMUXLiin7q4aOCr90l2+4d': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 ae ec 85 16 17 85 dd 99 92 40 9c 1a 3b b2 cf 0c 4c 51 72 e2 8a 7e ea e1 a3 82 af dd 25 db ee 1d>,
+      privKey: <Buffer 90 af 66 e7 1d 30 3b f8 e6 90 a9 fa 57 18 d4 ed 06 9f 14 f7 b5 1e 4a 83 d6 12 61 32 df 31 ff 52>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 04 87 0c 15 e1 39 bb eb c4 d9 6d c7 21 2f 21 be 65 b6 fc 54 20 d8 18 c9 5f 6b 58 92 33 27 08 06>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 7f 09 d3 2e eb 40 bf 17 f1 70 7f b6 88 5e 4d 2c 07 35 9b f5 94 cb d5 09 64 01 32 ab 85 23 64 11>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021643622,
+    created: 1782021643622,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 7f 09 d3 2e eb 40 bf 17 f1 70 7f b6 88 5e 4d 2c 07 35 9b f5 94 cb d5 09 64 01 32 ab 85 23 64 11>,
+    preKeyId: 4458178
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:00:50.766Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:00:50.766Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:00:55.965Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:00:57.330Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    BcMyjYncIDJGPbNRgHaqbyZ0XyP5cYpuMUeFO27wjKAq: { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 c3 32 8d 89 dc 20 32 46 3d b3 51 80 76 aa 6f 26 74 5f 23 f9 71 8a 6e 31 47 85 3b 6e f0 8c a0 2a>,
+      privKey: <Buffer 38 45 01 b7 d7 32 78 6f c7 24 95 15 eb 9a 55 b9 6c 90 be fd 4e 8b b3 3f 75 5f 3a b4 e7 ce fd 64>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer c9 57 f3 17 82 0c 97 54 3e 5b 2c 22 ff f8 28 1e 7e 6b 7f 6f 10 38 0d bd 94 41 b1 66 6a 59 fc 88>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 f5 f8 b5 6f 5c 61 82 fc 5f 0e 20 8f 99 56 fc 76 6c b7 a1 ab 6b 9a d3 69 6e eb 63 5a 02 57 5d 3d>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021656351,
+    created: 1782021656351,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 f5 f8 b5 6f 5c 61 82 fc 5f 0e 20 8f 99 56 fc 76 6c b7 a1 ab 6b 9a d3 69 6e eb 63 5a 02 57 5d 3d>,
+    preKeyId: 4458163
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:01:02.982Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:01:02.983Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:01:08.185Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:01:09.693Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'Bc16T2u8zHTLEQAjWallW9/FEEf1c8t7FHM/RnV8nywJ': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 cd 7a 4f 6b bc cc 74 cb 11 00 23 59 a9 65 5b df c5 10 47 f5 73 cb 7b 14 73 3f 46 75 7c 9f 2c 09>,
+      privKey: <Buffer b8 40 8a c6 0e a8 d1 bb 22 85 76 83 96 b3 47 a3 06 d3 7c 97 c6 5d a2 be 5d 22 cb 9c f8 59 6b 70>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 00 92 66 e7 09 25 6d 0b 5d 14 05 aa d8 08 8a ca 92 10 68 ce f4 2a 54 43 a6 3e 39 67 73 8f ba 1f>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 86 5c 6a e2 5e 36 3f 0e 37 99 90 ec c4 83 ca 28 19 03 d4 c4 65 6e 0a de ef 25 45 41 cd 5d 68 33>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021668686,
+    created: 1782021668686,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 86 5c 6a e2 5e 36 3f 0e 37 99 90 ec c4 83 ca 28 19 03 d4 c4 65 6e 0a de ef 25 45 41 cd 5d 68 33>,
+    preKeyId: 4458157
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:01:15.665Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:01:15.665Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:01:20.863Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:01:22.331Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    BXFHamgVOgHDHeWnozGYLLaGUUiCPvidESQUjBHx20c1: { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 71 47 6a 68 15 3a 01 c3 1d e5 a7 a3 31 98 2c b6 86 51 48 82 3e f8 9d 11 24 14 8c 11 f1 db 47 35>,
+      privKey: <Buffer 68 ae bb 1e ea 3c 33 81 d4 d3 ad 8c b3 10 0f 14 78 a4 ff 62 26 04 b6 48 5e bb 08 fb c1 86 e2 52>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 2a 57 32 c0 af df 2c 8e f7 06 df 8e f8 9e 5b 9f b6 12 09 93 a7 4f bd 8e a8 63 75 b7 ac b7 5c 59>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 51 d4 0c 26 62 37 78 ac fb 4c b5 de 9e d3 db 6c 53 28 b5 e9 28 e5 7f 7f 33 07 42 98 89 8a d7 6d>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021681262,
+    created: 1782021681262,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 51 d4 0c 26 62 37 78 ac fb 4c b5 de 9e d3 db 6c 53 28 b5 e9 28 e5 7f 7f 33 07 42 98 89 8a d7 6d>,
+    preKeyId: 4458201
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:01:27.927Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:01:27.927Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:01:33.133Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:01:34.670Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'BbO27uxK/r88xOnTRgcKzC/KO4GlE4a13Wbdjr5uqmF6': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 b3 b6 ee ec 4a fe bf 3c c4 e9 d3 46 07 0a cc 2f ca 3b 81 a5 13 86 b5 dd 66 dd 8e be 6e aa 61 7a>,
+      privKey: <Buffer c8 bf 93 14 0f c4 f3 81 98 8e ef 9f 38 dd e8 86 12 f4 0f 9a c9 c0 07 df 0b 96 17 da 92 f6 8a 54>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 89 aa d7 b0 bd 54 8e 7f d8 46 6b a6 a2 c1 b5 3b ba d9 46 25 5b 22 5a 12 25 b6 91 ba b9 45 39 af>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 51 24 9a 0e 4c f3 53 9a bc 7d 9e b4 ee cc f7 99 54 bd 52 02 07 87 f5 1d cd cf e3 75 19 2e 3f 28>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021693582,
+    created: 1782021693582,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 51 24 9a 0e 4c f3 53 9a bc 7d 9e b4 ee cc f7 99 54 bd 52 02 07 87 f5 1d cd cf e3 75 19 2e 3f 28>,
+    preKeyId: 4458166
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:01:40.214Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:01:40.214Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:01:45.416Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:01:46.909Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    BfklLe9Do2UD6uj3DCeIZvzZuoztNANgTvgDiN43bAsH: { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 f9 25 2d ef 43 a3 65 03 ea e8 f7 0c 27 88 66 fc d9 ba 8c ed 34 03 60 4e f8 03 88 de 37 6c 0b 07>,
+      privKey: <Buffer 70 67 ad 38 42 60 a0 2d 2f aa 38 70 05 a4 ea 32 a6 7a 79 e5 0c c1 5e 1c e0 01 42 5a 6a 33 91 6a>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 0b 7d 03 24 5c 39 7b b9 3e 49 e7 3f bb 57 6d b1 eb 29 9a 73 1c 5d f9 3c 5e f6 cc 87 67 ab 74 47>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 cf c7 fa 3e 19 e6 60 1d 02 7e 99 2e dc aa e4 aa 65 c6 15 81 91 e3 f4 3b cc a7 25 66 aa 7e 2d 01>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021705700,
+    created: 1782021705700,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 cf c7 fa 3e 19 e6 60 1d 02 7e 99 2e dc aa e4 aa 65 c6 15 81 91 e3 f4 3b cc a7 25 66 aa 7e 2d 01>,
+    preKeyId: 4458101
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:01:52.482Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:01:52.482Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:01:57.689Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:01:59.011Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    BdqGrEg6b8qOg3vThIQgNAFLbBEdpE25Z1SH4bIiHT0g: { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 da 86 ac 48 3a 6f ca 8e 83 7b d3 84 84 20 34 01 4b 6c 11 1d a4 4d b9 67 54 87 e1 b2 22 1d 3d 20>,
+      privKey: <Buffer 48 3f 8f b1 49 17 56 75 3b 90 50 ef c4 0e 96 5b 18 cb e5 e5 8f 3c 0d a1 09 19 f3 3f 5f 01 9a 44>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 3e c6 a5 c0 e8 9c 68 fe 7d 09 4d 31 36 a9 61 db 47 08 14 92 48 e0 73 77 3c 9a 81 62 04 e6 2c 56>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 6e ca a0 e2 8d af 6a 80 00 f3 f2 7b fa 78 7a 8e 85 cf 7e 60 41 86 ee 83 eb be 9d 21 c1 8f e1 06>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021711992,
+    created: 1782021711992,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 6e ca a0 e2 8d af 6a 80 00 f3 f2 7b fa 78 7a 8e 85 cf 7e 60 41 86 ee 83 eb be 9d 21 c1 8f e1 06>,
+    preKeyId: 4458232
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:02:05.118Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:02:05.118Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:02:10.315Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:02:12.327Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+{"level":"WARN","time":"2026-06-21T06:02:17.716Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:02:17.716Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:02:22.919Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:02:24.399Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    BWZmigxkjVrYkN53QHQpyEjl2qn7n7LwMAO1rp3NLpEE: { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 66 66 8a 0c 64 8d 5a d8 90 de 77 40 74 29 c8 48 e5 da a9 fb 9f b2 f0 30 03 b5 ae 9d cd 2e 91 04>,
+      privKey: <Buffer d8 9c fb ae e9 c4 8b 16 9c 68 21 86 64 e6 1a f9 89 a4 31 91 6b 38 c2 c0 ef db 67 04 82 cf 74 62>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer cc 32 31 8e 76 7e aa 19 47 46 3a 1c 02 24 23 4d 6c 71 62 07 9a 94 b8 c7 a8 c1 f3 93 e9 bc 6b 53>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 4b 5c e6 46 e5 b1 6f ac cf 60 e4 94 bf 50 59 89 ad e9 7b a5 ac 0f ac ba 16 e7 e6 20 3f 78 75 01>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021742758,
+    created: 1782021742758,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 4b 5c e6 46 e5 b1 6f ac cf 60 e4 94 bf 50 59 89 ad e9 7b a5 ac 0f ac ba 16 e7 e6 20 3f 78 75 01>,
+    preKeyId: 4458188
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:02:30.176Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:02:30.176Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:02:35.390Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:02:37.085Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+{"level":"WARN","time":"2026-06-21T06:02:42.401Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:02:42.402Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:02:47.613Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:02:49.458Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'BT/tZrzM/+xsaEzqvVOulcfLn+5BVu4x1adn5E0ct99d': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 3f ed 66 bc cc ff ec 6c 68 4c ea bd 53 ae 95 c7 cb 9f ee 41 56 ee 31 d5 a7 67 e4 4d 1c b7 df 5d>,
+      privKey: <Buffer 78 09 7a ac c6 ae 5e 7b 3a ea 45 97 68 1d 41 d4 03 0a 68 e9 de fa df 81 f0 71 aa ff 8c e6 bf 40>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer d4 64 54 29 83 24 6a 36 a4 3e 6a f2 25 87 6f 2d 9d b1 5c eb e7 e5 c8 a9 94 9e 19 fb 5f ba 34 cb>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 45 8d f7 96 f4 18 4a 83 7d cb 8f ce f6 43 8e 6b ff 77 2b b5 a6 cd 46 c9 d4 72 71 76 35 e6 6a 63>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021755693,
+    created: 1782021755693,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 45 8d f7 96 f4 18 4a 83 7d cb 8f ce f6 43 8e 6b ff 77 2b b5 a6 cd 46 c9 d4 72 71 76 35 e6 6a 63>,
+    preKeyId: 4458149
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:02:54.886Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:02:54.886Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:03:00.081Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:03:02.180Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'BZaXcHvTIlYrVo+A9m81sTrGo+1mxMfGs/uCKNnWMq5Z': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BfX+kikDViyaumyC43ptKQF54pvzbXDwBBv57y71TO5s': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 f5 fe 92 29 03 56 2c 9a ba 6c 82 e3 7a 6d 29 01 79 e2 9b f3 6d 70 f0 04 1b f9 ef 2e f5 4c ee 6c>,
+      privKey: <Buffer 40 e8 16 44 d5 b0 e4 cd 62 5e bb 36 9b a1 08 f4 a4 9c 2f 3e 64 4d ea bd 49 54 60 89 14 01 0a 43>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 96 97 70 7b d3 22 56 2b 56 8f 80 f6 6f 35 b1 3a c6 a3 ed 66 c4 c7 c6 b3 fb 82 28 d9 d6 32 ae 59>,
+    previousCounter: 0,
+    rootKey: <Buffer 6d 18 ad 0d e9 74 c0 25 6e cd fc b9 e4 d9 1e 7f e1 d6 e6 83 4c 62 90 bc 6e da 1a 32 f9 9d b5 d3>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 6a 4f be 4c ef 94 ec 44 48 46 8b 76 c3 9d 12 08 4e b2 0b 3e 61 ad 1f 1f 56 b9 5f 03 68 8e 3a 62>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021781145,
+    created: 1782021779907,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:03:07.623Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:03:07.623Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:03:12.830Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:03:14.511Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+{"level":"WARN","time":"2026-06-21T06:03:19.855Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:03:19.857Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:03:25.063Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:03:26.645Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'BUq64lVE3wd96Rx8QyzxeZCEdmwIS6mUM/+3KABESu0m': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 4a ba e2 55 44 df 07 7d e9 1c 7c 43 2c f1 79 90 84 76 6c 08 4b a9 94 33 ff b7 28 00 44 4a ed 26>,
+      privKey: <Buffer 80 c9 f9 43 0f b3 86 d2 df 73 1f 8d 6f af 02 ae dd 50 e2 29 89 4b f0 81 38 f0 6e 4f b0 08 a9 73>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer 35 72 54 99 39 71 6b b3 4b 88 40 14 a6 08 a9 cd 4a a5 08 74 79 1c 80 60 31 14 35 9f 25 57 d9 ce>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 c4 ee 5d 0a a6 14 17 09 42 9b 88 60 8e 79 90 14 a6 96 33 1b 57 7d 93 25 86 02 38 14 2b e6 65 41>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021805904,
+    created: 1782021805904,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 c4 ee 5d 0a a6 14 17 09 42 9b 88 60 8e 79 90 14 a6 96 33 1b 57 7d 93 25 86 02 38 14 2b e6 65 41>,
+    preKeyId: 4458165
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:03:32.366Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:03:32.366Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:03:37.561Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
+{"level":"INFO","time":"2026-06-21T06:03:39.040Z","sessionId":"AAKWB","name":"AAKWB","msg":"✅ WhatsApp Connected!"}
+✅ Session [AAKWB] connected as AAKWB
+Closing session: SessionEntry {
+  _chains: {
+    'BYROkx+II8Ua8psEfrpD1CSiVKdX951pqkBuDtVdSeZE': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 84 4e 93 1f 88 23 c5 1a f2 9b 04 7e ba 43 d4 24 a2 54 a7 57 f7 9d 69 aa 40 6e 0e d5 5d 49 e6 44>,
+      privKey: <Buffer 28 f5 1d 77 aa 36 96 d0 8d 19 aa b4 ec 35 48 58 83 e1 c0 cb 9d c7 76 72 2b 1b eb aa 4b f5 0e 6b>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 3d f0 78 62 7a f7 a6 6a b9 7d 97 52 5c db 25 7a 9a 11 50 93 9e 48 56 dc 02 d8 f7 e6 e4 84 0d 6b>,
+    previousCounter: 0,
+    rootKey: <Buffer bb 30 0b 32 82 03 05 fd 5b da 53 7c 5d dd 0e 9b 3b 80 ee 5b b3 c8 2b 31 ca 69 e0 aa 78 94 fb 57>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 4b 1d f0 2f 6b 4d 2c a7 bb 23 a9 51 4a cb a9 2e 34 a7 2c fb b4 5d a7 2c ae d0 57 ea 95 1f bf 29>,
+    baseKeyType: 1,
+    closed: -1,
+    used: 1782021817962,
+    created: 1782021817962,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  },
+  pendingPreKey: {
+    signedKeyId: 10183581,
+    baseKey: <Buffer 05 4b 1d f0 2f 6b 4d 2c a7 bb 23 a9 51 4a cb a9 2e 34 a7 2c fb b4 5d a7 2c ae d0 57 ea 95 1f bf 29>,
+    preKeyId: 4458394
+  }
+}
+Removing old closed session: SessionEntry {
+  _chains: {
+    'BWEr9l6hipUJj0/8UPF38SaO2xc3ZXhg4eMc9s7X3c00': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BYpSTvTF8oDtMFgQucA13YwStbkmOCK/DhPNpgj8/bYD': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BUzwDSD/yLr0Q0RjGIFRtuu8lM/1zXa8Jd3UdPV9VvpJ': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BVUWx03Vt++5TU+rOD6/e8PSl0xdJ0OSwbuxC1N34O1R': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BTUHyV91nScDv5bkr4qykS4Foui1WUxYzKaN7p276Akm: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BfRKqml/nX0T/lGtgZqIoSbyvov+7zYG3tUZ0hnQFkoA': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BQP75GijEetkQ9Nvi48b9zwFXRZMc5kYmelLEumdFNA9: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BTap5MdF3xT6HqkDQ4bi2OJlXqVw6d3qSEoynmwwFCRk: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    'BSObyFPbYY7p5zT4rP8KMv/eI1xEq1IVssUAcc5aeuJL': { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BbKxDPdphLTePwXrO9hZpsb9F7sQH1fFAyCq4LIhumce: { chainKey: [Object], chainType: 2, messageKeys: {} },
+    BVkZVsftxo4m9P7COqSZnyNSMpEDa7oh5LdrhrPcpX1a: { chainKey: [Object], chainType: 2, messageKeys: [Object] },
+    'BZiEAeTG+avCYH4RWvQrrC6JV5wXu4J02GQKc/l2TIIm': { chainKey: [Object], chainType: 1, messageKeys: {} }
+  },
+  registrationId: 840205169,
+  currentRatchet: {
+    ephemeralKeyPair: {
+      pubKey: <Buffer 05 98 84 01 e4 c6 f9 ab c2 60 7e 11 5a f4 2b ac 2e 89 57 9c 17 bb 82 74 d8 64 0a 73 f9 76 4c 82 26>,
+      privKey: <Buffer 88 0e 94 d1 8a dc d3 cf ce fd 41 d3 ef 6a 79 44 08 7d e9 f4 1c a3 8a 13 a2 4a 5d 43 42 e8 7c 4d>
+    },
+    lastRemoteEphemeralKey: <Buffer 05 59 19 56 c7 ed c6 8e 26 f4 fe c2 3a a4 99 9f 23 52 32 91 03 6b ba 21 e4 b7 6b 86 b3 dc a5 7d 5a>,
+    previousCounter: 1,
+    rootKey: <Buffer 47 0c 66 35 af 60 52 05 7f a1 10 dd 2c 16 18 9e f4 b5 4c 5d 65 11 fd 17 41 57 6a 74 60 bf 56 f7>
+  },
+  indexInfo: {
+    baseKey: <Buffer 05 cf 90 45 55 f2 d0 9d 3c 22 b4 d7 77 f3 7e 9f 57 ce d3 7a ab 1b e5 75 0a aa 02 98 39 2b 90 08 03>,
+    baseKeyType: 1,
+    closed: 1782019064661,
+    used: 1782019069435,
+    created: 1781979564776,
+    remoteIdentityKey: <Buffer 05 fb 42 55 16 0a 23 b8 fe 06 25 ba 50 bd eb 11 ee 31 a5 77 aa 67 23 10 b6 2e 38 bb e2 34 9f eb 3d>
+  }
+}
+{"level":"WARN","time":"2026-06-21T06:03:44.739Z","sessionId":"AAKWB","reason":440,"wasRegistered":true,"msg":"Connection closed"}
+{"level":"INFO","time":"2026-06-21T06:03:44.739Z","sessionId":"AAKWB","msg":"🔄 Reconnecting in 5s..."}
+{"level":"INFO","time":"2026-06-21T06:03:49.935Z","sessionId":"AAKWB","msg":"🔌 Session initialized"}
