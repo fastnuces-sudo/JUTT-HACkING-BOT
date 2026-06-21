@@ -5,15 +5,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
 import { generateId, getBuffer } from '../../lib/helper.js';
-import { YTDLP } from '../../lib/ytdlp.js';
+import { YTDLP, getCookiesFlag } from '../../lib/ytdlp.js';
 
 const execAsync  = promisify(exec);
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 
 const BRAND =
-  `\n🌐 https://aa-mods.vercel.app/\n` +
-  `🤖 *Powered by AA MD Bot*\n` +
-  `👨‍💻 *Developed by Ahsan Ali Wadani*`;
+  `\n> 🌐 https://aa-mods.vercel.app/\n` +
+  `> 🤖 *Powered by AA MD Bot*\n` +
+  `> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
 // Invidious public instances for YouTube proxy downloads
 const INV = [
@@ -104,15 +104,16 @@ async function ytdlpDownload(ytdlp, url, outTemplate) {
     } catch { return null; }
   };
 
+  const ckf = getCookiesFlag();
   const strategies = [
-    // tv_embedded — best on server/VPS IPs (bypasses most bot checks)
-    `"${ytdlp}" "${url}" -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=tv_embedded" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    // cookies + tv_embedded — most reliable on VPS/Railway
+    `"${ytdlp}" "${url}" ${ckf} -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=tv_embedded" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
     // android client with proper mobile UA
-    `"${ytdlp}" "${url}" -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=android" --add-header "User-Agent:com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB)" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    `"${ytdlp}" "${url}" ${ckf} -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=android" --add-header "User-Agent:com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB)" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
     // ios client
-    `"${ytdlp}" "${url}" -f "bestvideo[height<=480]+bestaudio/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=ios" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
-    // web fallback — best quality available ≤480p
-    `"${ytdlp}" "${url}" -f "best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=web" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
+    `"${ytdlp}" "${url}" ${ckf} -f "bestvideo[height<=480]+bestaudio/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=ios" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    // web fallback
+    `"${ytdlp}" "${url}" ${ckf} -f "best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=web" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
   ];
 
   for (const cmd of strategies) {

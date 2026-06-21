@@ -79,8 +79,8 @@ export default {
       `📞 Anti-Call   : ${bool(s.antiCall)}\n` +
       `🗑️ Anti-Delete : ${bool(s.antiDelete)}\n` +
       `👁️ Anti-ViewOnce: ${bool(s.antiViewOnce)}\n` +
-      `📊 Status View : ${bool(s.statusView, config.autoStatusView)}\n` +
-      `❤️ Status React : ${bool(s.statusReact, config.autoStatusReact)}\n` +
+      `📊 Status View : ${bool(s.autoStatusView, config.autoStatusView)}\n` +
+      `❤️ Status React : ${bool(s.autoStatusReact, config.autoStatusReact)}\n` +
       `📤 Auto Status : ${bool(s.autoStatus, config.autoStatus)}\n` +
       `🔧 Maintenance : ${bool(s.maintenanceMode)}\n` +
       `🛡️ Anti-Spam   : ${bool(s.antiSpam, config.antiSpam)}\n\n` +

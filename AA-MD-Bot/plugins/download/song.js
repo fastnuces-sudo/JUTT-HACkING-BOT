@@ -4,15 +4,15 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { generateId, getBuffer } from '../../lib/helper.js';
-import { YTDLP } from '../../lib/ytdlp.js';
+import { YTDLP, getCookiesFlag } from '../../lib/ytdlp.js';
 
 const execAsync  = promisify(exec);
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 
 const BRAND =
-  `\n🌐 https://aa-mods.vercel.app/\n` +
-  `🤖 *Powered by AA MD Bot*\n` +
-  `👨‍💻 *Developed by Ahsan Ali Wadani*`;
+  `\n> 🌐 https://aa-mods.vercel.app/\n` +
+  `> 🤖 *Powered by AA MD Bot*\n` +
+  `> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
 function fmtViews(v) {
   if (!v) return '—';
@@ -32,27 +32,45 @@ async function ytSearch(query) {
 }
 
 async function scDownload(ytdlp, query, outFile) {
-  // SoundCloud search works without bot detection
-  const scQuery = `scsearch1:${query}`;
-  try {
-    await execAsync(
-      `"${ytdlp}" "${scQuery}" -x --audio-format mp3 --audio-quality 128K ` +
-      `--no-playlist -o "${outFile}" --quiet --no-warnings`,
-      { timeout: 120000 }
-    );
-    return true;
-  } catch { return false; }
+  // SoundCloud — no cookies needed; try SoundCloud first then YouTube with cookies
+  const ckf = getCookiesFlag();
+  const cmds = [
+    // SoundCloud (no bot detection issues)
+    `"${ytdlp}" "scsearch1:${query}" -x --audio-format mp3 --audio-quality 128K --no-playlist -o "${outFile}" --quiet --no-warnings`,
+    // YouTube with cookies + android client
+    `"${ytdlp}" "ytsearch1:${query}" ${ckf} -x --audio-format mp3 --audio-quality 128K --extractor-args "youtube:player_client=android" --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
+    // YouTube tv_embedded fallback
+    `"${ytdlp}" "ytsearch1:${query}" ${ckf} -x --audio-format mp3 --audio-quality 128K --extractor-args "youtube:player_client=tv_embedded" --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
+  ];
+  for (const cmd of cmds) {
+    try {
+      await execAsync(cmd, { timeout: 120000 });
+      if (fs.existsSync(outFile)) return true;
+    } catch {}
+  }
+  return false;
 }
 
 async function scDumpJson(ytdlp, query) {
+  const ckf = getCookiesFlag();
   try {
     const { stdout } = await execAsync(
       `"${ytdlp}" "scsearch1:${query}" --dump-json --no-playlist --no-download --quiet --no-warnings`,
       { timeout: 20000 }
     );
     const lines = stdout.trim().split('\n').filter(l => l.startsWith('{'));
-    return lines.length ? JSON.parse(lines[0]) : null;
-  } catch { return null; }
+    if (lines.length) return JSON.parse(lines[0]);
+  } catch {}
+  // fallback: YouTube metadata
+  try {
+    const { stdout } = await execAsync(
+      `"${ytdlp}" "ytsearch1:${query}" ${ckf} --dump-json --no-playlist --no-download --quiet --no-warnings`,
+      { timeout: 20000 }
+    );
+    const lines = stdout.trim().split('\n').filter(l => l.startsWith('{'));
+    if (lines.length) return JSON.parse(lines[0]);
+  } catch {}
+  return null;
 }
 
 export default {

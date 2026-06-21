@@ -49,8 +49,9 @@ export default {
       `▸ *${p}setprefix* [char] — Change prefix\n` +
       `▸ *${p}bs* — Full bot settings panel\n\n` +
 
-      `🌐 https://aa-mods.vercel.app/\n` +
-      `👨‍💻 *Developed by Ahsan Ali Wadani*`;
+      `> 🌐 https://aa-mods.vercel.app/\n` +
+      `> 🤖 *Powered by AA MD Bot*\n` +
+      `> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
     return reply(text);
   },

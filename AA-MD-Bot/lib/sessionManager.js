@@ -289,6 +289,24 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     }
   });
 
+  // ── Anti-Call Handler ──────────────────────────────────────────────────────
+  sock.ev.on('call', async (calls) => {
+    try {
+      const settings = db.settings.get();
+      if (!settings.antiCall) return;
+      for (const call of calls) {
+        if (call.status !== 'offer') continue;
+        await sock.rejectCall(call.id, call.from).catch(() => {});
+        await sock.sendMessage(call.from, {
+          text: `📵 *Auto Reject*\n\nSorry, this bot cannot receive calls.\n\n> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`,
+        }).catch(() => {});
+        logger.info({ from: call.from, sessionId }, '📵 Auto-rejected call');
+      }
+    } catch (err) {
+      logger.warn({ err: err.message }, 'antiCall handler error');
+    }
+  });
+
   sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
     const g = db.groups.get(id);
     if (action === 'add' && g.welcome) {
