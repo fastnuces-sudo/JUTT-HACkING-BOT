@@ -761,7 +761,7 @@ async function disconnectSession(id) {
 // Connect screen logic
 // ──────────────────────────────────────────────────────
 let _csMode = 'pair';
-let _csSessId = null;
+let _csSessId = localStorage.getItem('mySessionId') || null;
 let _csPoll = null;
 
 function csMode(m) {
@@ -787,6 +787,7 @@ function csErr(msg) {
 function csReset() {
   clearInterval(_csPoll); clearInterval(_qrPoll); clearInterval(_codePoll);
   _csSessId = null;
+  localStorage.removeItem('mySessionId');
   csStep('cs-form');
   const btn = document.getElementById('cs-btn');
   btn.disabled = false; btn.textContent = 'Start Bot →';
@@ -844,6 +845,7 @@ async function csConnect() {
       btn.disabled = false; btn.textContent = 'Start Bot →'; return;
     }
     _csSessId = sess;
+    localStorage.setItem('mySessionId', sess);
     try {
       const r = await fetch(BASE + '/api/session/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -860,6 +862,7 @@ async function csConnect() {
   } else {
     const sess = (document.getElementById('cs-sess-qr').value.trim() || 'default').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30) || 'default';
     _csSessId = sess;
+    localStorage.setItem('mySessionId', sess);
     csStep('cs-qr-step');
     document.getElementById('cs-qr-img').style.display = 'none';
     document.getElementById('cs-qr-ph').style.display = '';
@@ -934,12 +937,14 @@ async function loadStats() {
       }
     }
 
-    // Sessions list section
+    // Sessions list section — show only current browser's session
     const sec  = document.getElementById('sessions-section');
     const list = document.getElementById('sessions-list');
     if (sec && list) {
-      sec.style.display = sessions.length > 0 ? '' : 'none';
-      list.innerHTML = sessions.map(s => {
+      const mySessId = _csSessId || localStorage.getItem('mySessionId');
+      const visibleSessions = mySessId ? sessions.filter(s => s.id === mySessId) : sessions;
+      sec.style.display = visibleSessions.length > 0 ? '' : 'none';
+      list.innerHTML = visibleSessions.map(s => {
         const isConn = s.status === 'connected';
         const dotColor = isConn ? '#48bb78' : s.status === 'connecting' ? '#ed8936' : '#718096';
         const label = s.phone ? `+${s.phone}` : s.name || s.id;

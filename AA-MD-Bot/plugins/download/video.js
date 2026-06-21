@@ -9,9 +9,11 @@ const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const YTDLP_PATHS = [
+  '/home/runner/workspace/.pythonlibs/bin/yt-dlp',
   '/home/runner/.local/bin/yt-dlp',
   '/usr/local/bin/yt-dlp',
   '/usr/bin/yt-dlp',
+  '/opt/homebrew/bin/yt-dlp',
   'yt-dlp',
 ];
 

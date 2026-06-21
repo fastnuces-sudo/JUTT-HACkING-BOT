@@ -14,5 +14,6 @@
   "botMode": "private",
   "newsletterJid": "120363428609538858@newsletter",
   "newsletterName": "AA MD Bot",
-  "antiviewonce": true
+  "antiviewonce": true,
+  "antidelete": true
 }
