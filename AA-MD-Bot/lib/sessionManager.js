@@ -289,6 +289,35 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     }
   });
 
+  // ── Presence Update — Online Alert + Ghost Mode ────────────────────────────
+  sock.ev.on('presence.update', async ({ id, presences }) => {
+    try {
+      // Online Alert: notify owner when watched contact comes online
+      const { getAlertRegistry } = await import('../plugins/gb/onlinealert.js').catch(() => ({ getAlertRegistry: () => new Map() }));
+      const registry = getAlertRegistry();
+      const contactNum = id?.split('@')[0]?.split(':')[0];
+      if (contactNum && registry.size) {
+        for (const [ownerNum, watching] of registry.entries()) {
+          if (watching.has(contactNum)) {
+            const presence = presences?.[id] || presences?.[Object.keys(presences || {})[0]];
+            const isOnline = presence?.lastKnownPresence === 'available';
+            if (isOnline) {
+              const ownerJid = `${ownerNum}@s.whatsapp.net`;
+              const now = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' });
+              await sock.sendMessage(ownerJid, {
+                text:
+                  `🟢 *Online Alert!*\n\n` +
+                  `📱 *+${contactNum}* just came *online*\n` +
+                  `🕐 *Time:* ${now}\n\n` +
+                  `> 👁️ *AA MD Bot Online Tracker*`,
+              }).catch(() => {});
+            }
+          }
+        }
+      }
+    } catch {}
+  });
+
   // ── Anti-Call Handler ──────────────────────────────────────────────────────
   sock.ev.on('call', async (calls) => {
     try {

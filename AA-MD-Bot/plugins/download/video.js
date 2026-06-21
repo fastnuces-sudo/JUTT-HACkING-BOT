@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import axios from 'axios';
 import { generateId, getBuffer } from '../../lib/helper.js';
 import { YTDLP, getCookiesFlag } from '../../lib/ytdlp.js';
 
@@ -28,19 +29,17 @@ function fmtDuration(sec) {
   return `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
-// ── Metadata: yt-dlp dump-json (more reliable than play-dl for URLs) ─────────
+// ── Metadata via yt-dlp dump-json ─────────────────────────────────────────────
 async function ytMeta(ytdlp, query) {
   const ckf = getCookiesFlag();
   const isUrl = /youtu\.?be/.test(query);
-  const searchArg = isUrl ? `"${query}"` : `"ytsearch1:${query}"`;
-
-  // tv_embedded — confirmed working June 2026, no bot detection
+  const arg = isUrl ? `"${query}"` : `"ytsearch1:${query}"`;
+  const BASE = `--no-playlist --no-download --quiet --no-warnings --no-check-certificate`;
   const cmds = [
-    `"${ytdlp}" ${searchArg} --extractor-args "youtube:player_client=tv_embedded" --dump-json --no-playlist --no-download --quiet --no-warnings --no-check-certificate`,
-    `"${ytdlp}" ${searchArg} ${ckf} --extractor-args "youtube:player_client=android" --dump-json --no-playlist --no-download --quiet --no-warnings --no-check-certificate`,
-    `"${ytdlp}" ${searchArg} --dump-json --no-playlist --no-download --quiet --no-warnings`,
+    `"${ytdlp}" ${arg} --extractor-args "youtube:player_client=tv_embedded" --dump-json ${BASE}`,
+    `"${ytdlp}" ${arg} ${ckf} --extractor-args "youtube:player_client=android" --dump-json ${BASE}`,
+    `"${ytdlp}" ${arg} --dump-json ${BASE}`,
   ];
-
   for (const cmd of cmds) {
     try {
       const { stdout } = await execAsync(cmd, { timeout: 25000 });
@@ -54,7 +53,7 @@ async function ytMeta(ytdlp, query) {
           duration: Math.floor(j.duration || 0),
           views   : fmtViews(j.view_count),
           thumbUrl: j.thumbnail || '',
-          url     : j.webpage_url || j.original_url || `https://www.youtube.com/watch?v=${j.id}`,
+          url     : j.webpage_url || `https://www.youtube.com/watch?v=${j.id}`,
         };
       }
     } catch {}
@@ -62,11 +61,69 @@ async function ytMeta(ytdlp, query) {
   return null;
 }
 
-// ── Video download — yt-dlp only (Cobalt/Invidious dead June 2026) ────────────
-// Tries multiple YouTube player clients in order of reliability.
-// tv_embedded is confirmed working June 2026 (no bot detection, no cookies).
-async function ytdlpVideoDownload(ytdlp, url, outTemplate, tempDir, uid) {
+// ── Strategy 1: --get-url → direct CDN URL → axios stream (CONFIRMED WORKING) ─
+// yt-dlp returns the direct Google Video CDN link; we download it with axios.
+// This bypasses yt-dlp's own downloader which may be throttled on cloud IPs.
+async function getUrlAndStream(ytdlp, url, outFile) {
   const ckf = getCookiesFlag();
+  const clients = ['tv_embedded', 'android', 'ios'];
+  const formats = [
+    'best[height<=480][ext=mp4]',
+    'best[height<=480][ext=webm]',
+    'best[height<=480]',
+    'best[height<=360][ext=mp4]',
+    'best[height<=360]',
+  ];
+
+  for (const client of clients) {
+    for (const fmt of formats) {
+      try {
+        const { stdout } = await execAsync(
+          `"${ytdlp}" "${url}" --extractor-args "youtube:player_client=${client}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings --no-check-certificate`,
+          { timeout: 30000 }
+        );
+        const directUrl = stdout.trim().split('\n').find(l => l.startsWith('http'));
+        if (!directUrl) continue;
+
+        const resp = await axios({
+          url: directUrl,
+          method: 'GET',
+          responseType: 'stream',
+          timeout: 300000,
+          headers: {
+            'User-Agent'     : 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/112 Mobile Safari/537.36',
+            'Accept'         : '*/*',
+            'Accept-Encoding': 'gzip, deflate',
+            'Range'          : 'bytes=0-',
+          },
+          maxRedirects: 10,
+        });
+
+        const writer = fs.createWriteStream(outFile);
+        resp.data.pipe(writer);
+        await new Promise((res, rej) => {
+          writer.on('finish', res);
+          writer.on('error', rej);
+          resp.data.on('error', rej);
+        });
+
+        const stat = await fs.stat(outFile).catch(() => null);
+        if (stat?.size > 100000) return true;
+        await fs.remove(outFile).catch(() => {});
+      } catch {}
+    }
+  }
+  return false;
+}
+
+// ── Strategy 2: yt-dlp direct download (multiple clients) ────────────────────
+async function ytdlpDirect(ytdlp, url, outTemplate, tempDir, uid) {
+  const ckf = getCookiesFlag();
+  const FMT_SINGLE = `best[height<=480][ext=mp4]/best[height<=480][ext=webm]/best[height<=480]`;
+  const FMT_MERGED = `bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]`;
+  const FMT_LOW    = `best[height<=360][ext=mp4]/best[height<=360]/worst[ext=mp4]/worst`;
+  const MERGE      = `--merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28"`;
+  const BASE       = `--no-playlist --quiet --no-warnings --no-check-certificate`;
 
   const findFile = async () => {
     try {
@@ -75,33 +132,13 @@ async function ytdlpVideoDownload(ytdlp, url, outTemplate, tempDir, uid) {
     } catch { return null; }
   };
 
-  // Format strings — order matters: prefer single-file mp4 (no ffmpeg merge needed)
-  const FMT_SINGLE = `best[height<=480][ext=mp4]/best[height<=480][ext=webm]/best[height<=480]`;
-  const FMT_MERGED = `bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]`;
-  const FMT_LOW    = `best[height<=360][ext=mp4]/best[height<=360]/worst[ext=mp4]/worst`;
-  const MERGE_ARGS = `--merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28"`;
-  const BASE       = `--no-playlist --quiet --no-warnings --no-check-certificate`;
-
   const strategies = [
-    // ① tv_embedded — no cookies, confirmed working, single-file (fastest)
     `"${ytdlp}" "${url}" --extractor-args "youtube:player_client=tv_embedded" -f "${FMT_SINGLE}" -o "${outTemplate}" ${BASE}`,
-
-    // ② tv_embedded + cookies + merged — higher quality
-    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=tv_embedded" -f "${FMT_MERGED}" ${MERGE_ARGS} -o "${outTemplate}" ${BASE}`,
-
-    // ③ tv_embedded with po_token workaround (some regions need this)
+    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=tv_embedded" -f "${FMT_MERGED}" ${MERGE} -o "${outTemplate}" ${BASE}`,
     `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=tv_embedded,web" -f "${FMT_SINGLE}" -o "${outTemplate}" ${BASE}`,
-
-    // ④ android — works when tv_embedded is throttled
-    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=android" -f "${FMT_MERGED}" ${MERGE_ARGS} -o "${outTemplate}" ${BASE}`,
-
-    // ⑤ ios — sometimes succeeds where android fails
-    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=ios" -f "${FMT_MERGED}" ${MERGE_ARGS} -o "${outTemplate}" ${BASE}`,
-
-    // ⑥ mweb — lightweight, lower quality, rarely fails
+    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=android" -f "${FMT_MERGED}" ${MERGE} -o "${outTemplate}" ${BASE}`,
+    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=ios" -f "${FMT_MERGED}" ${MERGE} -o "${outTemplate}" ${BASE}`,
     `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=mweb" -f "${FMT_LOW}" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
-
-    // ⑦ absolute last resort — any available format
     `"${ytdlp}" "${url}" ${ckf} -f "best[height<=480]/best" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
   ];
 
@@ -109,7 +146,7 @@ async function ytdlpVideoDownload(ytdlp, url, outTemplate, tempDir, uid) {
     try {
       await execAsync(cmd, { timeout: 300000 });
       const found = await findFile();
-      if (found) return found;
+      if (found) return path.join(tempDir, found);
     } catch {}
   }
   return null;
@@ -119,7 +156,7 @@ export default {
   command : 'video',
   alias   : ['yt', 'ytvideo', 'ytv', 'ytmp4'],
   category: 'download',
-  description: 'Download YouTube video (up to 10 min / 480p)',
+  description: 'Download YouTube video (up to 10 min)',
   usage   : '.video <name or YouTube URL>',
 
   execute: async ({ reply, react, sock, jid, msg, text, sendMedia }) => {
@@ -128,7 +165,7 @@ export default {
       'Usage: `.video <name or URL>`\n\nExamples:\n' +
       '• `.video Faded Alan Walker`\n' +
       '• `.yt https://youtu.be/xxxxx`\n' +
-      '• `.ytv Abbas Jo Zinda Hai Nadeem Sarwar`'
+      '• `.ytv Naat Sharif 2024`'
     );
 
     await react('⏳');
@@ -144,51 +181,40 @@ export default {
     const tempDir = path.join(__dirname, '../../temp');
     await fs.ensureDir(tempDir);
     const uid         = generateId();
+    const outFile     = path.join(tempDir, `${uid}.mp4`);
     const outTemplate = path.join(tempDir, `${uid}.%(ext)s`);
 
     try {
-      // ── Step 1: Get metadata ────────────────────────────────────────────────
+      // ── Step 1: Metadata ────────────────────────────────────────────────────
       const meta = await ytMeta(YTDLP, text);
 
-      if (!meta || !meta.id) {
+      if (!meta?.id) {
         await react('❌');
-        return reply(`❌ Video not found: *${text}*\n\nTry a YouTube URL directly:\n_.yt https://youtu.be/xxxxx_`);
+        return reply(`❌ Video not found: *${text}*\n\nTry a YouTube URL:\n_.yt https://youtu.be/xxxxx_`);
       }
 
-      // Duration guard (10 min max for video)
       if (meta.duration > 600) {
         await react('❌');
         return reply(
-          `❌ Too long (${fmtDuration(meta.duration)}). Max 10 min for video.\n` +
+          `❌ Too long (${fmtDuration(meta.duration)}). Max 10 min.\n` +
           `✅ Audio only: *.song ${meta.title}*`
         );
       }
 
       // Thumbnail
       let thumbBuf = null;
-      if (meta.thumbUrl) {
-        try { thumbBuf = await getBuffer(meta.thumbUrl); } catch {}
-      }
+      if (meta.thumbUrl) { try { thumbBuf = await getBuffer(meta.thumbUrl); } catch {} }
       if (!thumbBuf && meta.id) {
         for (const q of ['hqdefault', 'mqdefault', 'sddefault']) {
-          try {
-            thumbBuf = await getBuffer(`https://i.ytimg.com/vi/${meta.id}/${q}.jpg`);
-            if (thumbBuf) break;
-          } catch {}
+          try { thumbBuf = await getBuffer(`https://i.ytimg.com/vi/${meta.id}/${q}.jpg`); if (thumbBuf) break; } catch {}
         }
       }
 
-      // Info card
       const infoCaption =
-        `✦✦✦✦✦✦✦✦✦✦\n` +
-        `🎬 *AA MD Bot* VIDEO\n` +
-        `✦✦✦✦✦✦✦✦✦✦\n\n` +
-        `🎙 *${meta.title}*\n` +
-        `🎤 ${meta.uploader}\n` +
+        `✦✦✦✦✦✦✦✦✦✦\n🎬 *AA MD Bot* VIDEO\n✦✦✦✦✦✦✦✦✦✦\n\n` +
+        `🎙 *${meta.title}*\n🎤 ${meta.uploader}\n` +
         `⏱ ${fmtDuration(meta.duration)}  •  👁 ${meta.views} views\n\n` +
-        `━━━━━━━━━━━━━━━━\n` +
-        `⏳ _Downloading... please wait_` +
-        BRAND;
+        `━━━━━━━━━━━━━━━━\n⏳ _Downloading... please wait_` + BRAND;
 
       if (thumbBuf) {
         await sock.sendMessage(jid, { image: thumbBuf, caption: infoCaption }, { quoted: msg });
@@ -196,20 +222,27 @@ export default {
         await sock.sendMessage(jid, { text: infoCaption }, { quoted: msg });
       }
 
-      // ── Step 2: Download video ─────────────────────────────────────────────
-      const fullUrl  = `https://www.youtube.com/watch?v=${meta.id}`;
-      const fileName = await ytdlpVideoDownload(YTDLP, fullUrl, outTemplate, tempDir, uid);
+      // ── Step 2: Download (get-url+stream first, then direct yt-dlp) ─────────
+      const fullUrl = `https://www.youtube.com/watch?v=${meta.id}`;
+      let dlFile = null;
 
-      if (!fileName) {
+      // Primary: --get-url + axios (confirmed working on Replit Jun 2026)
+      const ok = await getUrlAndStream(YTDLP, fullUrl, outFile);
+      if (ok) dlFile = outFile;
+
+      // Fallback: yt-dlp direct download
+      if (!dlFile) {
+        dlFile = await ytdlpDirect(YTDLP, fullUrl, outTemplate, tempDir, uid);
+      }
+
+      if (!dlFile || !await fs.pathExists(dlFile)) {
         await react('❌');
         return reply(
           `❌ *Video download failed.*\n\n` +
-          `YouTube is blocking direct downloads from this server.\n\n` +
-          `✅ Try audio instead: *.song ${meta.title}*`
+          `✅ Audio works! Try: *.song ${meta.title}*`
         );
       }
 
-      const dlFile = path.join(tempDir, fileName);
       const stat   = await fs.stat(dlFile);
       const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
 
@@ -220,13 +253,9 @@ export default {
       }
 
       const videoCaption =
-        `✦✦✦✦✦✦✦✦✦✦\n` +
-        `🎬 *AA MD Bot* VIDEO\n` +
-        `✦✦✦✦✦✦✦✦✦✦\n\n` +
-        `🎙 *${meta.title}*\n` +
-        `🎤 ${meta.uploader}\n` +
-        `⏱ ${fmtDuration(meta.duration)}  •  📁 ${sizeMB} MB  •  👁 ${meta.views}` +
-        BRAND;
+        `✦✦✦✦✦✦✦✦✦✦\n🎬 *AA MD Bot* VIDEO\n✦✦✦✦✦✦✦✦✦✦\n\n` +
+        `🎙 *${meta.title}*\n🎤 ${meta.uploader}\n` +
+        `⏱ ${fmtDuration(meta.duration)}  •  📁 ${sizeMB} MB  •  👁 ${meta.views}` + BRAND;
 
       await sendMedia({
         video   : await fs.readFile(dlFile),
@@ -242,6 +271,7 @@ export default {
     } catch (err) {
       await react('❌');
       reply(`❌ Error: ${err.message?.slice(0, 120) || 'Unknown error'}`);
+      fs.remove(outFile).catch(() => {});
     }
   },
 };

@@ -33,7 +33,7 @@ function getCtx() {
 }
 
 const CAT_EMOJI = {
-  islamic: '☪️',  download: '⬇️',  media: '🎬',
+  islamic: '☪️',  gb:       '📱',  download: '⬇️',  media: '🎬',
   search:  '🔍',  fun:      '🎮',  utility: '🔧',
   tools:   '🛠️',  economy:  '💰',  level: '⭐',
   group:   '👥',  admin:    '🛡️',  owner: '👑',
@@ -41,9 +41,9 @@ const CAT_EMOJI = {
 };
 
 const CAT_ORDER = {
-  islamic: 0, download: 1, media: 2, search: 3, fun: 4,
-  utility: 5, tools: 6, economy: 7, level: 8, group: 9,
-  admin: 10, owner: 90,
+  islamic: 0, owner: 1, gb: 2, download: 3, media: 4,
+  search: 5, fun: 6, utility: 7, tools: 8, economy: 9,
+  level: 10, group: 11, admin: 12,
 };
 
 const SKIP_CATS  = new Set(['settings', 'ai']);
@@ -187,13 +187,50 @@ export default {
       if (!visibleCmds.length) continue;
 
       if (SUMMARY_CATS.has(cat)) {
+        // ── Islamic summary box ─────────────────────────────────────────────
         menu += `\n╭─── ☪️  *ISLAMIC*  (${visibleCmds.length})\n`;
         menu += `│  ▸ *${pref}islamicmenu* — Full Islamic panel\n`;
         menu += `│  _Duas • Zikr • Hadith • Kalimas • Adhkar_\n`;
         menu += `╰${'─'.repeat(32)}\n`;
+
+        // ── Support / Contact box — right after Islamic ─────────────────────
+        menu += `\n╭─── 📞  *SUPPORT & CONTACT*\n`;
+        menu += `│  ▸ *${pref}support*     — Contact owner / Get help\n`;
+        menu += `│  ▸ *${pref}report <msg>* — Report a bug or issue\n`;
+        menu += `│  ▸ *${pref}contact*     — Owner contact info\n`;
+        menu += `│  🌐 https://aa-mods.vercel.app/\n`;
+        menu += `╰${'─'.repeat(32)}\n`;
+
+        // ── Owner Settings box — right after support (owners only) ──────────
+        if (isOwner) {
+          menu += `\n╭─── ⚙️  *OWNER SETTINGS*\n`;
+          menu += `│  ▸ *${pref}bs*          — Bot settings panel\n`;
+          menu += `│  ▸ *${pref}mode*        — public / private\n`;
+          menu += `│  ▸ *${pref}autoread*    — Blue ticks on/off\n`;
+          menu += `│  ▸ *${pref}ghost*       — Appear offline (ghost)\n`;
+          menu += `│  ▸ *${pref}autoreact*   — Auto emoji react\n`;
+          menu += `│  ▸ *${pref}anticall*    — Block calls\n`;
+          menu += `│  ▸ *${pref}antispam*    — Spam filter\n`;
+          menu += `│  ▸ *${pref}setprefix*   — Change prefix\n`;
+          menu += `╰${'─'.repeat(32)}\n`;
+        }
+
+        // ── Super Owner Tools box ────────────────────────────────────────────
+        if (isSuperOwnerUser) {
+          menu += `\n╭─── 👑  *SUPER OWNER TOOLS* 🔐\n`;
+          menu += `│  ▸ *${pref}smenu*       — Dev control panel\n`;
+          menu += `│  ▸ *${pref}maintenance* — Lock/unlock bot\n`;
+          menu += `│  ▸ *${pref}broadcast*   — Message all groups\n`;
+          menu += `│  ▸ *${pref}eval*        — Run JS code\n`;
+          menu += `│  ▸ *${pref}shell*       — Run shell command\n`;
+          menu += `│  ▸ *${pref}restart*     — Reboot bot\n`;
+          menu += `╰${'─'.repeat(32)}\n`;
+        }
         continue;
       }
 
+      // Skip owner/admin — they are shown in the fixed boxes above (for owners)
+      // Non-owners never see owner category anyway due to OWNER_CATS filter
       menu += catBox(emoji, cat.toUpperCase(), visibleCmds.length,
         visibleCmds.slice(0, 9), pref, isSuperOwnerUser);
       if (visibleCmds.length > 9) {
@@ -201,31 +238,6 @@ export default {
         menu += `│  _+${visibleCmds.length - 9} more → *${pref}menu ${cat}*_\n`;
         menu += `╰${'─'.repeat(32)}\n`;
       }
-    }
-
-    // Owner quick settings — separate box
-    if (isOwner) {
-      menu += `\n╭─── ⚙️  *OWNER SETTINGS*\n`;
-      menu += `│  ▸ *${pref}bs*          — Bot settings panel\n`;
-      menu += `│  ▸ *${pref}mode*        — public / private\n`;
-      menu += `│  ▸ *${pref}autoread*    — Blue ticks on/off\n`;
-      menu += `│  ▸ *${pref}autoreact*   — Auto emoji react\n`;
-      menu += `│  ▸ *${pref}anticall*    — Block calls\n`;
-      menu += `│  ▸ *${pref}antispam*    — Spam filter\n`;
-      menu += `│  ▸ *${pref}setprefix*   — Change prefix\n`;
-      menu += `╰${'─'.repeat(32)}\n`;
-    }
-
-    // Super owner box
-    if (isSuperOwnerUser) {
-      menu += `\n╭─── 👑  *SUPER OWNER TOOLS* 🔐\n`;
-      menu += `│  ▸ *${pref}smenu*       — Dev control panel\n`;
-      menu += `│  ▸ *${pref}maintenance* — Lock/unlock bot\n`;
-      menu += `│  ▸ *${pref}broadcast*   — Message all groups\n`;
-      menu += `│  ▸ *${pref}eval*        — Run JS code\n`;
-      menu += `│  ▸ *${pref}shell*       — Run shell command\n`;
-      menu += `│  ▸ *${pref}restart*     — Reboot bot\n`;
-      menu += `╰${'─'.repeat(32)}\n`;
     }
 
     // Footer hint
