@@ -80,7 +80,7 @@ export default {
   description: 'Download audio (YouTube metadata + SoundCloud audio)',
   usage   : '.song <song name>',
 
-  execute: async ({ reply, react, sock, jid, msg, text }) => {
+  execute: async ({ reply, react, sock, jid, msg, text, sendMedia }) => {
     if (!text) return reply(
       '🎵 *AA MD Bot — Song Downloader*\n\n' +
       'Usage: `.song <song name>`\n\nExamples:\n' +
@@ -190,21 +190,12 @@ export default {
       const stat    = await fs.stat(dlFile);
       const sizeMB  = (stat.size / 1024 / 1024).toFixed(1);
 
-      await sock.sendMessage(jid, {
-        audio: await fs.readFile(dlFile),
+      await sendMedia({
+        audio   : await fs.readFile(dlFile),
         mimetype: 'audio/mpeg',
         fileName: `${title}.mp3`,
-        contextInfo: {
-          externalAdReply: {
-            title,
-            body: `${uploader} • ${mins}:${secs} • ${sizeMB}MB`,
-            renderLargerThumbnail: true,
-            mediaType: 1,
-            ...(thumbBuf ? { thumbnail: thumbBuf } : {}),
-            sourceUrl: 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617',
-          },
-        },
-      }, { quoted: msg });
+        ptt     : false,
+      });
 
       await react('✅');
       fs.remove(dlFile).catch(() => {});

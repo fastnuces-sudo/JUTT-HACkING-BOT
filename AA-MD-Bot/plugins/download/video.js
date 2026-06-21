@@ -132,7 +132,7 @@ export default {
   description: 'Download YouTube video (up to 10 min / 480p)',
   usage   : '.video <name or YouTube URL>',
 
-  execute: async ({ reply, react, sock, jid, msg, text }) => {
+  execute: async ({ reply, react, sock, jid, msg, text, sendMedia }) => {
     if (!text) return reply(
       '🎬 *AA MD Bot — Video Downloader*\n\n' +
       'Usage: `.video <name or URL>`\n\nExamples:\n' +
@@ -269,13 +269,13 @@ export default {
         `⏱ ${mins}:${secs} | 📁 ${sizeMB}MB | 👁 ${views} views` +
         BRAND;
 
-      await sock.sendMessage(jid, {
+      await sendMedia({
         video    : await fs.readFile(dlFile),
         mimetype : 'video/mp4',
         fileName : `${title}.mp4`,
         caption  : videoCaption,
         ...(thumbBuf ? { jpegThumbnail: thumbBuf } : {}),
-      }, { quoted: msg });
+      });
 
       await react('✅');
       fs.remove(dlFile).catch(() => {});

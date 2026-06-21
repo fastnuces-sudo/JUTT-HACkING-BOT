@@ -121,10 +121,22 @@ async function sendMsg(sock, jid, content, options = {}) {
 }
 
 // sendMedia — for plugins that send audio/image/video directly
-async function sendMedia(sock, jid, content) {
+// Properly merges channel ctx with any existing contextInfo in content
+async function sendMedia(sock, jid, msg, content) {
   const ctx = buildChannelCtx();
-  const payload = ctx ? { contextInfo: ctx, ...content } : { ...content };
-  return sock.sendMessage(jid, payload);
+  let finalCtx;
+  if (ctx && content.contextInfo) {
+    // Merge: channel newsletter info + existing contextInfo (e.g. externalAdReply)
+    finalCtx = { ...ctx, ...content.contextInfo };
+  } else if (ctx) {
+    finalCtx = ctx;
+  } else {
+    finalCtx = content.contextInfo;
+  }
+  const payload = { ...content };
+  if (finalCtx) payload.contextInfo = finalCtx;
+  else delete payload.contextInfo;
+  return sock.sendMessage(jid, payload, { quoted: msg });
 }
 
 export async function handleMessage(sock, msg, sessionId) {
@@ -234,7 +246,7 @@ export async function handleMessage(sock, msg, sessionId) {
       reply: (t, opts) => reply(sock, msg, t, opts),
       react: (e) => react(sock, msg, e),
       send: (t, opts) => sendMsg(sock, jid, t, opts),
-      sendMedia: (content) => sendMedia(sock, jid, content),
+      sendMedia: (content) => sendMedia(sock, jid, msg, content),
       db, config,
       getQuoted: () => msg.message?.extendedTextMessage?.contextInfo?.quotedMessage || null,
       logger,
