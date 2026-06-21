@@ -1,8 +1,3 @@
-// ============================================
-// AA MD Bot - Bot Settings Menu (Owner)
-// Developer: Ahsan Ali | AA Mods
-// ============================================
-
 import config from '../../config.js';
 import { db } from '../../lib/database.js';
 import fs from 'fs';
@@ -12,6 +7,9 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CHANNEL_URL  = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
 const CHANNEL_NAME = 'AA MD Bot';
+
+const DIV  = '─────────────────────────────────';
+const SDIV = '─────────────────────';
 
 const BANNER_PATHS = [
   path.join(__dirname, '../../banner.jpeg'),
@@ -66,58 +64,57 @@ export default {
     const s    = db.settings.get();
     const pref = (s.prefix ?? config.prefix)[0] ?? '.';
 
-    const on  = '🟢 ON ';
-    const off = '🔴 OFF';
-
+    const on  = '✅ ON ';
+    const off = '❌ OFF';
     const bool = (v, def = false) => (v ?? def) ? on : off;
 
     const menu =
-      `╔══════════════════════════════╗\n` +
-      `║   ⚙️  *BOT SETTINGS PANEL*    ║\n` +
-      `║   👑 Owner Only Commands      ║\n` +
-      `╚══════════════════════════════╝\n\n` +
+      `⚙️ *BOT SETTINGS PANEL*\n` +
+      `👑 _Owner Only Commands_\n` +
+      `${DIV}\n\n` +
 
-      `┌─────── 📊 *CURRENT STATUS* ───────┐\n` +
-      `│ 🤖 Mode        : *${(s.botMode ?? 'public').toUpperCase()}*\n` +
-      `│ 🔑 Prefix      : *${pref}*\n` +
-      `│ 📞 Anti-Call   : ${bool(s.antiCall)}\n` +
-      `│ 🗑️ Anti-Delete : ${bool(s.antiDelete)}\n` +
-      `│ 👁️ Anti-ViewOnce: ${bool(s.antiViewOnce)}\n` +
-      `│ 📊 Status View : ${bool(s.statusView, config.autoStatusView)}\n` +
-      `│ ❤️ Status React : ${bool(s.statusReact, config.autoStatusReact)}\n` +
-      `│ 📤 Auto Status : ${bool(s.autoStatus, config.autoStatus)}\n` +
-      `│ 🔧 Maintenance : ${bool(s.maintenanceMode)}\n` +
-      `│ 🛡️ Anti-Spam   : ${bool(s.antiSpam, config.antiSpam)}\n` +
-      `└───────────────────────────────┘\n\n` +
+      `📊 *CURRENT STATUS*\n${SDIV}\n` +
+      `🤖 Mode        : *${(s.botMode ?? 'public').toUpperCase()}*\n` +
+      `🔑 Prefix      : *${pref}*\n` +
+      `📞 Anti-Call   : ${bool(s.antiCall)}\n` +
+      `🗑️ Anti-Delete : ${bool(s.antiDelete)}\n` +
+      `👁️ Anti-ViewOnce: ${bool(s.antiViewOnce)}\n` +
+      `📊 Status View : ${bool(s.statusView, config.autoStatusView)}\n` +
+      `❤️ Status React : ${bool(s.statusReact, config.autoStatusReact)}\n` +
+      `📤 Auto Status : ${bool(s.autoStatus, config.autoStatus)}\n` +
+      `🔧 Maintenance : ${bool(s.maintenanceMode)}\n` +
+      `🛡️ Anti-Spam   : ${bool(s.antiSpam, config.antiSpam)}\n\n` +
 
-      `╔═══ 🔀 *BOT MODE* ═══\n` +
-      `│ ▸ *${pref}mode public*  — everyone can use\n` +
-      `│ ▸ *${pref}mode private* — only you (self-chat)\n\n` +
+      `🔀 *BOT MODE*\n${SDIV}\n` +
+      `▸ *${pref}mode public*  — everyone can use\n` +
+      `▸ *${pref}mode private* — only you (self-chat)\n\n` +
 
-      `╔═══ 🛡️ *PROTECTION* ═══\n` +
-      `│ ▸ *${pref}anticall* on/off\n` +
-      `│ ▸ *${pref}antidelete* on/off\n` +
-      `│ ▸ *${pref}antiviewonce* on/off\n` +
-      `│ ▸ *${pref}antispam* on/off\n\n` +
+      `🛡️ *PROTECTION*\n${SDIV}\n` +
+      `▸ *${pref}anticall* on/off\n` +
+      `▸ *${pref}antidelete* on/off\n` +
+      `▸ *${pref}antiviewonce* on/off\n` +
+      `▸ *${pref}antispam* on/off\n\n` +
 
-      `╔═══ 📊 *STATUS* ═══\n` +
-      `│ ▸ *${pref}statusview* on/off  — auto view\n` +
-      `│ ▸ *${pref}statusreact* on/off — auto react\n` +
-      `│ ▸ *${pref}autostatus* on/off  — post status\n\n` +
+      `📸 *STATUS*\n${SDIV}\n` +
+      `▸ *${pref}statusview* on/off  — auto view\n` +
+      `▸ *${pref}statusreact* on/off — auto react\n` +
+      `▸ *${pref}autostatus* on/off  — forward to DM\n\n` +
 
-      `╔═══ ⚙️ *BOT CONFIG* ═══\n` +
-      `│ ▸ *${pref}setprefix* <symbol>   — change prefix\n` +
-      `│ ▸ *${pref}maintenance* on/off   — maintenance mode\n` +
-      `│ ▸ *${pref}setnewsletter* <jid>  — View Channel button\n\n` +
+      `🔧 *BOT CONFIG*\n${SDIV}\n` +
+      `▸ *${pref}setprefix* <symbol>   — change prefix\n` +
+      `▸ *${pref}maintenance* on/off   — maintenance mode\n` +
+      `▸ *${pref}setnewsletter* <jid>  — View Channel button\n\n` +
 
-      `╔═══ 👥 *USER MANAGEMENT* ═══\n` +
-      `│ ▸ *${pref}ban* @user     — ban user\n` +
-      `│ ▸ *${pref}unban* @user   — unban user\n` +
-      `│ ▸ *${pref}block* @user   — block user\n` +
-      `│ ▸ *${pref}broadcast* msg — broadcast\n\n` +
+      `👥 *USER MANAGEMENT*\n${SDIV}\n` +
+      `▸ *${pref}ban* @user     — ban user\n` +
+      `▸ *${pref}unban* @user   — unban user\n` +
+      `▸ *${pref}block* @user   — block user\n` +
+      `▸ *${pref}broadcast* msg — broadcast\n\n` +
 
-      `╔══════════════════════════════╝\n` +
-      `📢 ${CHANNEL_URL}`;
+      `${DIV}\n` +
+      `> 🌐 ${CHANNEL_URL}\n` +
+      `> 🤖 *Powered by AA MD Bot*\n` +
+      `> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
     const banner = getBanner();
     const contextInfo = getCtx();

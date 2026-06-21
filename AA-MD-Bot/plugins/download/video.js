@@ -95,19 +95,30 @@ async function downloadVideoFromInvidious(info, outFile) {
 }
 
 async function ytdlpDownload(ytdlp, url, outTemplate) {
-  // Try several YouTube clients
-  const clients = ['ios', 'android', 'web_creator', 'mweb'];
-  for (const client of clients) {
+  const dir = path.dirname(outTemplate);
+  const uid = path.basename(outTemplate).split('.')[0];
+  const check = async () => {
     try {
-      await execAsync(
-        `"${ytdlp}" "${url}" ` +
-        `-f "bestvideo[height<=480][ext=mp4]+bestaudio/best[height<=480][ext=mp4]/best[height<=480]" ` +
-        `--merge-output-format mp4 ` +
-        `--extractor-args "youtube:player_client=${client}" ` +
-        `-o "${outTemplate}" --no-playlist --quiet --no-warnings`,
-        { timeout: 180000 }
-      );
-      return true;
+      const files = await fs.readdir(dir);
+      return files.find(f => f.startsWith(uid) && f.endsWith('.mp4')) || null;
+    } catch { return null; }
+  };
+
+  const strategies = [
+    // tv_embedded — best on server/VPS IPs (bypasses most bot checks)
+    `"${ytdlp}" "${url}" -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=tv_embedded" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    // android client with proper mobile UA
+    `"${ytdlp}" "${url}" -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=android" --add-header "User-Agent:com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB)" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    // ios client
+    `"${ytdlp}" "${url}" -f "bestvideo[height<=480]+bestaudio/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=ios" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    // web fallback — best quality available ≤480p
+    `"${ytdlp}" "${url}" -f "best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=web" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
+  ];
+
+  for (const cmd of strategies) {
+    try {
+      await execAsync(cmd, { timeout: 240000 });
+      if (await check()) return true;
     } catch {}
   }
   return false;
@@ -134,9 +145,9 @@ export default {
     const shortQ = text.length > 35 ? text.slice(0, 35) + '...' : text;
     await sock.sendMessage(jid, {
       text:
-        `🔍 *Searching:* ${shortQ}\n\n` +
-        `🤖 *Powered by AA MD Bot*\n` +
-        `👨‍💻 *Developed by Ahsan Ali Wadani*`
+        `🔎 *Searching:* ${shortQ}\n` +
+        `> 🤖 *Powered by AA MD Bot*\n` +
+        `> 👨‍💻 *Developed by Ahsan Ali Wadani*`
     }, { quoted: msg });
 
     const tempDir = path.join(__dirname, '../../temp');

@@ -45,11 +45,14 @@ const CAT_ORDER = {
   admin: 10, owner: 90,
 };
 
-const SKIP_CATS  = new Set(['settings', 'ai']);
-const OWNER_CATS = new Set(['owner']);
-const SUMMARY_CATS = new Set(['islamic']);
+const SKIP_CATS   = new Set(['settings', 'ai']);
+const OWNER_CATS  = new Set(['owner']);
+const SUMMARY_CATS= new Set(['islamic']);
 
-const WATERMARK = `\n\n🌐 https://aa-mods.vercel.app/\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*`;
+const DIV  = '─────────────────────────────────';
+const SDIV = '─────────────────────';
+
+const WATERMARK = `\n\n> 🌐 https://aa-mods.vercel.app/\n> 🤖 *Powered by AA MD Bot*\n> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
 export default {
   command: 'menu',
@@ -107,15 +110,14 @@ export default {
         return sock.sendMessage(jid, payload, { quoted: msg });
       }
       const emoji = CAT_EMOJI[cat] || '📌';
-      let text = `╔══════════════════════════════╗\n`;
-      text    += `║  ${emoji} *${cat.toUpperCase()} COMMANDS*\n`;
-      text    += `╚══════════════════════════════╝\n\n`;
+      let text = `${emoji} *${cat.toUpperCase()} COMMANDS*\n${DIV}\n\n`;
       for (const { main, short, desc, superOnly } of cmds) {
         if (superOnly && !isSuperOwnerUser) continue;
         const label = short ? `*${pref}${main}* / *${pref}${short}*` : `*${pref}${main}*`;
         const lock  = superOnly ? ' 🔐' : '';
-        text += `▸ ${label}${lock}${desc ? `\n  ╰ ${desc}` : ''}\n`;
+        text += `▸ ${label}${lock}${desc ? `\n  ╰ _${desc}_` : ''}\n`;
       }
+      text += `\n${DIV}`;
       text += WATERMARK;
       const payload = { text };
       if (ctx) payload.contextInfo = ctx;
@@ -124,26 +126,24 @@ export default {
 
     // ── Full Menu ─────────────────────────────────────────
     const greeting = isSuperOwnerUser
-      ? `🌟 *Assalamualaikum, Ahsan Bhai!* 🌟\n👑 _Super Owner access active_`
+      ? `🌟 *Assalamualaikum, Ahsan Bhai!*\n👑 _Super Owner access active_`
       : isOwner
         ? `🔑 *Assalamualaikum, Owner!* Welcome Back`
-        : `✨ *Assalamualaikum, ${pushName}!* ✨`;
+        : `✨ *Assalamualaikum, ${pushName}!*`;
 
-    let menu  = `╔══════════════════════════════╗\n`;
-    menu     += `║   🤖 *AA MD BOT*  v${config.version}    ║\n`;
-    menu     += `║  👨‍💻 Ahsan Ali | AA Mods     ║\n`;
-    menu     += `╚══════════════════════════════╝\n\n`;
-    menu     += `${greeting}\n\n`;
+    let menu = `🤖 *AA MD BOT*  v${config.version}\n`;
+    menu    += `👨‍💻 *Ahsan Ali Wadani* | AA Mods\n`;
+    menu    += `${DIV}\n\n`;
+    menu    += `${greeting}\n\n`;
 
-    menu += `┌──────── 📊 *BOT STATUS* ────────┐\n`;
-    menu += `│ 🟢 Status   : *Online*\n`;
-    menu += `│ ⏱️  Uptime   : *${uptime}*\n`;
-    menu += `│ 💾 RAM      : *${usedMB} MB*\n`;
-    menu += `│ 📦 Commands : *${totalCmds}+*\n`;
-    menu += `│ 🔑 Prefix   : *${pref}*\n`;
-    menu += `│ 🔀 Mode     : *${mode}*\n`;
-    menu += `│ 🎭 Role     : *${role}*\n`;
-    menu += `└─────────────────────────────────┘\n`;
+    menu += `📊 *BOT STATUS*\n${SDIV}\n`;
+    menu += `🟢 Status   : *Online*\n`;
+    menu += `⏱️  Uptime   : *${uptime}*\n`;
+    menu += `💾 RAM      : *${usedMB} MB*\n`;
+    menu += `📦 Commands : *${totalCmds}+*\n`;
+    menu += `🔑 Prefix   : *${pref}*\n`;
+    menu += `🔀 Mode     : *${mode}*\n`;
+    menu += `🎭 Role     : *${role}*\n`;
 
     const sorted = Object.entries(categories).sort(([a],[b]) =>
       (CAT_ORDER[a]??50) - (CAT_ORDER[b]??50) || a.localeCompare(b)
@@ -158,40 +158,39 @@ export default {
       if (!visibleCmds.length) continue;
 
       if (SUMMARY_CATS.has(cat)) {
-        menu += `\n╔══ ${emoji} *ISLAMIC* (${visibleCmds.length}) ══\n`;
-        menu += `│ ▸ *${pref}islamicmenu* — Full Islamic panel\n`;
-        menu += `│  Duas • Zikr • Hadith • Kalimas • Adhkar\n`;
+        menu += `\n${SDIV}\n${emoji} *ISLAMIC* (${visibleCmds.length})\n`;
+        menu += `  ▸ *${pref}islamicmenu* — Full Islamic panel\n`;
+        menu += `  _Duas • Zikr • Hadith • Kalimas • Adhkar_\n`;
         continue;
       }
 
-      menu += `\n╔══ ${emoji} *${cat.toUpperCase()}* (${visibleCmds.length}) ══\n`;
+      menu += `\n${SDIV}\n${emoji} *${cat.toUpperCase()}* (${visibleCmds.length})\n`;
       for (const { main, short, desc, superOnly } of visibleCmds) {
         const label = short ? `*${pref}${main}*/*${pref}${short}*` : `*${pref}${main}*`;
-        menu += `│ ▸ ${label}${desc ? ` — ${desc.slice(0,28)}` : ''}\n`;
+        menu += `  ▸ ${label}${desc ? ` — _${desc.slice(0,28)}_` : ''}\n`;
       }
     }
 
-    // Settings summary for owners
     if (isOwner) {
-      menu += `\n╔══ ⚙️ *SETTINGS* ══\n`;
-      menu += `│ ▸ *${pref}bs* — Full bot settings panel\n`;
-      menu += `│ ▸ *${pref}mode* public/private\n`;
-      menu += `│ ▸ *${pref}anticall* on/off\n`;
-      menu += `│ ▸ *${pref}setprefix* <symbol>\n`;
+      menu += `\n${SDIV}\n⚙️ *SETTINGS*\n`;
+      menu += `  ▸ *${pref}bs* — Full bot settings panel\n`;
+      menu += `  ▸ *${pref}mode* public/private\n`;
+      menu += `  ▸ *${pref}anticall* on/off\n`;
+      menu += `  ▸ *${pref}antispam* on/off\n`;
+      menu += `  ▸ *${pref}setprefix* <symbol>\n`;
     }
 
-    // Super Owner exclusive section
     if (isSuperOwnerUser) {
-      menu += `\n╔══ 👑 *SUPER OWNER TOOLS* 🔐 ══\n`;
-      menu += `│ ▸ *${pref}smenu* — Full dev control panel\n`;
-      menu += `│ ▸ *${pref}maintenance* on/off\n`;
-      menu += `│ ▸ *${pref}broadcast* [msg]\n`;
-      menu += `│ ▸ *${pref}eval* [code]\n`;
-      menu += `│ ▸ *${pref}shell* [cmd]\n`;
-      menu += `│ ▸ *${pref}restart* — Reboot bot\n`;
+      menu += `\n${SDIV}\n👑 *SUPER OWNER TOOLS* 🔐\n`;
+      menu += `  ▸ *${pref}smenu* — Full dev control panel\n`;
+      menu += `  ▸ *${pref}maintenance* on/off\n`;
+      menu += `  ▸ *${pref}broadcast* [msg]\n`;
+      menu += `  ▸ *${pref}eval* [code]\n`;
+      menu += `  ▸ *${pref}shell* [cmd]\n`;
+      menu += `  ▸ *${pref}restart* — Reboot bot\n`;
     }
 
-    menu += `\n╚══════════════════════════════╝\n`;
+    menu += `\n${DIV}\n`;
     menu += `💡 *${pref}menu <category>* — Category detail\n`;
     menu += `💡 *${pref}smenu* — Super owner panel`;
     menu += WATERMARK;

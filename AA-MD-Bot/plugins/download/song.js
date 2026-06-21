@@ -76,9 +76,9 @@ export default {
     const shortQ = text.length > 35 ? text.slice(0, 35) + '...' : text;
     await sock.sendMessage(jid, {
       text:
-        `🔍 *Searching:* ${shortQ}\n\n` +
-        `🤖 *Powered by AA MD Bot*\n` +
-        `👨‍💻 *Developed by Ahsan Ali Wadani*`
+        `🔎 *Searching:* ${shortQ}\n` +
+        `> 🤖 *Powered by AA MD Bot*\n` +
+        `> 👨‍💻 *Developed by Ahsan Ali Wadani*`
     }, { quoted: msg });
 
     const tempDir = path.join(__dirname, '../../temp');
