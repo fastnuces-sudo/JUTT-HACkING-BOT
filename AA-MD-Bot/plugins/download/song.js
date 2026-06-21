@@ -200,9 +200,8 @@ export default {
             body: `${uploader} • ${mins}:${secs} • ${sizeMB}MB`,
             renderLargerThumbnail: true,
             mediaType: 1,
-            ...(thumbUrl ? { thumbnailUrl: thumbUrl } : {}),
             ...(thumbBuf ? { thumbnail: thumbBuf } : {}),
-            sourceUrl: ytUrl || 'https://aa-mods.vercel.app/',
+            sourceUrl: 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617',
           },
         },
       }, { quoted: msg });

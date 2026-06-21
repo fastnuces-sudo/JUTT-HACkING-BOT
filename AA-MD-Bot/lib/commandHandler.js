@@ -150,6 +150,12 @@ export async function handleMessage(sock, msg, sessionId) {
       await sock.readMessages([msg.key]).catch(() => {});
     }
 
+    // Auto-react to every incoming message (not own messages)
+    if (settings.autoReact && !fromMe) {
+      const emoji = settings.autoReactEmoji ?? config.autoReactEmoji ?? '❤️';
+      sock.sendMessage(jid, { react: { text: emoji, key: msg.key } }).catch(() => {});
+    }
+
     const text = await getMessageText(msg);
     if (!text) return;
 
