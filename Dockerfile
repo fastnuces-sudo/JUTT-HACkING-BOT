@@ -1,25 +1,37 @@
 FROM node:20-slim
 
-RUN apt-get update && apt-get install -y \
+# ── System dependencies ────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     python3 \
     python3-pip \
     curl \
-    --no-install-recommends \
-    && pip3 install yt-dlp --break-system-packages \
-    && rm -rf /var/lib/apt/lists/*
+    wget \
+  && pip3 install yt-dlp --break-system-packages \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install to /node_modules at container ROOT level
-# Node.js walks UP from /bot/index.js → checks /bot/node_modules/ → checks /node_modules/
-# Volume can only ever reach /bot/... paths, never /node_modules/ at root
-WORKDIR /tmp/install
-COPY AA-MD-Bot/package.json AA-MD-Bot/package-lock.json ./
-RUN npm install --omit=dev && cp -r node_modules /node_modules && rm -rf /tmp/install
-
+# ── Bot directory ──────────────────────────────────────────────────────────────
 WORKDIR /bot
-COPY AA-MD-Bot/ .
-RUN mkdir -p session logs temp media
 
+# Copy package.json first (layer caching: only re-run npm install when deps change)
+COPY AA-MD-Bot/package.json ./
+
+# Install ALL dependencies directly inside /bot/node_modules
+# This is the only reliable approach — root /node_modules breaks ESM resolution
+RUN npm install --omit=dev --no-audit --no-fund --prefer-offline 2>/dev/null || \
+    npm install --omit=dev --no-audit --no-fund
+
+# ── Copy bot source code ───────────────────────────────────────────────────────
+COPY AA-MD-Bot/ .
+
+# Create runtime dirs (session, temp, logs persist via Railway Volume if configured)
+RUN mkdir -p session temp logs media
+
+# ── Runtime ───────────────────────────────────────────────────────────────────
 EXPOSE 5000
+
+# Health check (Railway uses this to detect crashes)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -fs http://localhost:5000/api/healthz || exit 1
 
 CMD ["node", "index.js"]

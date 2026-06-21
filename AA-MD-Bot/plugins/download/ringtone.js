@@ -4,11 +4,10 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { generateId } from '../../lib/helper.js';
+import { YTDLP } from '../../lib/ytdlp.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const YTDLP = '/home/runner/.local/bin/yt-dlp';
 
 export default {
   command: 'ringtone',

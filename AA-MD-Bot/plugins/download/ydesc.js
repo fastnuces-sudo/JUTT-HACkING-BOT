@@ -1,23 +1,9 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getBestThumb } from '../../lib/helper.js';
+import { YTDLP } from '../../lib/ytdlp.js';
 
 const execAsync = promisify(exec);
-
-const YTDLP_PATHS = [
-  '/home/runner/.local/bin/yt-dlp',
-  '/usr/local/bin/yt-dlp',
-  '/usr/bin/yt-dlp',
-  'yt-dlp',
-];
-
-async function getYtdlp() {
-  for (const p of YTDLP_PATHS) {
-    try { await execAsync(`${p} --version`); return p; }
-    catch {}
-  }
-  return null;
-}
 
 export default {
   command: 'ydesc',
@@ -29,8 +15,7 @@ export default {
   execute: async ({ reply, react, sock, jid, msg, text }) => {
     if (!text) return reply('🔍 Usage: .ydesc <search query>\n\nExample: .ydesc Faded Alan Walker');
 
-    const ytdlp = await getYtdlp();
-    if (!ytdlp) return reply('❌ yt-dlp not available.');
+    const ytdlp = YTDLP;
 
     await react('⏳');
 

@@ -5,16 +5,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
 import { generateId, getBuffer } from '../../lib/helper.js';
+import { YTDLP } from '../../lib/ytdlp.js';
 
 const execAsync  = promisify(exec);
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
-
-const YTDLP = [
-  '/home/runner/workspace/.pythonlibs/bin/yt-dlp',
-  '/home/runner/.local/bin/yt-dlp',
-  '/usr/local/bin/yt-dlp',
-  'yt-dlp',
-];
 
 const BRAND =
   `\n🌐 https://aa-mods.vercel.app/\n` +
@@ -31,13 +25,6 @@ const INV = [
   'https://invidious.fdn.fr',
   'https://invidious.nerdvpn.de',
 ];
-
-async function getYtdlp() {
-  for (const p of YTDLP) {
-    try { await execAsync(`"${p}" --version`, { timeout: 5000 }); return p; } catch {}
-  }
-  return null;
-}
 
 function fmtViews(v) {
   if (!v) return '—';
@@ -158,7 +145,7 @@ export default {
     const outFile = path.join(tempDir, `${uid}.mp4`);
 
     try {
-      const ytdlp = await getYtdlp();
+      const ytdlp = YTDLP;
 
       // ── Step 1: Metadata (play-dl for YouTube info) ────────────────────────
       let title    = text;
