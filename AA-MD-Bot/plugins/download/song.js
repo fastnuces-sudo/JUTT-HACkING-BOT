@@ -28,35 +28,56 @@ function fmtDuration(sec) {
   return `${m}:${String(s % 60).padStart(2, '0')}`;
 }
 
-// ── Step 1: Get SoundCloud metadata + exact URL ────────────────────────────
-// Returns { title, uploader, duration, thumbUrl, sourceUrl } or null
-async function scMeta(ytdlp, query) {
+// ── Phase 1: YouTube metadata (title, thumbnail, views, channel) ─────────────
+// YouTube has the best, most accurate metadata — used for display card only.
+async function ytSearchMeta(query) {
   try {
-    const { stdout } = await execAsync(
-      `"${ytdlp}" "scsearch1:${query}" --dump-json --no-playlist --no-download --quiet --no-warnings`,
-      { timeout: 25000 }
-    );
-    const lines = stdout.trim().split('\n').filter(l => l.startsWith('{'));
-    if (!lines.length) return null;
-    const j = JSON.parse(lines[0]);
-    return {
-      title    : j.title      || query,
-      uploader : j.uploader   || j.channel || 'Unknown',
-      duration : Math.floor(j.duration || 0),
-      views    : fmtViews(j.view_count),
-      thumbUrl : j.thumbnail  || '',
-      sourceUrl: j.webpage_url || j.url || '',
-    };
-  } catch {
-    return null;
-  }
+    const playdl  = (await import('play-dl')).default;
+    const results = await playdl.search(query, { source: { youtube: 'video' }, limit: 1 });
+    if (results.length) {
+      const r = results[0];
+      return {
+        title   : r.title || query,
+        uploader: r.channel?.name || 'Unknown',
+        duration: r.durationInSec || 0,
+        views   : fmtViews(r.views),
+        thumbUrl: r.thumbnails?.[r.thumbnails.length - 1]?.url || '',
+        ytUrl   : r.url || '',
+      };
+    }
+  } catch {}
+  return null;
 }
 
-// ── Step 2a: Download from exact SoundCloud URL (guaranteed metadata match) ─
-async function scDownloadUrl(ytdlp, url, outFile) {
+// ── Phase 2a: SoundCloud download using the exact YouTube title ───────────────
+// Using the YouTube title (not user's raw query) means SoundCloud finds the
+// same song whose info was shown — matching thumbnail and audio track.
+async function scDownloadByTitle(ytdlp, title, outFile) {
+  // Dump JSON first to get the exact SC track URL, then download that URL.
+  // This 2-step approach is more reliable than a blind scsearch download.
+  try {
+    const { stdout } = await execAsync(
+      `"${ytdlp}" "scsearch1:${title}" --dump-json --no-playlist --no-download --quiet --no-warnings`,
+      { timeout: 20000 }
+    );
+    const lines = stdout.trim().split('\n').filter(l => l.startsWith('{'));
+    if (lines.length) {
+      const j = JSON.parse(lines[0]);
+      const scUrl = j.webpage_url || j.url;
+      if (scUrl) {
+        await execAsync(
+          `"${ytdlp}" "${scUrl}" -x --audio-format mp3 --audio-quality 128K --no-playlist -o "${outFile}" --quiet --no-warnings`,
+          { timeout: 120000 }
+        );
+        if (fs.existsSync(outFile)) return true;
+      }
+    }
+  } catch {}
+
+  // Fallback: direct scsearch download (no separate meta step)
   try {
     await execAsync(
-      `"${ytdlp}" "${url}" -x --audio-format mp3 --audio-quality 128K --no-playlist -o "${outFile}" --quiet --no-warnings`,
+      `"${ytdlp}" "scsearch1:${title}" -x --audio-format mp3 --audio-quality 128K --no-playlist -o "${outFile}" --quiet --no-warnings`,
       { timeout: 120000 }
     );
     return fs.existsSync(outFile);
@@ -65,42 +86,41 @@ async function scDownloadUrl(ytdlp, url, outFile) {
   }
 }
 
-// ── Step 2b: YouTube fallback (tv_embedded — only reliable client June 2026) ─
-async function ytDownload(ytdlp, query, outFile) {
+// ── Phase 2b: YouTube audio download (best for very new / rare songs) ─────────
+// tv_embedded is the only reliable yt-dlp client as of June 2026.
+// Falls back to android → ios if tv_embedded fails.
+async function ytAudioDownload(ytdlp, query, ytUrl, outFile) {
   const ckf = getCookiesFlag();
+  // Prefer direct URL if we have it (avoids search ambiguity for latest songs)
+  const src = ytUrl || `ytsearch1:${query}`;
+  const arg = ytUrl ? `"${ytUrl}"` : `"ytsearch1:${query}"`;
+
   const cmds = [
-    // tv_embedded — no cookie requirement, confirmed working
-    `"${ytdlp}" "ytsearch1:${query}" -x --audio-format mp3 --audio-quality 128K --extractor-args "youtube:player_client=tv_embedded" --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
-    // tv_embedded with cookies
-    `"${ytdlp}" "ytsearch1:${query}" ${ckf} -x --audio-format mp3 --audio-quality 128K --extractor-args "youtube:player_client=tv_embedded" --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
-    // android client fallback
-    `"${ytdlp}" "ytsearch1:${query}" ${ckf} -x --audio-format mp3 --audio-quality 128K --extractor-args "youtube:player_client=android" --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
+    // ① tv_embedded — confirmed working, no cookies needed
+    `"${ytdlp}" ${arg} --extractor-args "youtube:player_client=tv_embedded" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
+    // ② tv_embedded + cookies
+    `"${ytdlp}" ${arg} ${ckf} --extractor-args "youtube:player_client=tv_embedded" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
+    // ③ android client
+    `"${ytdlp}" ${arg} ${ckf} --extractor-args "youtube:player_client=android" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
+    // ④ ios client — sometimes works when android is blocked
+    `"${ytdlp}" ${arg} ${ckf} --extractor-args "youtube:player_client=ios" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
   ];
+
   for (const cmd of cmds) {
     try {
-      await execAsync(cmd, { timeout: 120000 });
+      await execAsync(cmd, { timeout: 150000 });
       if (fs.existsSync(outFile)) return true;
     } catch {}
   }
   return false;
 }
 
-// ── Step 2c: YouTube metadata via play-dl (for YT fallback display) ─────────
-async function ytSearchMeta(query) {
-  try {
-    const playdl  = (await import('play-dl')).default;
-    const results = await playdl.search(query, { source: { youtube: 'video' }, limit: 1 });
-    if (results.length) return results[0];
-  } catch {}
-  return null;
-}
-
 export default {
   command : 'song',
   alias   : ['play', 'audio', 'music', 'mp3', 'yta'],
   category: 'download',
-  description: 'Download audio — metadata always matches the track',
-  usage   : '.song <song name>',
+  description: 'Download audio — YouTube metadata + SoundCloud audio (matched by title)',
+  usage   : '.song <song name or keywords>',
 
   execute: async ({ reply, react, sock, jid, msg, text, sendMedia }) => {
     if (!text) return reply(
@@ -108,12 +128,13 @@ export default {
       'Usage: `.song <song name>`\n\nExamples:\n' +
       '• `.play Faded Alan Walker`\n' +
       '• `.song Nadeem Sarwar Abbas Jo Zinda Hai`\n' +
-      '• `.music Shape of You Ed Sheeran`'
+      '• `.music Shape of You Ed Sheeran`\n' +
+      '• `.play latest songs 2025`'
     );
 
     await react('⏳');
 
-    const shortQ = text.length > 35 ? text.slice(0, 35) + '...' : text;
+    const shortQ = text.length > 40 ? text.slice(0, 40) + '...' : text;
     await sock.sendMessage(jid, {
       text:
         `🔎 *Searching:* ${shortQ}\n` +
@@ -127,51 +148,37 @@ export default {
     const outFile = path.join(tempDir, `${uid}.mp3`);
 
     try {
-      // ── Phase 1: Get metadata from SoundCloud first ──────────────────────
-      // SoundCloud metadata is fetched BEFORE download so what we show
-      // matches what we actually download (same search result).
-      let meta = await scMeta(YTDLP, text);
-      let source = 'soundcloud';
+      // ── Phase 1: YouTube metadata (shown to user) ──────────────────────────
+      // Best quality metadata: correct thumbnail, official title, views.
+      const ytInfo = await ytSearchMeta(text);
 
-      if (!meta || !meta.sourceUrl) {
-        // SC search returned nothing — try YouTube metadata instead
-        const ytInfo = await ytSearchMeta(text);
-        if (ytInfo) {
-          meta = {
-            title    : ytInfo.title || text,
-            uploader : ytInfo.channel?.name || 'Unknown',
-            duration : ytInfo.durationInSec || 0,
-            views    : fmtViews(ytInfo.views),
-            thumbUrl : ytInfo.thumbnails?.[ytInfo.thumbnails.length - 1]?.url || '',
-            sourceUrl: ytInfo.url || '',
-          };
-          source = 'youtube';
-        } else {
-          meta = { title: text, uploader: 'Unknown', duration: 0, views: '—', thumbUrl: '', sourceUrl: '' };
-          source = 'unknown';
-        }
-      }
+      const title    = ytInfo?.title    || text;
+      const uploader = ytInfo?.uploader || 'Unknown';
+      const duration = ytInfo?.duration || 0;
+      const views    = ytInfo?.views    || '—';
+      const thumbUrl = ytInfo?.thumbUrl || '';
+      const ytUrl    = ytInfo?.ytUrl    || '';
 
-      // Duration guard (15 min max)
-      if (meta.duration > 900) {
+      // Duration guard — 15 min max
+      if (duration > 900) {
         await react('❌');
-        return reply(`❌ Too long (${fmtDuration(meta.duration)}). Max 15 minutes.`);
+        return reply(`❌ Too long (${fmtDuration(duration)}). Max 15 minutes.`);
       }
 
-      // Fetch thumbnail
+      // Fetch YouTube thumbnail
       let thumbBuf = null;
-      if (meta.thumbUrl) {
-        try { thumbBuf = await getBuffer(meta.thumbUrl); } catch {}
+      if (thumbUrl) {
+        try { thumbBuf = await getBuffer(thumbUrl); } catch {}
       }
 
-      // Show info card — this metadata is exactly what will be downloaded
+      // Show info card with YouTube details
       const infoCaption =
         `✦✦✦✦✦✦✦✦✦✦\n` +
         `🎵 *AA MD Bot* MUSIC\n` +
         `✦✦✦✦✦✦✦✦✦✦\n\n` +
-        `🎙 *${meta.title}*\n` +
-        `🎤 ${meta.uploader}\n` +
-        `⏱ ${fmtDuration(meta.duration)} | 👁 ${meta.views} views\n\n` +
+        `🎙 *${title}*\n` +
+        `🎤 ${uploader}\n` +
+        `⏱ ${fmtDuration(duration)} | 👁 ${views} views\n\n` +
         `━━━━━━━━━━━━━━━━\n` +
         `⏳ _Please wait, downloading audio..._` +
         BRAND;
@@ -182,28 +189,31 @@ export default {
         await sock.sendMessage(jid, { text: infoCaption }, { quoted: msg });
       }
 
-      // ── Phase 2: Download the EXACT track whose metadata we showed ────────
+      // ── Phase 2: Download audio — SoundCloud first, YouTube fallback ────────
+      // SoundCloud is searched using the EXACT YouTube title (not user's raw query).
+      // This means the audio track matches what was shown in the info card above.
       let downloaded = false;
 
-      if (source === 'soundcloud' && meta.sourceUrl) {
-        // Download the exact URL from Phase 1 — guaranteed match
-        downloaded = await scDownloadUrl(YTDLP, meta.sourceUrl, outFile);
-        // Retry with title search if exact URL fails (rare network issue)
-        if (!downloaded) {
-          const cmd = `"${YTDLP}" "scsearch1:${meta.title}" -x --audio-format mp3 --audio-quality 128K --no-playlist -o "${outFile}" --quiet --no-warnings`;
-          try { await execAsync(cmd, { timeout: 120000 }); downloaded = fs.existsSync(outFile); } catch {}
-        }
+      // 2a. SoundCloud — search by YouTube title for accurate match
+      downloaded = await scDownloadByTitle(YTDLP, title, outFile);
+
+      // 2b. SoundCloud — try original user query if title search failed
+      if (!downloaded && title !== text) {
+        downloaded = await scDownloadByTitle(YTDLP, text, outFile);
       }
 
+      // 2c. YouTube direct (for latest / rare songs not yet on SoundCloud)
+      // Uses the DIRECT YouTube URL so it downloads exactly what was shown
       if (!downloaded) {
-        // Fall back to YouTube (tv_embedded — confirmed working June 2026)
-        downloaded = await ytDownload(YTDLP, meta.title !== text ? meta.title : text, outFile);
-        if (!downloaded && meta.title !== text) {
-          downloaded = await ytDownload(YTDLP, text, outFile);
-        }
+        downloaded = await ytAudioDownload(YTDLP, title, ytUrl, outFile);
       }
 
-      // Handle yt-dlp extension change (e.g. .mp3 → .opus, etc.)
+      // 2d. YouTube search fallback with original query
+      if (!downloaded && title !== text) {
+        downloaded = await ytAudioDownload(YTDLP, text, '', outFile);
+      }
+
+      // Handle yt-dlp output extension change (.mp3 → .opus, .m4a, etc.)
       let dlFile = outFile;
       if (!downloaded || !await fs.pathExists(outFile)) {
         const files = await fs.readdir(tempDir);
@@ -213,13 +223,19 @@ export default {
 
       if (!downloaded || !await fs.pathExists(dlFile)) {
         await react('❌');
-        return reply(`❌ Download failed. Try again or use different keywords.\n\nExample: \`.song ${text} lyrics\``);
+        return reply(
+          `❌ Download failed. Try different keywords.\n\n` +
+          `💡 Tips:\n` +
+          `• Add artist name: \`.play ${text} Alan Walker\`\n` +
+          `• Add year: \`.play ${text} 2024\`\n` +
+          `• Try exact song name`
+        );
       }
 
       await sendMedia({
         audio   : await fs.readFile(dlFile),
         mimetype: 'audio/mpeg',
-        fileName: `${meta.title}.mp3`,
+        fileName: `${title}.mp3`,
         ptt     : false,
       });
 

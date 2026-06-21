@@ -63,31 +63,45 @@ async function ytMeta(ytdlp, query) {
 }
 
 // ── Video download — yt-dlp only (Cobalt/Invidious dead June 2026) ────────────
-// Strategy order: tv_embedded (no cookies) → tv_embedded+cookies → android → mweb
+// Tries multiple YouTube player clients in order of reliability.
+// tv_embedded is confirmed working June 2026 (no bot detection, no cookies).
 async function ytdlpVideoDownload(ytdlp, url, outTemplate, tempDir, uid) {
   const ckf = getCookiesFlag();
 
   const findFile = async () => {
     try {
       const files = await fs.readdir(tempDir);
-      return files.find(f => f.startsWith(uid) && /\.(mp4|mkv|webm)$/.test(f)) || null;
+      return files.find(f => f.startsWith(uid) && /\.(mp4|mkv|webm|m4v)$/.test(f)) || null;
     } catch { return null; }
   };
 
+  // Format strings — order matters: prefer single-file mp4 (no ffmpeg merge needed)
+  const FMT_SINGLE = `best[height<=480][ext=mp4]/best[height<=480][ext=webm]/best[height<=480]`;
+  const FMT_MERGED = `bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]`;
+  const FMT_LOW    = `best[height<=360][ext=mp4]/best[height<=360]/worst[ext=mp4]/worst`;
+  const MERGE_ARGS = `--merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28"`;
+  const BASE       = `--no-playlist --quiet --no-warnings --no-check-certificate`;
+
   const strategies = [
-    // ① tv_embedded, single-file best (no merge — avoids ffmpeg issues)
-    `"${ytdlp}" "${url}" --extractor-args "youtube:player_client=tv_embedded" -f "best[height<=480][ext=mp4]/best[height<=480]" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    // ① tv_embedded — no cookies, confirmed working, single-file (fastest)
+    `"${ytdlp}" "${url}" --extractor-args "youtube:player_client=tv_embedded" -f "${FMT_SINGLE}" -o "${outTemplate}" ${BASE}`,
 
-    // ② tv_embedded + cookies, merged mp4
-    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=tv_embedded" -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]" --merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    // ② tv_embedded + cookies + merged — higher quality
+    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=tv_embedded" -f "${FMT_MERGED}" ${MERGE_ARGS} -o "${outTemplate}" ${BASE}`,
 
-    // ③ android client + cookies
-    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=android" -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
+    // ③ tv_embedded with po_token workaround (some regions need this)
+    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=tv_embedded,web" -f "${FMT_SINGLE}" -o "${outTemplate}" ${BASE}`,
 
-    // ④ mweb — lightweight fallback
-    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=mweb" -f "best[height<=360][ext=mp4]/best[height<=360]" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
+    // ④ android — works when tv_embedded is throttled
+    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=android" -f "${FMT_MERGED}" ${MERGE_ARGS} -o "${outTemplate}" ${BASE}`,
 
-    // ⑤ last resort — any format
+    // ⑤ ios — sometimes succeeds where android fails
+    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=ios" -f "${FMT_MERGED}" ${MERGE_ARGS} -o "${outTemplate}" ${BASE}`,
+
+    // ⑥ mweb — lightweight, lower quality, rarely fails
+    `"${ytdlp}" "${url}" ${ckf} --extractor-args "youtube:player_client=mweb" -f "${FMT_LOW}" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
+
+    // ⑦ absolute last resort — any available format
     `"${ytdlp}" "${url}" ${ckf} -f "best[height<=480]/best" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
   ];
 
