@@ -15,33 +15,58 @@ const BRAND =
   `> 🤖 *Powered by AA MD Bot*\n` +
   `> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
-// Invidious public instances for YouTube proxy downloads
+// ── Cobalt.tools public API (primary — no key needed) ─────────────────────────
+const COBALT_INSTANCES = [
+  'https://api.cobalt.tools',
+  'https://cobalt.api.timelessnesses.me',
+  'https://cobalt.ggtyler.dev',
+];
+
+async function cobaltDownload(ytUrl, outFile) {
+  for (const base of COBALT_INSTANCES) {
+    try {
+      const res = await axios.post(
+        `${base}/`,
+        { url: ytUrl, videoQuality: '480', filenameStyle: 'basic', downloadMode: 'auto' },
+        {
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          timeout: 20000,
+        }
+      );
+      const { status, url } = res.data || {};
+      if ((status === 'tunnel' || status === 'redirect') && url) {
+        // Stream to file
+        const dl = await axios({
+          url,
+          method: 'GET',
+          responseType: 'stream',
+          timeout: 300000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AA-MD-Bot/3.0)' },
+          maxRedirects: 10,
+        });
+        const writer = fs.createWriteStream(outFile);
+        dl.data.pipe(writer);
+        await new Promise((resolve, reject) => {
+          writer.on('finish', resolve);
+          writer.on('error', reject);
+          dl.data.on('error', reject);
+        });
+        const stat = await fs.stat(outFile).catch(() => null);
+        if (stat?.size > 50000) return true;
+      }
+    } catch {}
+  }
+  return false;
+}
+
+// ── Invidious instances (secondary) ───────────────────────────────────────────
 const INV = [
   'https://inv.tux.pizza',
   'https://invidious.privacydev.net',
   'https://yt.cdaut.de',
   'https://iv.melmac.space',
   'https://yewtu.be',
-  'https://invidious.fdn.fr',
-  'https://invidious.nerdvpn.de',
 ];
-
-function fmtViews(v) {
-  if (!v) return '—';
-  if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
-  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
-  return String(v);
-}
-
-async function ytSearch(query) {
-  try {
-    const playdl  = (await import('play-dl')).default;
-    const results = await playdl.search(query, { source: { youtube: 'video' }, limit: 1 });
-    if (results.length) return results[0];
-  } catch {}
-  return null;
-}
 
 async function invidiousVideoInfo(videoId) {
   for (const base of INV) {
@@ -56,21 +81,15 @@ async function invidiousVideoInfo(videoId) {
   return null;
 }
 
-async function downloadVideoFromInvidious(info, outFile) {
-  // formatStreams = muxed mp4 (audio+video) — no ffmpeg merge needed
+async function downloadFromInvidious(info, outFile) {
   const streams = (info.formatStreams || [])
     .filter(f => f.container === 'mp4' || f.type?.includes('video/mp4'))
-    .filter(f => {
-      const h = parseInt((f.resolution || '0').replace('p', ''));
-      return h <= 480;
-    })
+    .filter(f => parseInt((f.resolution || '0').replace('p', '')) <= 480)
     .sort((a, b) => {
       const ha = parseInt((a.resolution || '0').replace('p', ''));
       const hb = parseInt((b.resolution || '0').replace('p', ''));
       return hb - ha;
     });
-
-  if (!streams.length) return false;
 
   for (const s of streams) {
     let url = s.url;
@@ -94,6 +113,7 @@ async function downloadVideoFromInvidious(info, outFile) {
   return false;
 }
 
+// ── yt-dlp (last resort) ──────────────────────────────────────────────────────
 async function ytdlpDownload(ytdlp, url, outTemplate) {
   const dir = path.dirname(outTemplate);
   const uid = path.basename(outTemplate).split('.')[0];
@@ -106,14 +126,10 @@ async function ytdlpDownload(ytdlp, url, outTemplate) {
 
   const ckf = getCookiesFlag();
   const strategies = [
-    // cookies + tv_embedded — most reliable on VPS/Railway
     `"${ytdlp}" "${url}" ${ckf} -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=tv_embedded" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
-    // android client with proper mobile UA
     `"${ytdlp}" "${url}" ${ckf} -f "bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=android" --add-header "User-Agent:com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB)" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
-    // ios client
     `"${ytdlp}" "${url}" ${ckf} -f "bestvideo[height<=480]+bestaudio/best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=ios" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast -crf 28" -o "${outTemplate}" --no-playlist --quiet --no-warnings --no-check-certificate`,
-    // web fallback
-    `"${ytdlp}" "${url}" ${ckf} -f "best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=web" --postprocessor-args "ffmpeg:-c:v libx264 -c:a aac -movflags +faststart -preset fast" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
+    `"${ytdlp}" "${url}" ${ckf} -f "best[height<=480]" --merge-output-format mp4 --extractor-args "youtube:player_client=mweb" -o "${outTemplate}" --no-playlist --quiet --no-warnings`,
   ];
 
   for (const cmd of strategies) {
@@ -123,6 +139,24 @@ async function ytdlpDownload(ytdlp, url, outTemplate) {
     } catch {}
   }
   return false;
+}
+
+// ── YouTube metadata via play-dl ──────────────────────────────────────────────
+function fmtViews(v) {
+  if (!v) return '—';
+  if (v >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+  return String(v);
+}
+
+async function ytSearch(query) {
+  try {
+    const playdl  = (await import('play-dl')).default;
+    const results = await playdl.search(query, { source: { youtube: 'video' }, limit: 1 });
+    if (results.length) return results[0];
+  } catch {}
+  return null;
 }
 
 export default {
@@ -137,7 +171,7 @@ export default {
       '🎬 *AA MD Bot — Video Downloader*\n\n' +
       'Usage: `.video <name or URL>`\n\nExamples:\n' +
       '• `.video Faded Alan Walker`\n' +
-      '• `.yt https://youtube.com/watch?v=...`\n' +
+      '• `.yt https://youtu.be/xxxxx`\n' +
       '• `.ytv Abbas Jo Zinda Hai Nadeem Sarwar`'
     );
 
@@ -157,9 +191,7 @@ export default {
     const outFile = path.join(tempDir, `${uid}.mp4`);
 
     try {
-      const ytdlp = YTDLP;
-
-      // ── Step 1: Metadata (play-dl for YouTube info) ────────────────────────
+      // ── Step 1: Metadata ──────────────────────────────────────────────────
       let title    = text;
       let duration = 0;
       let uploader = 'Unknown';
@@ -182,35 +214,43 @@ export default {
         ytUrl    = ytInfo.url || ytUrl;
       }
 
-      if (!videoId) { await react('❌'); return reply(`❌ Video not found: *${text}*`); }
+      if (!videoId) {
+        await react('❌');
+        return reply(`❌ Video not found: *${text}*`);
+      }
 
       // Duration guard
       if (duration > 600) {
         await react('❌');
         const m = Math.floor(duration / 60), s = String(duration % 60).padStart(2, '0');
-        return reply(`❌ Too long (${m}:${s}). Max 10 min.\nFor audio only: .song ${title}`);
+        return reply(`❌ Too long (${m}:${s}). Max 10 min.\n✅ Audio only: *.song ${title}*`);
       }
 
       const mins = Math.floor(duration / 60);
       const secs = String(duration % 60).padStart(2, '0');
 
+      // Thumbnail
       let thumbBuf = null;
       if (thumbUrl) { try { thumbBuf = await getBuffer(thumbUrl); } catch {} }
       if (!thumbBuf) {
         for (const q of ['hqdefault', 'mqdefault', 'sddefault']) {
-          try { thumbBuf = await getBuffer(`https://i.ytimg.com/vi/${videoId}/${q}.jpg`); if (thumbBuf) break; } catch {}
+          try {
+            thumbBuf = await getBuffer(`https://i.ytimg.com/vi/${videoId}/${q}.jpg`);
+            if (thumbBuf) break;
+          } catch {}
         }
       }
 
+      // Info card
       const infoCaption =
         `✦✦✦✦✦✦✦✦✦✦\n` +
         `🎬 *AA MD Bot* VIDEO\n` +
         `✦✦✦✦✦✦✦✦✦✦\n\n` +
         `🎙 *${title}*\n` +
         `🎤 ${uploader}\n` +
-        `⏱ ${mins}:${secs} | 👁 ${views} views\n\n` +
+        `⏱ ${mins}:${secs}  •  👁 ${views} views\n\n` +
         `━━━━━━━━━━━━━━━━\n` +
-        `⏳ _Please wait, fetching your video..._` +
+        `⏳ _Downloading... please wait_` +
         BRAND;
 
       if (thumbBuf) {
@@ -219,35 +259,40 @@ export default {
         await sock.sendMessage(jid, { text: infoCaption }, { quoted: msg });
       }
 
-      // ── Step 2: Download — Invidious → yt-dlp ─────────────────────────────
+      // ── Step 2: Download (Cobalt → Invidious → yt-dlp) ───────────────────
+      const fullYtUrl = `https://www.youtube.com/watch?v=${videoId}`;
       let downloaded = false;
 
-      // Try Invidious proxy first
-      try {
-        const invInfo = await invidiousVideoInfo(videoId);
-        if (invInfo) {
-          downloaded = await downloadVideoFromInvidious(invInfo, outFile);
-        }
-      } catch {}
+      // 1. Cobalt.tools — free, no bot detection
+      downloaded = await cobaltDownload(fullYtUrl, outFile);
 
-      // Try yt-dlp as fallback
-      if (!downloaded && ytdlp) {
-        const outTemplate = path.join(tempDir, `${uid}.%(ext)s`);
-        downloaded = await ytdlpDownload(ytdlp, `https://www.youtube.com/watch?v=${videoId}`, outTemplate);
+      // 2. Invidious proxy
+      if (!downloaded) {
+        try {
+          const invInfo = await invidiousVideoInfo(videoId);
+          if (invInfo) downloaded = await downloadFromInvidious(invInfo, outFile);
+        } catch {}
       }
 
-      // Find output file
+      // 3. yt-dlp fallback
+      if (!downloaded && YTDLP) {
+        const outTemplate = path.join(tempDir, `${uid}.%(ext)s`);
+        downloaded = await ytdlpDownload(YTDLP, fullYtUrl, outTemplate);
+      }
+
+      // Locate the actual output file (yt-dlp may change extension)
       let dlFile = outFile;
       if (!downloaded || !await fs.pathExists(outFile)) {
         const files = await fs.readdir(tempDir);
-        const found = files.find(f => f.startsWith(uid));
+        const found = files.find(f => f.startsWith(uid) && (f.endsWith('.mp4') || f.endsWith('.mkv') || f.endsWith('.webm')));
         if (found) { dlFile = path.join(tempDir, found); downloaded = true; }
       }
 
       if (!downloaded || !await fs.pathExists(dlFile)) {
         await react('❌');
         return reply(
-          `❌ Video download failed. YouTube servers are blocking bots.\n\n` +
+          `❌ *Video download failed.*\n\n` +
+          `YouTube is blocking all download attempts right now.\n\n` +
           `✅ Try audio instead: *.song ${title}*`
         );
       }
@@ -256,8 +301,9 @@ export default {
       const sizeMB = (stat.size / 1024 / 1024).toFixed(1);
 
       if (stat.size > 64 * 1024 * 1024) {
-        await fs.remove(dlFile); await react('❌');
-        return reply(`❌ File too large (${sizeMB}MB). Max ~64MB.\nTry: .song ${title}`);
+        await fs.remove(dlFile);
+        await react('❌');
+        return reply(`❌ File too large (${sizeMB} MB). Max ~64 MB.\nTry: *.song ${title}*`);
       }
 
       const videoCaption =
@@ -266,7 +312,7 @@ export default {
         `✦✦✦✦✦✦✦✦✦✦\n\n` +
         `🎙 *${title}*\n` +
         `🎤 ${uploader}\n` +
-        `⏱ ${mins}:${secs} | 📁 ${sizeMB}MB | 👁 ${views} views` +
+        `⏱ ${mins}:${secs}  •  📁 ${sizeMB} MB  •  👁 ${views}` +
         BRAND;
 
       await sendMedia({

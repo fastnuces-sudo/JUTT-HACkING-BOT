@@ -33,10 +33,11 @@ function getCtx() {
 }
 
 const CAT_EMOJI = {
-  islamic: '☪️', general: '📋', download: '⬇️', media: '🎬',
-  search: '🔍', fun: '🎮', utility: '🔧', tools: '🛠️',
-  group: '👥', admin: '🛡️', economy: '💰', level: '⭐',
-  owner: '👑', support: '📞', misc: '📌',
+  islamic: '☪️',  download: '⬇️',  media: '🎬',
+  search:  '🔍',  fun:      '🎮',  utility: '🔧',
+  tools:   '🛠️',  economy:  '💰',  level: '⭐',
+  group:   '👥',  admin:    '🛡️',  owner: '👑',
+  general: '📋',  misc:     '📌',
 };
 
 const CAT_ORDER = {
@@ -45,18 +46,34 @@ const CAT_ORDER = {
   admin: 10, owner: 90,
 };
 
-const SKIP_CATS   = new Set(['settings', 'ai']);
-const OWNER_CATS  = new Set(['owner']);
-const SUMMARY_CATS= new Set(['islamic']);
+const SKIP_CATS  = new Set(['settings', 'ai']);
+const OWNER_CATS = new Set(['owner']);
+const SUMMARY_CATS = new Set(['islamic']);
 
-const WATERMARK = `\n\n> 🌐 *https://aa-mods.vercel.app/*\n> 🤖 *Powered by AA MD Bot*\n> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
+const W = `\n\n> 🌐 *https://aa-mods.vercel.app/*\n> 🤖 *Powered by AA MD Bot*\n> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
 
-function getGreeting() {
-  const h = new Date().getUTCHours() + 5; // PKT = UTC+5
-  if (h < 12) return '🌅 *Assalamualaikum!*';
-  if (h < 17) return '☀️ *Assalamualaikum!*';
-  if (h < 20) return '🌆 *Assalamualaikum!*';
-  return '🌙 *Assalamualaikum!*';
+function greet() {
+  const h = new Date().getUTCHours() + 5;
+  if (h < 6)  return '🌙 Assalamualaikum';
+  if (h < 12) return '🌅 Assalamualaikum';
+  if (h < 17) return '☀️  Assalamualaikum';
+  if (h < 20) return '🌆 Assalamualaikum';
+  return '🌙 Assalamualaikum';
+}
+
+// Draw a category box with its commands inside
+function catBox(emoji, label, count, cmds, pref, isSuperOwnerUser) {
+  const title = `${emoji}  *${label}*  (${count})`;
+  let box = `\n╭─── ${title}\n`;
+  for (const { main, short, desc, superOnly } of cmds) {
+    if (superOnly && !isSuperOwnerUser) continue;
+    const alias = short ? `/${pref}${short}` : '';
+    const lock  = superOnly ? ' 🔐' : '';
+    const d     = desc ? `  _${desc.slice(0, 30)}_` : '';
+    box += `│  ▸ *${pref}${main}*${alias}${lock}${d}\n`;
+  }
+  box += `╰${'─'.repeat(32)}\n`;
+  return box;
 }
 
 export default {
@@ -67,10 +84,10 @@ export default {
   usage: '.menu | .menu <category>',
 
   async execute({ sock, jid, msg, isOwner, args, senderJid }) {
-    const settings  = db.settings.get();
-    const pushName  = msg.pushName || 'User';
-    const pref      = (settings.prefix ?? config.prefix)[0] ?? '.';
-    const mode      = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
+    const settings = db.settings.get();
+    const pushName = msg.pushName || 'User';
+    const pref     = (settings.prefix ?? config.prefix)[0] ?? '.';
+    const mode     = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
     const isSuperOwnerUser = senderJid?.split('@')[0]?.split(':')[0] === config.superOwner;
     const role = isSuperOwnerUser ? '👑 Super Owner' : isOwner ? '🔑 Owner' : '👤 User';
 
@@ -81,7 +98,7 @@ export default {
     const uptime = upH > 0 ? `${upH}h ${upM}m` : upM > 0 ? `${upM}m ${upS}s` : `${upS}s`;
     const usedMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
 
-    // Deduplicate & categorise
+    // Build category map
     const seen = new Set();
     const categories = {};
     for (const plugin of plugins.values()) {
@@ -92,42 +109,41 @@ export default {
       const cmds  = [].concat(plugin.command);
       const alias = [].concat(plugin.alias || []);
       const main  = cmds[0];
-      const short = alias.find(a => a.length <= 5) || alias[0] || null;
+      const short = alias.find(a => a.length <= 6) || alias[0] || null;
       const desc  = (plugin.description || '').slice(0, 40);
       if (!categories[cat]) categories[cat] = [];
-      categories[cat].push({ main, short, desc, superOnly: plugin.superOwnerOnly });
+      categories[cat].push({ main, short, desc, superOnly: !!plugin.superOwnerOnly });
     }
     const totalCmds = seen.size;
     const ctx = getCtx();
 
-    // ── Category-specific view ────────────────────────────
+    // ── Single-category view ──────────────────────────────
     if (args[0]) {
       const cat  = args[0].toLowerCase();
       const cmds = categories[cat];
       if (!cmds) {
         const list = Object.keys(categories)
           .filter(c => !SKIP_CATS.has(c))
-          .sort((a,b) => (CAT_ORDER[a]??50)-(CAT_ORDER[b]??50))
-          .map(c => `  ${CAT_EMOJI[c]||'📌'} *${c}*  (${categories[c].length} cmds)`)
+          .sort((a, b) => (CAT_ORDER[a] ?? 50) - (CAT_ORDER[b] ?? 50))
+          .map(c => `  ${CAT_EMOJI[c] || '📌'} *${c}*  (${categories[c].length})`)
           .join('\n');
-        const txt = `❌ *"${cat}"* category not found.\n\n📦 *Available Categories:*\n\n${list}${WATERMARK}`;
-        const payload = { text: txt };
+        const payload = { text: `❌ *"${cat}"* not found.\n\n📦 *Categories:*\n\n${list}${W}` };
         if (ctx) payload.contextInfo = ctx;
         return sock.sendMessage(jid, payload, { quoted: msg });
       }
       const emoji = CAT_EMOJI[cat] || '📌';
-      let text = `╔══════════════════════════════╗\n`;
-      text    += `║  ${emoji} *${cat.toUpperCase()} COMMANDS*\n`;
-      text    += `╚══════════════════════════════╝\n\n`;
+      let text = `╔══════════════════════════════════╗\n`;
+      text    += `║  ${emoji}  *${cat.toUpperCase()} COMMANDS*\n`;
+      text    += `╚══════════════════════════════════╝\n`;
       for (const { main, short, desc, superOnly } of cmds) {
         if (superOnly && !isSuperOwnerUser) continue;
-        const label = short ? `*${pref}${main}* | *${pref}${short}*` : `*${pref}${main}*`;
+        const alias = short ? ` / *${pref}${short}*` : '';
         const lock  = superOnly ? ' 🔐' : '';
-        text += `▸ ${label}${lock}\n`;
-        if (desc) text += `  ╰ _${desc}_\n`;
+        text += `\n▸ *${pref}${main}*${alias}${lock}`;
+        if (desc) text += `\n  ╰ _${desc}_`;
       }
-      text += `\n> 💡 *${pref}menu* — Back to full menu`;
-      text += WATERMARK;
+      text += `\n\n> 💡 *${pref}menu* — back to full menu`;
+      text += W;
       const payload = { text };
       if (ctx) payload.contextInfo = ctx;
       return sock.sendMessage(jid, payload, { quoted: msg });
@@ -135,97 +151,86 @@ export default {
 
     // ── Full Menu ─────────────────────────────────────────
     const greeting = isSuperOwnerUser
-      ? `🌟 *Assalamualaikum, Ahsan Bhai!*\n👑 _Super Owner — Full Access_`
+      ? `🌟 *${greet()}, Ahsan Bhai!*\n👑 _Super Owner — Full Access_`
       : isOwner
-        ? `🔑 *Assalamualaikum, Owner!*\n_Bot control access active_`
-        : `${getGreeting()}\n✨ *${pushName}*, welcome to AA MD Bot!`;
+        ? `🔑 *${greet()}, Owner!*\n_Bot control active_`
+        : `✨ *${greet()}, ${pushName}!*\n_Welcome to AA MD Bot_`;
 
     let menu = '';
+
+    // Header
     menu += `╔══════════════════════════════════╗\n`;
-    menu += `║   🤖  *A A   M D   B O T*        ║\n`;
-    menu += `║   👨‍💻  Ahsan Ali Wadani | AA Mods  ║\n`;
-    menu += `║   🌐  aa-mods.vercel.app          ║\n`;
+    menu += `║  🤖  *A  A     M D     B  O  T*  ║\n`;
+    menu += `║  👨‍💻  Ahsan Ali Wadani | AA Mods   ║\n`;
+    menu += `║  🌐  aa-mods.vercel.app           ║\n`;
     menu += `╚══════════════════════════════════╝\n\n`;
+    menu += `${greeting}\n`;
 
-    menu += `${greeting}\n\n`;
+    // Status box
+    menu += `\n╭─── 📊  *BOT STATUS*\n`;
+    menu += `│  🟢  Online    •  ⏱️  ${uptime}\n`;
+    menu += `│  💾  ${usedMB} MB RAM  •  📦  ${totalCmds}+ cmds\n`;
+    menu += `│  🔑  Prefix: *${pref}*   •  🔀  Mode: *${mode}*\n`;
+    menu += `│  🎭  Role:   *${role}*\n`;
+    menu += `╰${'─'.repeat(32)}\n`;
 
-    menu += `┌─────────────────────────────────\n`;
-    menu += `│  📊 *BOT STATUS*\n`;
-    menu += `├─────────────────────────────────\n`;
-    menu += `│  🟢 Status    :  *Online ✓*\n`;
-    menu += `│  ⏱️  Uptime    :  *${uptime}*\n`;
-    menu += `│  💾 RAM       :  *${usedMB} MB*\n`;
-    menu += `│  📦 Commands  :  *${totalCmds}+*\n`;
-    menu += `│  🔑 Prefix    :  *${pref}*\n`;
-    menu += `│  🔀 Mode      :  *${mode}*\n`;
-    menu += `│  🎭 Role      :  *${role}*\n`;
-    menu += `└─────────────────────────────────\n\n`;
-
+    // Category boxes — each separated clearly
     const sorted = Object.entries(categories).sort(([a],[b]) =>
-      (CAT_ORDER[a]??50) - (CAT_ORDER[b]??50) || a.localeCompare(b)
+      (CAT_ORDER[a] ?? 50) - (CAT_ORDER[b] ?? 50) || a.localeCompare(b)
     );
-
-    menu += `┌─────────────────────────────────\n`;
-    menu += `│  📚 *COMMAND CATEGORIES*\n`;
-    menu += `├─────────────────────────────────\n`;
 
     for (const [cat, cmds] of sorted) {
       if (SKIP_CATS.has(cat)) continue;
       if (OWNER_CATS.has(cat) && !isOwner) continue;
-
       const emoji = CAT_EMOJI[cat] || '📌';
       const visibleCmds = cmds.filter(c => !c.superOnly || isSuperOwnerUser);
       if (!visibleCmds.length) continue;
 
       if (SUMMARY_CATS.has(cat)) {
-        menu += `│\n│  ${emoji} *ISLAMIC*  (${visibleCmds.length})\n`;
-        menu += `│    ▸ *${pref}islamicmenu* — Full Islamic panel\n`;
-        menu += `│    _Duas • Zikr • Hadith • Kalimas • Adhkar_\n`;
+        menu += `\n╭─── ☪️  *ISLAMIC*  (${visibleCmds.length})\n`;
+        menu += `│  ▸ *${pref}islamicmenu* — Full Islamic panel\n`;
+        menu += `│  _Duas • Zikr • Hadith • Kalimas • Adhkar_\n`;
+        menu += `╰${'─'.repeat(32)}\n`;
         continue;
       }
 
-      menu += `│\n│  ${emoji} *${cat.toUpperCase()}*  (${visibleCmds.length})\n`;
-      for (const { main, short, desc } of visibleCmds.slice(0, 8)) {
-        const label = short ? `*${pref}${main}*/*${pref}${short}*` : `*${pref}${main}*`;
-        const d = desc ? ` — _${desc.slice(0,28)}_` : '';
-        menu += `│    ▸ ${label}${d}\n`;
-      }
-      if (visibleCmds.length > 8) {
-        menu += `│    _...and ${visibleCmds.length - 8} more → *${pref}menu ${cat}*_\n`;
+      menu += catBox(emoji, cat.toUpperCase(), visibleCmds.length,
+        visibleCmds.slice(0, 9), pref, isSuperOwnerUser);
+      if (visibleCmds.length > 9) {
+        menu = menu.replace(/╰─+\n$/, '');
+        menu += `│  _+${visibleCmds.length - 9} more → *${pref}menu ${cat}*_\n`;
+        menu += `╰${'─'.repeat(32)}\n`;
       }
     }
-    menu += `└─────────────────────────────────\n\n`;
 
+    // Owner quick settings — separate box
     if (isOwner) {
-      menu += `┌─────────────────────────────────\n`;
-      menu += `│  ⚙️  *OWNER SETTINGS*\n`;
-      menu += `├─────────────────────────────────\n`;
+      menu += `\n╭─── ⚙️  *OWNER SETTINGS*\n`;
       menu += `│  ▸ *${pref}bs*          — Bot settings panel\n`;
       menu += `│  ▸ *${pref}mode*        — public / private\n`;
-      menu += `│  ▸ *${pref}autoread*    — Blue ticks toggle\n`;
+      menu += `│  ▸ *${pref}autoread*    — Blue ticks on/off\n`;
       menu += `│  ▸ *${pref}autoreact*   — Auto emoji react\n`;
-      menu += `│  ▸ *${pref}anticall*    — Block incoming calls\n`;
-      menu += `│  ▸ *${pref}antispam*    — Anti-spam filter\n`;
+      menu += `│  ▸ *${pref}anticall*    — Block calls\n`;
+      menu += `│  ▸ *${pref}antispam*    — Spam filter\n`;
       menu += `│  ▸ *${pref}setprefix*   — Change prefix\n`;
-      menu += `└─────────────────────────────────\n\n`;
+      menu += `╰${'─'.repeat(32)}\n`;
     }
 
+    // Super owner box
     if (isSuperOwnerUser) {
-      menu += `┌─────────────────────────────────\n`;
-      menu += `│  👑 *SUPER OWNER TOOLS* 🔐\n`;
-      menu += `├─────────────────────────────────\n`;
+      menu += `\n╭─── 👑  *SUPER OWNER TOOLS* 🔐\n`;
       menu += `│  ▸ *${pref}smenu*       — Dev control panel\n`;
-      menu += `│  ▸ *${pref}maintenance* — Lock bot\n`;
-      menu += `│  ▸ *${pref}broadcast*   — Blast to all groups\n`;
+      menu += `│  ▸ *${pref}maintenance* — Lock/unlock bot\n`;
+      menu += `│  ▸ *${pref}broadcast*   — Message all groups\n`;
       menu += `│  ▸ *${pref}eval*        — Run JS code\n`;
-      menu += `│  ▸ *${pref}shell*       — Run shell cmd\n`;
+      menu += `│  ▸ *${pref}shell*       — Run shell command\n`;
       menu += `│  ▸ *${pref}restart*     — Reboot bot\n`;
-      menu += `└─────────────────────────────────\n\n`;
+      menu += `╰${'─'.repeat(32)}\n`;
     }
 
-    menu += `> 💡 *${pref}menu <category>* — Detailed category view\n`;
-    menu += `> 📢 *${pref}setnewsletter* — Enable View Channel button`;
-    menu += WATERMARK;
+    // Footer hint
+    menu += `\n> 💡 *${pref}menu <category>* for detailed view`;
+    menu += W;
 
     const banner = getBanner();
     const payload = banner
@@ -236,7 +241,9 @@ export default {
     try {
       await sock.sendMessage(jid, payload, { quoted: msg });
     } catch {
-      await sock.sendMessage(jid, { text: menu, ...(ctx ? { contextInfo: ctx } : {}) }, { quoted: msg });
+      const fallback = { text: menu };
+      if (ctx) fallback.contextInfo = ctx;
+      await sock.sendMessage(jid, fallback, { quoted: msg });
     }
   },
 };
