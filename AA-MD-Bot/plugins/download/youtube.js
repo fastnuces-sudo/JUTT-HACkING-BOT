@@ -23,14 +23,26 @@ function fmtViews(n) {
   return String(n);
 }
 
-// ── Search (play-dl first for accuracy, faa fallback) ─────────────────────────
+// ── Title similarity scorer ───────────────────────────────────────────────────
+function scoreMatch(title, query) {
+  if (!title) return 0;
+  const t = title.toLowerCase();
+  const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  if (!words.length) return 0;
+  return words.filter(w => t.includes(w)).length / words.length;
+}
+
+// ── Search (top 5 results + best-match scoring for accuracy) ──────────────────
 async function searchYT(query) {
-  // Primary: play-dl YouTube search — most accurate results
+  // Primary: play-dl — fetch top 5, pick best title match
   try {
     const playdl = (await import('play-dl')).default;
-    const res = await playdl.search(query, { source: { youtube: 'video' }, limit: 1 });
+    const res = await playdl.search(query, { source: { youtube: 'video' }, limit: 5 });
     if (res?.length) {
-      const r = res[0];
+      // Score each result against query words, pick best
+      const scored = res.map(r => ({ r, score: scoreMatch(r.title, query) }));
+      scored.sort((a, b) => b.score - a.score);
+      const r = scored[0].r;
       const m = Math.floor((r.durationInSec || 0) / 60);
       const s = String((r.durationInSec || 0) % 60).padStart(2, '0');
       return {
@@ -43,11 +55,14 @@ async function searchYT(query) {
       };
     }
   } catch {}
-  // Fallback: api-faa.my.id search
+  // Fallback: api-faa.my.id search (top 3, best match)
   try {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/youtube?q=${encodeURIComponent(query)}`);
     if (d.status && d.result?.length) {
-      const r = d.result[0];
+      const top = d.result.slice(0, 3);
+      const scored = top.map(r => ({ r, score: scoreMatch(r.title, query) }));
+      scored.sort((a, b) => b.score - a.score);
+      const r = scored[0].r;
       return { url: r.link, title: r.title, thumbnail: r.imageUrl, duration: r.duration, author: r.channel || '', views: '' };
     }
   } catch {}
@@ -359,22 +374,10 @@ export default {
             }, { quoted: msg });
           }
 
-          // Send the audio
+          // Send the audio — no contextInfo so no link card appears
           const amsg = audio.audioBuffer
             ? { audio: audio.audioBuffer, mimetype: 'audio/mpeg' }
-            : {
-                audio: { url: audio.audioUrl },
-                mimetype: 'audio/mpeg',
-                contextInfo: {
-                  externalAdReply: {
-                    title: meta.title,
-                    body: meta.author || '',
-                    thumbnailUrl: meta.thumbnail || '',
-                    mediaType: 2,
-                    renderLargerThumbnail: true,
-                  },
-                },
-              };
+            : { audio: { url: audio.audioUrl }, mimetype: 'audio/mpeg' };
 
           await sock.sendMessage(jid, amsg, { quoted: msg });
           await react('✅');
