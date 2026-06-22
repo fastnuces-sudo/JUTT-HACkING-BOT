@@ -125,7 +125,11 @@ async function tryYtdlpAudio(url, isUrl = true) {
   const src = isUrl ? `"${url}"` : `"ytsearch1:${url.replace(/"/g, '')}"`;
   for (const client of ['tv_embedded', 'android', 'ios']) {
     try {
-      await execAsync(`${YTDLP} ${src} ${ck} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --max-filesize 20m --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`, { timeout: 90000 });
+      // 64K bitrate keeps files small (~2-3 MB for a 4-min song)
+      await execAsync(
+        `${YTDLP} ${src} ${ck} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 64K --max-filesize 8m --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`,
+        { timeout: 90000 }
+      );
       if (await fs.pathExists(out)) {
         const buf = await fs.readFile(out);
         await fs.remove(out).catch(() => {});
@@ -164,22 +168,17 @@ async function trySiputzxMp4(url) {
 }
 
 async function tryYtdlpVideo(url) {
-  const tempDir = path.join(__dirname, '../../temp');
-  await fs.ensureDir(tempDir);
-  const uid = `ytv_${Date.now()}`;
-  const outTpl = path.join(tempDir, `${uid}.%(ext)s`);
   const ck = getCookiesFlag();
+  // Use --get-url to get the direct CDN stream URL (no download, no size limit)
   for (const client of ['tv_embedded', 'android', 'ios']) {
-    for (const fmt of ['best[height<=480][ext=mp4]', 'best[height<=360][ext=mp4]', 'best[height<=480]', 'best']) {
+    for (const fmt of ['best[height<=480][ext=mp4]', 'best[height<=360][ext=mp4]', 'bestvideo[height<=480]+bestaudio/best[height<=480]', 'best']) {
       try {
-        await execAsync(`${YTDLP} "${url}" ${ck} --extractor-args "youtube:player_client=${client}" -f "${fmt}" -o "${outTpl}" --max-filesize 50m --no-playlist --quiet --no-warnings --no-check-certificate`, { timeout: 180000 });
-        const files = await fs.readdir(tempDir);
-        const found = files.find(f => f.startsWith(uid));
-        if (found) {
-          const buf = await fs.readFile(path.join(tempDir, found));
-          await fs.remove(path.join(tempDir, found)).catch(() => {});
-          return { buffer: buf };
-        }
+        const { stdout } = await execAsync(
+          `${YTDLP} "${url}" ${ck} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings --no-check-certificate`,
+          { timeout: 30000 }
+        );
+        const streamUrl = stdout.trim().split('\n')[0];
+        if (streamUrl && streamUrl.startsWith('http')) return { videoUrl: streamUrl };
       } catch {}
     }
   }
