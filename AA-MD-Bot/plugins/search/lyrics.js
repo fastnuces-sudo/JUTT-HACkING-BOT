@@ -1,22 +1,32 @@
-import axios from 'axios';
+import { getLyrics } from '@fantox01/lyrics-scraper';
 
 export default {
   command: 'lyrics',
-  alias: ['lyric', 'song'],
+  alias: ['lyric'],
   description: 'Get song lyrics',
   category: 'search',
-  async execute({ reply, args }) {
-    if (args.length < 2) return reply('❌ Usage: .lyrics [artist] - [song]\nExample: .lyrics Eminem - Lose Yourself');
-    const input = args.join(' ');
-    const parts = input.split(' - ');
-    if (parts.length < 2) return reply('❌ Format: .lyrics [artist] - [song]');
-    const [artist, title] = parts;
+  async execute({ sock, msg, jid, text, react, reply, prefix }) {
+    if (!text) {
+      await react('❔');
+      return reply(`Please provide an lyrics Search Term !\n\nExample: *${prefix}lyrics Heat waves*`);
+    }
+    await react('📃');
     try {
-      const res = await axios.get(`https://api.lyrics.ovh/v1/${encodeURIComponent(artist.trim())}/${encodeURIComponent(title.trim())}`);
-      const lyrics = res.data.lyrics?.substring(0, 3000) || 'No lyrics found';
-      reply(`🎵 *${title.trim()}* — ${artist.trim()}\n\n${lyrics}${res.data.lyrics?.length > 3000 ? '\n\n...*(truncated)*' : ''}`);
-    } catch {
-      reply(`❌ Lyrics not found for: *${title}* by ${artist}`);
+      let result = await getLyrics(text);
+      if (result && result.status !== 500 && result.lyrics && result.thumbnail) {
+        let resText2 = `  *『  ⚡️ Lyrics Search Engine ⚡️  』*\n\n\n_Search Term:_ *${text}*\n\n\n*📍 Lyrics:* \n\n${result.lyrics}\n\n\n_*Powered by:*_ *Lyrics Scraper - by FantoX*\n\n_*Url:*_ https://github.com/FantoX/lyrics-scraper \n`;
+        await sock.sendMessage(jid, {
+          image: { url: result.thumbnail },
+          caption: resText2,
+        }, { quoted: msg });
+      } else {
+        await react('❌');
+        return reply(result?.message || `Unable to find lyrics for the song: *${text}*`);
+      }
+    } catch (err) {
+      console.error('Lyrics Error:', err);
+      await react('❌');
+      return reply(`An error occurred while fetching lyrics for: *${text}*`);
     }
   },
 };

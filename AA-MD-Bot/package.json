@@ -17,6 +17,8 @@
   "author": "Ahsan Ali Wadani (AA Mods)",
   "license": "MIT",
   "dependencies": {
+    "@fantox01/lyrics-scraper": "^4.0.0",
+    "@fantox01/search-it": "^1.0.0",
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "7.0.0-rc13",
     "axios": "^1.7.0",

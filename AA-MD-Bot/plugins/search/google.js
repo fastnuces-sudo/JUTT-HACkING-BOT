@@ -1,23 +1,35 @@
-import axios from 'axios';
+import { searchit } from '@fantox01/search-it';
 
 export default {
   command: 'google',
-  alias: ['search', 'gsearch'],
-  description: 'Search Google (via DuckDuckGo)',
+  alias: ['search'],
+  description: 'Search Google',
   category: 'search',
-  async execute({ reply, text }) {
-    if (!text) return reply('❌ Usage: .google [query]\nExample: .google Node.js tutorial');
+  async execute({ sock, msg, jid, text, react, reply, prefix }) {
+    if (!text) {
+      await react('❔');
+      return reply(`Please provide an image Search Term !\n\nExample: *${prefix}search Free Web development Course*`);
+    }
+    await react('🔍');
     try {
-      const res = await axios.get(`https://api.duckduckgo.com/?q=${encodeURIComponent(text)}&format=json&no_html=1&skip_disambig=1`);
-      const d = res.data;
-      const answer = d.AbstractText || d.Answer || d.Definition;
-      if (answer) {
-        return reply(`🔍 *Search: ${text}*\n\n${answer}\n\n🔗 Source: ${d.AbstractURL || d.DefinitionURL || 'DuckDuckGo'}`);
+      const googleSearch = await searchit(text, 10);
+      if (!googleSearch || googleSearch.length === 0) {
+        await react('❌');
+        return reply(`No results found for: *${text}*`);
       }
-      const related = d.RelatedTopics?.slice(0, 5)?.map((t, i) => `${i + 1}. ${t.Text?.substring(0, 100) || ''}`.trim()).filter(Boolean).join('\n');
-      reply(`🔍 *Search: ${text}*\n\n${related || 'No results found.'}\n\n🔗 https://duckduckgo.com/?q=${encodeURIComponent(text)}`);
-    } catch {
-      reply(`❌ Search failed for: *${text}*`);
+      let resText = `  *『  ⚡️ Google Search Engine ⚡️  』*\n\n\n_🔍 Search Term:_ *${text}*\n\n\n`;
+      for (const result of googleSearch) {
+        resText += `_📍 Result:_ *${result.index + 1}*\n\n_🎀 Title:_ *${result.page}*\n\n_🔶 Description:_ *${result.desc}*\n\n_🔷 Link:_ *${result.url}*\n\n\n`;
+      }
+      await sock.sendMessage(jid, {
+        video: { url: 'https://media.tenor.com/3aaAzbTrTMwAAAPo/google-technology-company.mp4' },
+        gifPlayback: true,
+        caption: resText,
+      }, { quoted: msg });
+    } catch (err) {
+      console.error('Search error:', err);
+      await react('❌');
+      return reply(`An error occurred while searching for: *${text}*`);
     }
   },
 };
