@@ -177,31 +177,35 @@ async function trySiputzxMp4(ytUrl) {
   return null;
 }
 
-// ── yt-dlp video — 360p mp4, with PO token ───────────────────────────────────
+// ── yt-dlp video — 360p mp4 forced, with PO token ────────────────────────────
 async function tryYtdlpVideo(ytUrl) {
   const tempDir = path.join(__dirname, '../../temp');
   await fs.ensureDir(tempDir);
   const uid = `ytv_${Date.now()}`;
-  const outTpl = path.join(tempDir, `${uid}.%(ext)s`);
+  const outFile = path.join(tempDir, `${uid}.mp4`);
   const ck = getCookiesFlag();
   const po = await getPoTokenArgs();
   for (const client of ['tv_embedded', 'android', 'ios']) {
-    for (const fmt of ['best[height<=360][ext=mp4]', 'best[height<=360]', 'best[height<=480][ext=mp4]', 'best']) {
+    for (const fmt of [
+      'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]',
+      'best[height<=360]',
+      'best[height<=480]',
+      'best',
+    ]) {
       try {
         await execAsync(
-          `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --no-playlist -o "${outTpl}" --quiet --no-warnings --no-check-certificate`,
+          `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --merge-output-format mp4 --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
           { timeout: 180000 }
         );
-        const files = await fs.readdir(tempDir);
-        const found = files.find(f => f.startsWith(uid));
-        if (found) {
-          const buf = await fs.readFile(path.join(tempDir, found));
-          await fs.remove(path.join(tempDir, found)).catch(() => {});
-          return { buffer: buf };
+        if (await fs.pathExists(outFile)) {
+          const buf = await fs.readFile(outFile);
+          await fs.remove(outFile).catch(() => {});
+          if (buf.length > 0) return { buffer: buf };
         }
       } catch {}
     }
   }
+  await fs.remove(outFile).catch(() => {});
   return null;
 }
 
@@ -339,8 +343,8 @@ export default {
           const adata = await downloadAudio(ytUrl, null);
           if (!adata) return reply('❌ MP3 download failed — all sources returned error.');
           const amsg = adata.buffer
-            ? { audio: adata.buffer, mimetype: adata.mime }
-            : { audio: { url: adata.url }, mimetype: adata.mime };
+            ? { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }
+            : { audio: { url: adata.url }, mimetype: 'audio/mpeg', ptt: false };
           await sock.sendMessage(jid, amsg, { quoted: msg });
           await react('✅');
           break;
@@ -359,8 +363,8 @@ export default {
             const adata = await downloadAudio(directUrl, null);
             if (!adata) return reply('❌ Download failed — all sources returned error.');
             const amsg = adata.buffer
-              ? { audio: adata.buffer, mimetype: adata.mime }
-              : { audio: { url: adata.url }, mimetype: adata.mime };
+              ? { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }
+              : { audio: { url: adata.url }, mimetype: 'audio/mpeg', ptt: false };
             await sock.sendMessage(jid, amsg, { quoted: msg });
             await react('✅');
             break;
@@ -388,8 +392,8 @@ export default {
             : meta;
 
           const amsg = adata.buffer
-            ? { audio: adata.buffer, mimetype: adata.mime }
-            : { audio: { url: adata.url }, mimetype: adata.mime };
+            ? { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }
+            : { audio: { url: adata.url }, mimetype: 'audio/mpeg', ptt: false };
 
           await sock.sendMessage(jid, amsg, { quoted: msg });
           await react('✅');
