@@ -273,6 +273,39 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         if (cache.size > _CACHE_MAX) cache.delete(cache.keys().next().value);
       }
 
+      // ── Anti View-Once: auto-reveal view-once media ──────────
+      try {
+        const voMsg = msg.message?.viewOnceMessage
+                   || msg.message?.viewOnceMessageV2
+                   || msg.message?.viewOnceMessageV2Extension;
+        if (voMsg) {
+          const settings = db.settings.get();
+          const chatJid  = msg.key.remoteJid;
+          const inGroup  = chatJid?.endsWith('@g.us');
+          const grpSet   = inGroup ? db.groups.get(chatJid) : null;
+          const avo      = inGroup
+            ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
+            : (settings.antiViewOnce ?? false);
+          if (avo) {
+            const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
+            const buf = await downloadMediaMessage(msg, 'buffer', {}).catch(() => null);
+            if (buf?.length) {
+              const inner = voMsg.message?.imageMessage || voMsg.message?.videoMessage;
+              const mime  = inner?.mimetype || 'image/jpeg';
+              const isVid = !!voMsg.message?.videoMessage;
+              const sender = msg.key.participant || msg.key.remoteJid;
+              const num    = sender?.split('@')[0]?.split(':')[0] || '?';
+              const cap    = `🔓 *View-Once Revealed*\n👤 From: @${num}`;
+              if (isVid) {
+                await sock.sendMessage(chatJid, { video: buf, caption: cap, mimetype: mime, mentions: [sender] }).catch(() => {});
+              } else {
+                await sock.sendMessage(chatJid, { image: buf, caption: cap, mimetype: mime, mentions: [sender] }).catch(() => {});
+              }
+            }
+          }
+        }
+      } catch {}
+
       // ── Auto-Status handling (status@broadcast) ──────────────
       if (msg.key.remoteJid === 'status@broadcast') {
         await handleStatusMessage(sock, msg, sessionId).catch(() => {});
@@ -280,6 +313,30 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       }
 
       if (isJidBroadcast(msg.key.remoteJid)) continue;
+
+      // ── Auto Read: silently mark message as read ──────────────
+      try {
+        if (db.settings.getValue('autoRead')) {
+          await sock.readMessages([msg.key]).catch(() => {});
+        }
+      } catch {}
+
+      // ── Auto Reply: respond to DMs automatically ──────────────
+      try {
+        const isDm       = !msg.key.remoteJid?.endsWith('@g.us') && !msg.key.remoteJid?.endsWith('@broadcast');
+        const isFromMe   = msg.key.fromMe;
+        const autoReplyMsg = db.settings.getValue('autoReply');
+        if (isDm && !isFromMe && autoReplyMsg) {
+          const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+          const isCmd = text?.startsWith(db.settings.getValue('prefix') || '.');
+          if (!isCmd) {
+            await sock.sendMessage(msg.key.remoteJid, {
+              text: `🤖 *Auto Reply*\n\n${autoReplyMsg}\n\n> Powered by AA MD Bot`,
+            }).catch(() => {});
+          }
+        }
+      } catch {}
+
       if (messageHandler) {
         try { await messageHandler(sock, msg, sessionId); }
         catch (err) { logger.error({ err: err.message }, 'Message handler error'); }
