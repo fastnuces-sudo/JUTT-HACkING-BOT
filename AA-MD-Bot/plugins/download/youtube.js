@@ -9,6 +9,7 @@ import { getPoTokenArgs } from '../../lib/potoken.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TEMP = path.join(__dirname, '../../temp');
 
 const YT_REGEX =
   /^(https?:\/\/)?((www|m|music)\.)?(youtube(-nocookie)?\.com\/(watch\?v=|shorts\/|live\/)|youtu\.be\/)[\w-]+(\S+)?$/i;
@@ -16,8 +17,78 @@ const YT_REGEX =
 const extractUrl = (t) => { if (!t) return null; const m = t.match(YT_REGEX); return m ? m[0] : null; };
 const api = axios.create({ timeout: 20000 });
 
-const MAX_AUDIO_MB = 18;
-const MAX_VIDEO_MB = 18;
+// ── ffmpeg compress helpers ────────────────────────────────────────────────────
+
+async function compressAudio(inputBuf) {
+  await fs.ensureDir(TEMP);
+  const id  = Date.now();
+  const inp = path.join(TEMP, `ca_${id}_in.mp3`);
+  const out = path.join(TEMP, `ca_${id}_out.mp3`);
+  try {
+    await fs.writeFile(inp, inputBuf);
+    await execAsync(
+      `ffmpeg -i "${inp}" -b:a 64k -ar 44100 -ac 2 -y "${out}" -loglevel error`,
+      { timeout: 90000 }
+    );
+    if (await fs.pathExists(out)) {
+      const buf = await fs.readFile(out);
+      if (buf.length > 0) return buf;
+    }
+  } catch {}
+  finally {
+    await fs.remove(inp).catch(() => {});
+    await fs.remove(out).catch(() => {});
+  }
+  return inputBuf; // fallback: return original if ffmpeg fails
+}
+
+async function compressVideo(inputBuf) {
+  await fs.ensureDir(TEMP);
+  const id  = Date.now();
+  const inp = path.join(TEMP, `cv_${id}_in.mp4`);
+  const out = path.join(TEMP, `cv_${id}_out.mp4`);
+  try {
+    await fs.writeFile(inp, inputBuf);
+    await execAsync(
+      `ffmpeg -i "${inp}" -vf "scale=-2:360" -c:v libx264 -crf 28 -preset fast -c:a aac -b:a 64k -movflags +faststart -y "${out}" -loglevel error`,
+      { timeout: 180000 }
+    );
+    if (await fs.pathExists(out)) {
+      const buf = await fs.readFile(out);
+      if (buf.length > 0) return buf;
+    }
+  } catch {}
+  finally {
+    await fs.remove(inp).catch(() => {});
+    await fs.remove(out).catch(() => {});
+  }
+  return inputBuf;
+}
+
+// ── Fetch URL → buffer ────────────────────────────────────────────────────────
+
+async function fetchBuf(url) {
+  try {
+    const resp = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 60000,
+      maxContentLength: 200 * 1024 * 1024,
+    });
+    const buf = Buffer.from(resp.data);
+    if (buf.length > 0) return buf;
+  } catch {}
+  return null;
+}
+
+// ── Title similarity scorer ───────────────────────────────────────────────────
+
+function scoreMatch(title, query) {
+  if (!title) return 0;
+  const t = title.toLowerCase();
+  const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+  if (!words.length) return 0;
+  return words.filter(w => t.includes(w)).length / words.length;
+}
 
 function fmtViews(n) {
   if (!n) return '';
@@ -27,16 +98,8 @@ function fmtViews(n) {
   return String(n);
 }
 
-// ── Title similarity scorer ───────────────────────────────────────────────────
-function scoreMatch(title, query) {
-  if (!title) return 0;
-  const t = title.toLowerCase();
-  const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-  if (!words.length) return 0;
-  return words.filter(w => t.includes(w)).length / words.length;
-}
+// ── Search (top 5 → best title match) ────────────────────────────────────────
 
-// ── Search (top 5 results + best-match scoring) ───────────────────────────────
 async function searchYT(query) {
   try {
     const playdl = (await import('play-dl')).default;
@@ -53,8 +116,7 @@ async function searchYT(query) {
   try {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/youtube?q=${encodeURIComponent(query)}`);
     if (d.status && d.result?.length) {
-      const top = d.result.slice(0, 3);
-      const scored = top.map(r => ({ r, score: scoreMatch(r.title, query) }));
+      const scored = d.result.slice(0, 3).map(r => ({ r, score: scoreMatch(r.title, query) }));
       scored.sort((a, b) => b.score - a.score);
       const r = scored[0].r;
       return { url: r.link, title: r.title, thumbnail: r.imageUrl, duration: r.duration, author: r.channel || '', views: '' };
@@ -63,24 +125,13 @@ async function searchYT(query) {
   return null;
 }
 
-// ── URL size/type validator (HEAD request — no download) ──────────────────────
-async function headOk(url, maxMB, rejectVideoType = false) {
-  try {
-    const resp = await axios.head(url, { timeout: 8000, maxRedirects: 5 });
-    const cl = parseInt(resp.headers['content-length'] || '0');
-    const ct = (resp.headers['content-type'] || '').toLowerCase();
-    if (cl && cl > maxMB * 1024 * 1024) return false; // too large
-    if (rejectVideoType && ct.startsWith('video/')) return false; // wrong type for audio
-    return true;
-  } catch { return false; }
-}
+// ── Audio API sources — download to buffer ────────────────────────────────────
 
-// ── Audio API sources — return { url, mime } if passes HEAD check ─────────────
 async function tryFaaMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.mp3;
-    if (u && await headOk(u, MAX_AUDIO_MB, true)) return { url: u, mime: 'audio/mpeg' };
+    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
   } catch {}
   return null;
 }
@@ -89,7 +140,7 @@ async function tryNexrayMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.url;
-    if (u && await headOk(u, MAX_AUDIO_MB, true)) return { url: u, mime: 'audio/mpeg' };
+    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
   } catch {}
   return null;
 }
@@ -98,13 +149,14 @@ async function trySiputzxMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.siputzx.my.id/api/d/ytmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.data?.url;
-    if (u && await headOk(u, MAX_AUDIO_MB, true)) return { url: u, mime: 'audio/mpeg' };
+    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
   } catch {}
   return null;
 }
 
-// ── SoundCloud fallback (streams to buffer — completely bypasses YouTube) ─────
-async function trySoundCloud(query, thumbnail = '') {
+// ── SoundCloud fallback ───────────────────────────────────────────────────────
+
+async function trySoundCloud(query) {
   try {
     const playdl = (await import('play-dl')).default;
     const scRes = await playdl.search(query, { source: { soundcloud: 'tracks' }, limit: 1 });
@@ -114,34 +166,28 @@ async function trySoundCloud(query, thumbnail = '') {
     const chunks = [];
     for await (const chunk of stream.stream) chunks.push(chunk);
     const buf = Buffer.concat(chunks);
-    if (buf.length > MAX_AUDIO_MB * 1024 * 1024) return null;
-    return {
-      buffer: buf, mime: 'audio/mpeg',
-      scTitle: sc.name || query,
-      scAuthor: sc.publisher?.artist || sc.user?.name || 'SoundCloud',
-      scThumb: sc.thumbnail || thumbnail,
-    };
+    if (buf.length > 0) return { buf, title: sc.name || query, author: sc.user?.name || 'SoundCloud', thumb: sc.thumbnail || '' };
   } catch {}
   return null;
 }
 
-// ── yt-dlp audio — 128K MP3, with PO token ───────────────────────────────────
+// ── yt-dlp audio — 64K MP3 with PO token ─────────────────────────────────────
+
 async function tryYtdlpAudio(ytUrl) {
-  const tempDir = path.join(__dirname, '../../temp');
-  await fs.ensureDir(tempDir);
-  const out = path.join(tempDir, `yta_${Date.now()}.mp3`);
+  await fs.ensureDir(TEMP);
+  const out = path.join(TEMP, `yta_${Date.now()}.mp3`);
   const ck = getCookiesFlag();
   const po = await getPoTokenArgs();
   for (const client of ['tv_embedded', 'android', 'ios']) {
     try {
       await execAsync(
-        `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`,
+        `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 64K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`,
         { timeout: 180000 }
       );
       if (await fs.pathExists(out)) {
         const buf = await fs.readFile(out);
         await fs.remove(out).catch(() => {});
-        return { buffer: buf, mime: 'audio/mpeg' };
+        if (buf.length > 0) return buf;
       }
     } catch {}
   }
@@ -149,12 +195,13 @@ async function tryYtdlpAudio(ytUrl) {
   return null;
 }
 
-// ── Video API sources — return { url } if passes HEAD check ──────────────────
+// ── Video API sources — download to buffer ────────────────────────────────────
+
 async function tryFaaMp4(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp4?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.download_url;
-    if (u && await headOk(u, MAX_VIDEO_MB)) return { url: u };
+    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
   } catch {}
   return null;
 }
@@ -163,7 +210,7 @@ async function tryNexrayMp4(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.url;
-    if (u && await headOk(u, MAX_VIDEO_MB)) return { url: u };
+    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
   } catch {}
   return null;
 }
@@ -172,17 +219,16 @@ async function trySiputzxMp4(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.siputzx.my.id/api/d/ytmp4?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.data?.url;
-    if (u && await headOk(u, MAX_VIDEO_MB)) return { url: u };
+    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
   } catch {}
   return null;
 }
 
-// ── yt-dlp video — 360p mp4 forced, with PO token ────────────────────────────
+// ── yt-dlp video — 360p MP4 with PO token ────────────────────────────────────
+
 async function tryYtdlpVideo(ytUrl) {
-  const tempDir = path.join(__dirname, '../../temp');
-  await fs.ensureDir(tempDir);
-  const uid = `ytv_${Date.now()}`;
-  const outFile = path.join(tempDir, `${uid}.mp4`);
+  await fs.ensureDir(TEMP);
+  const outFile = path.join(TEMP, `ytv_${Date.now()}.mp4`);
   const ck = getCookiesFlag();
   const po = await getPoTokenArgs();
   for (const client of ['tv_embedded', 'android', 'ios']) {
@@ -200,7 +246,7 @@ async function tryYtdlpVideo(ytUrl) {
         if (await fs.pathExists(outFile)) {
           const buf = await fs.readFile(outFile);
           await fs.remove(outFile).catch(() => {});
-          if (buf.length > 0) return { buffer: buf };
+          if (buf.length > 0) return buf;
         }
       } catch {}
     }
@@ -209,36 +255,45 @@ async function tryYtdlpVideo(ytUrl) {
   return null;
 }
 
-// ── Orchestrators ─────────────────────────────────────────────────────────────
+// ── Orchestrators — download + compress ───────────────────────────────────────
 
 async function downloadAudio(ytUrl, query) {
-  // 1-3: API sources via URL (HEAD-validated, WhatsApp downloads directly)
-  const a1 = await tryFaaMp3(ytUrl);     if (a1) return { url: a1.url, mime: a1.mime };
-  const a2 = await tryNexrayMp3(ytUrl);  if (a2) return { url: a2.url, mime: a2.mime };
-  const a3 = await trySiputzxMp3(ytUrl); if (a3) return { url: a3.url, mime: a3.mime };
-  // 4: SoundCloud fallback (no YouTube dependency, no size issues)
-  if (query) {
+  let raw = null;
+  let scMeta = null;
+
+  raw = await tryFaaMp3(ytUrl);
+  if (!raw) raw = await tryNexrayMp3(ytUrl);
+  if (!raw) raw = await trySiputzxMp3(ytUrl);
+
+  if (!raw && query) {
     const sc = await trySoundCloud(query);
-    if (sc) return { buffer: sc.buffer, mime: sc.mime, scMeta: { title: sc.scTitle, author: sc.scAuthor, thumbnail: sc.scThumb } };
+    if (sc) { raw = sc.buf; scMeta = { title: sc.title, author: sc.author, thumb: sc.thumb }; }
   }
-  // 5: yt-dlp with PO token (guaranteed, controlled quality)
-  const yt = await tryYtdlpAudio(ytUrl);
-  if (yt) return { buffer: yt.buffer, mime: yt.mime };
-  return null;
+
+  if (!raw) raw = await tryYtdlpAudio(ytUrl);
+  if (!raw) return null;
+
+  const compressed = await compressAudio(raw);
+  return { buffer: compressed, mime: 'audio/mpeg', scMeta };
 }
 
 async function downloadVideo(ytUrl) {
-  const v1 = await tryFaaMp4(ytUrl);     if (v1) return { url: v1.url };
-  const v2 = await tryNexrayMp4(ytUrl);  if (v2) return { url: v2.url };
-  const v3 = await trySiputzxMp4(ytUrl); if (v3) return { url: v3.url };
-  const yt = await tryYtdlpVideo(ytUrl); if (yt)  return { buffer: yt.buffer };
-  return null;
+  let raw = null;
+
+  raw = await tryFaaMp4(ytUrl);
+  if (!raw) raw = await tryNexrayMp4(ytUrl);
+  if (!raw) raw = await trySiputzxMp4(ytUrl);
+  if (!raw) raw = await tryYtdlpVideo(ytUrl);
+  if (!raw) return null;
+
+  const compressed = await compressVideo(raw);
+  return { buffer: compressed };
 }
 
 // ── UI captions ───────────────────────────────────────────────────────────────
 
 function buildAudioCaption(meta, botName) {
-  const views = meta.views ? ` | 👁 ${meta.views} views` : '';
+  const views = meta.views ? ` | 👁 ${meta.views}` : '';
   return (
     `✦✦✦✦✦✦✦✦✦✦\n` +
     `🎵 ${botName} MUSIC\n` +
@@ -247,14 +302,14 @@ function buildAudioCaption(meta, botName) {
     `🎤 ${meta.author || 'Unknown'}\n` +
     `⏱ ${meta.duration || '?'}${views}\n\n` +
     `━━━━━━━━━━━━━━━━\n` +
-    `⏳ Please wait, downloading audio...\n` +
+    `⏳ Downloading & compressing...\n` +
     `> 🤖 Powered by ${botName}\n` +
     `> 👨‍💻 Developed by Ahsan Ali Wadani`
   );
 }
 
 function buildVideoCaption(meta, botName) {
-  const views = meta.views ? ` | 👁 ${meta.views} views` : '';
+  const views = meta.views ? ` | 👁 ${meta.views}` : '';
   return (
     `✦✦✦✦✦✦✦✦✦✦\n` +
     `🎬 ${botName} VIDEO\n` +
@@ -273,7 +328,7 @@ function buildVideoCaption(meta, botName) {
 export default {
   command: 'play',
   alias: ['song', 'yt', 'ytmp3', 'mp3', 'ytmp4', 'video', 'mp4'],
-  description: 'Download YouTube audio or video',
+  description: 'Download YouTube audio or video (compressed)',
   category: 'download',
 
   execute: async ({ sock, msg, jid, text, command, react, reply, prefix, config }) => {
@@ -317,19 +372,22 @@ export default {
           if (meta?.thumbnail) {
             await sock.sendMessage(jid, {
               image: { url: meta.thumbnail },
-              caption: `${buildVideoCaption(meta, botName)}\n\n⏳ Downloading...`,
+              caption: `${buildVideoCaption(meta, botName)}\n\n⏳ Downloading & compressing...`,
             }, { quoted: msg });
           }
 
           const vdata = await downloadVideo(ytUrl);
           if (!vdata) return reply('❌ Video download failed — all sources returned error.');
 
-          const vcap = meta ? buildVideoCaption(meta, botName) : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
-          if (vdata.buffer) {
-            await sock.sendMessage(jid, { video: vdata.buffer, mimetype: 'video/mp4', caption: vcap }, { quoted: msg });
-          } else {
-            await sock.sendMessage(jid, { video: { url: vdata.url }, mimetype: 'video/mp4', caption: vcap }, { quoted: msg });
-          }
+          const vcap = meta
+            ? buildVideoCaption(meta, botName)
+            : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
+
+          await sock.sendMessage(jid, {
+            video: vdata.buffer,
+            mimetype: 'video/mp4',
+            caption: vcap,
+          }, { quoted: msg });
           await react('✅');
           break;
         }
@@ -342,10 +400,7 @@ export default {
           if (!ytUrl) return reply(`❌ Please provide a valid YouTube URL.\n\nTo search by name: *${prefix}play <song name>*`);
           const adata = await downloadAudio(ytUrl, null);
           if (!adata) return reply('❌ MP3 download failed — all sources returned error.');
-          const amsg = adata.buffer
-            ? { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }
-            : { audio: { url: adata.url }, mimetype: 'audio/mpeg', ptt: false };
-          await sock.sendMessage(jid, amsg, { quoted: msg });
+          await sock.sendMessage(jid, { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
           await react('✅');
           break;
         }
@@ -362,19 +417,15 @@ export default {
           if (directUrl) {
             const adata = await downloadAudio(directUrl, null);
             if (!adata) return reply('❌ Download failed — all sources returned error.');
-            const amsg = adata.buffer
-              ? { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }
-              : { audio: { url: adata.url }, mimetype: 'audio/mpeg', ptt: false };
-            await sock.sendMessage(jid, amsg, { quoted: msg });
+            await sock.sendMessage(jid, { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
             await react('✅');
             break;
           }
 
-          // Search → get exact YouTube URL → download
+          // Search → get exact YouTube URL → download + compress
           const meta = await searchYT(query);
           if (!meta?.url) return reply(`❌ Could not find: *${query}*`);
 
-          // Show info card while downloading
           if (meta.thumbnail) {
             await sock.sendMessage(jid, {
               image: { url: meta.thumbnail },
@@ -383,19 +434,9 @@ export default {
           }
 
           const adata = await downloadAudio(meta.url, query);
-
           if (!adata) return reply(`❌ Found *${meta.title}* but download failed — all sources returned error.`);
 
-          // If SoundCloud was used, scMeta has updated title/author
-          const finalMeta = adata.scMeta
-            ? { ...meta, title: adata.scMeta.title || meta.title, author: adata.scMeta.author || meta.author }
-            : meta;
-
-          const amsg = adata.buffer
-            ? { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }
-            : { audio: { url: adata.url }, mimetype: 'audio/mpeg', ptt: false };
-
-          await sock.sendMessage(jid, amsg, { quoted: msg });
+          await sock.sendMessage(jid, { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
           await react('✅');
           break;
         }
