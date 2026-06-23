@@ -125,23 +125,23 @@ async function trySoundCloud(query, thumbnail = '') {
   return null;
 }
 
-// ── yt-dlp audio — 64K m4a, with PO token (guaranteed no 403) ────────────────
+// ── yt-dlp audio — 128K MP3, with PO token ───────────────────────────────────
 async function tryYtdlpAudio(ytUrl) {
   const tempDir = path.join(__dirname, '../../temp');
   await fs.ensureDir(tempDir);
-  const out = path.join(tempDir, `yta_${Date.now()}.m4a`);
+  const out = path.join(tempDir, `yta_${Date.now()}.mp3`);
   const ck = getCookiesFlag();
   const po = await getPoTokenArgs();
   for (const client of ['tv_embedded', 'android', 'ios']) {
     try {
       await execAsync(
-        `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format m4a --audio-quality 64K --max-filesize ${MAX_AUDIO_MB}m --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`,
-        { timeout: 120000 }
+        `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`,
+        { timeout: 180000 }
       );
       if (await fs.pathExists(out)) {
         const buf = await fs.readFile(out);
         await fs.remove(out).catch(() => {});
-        return { buffer: buf, mime: 'audio/mp4' };
+        return { buffer: buf, mime: 'audio/mpeg' };
       }
     } catch {}
   }
@@ -186,11 +186,11 @@ async function tryYtdlpVideo(ytUrl) {
   const ck = getCookiesFlag();
   const po = await getPoTokenArgs();
   for (const client of ['tv_embedded', 'android', 'ios']) {
-    for (const fmt of ['best[height<=360][ext=mp4]', 'best[height<=480][ext=mp4]', 'best[height<=360]']) {
+    for (const fmt of ['best[height<=360][ext=mp4]', 'best[height<=360]', 'best[height<=480][ext=mp4]', 'best']) {
       try {
         await execAsync(
-          `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --max-filesize ${MAX_VIDEO_MB}m --no-playlist -o "${outTpl}" --quiet --no-warnings --no-check-certificate`,
-          { timeout: 120000 }
+          `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --no-playlist -o "${outTpl}" --quiet --no-warnings --no-check-certificate`,
+          { timeout: 180000 }
         );
         const files = await fs.readdir(tempDir);
         const found = files.find(f => f.startsWith(uid));
