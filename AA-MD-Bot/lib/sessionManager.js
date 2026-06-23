@@ -158,51 +158,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       });
       if (connectionHandler) connectionHandler(sessionId, sock, 'open');
 
-      // Send connection confirmation to own self-chat (You tab)
-      setTimeout(async () => {
-        try {
-          if (!phone) return;
-          // selfJid must be bare number @s.whatsapp.net (no device suffix :0)
-          const selfJid = `${phone}@s.whatsapp.net`;
-          const now = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' });
-          const dashboard = process.env.REPLIT_DEV_DOMAIN
-            ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-            : 'http://localhost:5000';
-          const infoText =
-            `╔══════════════════════════════╗\n` +
-            `║  ✅ *AA MD Bot Connected!*   ║\n` +
-            `╚══════════════════════════════╝\n\n` +
-            `📱 *Number:* +${phone}\n` +
-            `🆔 *Session:* ${sessionId}\n` +
-            `🕐 *Time:* ${now}\n` +
-            `🌐 *Dashboard:* ${dashboard}\n\n` +
-            `📦 *Commands:* Type *.menu* to see all commands\n` +
-            `👑 *Owner Panel:* Type *.smenu* for dev tools\n` +
-            `⚙️ *Settings:* Type *.bs* for bot settings\n\n` +
-            `🌐 https://aa-mods.vercel.app/\n` +
-            `🤖 *Powered by AA MD Bot v3.0*\n` +
-            `👨‍💻 *Developed by Ahsan Ali Wadani*`;
-
-          const bannerPaths = [
-            path.join(__dirname, '../banner.jpeg'),
-            path.join(__dirname, '../banner.jpg'),
-          ];
-          let bannerBuf = null;
-          for (const p of bannerPaths) {
-            try { if (fs.existsSync(p)) { bannerBuf = fs.readFileSync(p); break; } } catch {}
-          }
-
-          if (bannerBuf) {
-            await sock.sendMessage(selfJid, {
-              image: bannerBuf,
-              caption: infoText,
-              mimetype: 'image/jpeg',
-            }).catch(() => {});
-          } else {
-            await sock.sendMessage(selfJid, { text: infoText }).catch(() => {});
-          }
-        } catch {}
-      }, 3500);
+      // Connection confirmation message removed — was spamming DM on every restart
     }
 
     if (connection === 'connecting') {
@@ -270,10 +226,52 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     }
   });
 
+  // In-memory cache for anti-delete (last 60 messages per JID)
+  const _msgCache = new Map();
+  const _CACHE_MAX = 60;
+
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
     for (const msg of messages) {
       if (!msg.message) continue;
+
+      // ── Anti-Delete: detect protocolMessage REVOKE ────────────
+      const proto = msg.message?.protocolMessage;
+      if (proto?.type === 0) { // type 0 = REVOKE (message deleted)
+        try {
+          const deletedKey = proto.key;
+          const chatJid = deletedKey?.remoteJid || msg.key.remoteJid;
+          const deletedId = deletedKey?.id;
+          const groupMsg = chatJid?.endsWith('@g.us');
+          const settings = db.settings.get();
+          const adGroup = groupMsg ? (db.groups.get(chatJid)?.antidelete ?? settings.antidelete ?? false) : false;
+          const adDm    = !groupMsg ? (settings.antidelete ?? false) : false;
+          if (adGroup || adDm) {
+            const cache = _msgCache.get(chatJid);
+            const original = cache?.get(deletedId);
+            if (original) {
+              const deleter = msg.key.participant || msg.key.remoteJid;
+              const deleterNum = deleter?.split('@')[0]?.split(':')[0] || '?';
+              await sock.sendMessage(chatJid, {
+                text: `🗑️ *Anti-Delete* — Message recovered\n👤 Deleted by: @${deleterNum}`,
+                mentions: [deleter],
+              }).catch(() => {});
+              await sock.sendMessage(chatJid, { forward: original, force: true }).catch(() => {});
+            }
+          }
+        } catch {}
+        continue;
+      }
+
+      // Cache this message for potential anti-delete recovery
+      const cJid = msg.key.remoteJid;
+      const cId  = msg.key.id;
+      if (cJid && cId) {
+        if (!_msgCache.has(cJid)) _msgCache.set(cJid, new Map());
+        const cache = _msgCache.get(cJid);
+        cache.set(cId, msg);
+        if (cache.size > _CACHE_MAX) cache.delete(cache.keys().next().value);
+      }
 
       // ── Auto-Status handling (status@broadcast) ──────────────
       if (msg.key.remoteJid === 'status@broadcast') {
