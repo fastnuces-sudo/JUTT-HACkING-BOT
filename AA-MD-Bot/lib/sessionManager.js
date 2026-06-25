@@ -122,7 +122,8 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     generateHighQualityLinkPreview: true,
     getMessage: async () => ({ conversation: '' }),
     syncFullHistory: false,
-    markOnlineOnConnect: true,
+    markOnlineOnConnect: false,
+    shouldIgnoreJid: jid => isJidBroadcast(jid),
   });
 
   sock.sessionId = sessionId;
@@ -194,7 +195,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       });
       if (connectionHandler) connectionHandler(sessionId, sock, 'open');
 
-      // Connection confirmation message removed — was spamming DM on every restart
+      // Go unavailable immediately so phone still gets push notifications
+      // (markOnlineOnConnect:false + this ensures bot runs silently in background)
+      sock.sendPresenceUpdate('unavailable').catch(() => {});
     }
 
     if (connection === 'connecting') {
@@ -415,6 +418,8 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       if (messageHandler) {
         try { await messageHandler(sock, msg, sessionId); }
         catch (err) { logger.error({ err: err.message }, 'Message handler error'); }
+        // Stay invisible after processing so phone keeps getting push notifications
+        sock.sendPresenceUpdate('unavailable').catch(() => {});
       }
     }
   });
