@@ -11,32 +11,65 @@
 <meta name="author" content="Ahsan Ali Wadani — AA Mods">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#25d366">
-<link rel="canonical" href="/">
+<link rel="canonical" href="https://aa-md-bot.up.railway.app/">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://aa-md-bot.up.railway.app/">
 <meta property="og:title" content="AA MD Bot — Powerful WhatsApp Multi-Device Bot">
 <meta property="og:description" content="147+ plugins: Islamic commands, music, stickers, economy, group management & more. Free WhatsApp bot by AA Mods.">
-<meta property="og:image" content="/logo.jpeg">
+<meta property="og:image" content="https://aa-md-bot.up.railway.app/logo.jpeg">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
 <meta property="og:site_name" content="AA MD Bot">
+<meta property="og:locale" content="en_US">
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="AA MD Bot — Powerful WhatsApp Multi-Device Bot">
 <meta name="twitter:description" content="147+ plugins: Islamic commands, music, stickers, economy, group management & more.">
-<meta name="twitter:image" content="/logo.jpeg">
+<meta name="twitter:image" content="https://aa-md-bot.up.railway.app/logo.jpeg">
 
 <!-- Favicon -->
 <link rel="icon" type="image/jpeg" href="/logo.jpeg">
 <link rel="shortcut icon" href="/logo.jpeg">
 <link rel="apple-touch-icon" href="/logo.jpeg">
 
+<!-- JSON-LD Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "AA MD Bot",
+  "applicationCategory": "ChatApplication",
+  "operatingSystem": "Any",
+  "description": "Powerful WhatsApp Multi-Device bot with 147+ plugins: Islamic commands, music downloader, sticker maker, economy system, XP levels, group management, anti-delete, and much more.",
+  "url": "https://aa-md-bot.up.railway.app/",
+  "image": "https://aa-md-bot.up.railway.app/logo.jpeg",
+  "author": {
+    "@type": "Person",
+    "name": "Ahsan Ali Wadani",
+    "brand": "AA Mods"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "featureList": "Islamic Commands, Music Downloader, Sticker Maker, Economy System, XP Levels, Group Management, Anti-Delete, Anti-Call, YouTube Downloader, TikTok Downloader"
+}
+</script>
+
+<!-- Critical resource preloads (LCP elements) -->
+<link rel="preload" href="/banner.jpeg" as="image" fetchpriority="high">
+<link rel="preload" href="/logo.jpeg" as="image" fetchpriority="high">
+
+<!-- Non-render-blocking Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
 :root {
   --bg: #0b0f1a;
   --card: #111827;
@@ -45,7 +78,7 @@
   --green: #25d366;
   --green2: #128c7e;
   --text: #e0e6f0;
-  --muted: #6b7280;
+  --muted: #9ca3af;
   --red: #ef4444;
   --yellow: #fbbf24;
   --blue: #3b82f6;
@@ -295,8 +328,8 @@ a { text-decoration: none; color: inherit; }
 <div class="cs-wrap">
 
   <div class="cs-logo">
-    <img src="/logo.jpeg" alt="AA MD Bot" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-    <div class="cs-logo-fallback" style="display:none">🤖</div>
+    <img src="/logo.jpeg" alt="AA MD Bot Logo" fetchpriority="high" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="cs-logo-fallback" style="display:none" role="img" aria-label="AA MD Bot Logo">🤖</div>
     <div>
       <div class="cs-logo-text">AA MD Bot</div>
       <div class="cs-logo-sub">by Ahsan Ali | AA Mods</div>
@@ -316,8 +349,8 @@ a { text-decoration: none; color: inherit; }
       </div>
 
       <div id="pair-panel">
-        <label class="field-label">WhatsApp Number</label>
-        <input class="field-input" type="tel" id="cs-phone" placeholder="923001234567" maxlength="15">
+        <label class="field-label" for="cs-phone">WhatsApp Number</label>
+        <input class="field-input" type="tel" id="cs-phone" placeholder="923001234567" maxlength="15" autocomplete="tel">
         <p class="field-hint">Include country code, no + or spaces</p>
         <div style="margin-top:14px">
           <label class="field-label">Session Name <span style="font-weight:400;text-transform:none">(for multiple devices — optional)</span></label>
@@ -396,13 +429,13 @@ a { text-decoration: none; color: inherit; }
 
   <!-- Hero -->
   <div class="dash-hero">
-    <img src="/banner.jpeg" alt="" class="dash-banner" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <img src="/banner.jpeg" alt="AA MD Bot Dashboard Banner" class="dash-banner" fetchpriority="high" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
     <div class="dash-banner-fallback" style="display:none"></div>
     <div class="dash-hero-overlay"></div>
     <div class="dash-hero-content">
       <div class="dash-hero-left">
-        <img src="/logo.jpeg" alt="AA MD" class="dash-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-        <div class="dash-logo-fallback" style="display:none">🤖</div>
+        <img src="/logo.jpeg" alt="AA MD Bot Logo" class="dash-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="dash-logo-fallback" style="display:none" role="img" aria-label="AA MD Bot Logo">🤖</div>
         <div>
           <div class="dash-hero-title">AA MD Bot</div>
           <div class="dash-hero-sub" id="hero-sub">
