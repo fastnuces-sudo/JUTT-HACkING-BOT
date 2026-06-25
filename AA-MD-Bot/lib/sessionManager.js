@@ -240,32 +240,62 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       if (proto?.type === 0) { // type 0 = REVOKE (message deleted)
         try {
           const deletedKey = proto.key;
-          // Always use msg.key.remoteJid — this is the chat where the delete event
-          // was received (the group or DM where deletion happened), never the bot's own number
-          const chatJid  = msg.key.remoteJid;
+          // msg.key.remoteJid = the chat where the deletion was received (group or DM)
+          const chatJid   = msg.key.remoteJid;
           const deletedId = deletedKey?.id;
-          const groupMsg = chatJid?.endsWith('@g.us');
-          const settings = db.settings.get();
-          const adEnabled = groupMsg
+          const isGroup   = chatJid?.endsWith('@g.us');
+          const settings  = db.settings.get();
+          const adEnabled = isGroup
             ? (db.groups.get(chatJid)?.antidelete ?? settings.antidelete ?? false)
             : (settings.antidelete ?? false);
+
           if (adEnabled) {
-            // Try cache with the correct JID first; fall back to deletedKey.remoteJid
-            let cache = _msgCache.get(chatJid);
+            // Locate original message in cache
+            let cache    = _msgCache.get(chatJid);
             let original = cache?.get(deletedId);
             if (!original && deletedKey?.remoteJid && deletedKey.remoteJid !== chatJid) {
-              cache = _msgCache.get(deletedKey.remoteJid);
-              original = cache?.get(deletedId);
+              cache    = _msgCache.get(deletedKey.remoteJid);
+              original = cache?.get(deletedKey.remoteJid === chatJid ? deletedId : deletedId);
             }
+
             if (original) {
+              const now        = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' });
               const deleter    = msg.key.participant || msg.key.remoteJid;
               const deleterNum = deleter?.split('@')[0]?.split(':')[0] || '?';
-              const now        = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' });
-              await sock.sendMessage(chatJid, {
-                text: `🗑️ *Anti-Delete*\n👤 Deleted by: @${deleterNum}\n🕐 Time: ${now}`,
-                mentions: [deleter],
-              }).catch(() => {});
-              await sock.sendMessage(chatJid, { forward: original, force: true }).catch(() => {});
+
+              if (isGroup) {
+                // ── GROUP: resend in the same group chat ──────────────
+                await sock.sendMessage(chatJid, {
+                  text: `🗑️ *Anti-Delete*\n👤 Deleted by: @${deleterNum}\n🕐 Time: ${now}`,
+                  mentions: [deleter],
+                }).catch(() => {});
+                await sock.sendMessage(chatJid, { forward: original, force: true }).catch(() => {});
+
+              } else {
+                // ── DM: send silently to bot's own "You" (self) chat ──
+                // Get sender name: saved contact name > WhatsApp push name > number
+                const senderJid  = chatJid; // in DM, chatJid IS the sender
+                const savedName  = sock.contacts?.[senderJid]?.name
+                                || sock.contacts?.[senderJid]?.notify
+                                || original.pushName
+                                || msg.pushName
+                                || '';
+                const nameDisplay = savedName ? `*${savedName}*` : '';
+                const numDisplay  = `+${deleterNum}`;
+
+                // Bot's own self-chat JID
+                const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
+                const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
+                if (selfJid) {
+                  await sock.sendMessage(selfJid, {
+                    text:
+                      `🗑️ *Deleted Message Recovered*\n\n` +
+                      `👤 From: ${nameDisplay ? `${nameDisplay} ` : ''}${numDisplay}\n` +
+                      `🕐 Time: ${now}`,
+                  }).catch(() => {});
+                  await sock.sendMessage(selfJid, { forward: original, force: true }).catch(() => {});
+                }
+              }
             }
           }
         } catch {}
