@@ -20,6 +20,8 @@ const api = axios.create({ timeout: 20000 });
 // ── ffmpeg compress helpers ────────────────────────────────────────────────────
 
 async function compressAudio(inputBuf) {
+  // Skip compression for small files — already good quality
+  if (inputBuf.length < 8 * 1024 * 1024) return inputBuf;
   await fs.ensureDir(TEMP);
   const id  = Date.now();
   const inp = path.join(TEMP, `ca_${id}_in.mp3`);
@@ -27,7 +29,7 @@ async function compressAudio(inputBuf) {
   try {
     await fs.writeFile(inp, inputBuf);
     await execAsync(
-      `ffmpeg -i "${inp}" -b:a 64k -ar 44100 -ac 2 -y "${out}" -loglevel error`,
+      `ffmpeg -i "${inp}" -b:a 128k -ar 44100 -ac 2 -y "${out}" -loglevel error`,
       { timeout: 90000 }
     );
     if (await fs.pathExists(out)) {
@@ -181,7 +183,7 @@ async function tryYtdlpAudio(ytUrl) {
   for (const client of ['tv_embedded', 'android', 'ios']) {
     try {
       await execAsync(
-        `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 64K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`,
+        `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`,
         { timeout: 180000 }
       );
       if (await fs.pathExists(out)) {
@@ -195,36 +197,36 @@ async function tryYtdlpAudio(ytUrl) {
   return null;
 }
 
-// ── Video API sources — download to buffer ────────────────────────────────────
+// ── Video API sources — return direct URL (no buffer download) ────────────────
 
-async function tryFaaMp4(ytUrl) {
+async function tryFaaMp4Url(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp4?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.download_url;
-    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
+    if (u) return u;
   } catch {}
   return null;
 }
 
-async function tryNexrayMp4(ytUrl) {
+async function tryNexrayMp4Url(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.url;
-    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
+    if (u) return u;
   } catch {}
   return null;
 }
 
-async function trySiputzxMp4(ytUrl) {
+async function trySiputzxMp4Url(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.siputzx.my.id/api/d/ytmp4?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.data?.url;
-    if (u) { const buf = await fetchBuf(u); if (buf) return buf; }
+    if (u) return u;
   } catch {}
   return null;
 }
 
-// ── yt-dlp video — 360p MP4 with PO token ────────────────────────────────────
+// ── yt-dlp video — 480p MP4 with PO token (fallback only) ────────────────────
 
 async function tryYtdlpVideo(ytUrl) {
   await fs.ensureDir(TEMP);
@@ -233,9 +235,9 @@ async function tryYtdlpVideo(ytUrl) {
   const po = await getPoTokenArgs();
   for (const client of ['tv_embedded', 'android', 'ios']) {
     for (const fmt of [
-      'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]',
-      'best[height<=360]',
+      'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]',
       'best[height<=480]',
+      'best[height<=720]',
       'best',
     ]) {
       try {
@@ -255,7 +257,7 @@ async function tryYtdlpVideo(ytUrl) {
   return null;
 }
 
-// ── Orchestrators — download + compress ───────────────────────────────────────
+// ── Orchestrators ─────────────────────────────────────────────────────────────
 
 async function downloadAudio(ytUrl, query) {
   let raw = null;
@@ -277,15 +279,16 @@ async function downloadAudio(ytUrl, query) {
   return { buffer: compressed, mime: 'audio/mpeg', scMeta };
 }
 
+// Returns { url } for direct streaming or { buffer } for yt-dlp fallback
 async function downloadVideo(ytUrl) {
-  let raw = null;
+  const directUrl = await tryFaaMp4Url(ytUrl)
+    || await tryNexrayMp4Url(ytUrl)
+    || await trySiputzxMp4Url(ytUrl);
+  if (directUrl) return { url: directUrl };
 
-  raw = await tryFaaMp4(ytUrl);
-  if (!raw) raw = await tryNexrayMp4(ytUrl);
-  if (!raw) raw = await trySiputzxMp4(ytUrl);
-  if (!raw) raw = await tryYtdlpVideo(ytUrl);
+  // Fallback: yt-dlp download + compress
+  const raw = await tryYtdlpVideo(ytUrl);
   if (!raw) return null;
-
   const compressed = await compressVideo(raw);
   return { buffer: compressed };
 }
@@ -372,7 +375,7 @@ export default {
           if (meta?.thumbnail) {
             await sock.sendMessage(jid, {
               image: { url: meta.thumbnail },
-              caption: `${buildVideoCaption(meta, botName)}\n\n⏳ Downloading & compressing...`,
+              caption: `${buildVideoCaption(meta, botName)}\n\n⏳ Fetching video...`,
             }, { quoted: msg });
           }
 
@@ -383,11 +386,12 @@ export default {
             ? buildVideoCaption(meta, botName)
             : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
 
-          await sock.sendMessage(jid, {
-            video: vdata.buffer,
-            mimetype: 'video/mp4',
-            caption: vcap,
-          }, { quoted: msg });
+          // Prefer direct URL delivery (fast, no size limit); fallback to buffer
+          const videoPayload = vdata.url
+            ? { video: { url: vdata.url }, mimetype: 'video/mp4', caption: vcap }
+            : { video: vdata.buffer, mimetype: 'video/mp4', caption: vcap };
+
+          await sock.sendMessage(jid, videoPayload, { quoted: msg });
           await react('✅');
           break;
         }

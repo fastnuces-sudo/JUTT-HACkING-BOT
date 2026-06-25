@@ -930,10 +930,9 @@ async function loadStats() {
       if (connected.length === 0) {
         heroSub.innerHTML = `<span class="dot" style="background:#e53e3e"></span> No sessions connected`;
       } else if (connected.length === 1) {
-        const s = connected[0];
-        heroSub.innerHTML = `<span class="dot dot-green"></span>${s.phone ? '+'+s.phone+' — ' : ''}Connected`;
+        heroSub.innerHTML = `<span class="dot dot-green"></span> Connected`;
       } else {
-        heroSub.innerHTML = `<span class="dot dot-green"></span>${connected.length} Numbers Connected`;
+        heroSub.innerHTML = `<span class="dot dot-green"></span>${connected.length} Sessions Connected`;
       }
     }
 
@@ -947,7 +946,7 @@ async function loadStats() {
       list.innerHTML = visibleSessions.map(s => {
         const isConn = s.status === 'connected';
         const dotColor = isConn ? '#48bb78' : s.status === 'connecting' ? '#ed8936' : '#718096';
-        const label = s.phone ? `+${s.phone}` : s.name || s.id;
+        const label = s.name || s.id;
         const badge = s.status === 'connected' ? '🟢 Connected'
                     : s.status === 'connecting' ? '🟡 Connecting'
                     : s.status === 'qr'         ? '📱 Scan QR'
@@ -957,7 +956,6 @@ async function loadStats() {
           <div class="sess-dot" style="background:${dotColor}"></div>
           <div class="sess-info">
             <div class="sess-name">${label}</div>
-            <div class="sess-id">${s.id}</div>
           </div>
           <div class="sess-badge">${badge}</div>
           <button class="btn-disconnect" onclick="disconnectSession('${s.id}')" title="Disconnect this session">🔌 Disconnect</button>
@@ -1018,7 +1016,7 @@ function connectSSE() {
         if (!_csSessId || _csSessId === d.sessionId) {
           clearInterval(_csPoll); clearInterval(_qrPoll); clearInterval(_codePoll);
           csStep('cs-done-step');
-          setTimeout(() => showDash({ phone: d.user?.id?.replace(/@.+/,'') }), 900);
+          setTimeout(() => showDash({}), 900);
         }
       }
       loadStats();
