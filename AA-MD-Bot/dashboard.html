@@ -3,7 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>AA MD Bot Dashboard</title>
+<title>AA MD Bot — Powerful WhatsApp Multi-Device Bot by AA Mods</title>
+
+<!-- SEO -->
+<meta name="description" content="AA MD Bot is a powerful WhatsApp Multi-Device bot with 147+ plugins: Islamic commands, music downloader, sticker maker, economy system, XP levels, group management, anti-delete, and much more. Developed by Ahsan Ali Wadani | AA Mods.">
+<meta name="keywords" content="AA MD Bot, WhatsApp Bot, WhatsApp Multi-Device Bot, AA Mods, Ahsan Ali Wadani, WhatsApp Bot Pakistan, Islamic WhatsApp Bot, Quran Bot, Sticker Bot, Music Bot, YouTube Downloader Bot, TikTok Downloader, group management bot, WhatsApp automation, baileys bot, WhatsApp chatbot, free WhatsApp bot, best WhatsApp bot 2025, AA MD Bot commands, WhatsApp multi-session bot">
+<meta name="author" content="Ahsan Ali Wadani — AA Mods">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#25d366">
+<link rel="canonical" href="/">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="AA MD Bot — Powerful WhatsApp Multi-Device Bot">
+<meta property="og:description" content="147+ plugins: Islamic commands, music, stickers, economy, group management & more. Free WhatsApp bot by AA Mods.">
+<meta property="og:image" content="/logo.jpeg">
+<meta property="og:site_name" content="AA MD Bot">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AA MD Bot — Powerful WhatsApp Multi-Device Bot">
+<meta name="twitter:description" content="147+ plugins: Islamic commands, music, stickers, economy, group management & more.">
+<meta name="twitter:image" content="/logo.jpeg">
+
+<!-- Favicon -->
+<link rel="icon" type="image/jpeg" href="/logo.jpeg">
+<link rel="shortcut icon" href="/logo.jpeg">
+<link rel="apple-touch-icon" href="/logo.jpeg">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -418,15 +445,6 @@ a { text-decoration: none; color: inherit; }
         <div class="sc-icon">📱</div>
         <div class="sc-value" style="color:var(--green)" id="s-sessions-count">0</div>
         <div class="sc-label">Sessions</div>
-      </div>
-    </div>
-
-    <!-- Connected Sessions List -->
-    <div class="section" id="sessions-section" style="display:none">
-      <div class="section-head">📱 Connected Sessions</div>
-      <div id="sessions-list" class="sessions-list"></div>
-      <div style="margin-top:10px;text-align:right">
-        <button class="btn-connect-more" onclick="goConnect()">➕ Connect Another Number</button>
       </div>
     </div>
 
@@ -924,7 +942,7 @@ async function loadStats() {
 
     if (scEl) scEl.textContent = connected.length;
 
-    // Update hero subtitle
+    // Update hero subtitle — status only, no names or phone numbers
     const heroSub = document.getElementById('hero-sub');
     if (heroSub) {
       if (connected.length === 0) {
@@ -932,35 +950,8 @@ async function loadStats() {
       } else if (connected.length === 1) {
         heroSub.innerHTML = `<span class="dot dot-green"></span> Connected`;
       } else {
-        heroSub.innerHTML = `<span class="dot dot-green"></span>${connected.length} Sessions Connected`;
+        heroSub.innerHTML = `<span class="dot dot-green"></span> ${connected.length} Sessions Connected`;
       }
-    }
-
-    // Sessions list section — show only current browser's session
-    const sec  = document.getElementById('sessions-section');
-    const list = document.getElementById('sessions-list');
-    if (sec && list) {
-      const mySessId = _csSessId || localStorage.getItem('mySessionId');
-      const visibleSessions = mySessId ? sessions.filter(s => s.id === mySessId) : sessions;
-      sec.style.display = visibleSessions.length > 0 ? '' : 'none';
-      list.innerHTML = visibleSessions.map(s => {
-        const isConn = s.status === 'connected';
-        const dotColor = isConn ? '#48bb78' : s.status === 'connecting' ? '#ed8936' : '#718096';
-        const label = s.name || s.id;
-        const badge = s.status === 'connected' ? '🟢 Connected'
-                    : s.status === 'connecting' ? '🟡 Connecting'
-                    : s.status === 'qr'         ? '📱 Scan QR'
-                    : s.status === 'reconnecting' ? '🔄 Reconnecting'
-                    : '⚪ Disconnected';
-        return `<div class="sess-row">
-          <div class="sess-dot" style="background:${dotColor}"></div>
-          <div class="sess-info">
-            <div class="sess-name">${label}</div>
-          </div>
-          <div class="sess-badge">${badge}</div>
-          <button class="btn-disconnect" onclick="disconnectSession('${s.id}')" title="Disconnect this session">🔌 Disconnect</button>
-        </div>`;
-      }).join('');
     }
   } catch {}
 }
