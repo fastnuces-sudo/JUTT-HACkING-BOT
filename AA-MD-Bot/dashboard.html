@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AA MD Bot — Powerful WhatsApp Multi-Device Bot by AA Mods</title>
 
 <!-- SEO -->
@@ -18,9 +18,9 @@
 <meta property="og:url" content="https://aa-md-bot.up.railway.app/">
 <meta property="og:title" content="AA MD Bot — Powerful WhatsApp Multi-Device Bot">
 <meta property="og:description" content="147+ plugins: Islamic commands, music, stickers, economy, group management & more. Free WhatsApp bot by AA Mods.">
-<meta property="og:image" content="https://aa-md-bot.up.railway.app/logo.jpeg">
-<meta property="og:image:width" content="512">
-<meta property="og:image:height" content="512">
+<meta property="og:image" content="https://aa-md-bot.up.railway.app/logo.webp">
+<meta property="og:image:width" content="200">
+<meta property="og:image:height" content="200">
 <meta property="og:site_name" content="AA MD Bot">
 <meta property="og:locale" content="en_US">
 
@@ -28,12 +28,12 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="AA MD Bot — Powerful WhatsApp Multi-Device Bot">
 <meta name="twitter:description" content="147+ plugins: Islamic commands, music, stickers, economy, group management & more.">
-<meta name="twitter:image" content="https://aa-md-bot.up.railway.app/logo.jpeg">
+<meta name="twitter:image" content="https://aa-md-bot.up.railway.app/logo.webp">
 
 <!-- Favicon -->
-<link rel="icon" type="image/jpeg" href="/logo.jpeg">
-<link rel="shortcut icon" href="/logo.jpeg">
-<link rel="apple-touch-icon" href="/logo.jpeg">
+<link rel="icon" type="image/webp" href="/logo.webp">
+<link rel="shortcut icon" href="/logo.webp">
+<link rel="apple-touch-icon" href="/logo.webp">
 
 <!-- JSON-LD Structured Data -->
 <script type="application/ld+json">
@@ -61,14 +61,8 @@
 </script>
 
 <!-- Critical resource preloads (LCP elements) -->
-<link rel="preload" href="/banner.jpeg" as="image" fetchpriority="high">
-<link rel="preload" href="/logo.jpeg" as="image" fetchpriority="high">
-
-<!-- Non-render-blocking Google Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
+<link rel="preload" href="/banner.webp" as="image" fetchpriority="high" type="image/webp">
+<link rel="preload" href="/logo.webp" as="image" fetchpriority="high" type="image/webp">
 <style>
 :root {
   --bg: #0b0f1a;
@@ -78,7 +72,7 @@
   --green: #25d366;
   --green2: #128c7e;
   --text: #e0e6f0;
-  --muted: #9ca3af;
+  --muted: #c0c7d4;
   --red: #ef4444;
   --yellow: #fbbf24;
   --blue: #3b82f6;
@@ -86,7 +80,7 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 button { cursor: pointer; font-family: inherit; }
 input { font-family: inherit; }
 a { text-decoration: none; color: inherit; }
@@ -196,7 +190,7 @@ a { text-decoration: none; color: inherit; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 .channel-bar { background: linear-gradient(135deg, rgba(37,211,102,.12), rgba(18,140,126,.12)); border-bottom: 1px solid rgba(37,211,102,.2); padding: 12px 24px; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
-.channel-bar-text { font-size: 13px; color: rgba(37,211,102,.85); font-weight: 500; }
+.channel-bar-text { font-size: 13px; color: #20c95e; font-weight: 500; }
 
 .dash-body { max-width: 900px; margin: 0 auto; padding: 24px 20px 48px; }
 
@@ -324,11 +318,15 @@ a { text-decoration: none; color: inherit; }
 <body>
 
 <!-- ════════════════ CONNECT SCREEN ════════════════ -->
+<main id="app-root">
 <div id="screen-connect" style="display:none">
 <div class="cs-wrap">
 
   <div class="cs-logo">
-    <img src="/logo.jpeg" alt="AA MD Bot Logo" fetchpriority="high" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <picture>
+      <source srcset="/logo.webp" type="image/webp">
+      <img src="/logo.jpeg" alt="AA MD Bot Logo" width="60" height="60" fetchpriority="high" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    </picture>
     <div class="cs-logo-fallback" style="display:none" role="img" aria-label="AA MD Bot Logo">🤖</div>
     <div>
       <div class="cs-logo-text">AA MD Bot</div>
@@ -429,12 +427,18 @@ a { text-decoration: none; color: inherit; }
 
   <!-- Hero -->
   <div class="dash-hero">
-    <img src="/banner.jpeg" alt="AA MD Bot Dashboard Banner" class="dash-banner" fetchpriority="high" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <picture>
+      <source srcset="/banner.webp" type="image/webp">
+      <img src="/banner.jpeg" alt="AA MD Bot Dashboard Banner" class="dash-banner" width="1024" height="400" fetchpriority="high" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    </picture>
     <div class="dash-banner-fallback" style="display:none"></div>
     <div class="dash-hero-overlay"></div>
     <div class="dash-hero-content">
       <div class="dash-hero-left">
-        <img src="/logo.jpeg" alt="AA MD Bot Logo" class="dash-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <picture>
+          <source srcset="/logo.webp" type="image/webp">
+          <img src="/logo.jpeg" alt="AA MD Bot Logo" class="dash-logo" width="52" height="52" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        </picture>
         <div class="dash-logo-fallback" style="display:none" role="img" aria-label="AA MD Bot Logo">🤖</div>
         <div>
           <div class="dash-hero-title">AA MD Bot</div>
@@ -613,7 +617,10 @@ a { text-decoration: none; color: inherit; }
 
     <!-- About -->
     <div class="about-card">
-      <img src="/logo.jpeg" alt="AA MD" class="about-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <picture>
+        <source srcset="/logo.webp" type="image/webp">
+        <img src="/logo.jpeg" alt="AA MD Bot Logo" class="about-logo" width="60" height="60" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      </picture>
       <div class="about-logo-fallback" style="display:none">🤖</div>
       <div style="flex:1">
         <div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
@@ -638,6 +645,8 @@ a { text-decoration: none; color: inherit; }
   </div>
 </div>
 </div>
+
+</main>
 
 <!-- Loading splash -->
 <div id="screen-loading" style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:var(--bg)">

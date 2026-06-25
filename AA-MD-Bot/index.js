@@ -5,6 +5,7 @@ for (const p of extraPaths) {
 }
 
 import http from 'http';
+import zlib from 'zlib';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -98,8 +99,16 @@ async function startServer() {
     if (p === '/' || p === '' || p === '/dashboard') {
       try {
         const html = await fs.readFile(dashboardPath, 'utf8');
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' });
-        res.end(html);
+        const acceptEncoding = req.headers['accept-encoding'] || '';
+        const headers = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'Vary': 'Accept-Encoding' };
+        if (acceptEncoding.includes('gzip')) {
+          const compressed = await new Promise((resolve, reject) => zlib.gzip(Buffer.from(html), (e, b) => e ? reject(e) : resolve(b)));
+          res.writeHead(200, { ...headers, 'Content-Encoding': 'gzip' });
+          res.end(compressed);
+        } else {
+          res.writeHead(200, headers);
+          res.end(html);
+        }
       } catch {
         res.writeHead(500); res.end('Dashboard file missing');
       }
@@ -245,12 +254,19 @@ async function startServer() {
     }
 
     // ── Static images ──────────────────────────────────────
-    if (p === '/banner.jpeg' || p === '/logo.jpeg' || p === '/favicon.svg') {
+    const STATIC_IMAGES = {
+      '/banner.webp': 'image/webp',
+      '/logo.webp': 'image/webp',
+      '/favicon.webp': 'image/webp',
+      '/banner.jpeg': 'image/jpeg',
+      '/logo.jpeg': 'image/jpeg',
+      '/favicon.svg': 'image/svg+xml',
+    };
+    if (STATIC_IMAGES[p]) {
       const imgPath = path.join(__dirname, p.slice(1));
       try {
         const data = await fs.readFile(imgPath);
-        const mime = p.endsWith('.svg') ? 'image/svg+xml' : 'image/jpeg';
-        res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'public, max-age=3600' });
+        res.writeHead(200, { 'Content-Type': STATIC_IMAGES[p], 'Cache-Control': 'public, max-age=31536000, immutable', 'Vary': 'Accept' });
         res.end(data);
       } catch { res.writeHead(404); res.end('Not found'); }
       return;
