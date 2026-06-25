@@ -128,6 +128,42 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   sock.sessionId = sessionId;
   sessionStatus.set(sessionId, 'connecting');
 
+  // ── Newsletter "View Channel" button — patch sock.sendMessage ─────────────
+  // Injects forwardedNewsletterMessageInfo into EVERY outgoing message so
+  // the button appears regardless of which plugin/helper sends the message.
+  const _origSend = sock.sendMessage.bind(sock);
+  sock.sendMessage = async (jid, content, opts) => {
+    try {
+      const nlJid  = global._AA_NEWSLETTER_JID;
+      const nlName = global._AA_NEWSLETTER_NAME || 'AA MD Bot';
+      // Skip: no JID set, reactions, read-receipts, status broadcasts, forwards
+      const isReact   = !!content?.react;
+      const isForward = !!content?.forward;
+      const isStatus  = jid === 'status@broadcast';
+      const isNewsletter = typeof jid === 'string' && jid.endsWith('@newsletter');
+      if (nlJid && !isReact && !isForward && !isStatus && !isNewsletter) {
+        const nlCtx = {
+          forwardingScore: 999,
+          isForwarded: true,
+          forwardedNewsletterMessageInfo: {
+            newsletterJid: nlJid,
+            newsletterName: nlName,
+            serverMessageId: Math.floor(Math.random() * 99999) + 1,
+          },
+        };
+        // Merge with any existing contextInfo the plugin already set
+        content = {
+          ...content,
+          contextInfo: content.contextInfo
+            ? { ...nlCtx, ...content.contextInfo,
+                forwardedNewsletterMessageInfo: nlCtx.forwardedNewsletterMessageInfo }
+            : nlCtx,
+        };
+      }
+    } catch (_) {}
+    return _origSend(jid, content, opts);
+  };
+
   sock.ev.on('creds.update', () => {
     wasRegistered = sock.authState?.creds?.registered || wasRegistered;
     saveCreds();
