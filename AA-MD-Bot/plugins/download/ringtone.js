@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { generateId } from '../../lib/helper.js';
-import { YTDLP } from '../../lib/ytdlp.js';
+import { YTDLP, YTDLP_FLAGS } from '../../lib/ytdlp.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -28,7 +28,7 @@ export default {
     try {
       // Search for the ringtone on YouTube (short clips, max 120s)
       const searchQuery = `${text} ringtone`;
-      const infoCmd = `${YTDLP} "ytsearch3:${searchQuery}" --dump-json --no-playlist --no-download --quiet --match-filter "duration < 200"`;
+      const infoCmd = `${YTDLP} ${YTDLP_FLAGS} "ytsearch3:${searchQuery}" --dump-json --no-playlist --no-download --quiet --match-filter "duration < 200"`;
       let info = null;
 
       try {
@@ -44,7 +44,7 @@ export default {
 
       // If match-filter failed, try without it
       if (!info) {
-        const cmd2 = `${YTDLP} "ytsearch5:${searchQuery}" --dump-json --no-playlist --no-download --quiet`;
+        const cmd2 = `${YTDLP} ${YTDLP_FLAGS} "ytsearch5:${searchQuery}" --dump-json --no-playlist --no-download --quiet`;
         const { stdout } = await execAsync(cmd2, { timeout: 25000 });
         const lines = stdout.trim().split('\n').filter(Boolean);
         for (const line of lines) {
@@ -72,7 +72,7 @@ export default {
 
       const outFile = path.join(tempDir, `${uid}.mp3`);
       await execAsync(
-        `${YTDLP} "${url}" -x --audio-format mp3 --audio-quality 128K -o "${outFile.replace('.mp3', '.%(ext)s')}" --no-playlist --quiet --no-warnings`,
+        `${YTDLP} ${YTDLP_FLAGS} "${url}" -x --audio-format mp3 --audio-quality 128K -o "${outFile.replace('.mp3', '.%(ext)s')}" --no-playlist --quiet --no-warnings`,
         { timeout: 90000 }
       );
 

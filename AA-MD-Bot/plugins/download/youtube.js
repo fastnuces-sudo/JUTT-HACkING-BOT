@@ -4,7 +4,7 @@ import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { YTDLP, getCookiesFlag } from '../../lib/ytdlp.js';
+import { YTDLP, YTDLP_FLAGS, getCookiesFlag } from '../../lib/ytdlp.js';
 import { getPoTokenArgs } from '../../lib/potoken.js';
 
 const execAsync = promisify(exec);
@@ -183,7 +183,7 @@ async function tryYtdlpAudio(ytUrl) {
   for (const client of ['tv_embedded', 'android', 'ios']) {
     try {
       await execAsync(
-        `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings --no-check-certificate`,
+        `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings`,
         { timeout: 180000 }
       );
       if (await fs.pathExists(out)) {
@@ -242,7 +242,7 @@ async function tryYtdlpVideo(ytUrl) {
     ]) {
       try {
         await execAsync(
-          `${YTDLP} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --merge-output-format mp4 --no-playlist -o "${outFile}" --quiet --no-warnings --no-check-certificate`,
+          `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --merge-output-format mp4 --no-playlist -o "${outFile}" --quiet --no-warnings`,
           { timeout: 180000 }
         );
         if (await fs.pathExists(outFile)) {

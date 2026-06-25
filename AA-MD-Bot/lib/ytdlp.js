@@ -21,6 +21,26 @@ function resolveYtdlp() {
 
 export const YTDLP = resolveYtdlp();
 
+// Resolve Node.js binary for yt-dlp JS extraction engine
+function resolveNode() {
+  const candidates = [
+    process.execPath,                                                    // current Node process
+    '/nix/store/1lagpgadaybvs1n2312gysg2phjk89y8-nodejs-20.20.0-wrapped/bin/node',
+    '/usr/local/bin/node',
+    '/usr/bin/node',
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return 'node';
+}
+
+// Common flags for all yt-dlp invocations:
+// --js-runtimes node:PATH → use Node.js for JS extraction (proper YouTube support)
+// --no-check-certificate  → skip SSL issues in sandboxed environments
+const _nodePath = resolveNode();
+export const YTDLP_FLAGS = `--js-runtimes "node:${_nodePath}" --no-check-certificate`;
+
 // Returns --cookies flag string if cookies.txt exists, else empty string
 const COOKIES_PATH = path.join(__dirname, '..', 'cookies.txt');
 export function getCookiesFlag() {
