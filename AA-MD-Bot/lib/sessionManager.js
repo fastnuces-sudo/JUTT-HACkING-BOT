@@ -240,20 +240,29 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       if (proto?.type === 0) { // type 0 = REVOKE (message deleted)
         try {
           const deletedKey = proto.key;
-          const chatJid = deletedKey?.remoteJid || msg.key.remoteJid;
+          // Always use msg.key.remoteJid — this is the chat where the delete event
+          // was received (the group or DM where deletion happened), never the bot's own number
+          const chatJid  = msg.key.remoteJid;
           const deletedId = deletedKey?.id;
           const groupMsg = chatJid?.endsWith('@g.us');
           const settings = db.settings.get();
-          const adGroup = groupMsg ? (db.groups.get(chatJid)?.antidelete ?? settings.antidelete ?? false) : false;
-          const adDm    = !groupMsg ? (settings.antidelete ?? false) : false;
-          if (adGroup || adDm) {
-            const cache = _msgCache.get(chatJid);
-            const original = cache?.get(deletedId);
+          const adEnabled = groupMsg
+            ? (db.groups.get(chatJid)?.antidelete ?? settings.antidelete ?? false)
+            : (settings.antidelete ?? false);
+          if (adEnabled) {
+            // Try cache with the correct JID first; fall back to deletedKey.remoteJid
+            let cache = _msgCache.get(chatJid);
+            let original = cache?.get(deletedId);
+            if (!original && deletedKey?.remoteJid && deletedKey.remoteJid !== chatJid) {
+              cache = _msgCache.get(deletedKey.remoteJid);
+              original = cache?.get(deletedId);
+            }
             if (original) {
-              const deleter = msg.key.participant || msg.key.remoteJid;
+              const deleter    = msg.key.participant || msg.key.remoteJid;
               const deleterNum = deleter?.split('@')[0]?.split(':')[0] || '?';
+              const now        = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' });
               await sock.sendMessage(chatJid, {
-                text: `🗑️ *Anti-Delete* — Message recovered\n👤 Deleted by: @${deleterNum}`,
+                text: `🗑️ *Anti-Delete*\n👤 Deleted by: @${deleterNum}\n🕐 Time: ${now}`,
                 mentions: [deleter],
               }).catch(() => {});
               await sock.sendMessage(chatJid, { forward: original, force: true }).catch(() => {});
@@ -381,9 +390,12 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       for (const call of calls) {
         if (call.status !== 'offer') continue;
         await sock.rejectCall(call.id, call.from).catch(() => {});
-        await sock.sendMessage(call.from, {
-          text: `📵 *Auto Reject*\n\nSorry, this bot cannot receive calls.\n\n> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`,
-        }).catch(() => {});
+        // Use owner-defined custom message if set, else default
+        const customMsg = settings.antiCallMsg?.trim();
+        const replyText = customMsg
+          ? customMsg
+          : `📵 *Auto Reject*\n\nSorry, this bot cannot receive calls.\n\n> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`;
+        await sock.sendMessage(call.from, { text: replyText }).catch(() => {});
         logger.info({ from: call.from, sessionId }, '📵 Auto-rejected call');
       }
     } catch (err) {
