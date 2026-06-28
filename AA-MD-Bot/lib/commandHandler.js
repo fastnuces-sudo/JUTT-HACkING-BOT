@@ -35,22 +35,21 @@ function getBannerThumb() {
   return _bannerThumb;
 }
 
-// Build contextInfo — only when a newsletter JID is set via .setnewsletter.
-// No fallback external ad reply so messages don't show a channel follow button.
+// Build contextInfo — always includes newsletter "View Channel" button.
+// Uses global (set at startup / .setnewsletter) with config as hard fallback.
 function buildChannelCtx() {
-  const newsletterJid = global._AA_NEWSLETTER_JID;
-  if (newsletterJid) {
-    return {
-      forwardingScore: 999,
-      isForwarded: true,
-      forwardedNewsletterMessageInfo: {
-        newsletterJid,
-        newsletterName: global._AA_NEWSLETTER_NAME || CHANNEL_NAME,
-        serverMessageId: Math.floor(Math.random() * 99999) + 1,
-      },
-    };
-  }
-  return null;
+  const newsletterJid  = global._AA_NEWSLETTER_JID  || config.newsletterJid;
+  const newsletterName = global._AA_NEWSLETTER_NAME || config.newsletterName || CHANNEL_NAME;
+  if (!newsletterJid) return null;
+  return {
+    forwardingScore: 999,
+    isForwarded: true,
+    forwardedNewsletterMessageInfo: {
+      newsletterJid,
+      newsletterName,
+      serverMessageId: Math.floor(Math.random() * 99999) + 1,
+    },
+  };
 }
 
 export function isOwner(jid) {
@@ -121,13 +120,18 @@ async function sendMsg(sock, jid, content, options = {}) {
 }
 
 // sendMedia — for plugins that send audio/image/video directly
-// Properly merges channel ctx with any existing contextInfo in content
+// Newsletter button always wins — plugin contextInfo preserved alongside it
 async function sendMedia(sock, jid, msg, content) {
   const ctx = buildChannelCtx();
   let finalCtx;
   if (ctx && content.contextInfo) {
-    // Merge: channel newsletter info + existing contextInfo (e.g. externalAdReply)
-    finalCtx = { ...ctx, ...content.contextInfo };
+    // Plugin contextInfo first, then newsletter button overwrites forwardedNewsletterMessageInfo
+    finalCtx = {
+      ...content.contextInfo,
+      forwardingScore: 999,
+      isForwarded: true,
+      forwardedNewsletterMessageInfo: ctx.forwardedNewsletterMessageInfo,
+    };
   } else if (ctx) {
     finalCtx = ctx;
   } else {

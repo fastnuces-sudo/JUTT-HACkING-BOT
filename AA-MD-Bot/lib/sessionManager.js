@@ -139,8 +139,8 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   const _origSend = sock.sendMessage.bind(sock);
   sock.sendMessage = async (jid, content, opts) => {
     try {
-      const nlJid  = global._AA_NEWSLETTER_JID;
-      const nlName = global._AA_NEWSLETTER_NAME || 'AA MD Bot';
+      const nlJid  = global._AA_NEWSLETTER_JID  || config.newsletterJid;
+      const nlName = global._AA_NEWSLETTER_NAME || config.newsletterName || 'AA MD Bot';
       // Skip: no JID set, reactions, read-receipts, status broadcasts, forwards
       const isReact   = !!content?.react;
       const isForward = !!content?.forward;
