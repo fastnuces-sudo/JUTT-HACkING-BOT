@@ -14,6 +14,7 @@ import { EventEmitter } from 'events';
 import { logger } from './logger.js';
 import { db } from './database.js';
 import config from '../config.js';
+import { voCacheSet } from './voCache.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Railway volume: if DATA_DIR=/bot/session is set, sessions go under volume/sessions/
@@ -398,58 +399,73 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         if (cache.size > _CACHE_MAX) cache.delete(cache.keys().next().value);
       }
 
-      // ── Anti View-Once: auto-reveal view-once media ──────────
+      // ── Anti View-Once: cache + auto-reveal view-once media ─────
       try {
         const voMsg = msg.message?.viewOnceMessage
                    || msg.message?.viewOnceMessageV2
                    || msg.message?.viewOnceMessageV2Extension;
         if (voMsg) {
-          const settings = db.settings.get();
-          const chatJid  = msg.key.remoteJid;
-          const inGroup  = chatJid?.endsWith('@g.us');
-          const grpSet   = inGroup ? db.groups.get(chatJid) : null;
-          const avo      = inGroup
-            ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
-            : (settings.antiViewOnce ?? false);
-          if (avo) {
-            const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
-            const silentLog = pino({ level: 'silent' });
-            const buf = await downloadMediaMessage(
-              msg, 'buffer', {},
-              { reuploadRequest: sock.updateMediaMessage, logger: silentLog }
-            ).catch(() => null);
-            if (buf?.length) {
-              const inner = voMsg.message?.imageMessage || voMsg.message?.videoMessage;
-              const mime  = inner?.mimetype || 'image/jpeg';
-              const isVid = !!voMsg.message?.videoMessage;
-              const ownJid = (sock.user?.id || '').replace(/:.*@/, '@') || chatJid;
-              const sender = msg.key.participant || msg.key.remoteJid || '';
-              const num    = sender.split('@')[0].split(':')[0];
-              const time   = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
+          // ── Always download & cache — needed for .reveal even if auto-reveal is OFF
+          const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
+          const silentLog = pino({ level: 'silent' });
 
-              // Caption for "You" chat — shows who sent it + when
-              const privateCap = `🔓 *View-Once Revealed*\n\n` +
+          // CRITICAL: pass inner message directly, not the viewOnce wrapper
+          // downloadMediaMessage needs { imageMessage } or { videoMessage } at top level
+          const innerContent = voMsg.message; // { imageMessage:{} } or { videoMessage:{} }
+          const fakeMsg = { key: msg.key, message: innerContent };
+
+          const buf = await downloadMediaMessage(
+            fakeMsg, 'buffer', {},
+            { reuploadRequest: sock.updateMediaMessage, logger: silentLog }
+          ).catch(() => null);
+
+          if (buf?.length) {
+            const inner  = innerContent?.imageMessage || innerContent?.videoMessage;
+            const mime   = inner?.mimetype || 'image/jpeg';
+            const isVid  = !!innerContent?.videoMessage;
+            const sender = msg.key.participant || msg.key.remoteJid || '';
+            const num    = sender.split('@')[0].split(':')[0];
+            const chatJid = msg.key.remoteJid;
+            const inGroup = chatJid?.endsWith('@g.us');
+            const time   = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
+
+            // Cache the buffer so .reveal can serve it by message ID
+            voCacheSet(msg.key.id, { buffer: buf, mime, isVid, num, time, inGroup });
+
+            // ── Auto-forward only if antiviewonce is ON ───────────
+            const settings = db.settings.get();
+            const grpSet   = inGroup ? db.groups.get(chatJid) : null;
+            const avo      = inGroup
+              ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
+              : (settings.antiViewOnce ?? false);
+
+            if (avo) {
+              const ownRaw = sock.user?.id || '';
+              const ownJid = ownRaw.replace(/:.*@/, '@') || chatJid;
+
+              const privateCap =
+                `🔓 *View-Once Revealed*\n\n` +
                 `👤 *From:* +${num}\n` +
                 `🕐 *Time:* ${time}\n` +
                 `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n\n` +
                 `> 👁️ AA MD Bot`;
 
-              // ── If in GROUP: also reveal inside the group (no sender mention)
+              // Group: also reveal inside group (no sender mention)
               if (inGroup) {
                 const groupCap = `🔓 *View-Once Revealed*\n\n> 👁️ AA MD Bot`;
-                if (isVid) {
-                  await sock.sendMessage(chatJid, { video: buf, caption: groupCap, mimetype: mime }).catch(() => {});
-                } else {
-                  await sock.sendMessage(chatJid, { image: buf, caption: groupCap, mimetype: mime }).catch(() => {});
-                }
+                await sock.sendMessage(
+                  chatJid,
+                  isVid ? { video: buf, caption: groupCap, mimetype: mime }
+                        : { image: buf, caption: groupCap, mimetype: mime }
+                ).catch(() => {});
               }
 
-              // ── Always forward to own "You" private chat with full details
-              if (isVid) {
-                await sock.sendMessage(ownJid, { video: buf, caption: privateCap, mimetype: mime }).catch(() => {});
-              } else {
-                await sock.sendMessage(ownJid, { image: buf, caption: privateCap, mimetype: mime }).catch(() => {});
-              }
+              // Always forward to own "You" private chat
+              await sock.sendMessage(
+                ownJid,
+                isVid ? { video: buf, caption: privateCap, mimetype: mime }
+                      : { image: buf, caption: privateCap, mimetype: mime }
+              ).catch(() => {});
             }
           }
         }
