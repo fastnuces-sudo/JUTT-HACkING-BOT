@@ -413,7 +413,11 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             : (settings.antiViewOnce ?? false);
           if (avo) {
             const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
-            const buf = await downloadMediaMessage(msg, 'buffer', {}).catch(() => null);
+            const silentLog = pino({ level: 'silent' });
+            const buf = await downloadMediaMessage(
+              msg, 'buffer', {},
+              { reuploadRequest: sock.updateMediaMessage, logger: silentLog }
+            ).catch(() => null);
             if (buf?.length) {
               const inner = voMsg.message?.imageMessage || voMsg.message?.videoMessage;
               const mime  = inner?.mimetype || 'image/jpeg';

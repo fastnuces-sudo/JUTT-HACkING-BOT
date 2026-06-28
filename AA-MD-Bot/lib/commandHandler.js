@@ -239,6 +239,27 @@ export async function handleMessage(sock, msg, sessionId) {
       await sock.sendPresenceUpdate('composing', jid).catch(() => {});
     }
 
+    // Build quoted object with message + key so plugins can download media
+    const _ctxInfo = msg.message?.extendedTextMessage?.contextInfo
+                  || msg.message?.imageMessage?.contextInfo
+                  || msg.message?.videoMessage?.contextInfo
+                  || msg.message?.audioMessage?.contextInfo;
+    const _quotedMsg = _ctxInfo?.quotedMessage;
+    const quoted = _quotedMsg
+      ? {
+          message: _quotedMsg,
+          key: {
+            id: _ctxInfo?.stanzaId,
+            remoteJid: _ctxInfo?.remoteJid || jid,
+            participant: _ctxInfo?.participant || undefined,
+            fromMe: false,
+          },
+        }
+      : null;
+
+    // Bot's own JID for sending to "You" / saved-messages chat
+    const ownJid = (sock.user?.id || '').replace(/:.*@/, '@') || null;
+
     await plugin.execute({
       sock, msg, jid, senderJid, fromMe, isGroupMsg,
       command, args, text: argText, sessionId,
@@ -248,7 +269,9 @@ export async function handleMessage(sock, msg, sessionId) {
       send: (t, opts) => sendMsg(sock, jid, t, opts),
       sendMedia: (content) => sendMedia(sock, jid, msg, content),
       db, config,
-      getQuoted: () => msg.message?.extendedTextMessage?.contextInfo?.quotedMessage || null,
+      quoted,
+      ownJid,
+      getQuoted: () => _quotedMsg || null,
       logger,
     });
 

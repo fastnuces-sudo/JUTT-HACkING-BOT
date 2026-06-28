@@ -1,6 +1,6 @@
 // ============================================
 // AA MD Bot - Anti View Once + .reveal
-// Auto-reveal view-once & manual reveal to private chat
+// Auto-reveal view-once & manual reveal to private "You" chat
 // ============================================
 
 export default {
@@ -8,9 +8,10 @@ export default {
   alias: ['aviewonce', 'viewonce', 'avo', 'reveal'],
   category: 'gb',
   description: 'Reveal view-once photos & videos / toggle auto-reveal',
-  usage: '.antiviewonce on/off  |  reply to view-once with .antiviewonce  |  .reveal',
+  usage: '.antiviewonce on/off  |  reply to view-once with .reveal',
 
-  async execute({ reply, react, args, sock, jid, msg, db, quoted, command }) {
+  async execute({ reply, react, args, sock, jid, msg, db, quoted, ownJid, command }) {
+    const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
     const toggle = args[0]?.toLowerCase();
     const isReveal = command === 'reveal';
 
@@ -22,16 +23,18 @@ export default {
         `🔓 *Anti View-Once* is now *${val ? 'ON ✅' : 'OFF ❌'}*\n\n` +
         (val
           ? `Every view-once photo/video will be:\n` +
-            `• *Revealed in the group* (no sender tag)\n` +
+            `• *Revealed in group* (no sender tag)\n` +
             `• *Forwarded to your "You" chat* with sender number + time\n\n` +
-            `📌 For groups, enable per-group too: *.antiviewonce on* in that group.`
+            `📌 For groups, enable per-group too.`
           : `View-once messages will remain private.`) +
         `\n\n> 🤖 *Powered by AA MD Bot*`
       );
     }
 
-    // ── Manual reveal: reply to a view-once message ───────────────
-    const q = quoted?.message || msg?.message;
+    // ── Extract view-once from quoted message ──────────────────────
+    // quoted is passed from commandHandler (built from contextInfo)
+    const q = quoted?.message;
+
     const voImage = q?.viewOnceMessage?.message?.imageMessage
                  || q?.viewOnceMessageV2?.message?.imageMessage
                  || q?.viewOnceMessageV2Extension?.message?.imageMessage;
@@ -42,87 +45,71 @@ export default {
 
     if (!voMedia) {
       if (isReveal) {
-        return reply(
-          `❌ *Reply to a view-once message* with *.reveal* to reveal it.\n\n` +
-          `> 👁️ AA MD Bot`
-        );
+        return reply(`❌ *Reply to a view-once message* with *.reveal* to reveal it.\n\n> 👁️ AA MD Bot`);
       }
       const current = db.settings.getValue('antiViewOnce') ?? false;
       return reply(
         `🔓 *Anti View-Once*\n` +
         `Status: *${current ? 'ON ✅' : 'OFF ❌'}*\n\n` +
-        `*GB WhatsApp Feature* — Reveal view-once media\n\n` +
         `━━━━━━━━━━━━━━━━\n` +
         `📌 *How to use:*\n` +
-        `▸ *.antiviewonce on* — Auto-reveal all view-once msgs\n` +
-        `▸ *.antiviewonce off* — Turn off auto-reveal\n` +
-        `▸ Reply to a view-once with *.reveal* — Send to your private chat\n\n` +
-        `🔒 *Auto behavior:*\n` +
-        `▸ Group view-once → revealed in group + forwarded to your "You" chat\n` +
-        `▸ DM view-once → forwarded to your "You" chat only (stealth)\n\n` +
+        `▸ *.antiviewonce on* — Auto-reveal all view-once\n` +
+        `▸ *.antiviewonce off* — Turn off\n` +
+        `▸ Reply to view-once with *.reveal* → private chat\n\n` +
+        `🔒 *Auto behavior (when ON):*\n` +
+        `▸ Group view-once → revealed in group + your "You" chat\n` +
+        `▸ DM view-once → your "You" chat only (stealth)\n\n` +
         `> 🤖 *Powered by AA MD Bot*`
       );
     }
 
     await react('⏳');
     try {
-      const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
-
+      // Build a proper fake message for downloadMediaMessage
+      const voKey = q?.viewOnceMessage || q?.viewOnceMessageV2 || q?.viewOnceMessageV2Extension;
       const fakeMsg = {
         key: quoted?.key || msg?.key,
-        message: {
-          viewOnceMessage:
-            q?.viewOnceMessage || q?.viewOnceMessageV2 || q?.viewOnceMessageV2Extension,
-        },
+        message: { viewOnceMessageV2: { message: voKey?.message || voKey } },
       };
 
-      const buffer = await downloadMediaMessage(fakeMsg, 'buffer', {});
+      const buffer = await downloadMediaMessage(
+        fakeMsg, 'buffer', {},
+        { reuploadRequest: sock.updateMediaMessage }
+      ).catch(() => null);
+
       if (!buffer?.length) {
         await react('❌');
         return reply(`❌ Could not reveal — media may have expired.`);
       }
 
-      // Sender info from quoted message key
+      const mime = (voImage || voVideo)?.mimetype || (voImage ? 'image/jpeg' : 'video/mp4');
+      const isVid = !!voVideo;
+
+      // Sender info from quoted key
       const senderJid = quoted?.key?.participant || quoted?.key?.remoteJid || '';
-      const num       = senderJid.split('@')[0].split(':')[0] || '?';
-      const time      = new Date().toLocaleString('en-PK', {
-        timeZone: 'Asia/Karachi',
-        hour12: true,
-      });
+      const num  = senderJid.split('@')[0].split(':')[0] || '?';
+      const time = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
       const inGroup = jid?.endsWith('@g.us');
 
-      // Always send to own "You" chat
-      const ownJid = (sock.user?.id || '').replace(/:.*@/, '@') || jid;
+      // Target: bot's own "You" private chat
+      const dest = ownJid || jid;
 
-      const privateCap =
+      const cap =
         `🔓 *View-Once Revealed*\n\n` +
         `👤 *From:* +${num}\n` +
         `🕐 *Time:* ${time}\n` +
         `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n\n` +
         `> 👁️ AA MD Bot`;
 
-      if (voImage) {
-        await sock.sendMessage(ownJid, {
-          image: buffer,
-          caption: privateCap,
-          mimetype: voImage.mimetype || 'image/jpeg',
-        });
+      if (isVid) {
+        await sock.sendMessage(dest, { video: buffer, caption: cap, mimetype: mime });
       } else {
-        await sock.sendMessage(ownJid, {
-          video: buffer,
-          caption: privateCap,
-          mimetype: voVideo.mimetype || 'video/mp4',
-        });
+        await sock.sendMessage(dest, { image: buffer, caption: cap, mimetype: mime });
       }
 
+      // Only react in current chat — no text reply (keeps it clean/stealthy)
       await react('✅');
-      await reply(
-        `✅ *Revealed!*\n\n` +
-        `📤 Forwarded to your *"You"* private chat\n` +
-        `👤 Sender: +${num}\n` +
-        `🕐 Time: ${time}\n\n` +
-        `> 👁️ AA MD Bot`
-      );
+
     } catch (err) {
       await react('❌');
       reply(`❌ Failed: ${err.message?.slice(0, 80)}`);
