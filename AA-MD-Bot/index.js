@@ -30,13 +30,18 @@ const dashboardPath = path.join(__dirname, 'dashboard.html');
 process.on('uncaughtException', err => logger.error({ err: err.message }, '💥 Uncaught Exception'));
 process.on('unhandledRejection', err => logger.error({ err: String(err) }, '💥 Unhandled Rejection'));
 
-// Restore newsletter JID from db (persisted by .setnewsletter)
+// Restore newsletter JID — db first (set via .setnewsletter), then config fallback
 try {
-  const savedJid  = db.settings.getValue('newsletterJid');
-  const savedName = db.settings.getValue('newsletterName');
+  const savedJid  = db.settings.getValue('newsletterJid') || config.newsletterJid;
+  const savedName = db.settings.getValue('newsletterName') || config.newsletterName || 'AA MD Bot';
   if (savedJid) {
     global._AA_NEWSLETTER_JID  = savedJid;
-    global._AA_NEWSLETTER_NAME = savedName || 'AA MD Bot';
+    global._AA_NEWSLETTER_NAME = savedName;
+    // Keep db in sync with config default if it was missing
+    if (!db.settings.getValue('newsletterJid')) {
+      db.settings.setValue('newsletterJid', savedJid);
+      db.settings.setValue('newsletterName', savedName);
+    }
     logger.info({ jid: savedJid }, '📢 Newsletter JID restored from db');
   }
 } catch {}

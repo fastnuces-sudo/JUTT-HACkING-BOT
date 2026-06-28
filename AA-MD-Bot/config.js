@@ -7,6 +7,8 @@ const config = {
   ownerNumber: ['923346741532'],
   superOwner: '923346741532',
   channelLink: 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617',
+  newsletterJid: '120363428609538858@newsletter',
+  newsletterName: 'AA MD Bot',
   prefix: ['.', '!', '#'],
   altPrefixes: [],
   owners: [],
