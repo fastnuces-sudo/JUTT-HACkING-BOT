@@ -5,6 +5,7 @@
 // ============================================
 
 import { voCacheGet } from '../../lib/voCache.js';
+import config from '../../config.js';
 
 export default {
   command: 'antiviewonce',
@@ -54,11 +55,19 @@ export default {
 
       await react('⏳');
       try {
-        // Normalize JID — strip device suffix (:5) so self-chat works correctly
-        const normJid = (j) => j ? j.replace(/:\d+@/, '@') : null;
-        // Chain: DB setting → ownJid param → sock.user.id → current chat (last resort)
-        const rawJid = db.settings.getValue('botJid') || ownJid || sock.user?.id;
-        const dest = normJid(rawJid) || jid;
+        // strip device suffix (:5) from any JID
+        const norm = (j) => j ? String(j).replace(/:\d+@/, '@') : null;
+        // Destination priority:
+        // 1. config.superOwner (hardcoded — never null, works on fresh Railway deploy)
+        // 2. DB botJid (saved at connect time)
+        // 3. ownJid from commandHandler
+        // 4. sock.user.id (live)
+        const dest =
+          (config.superOwner ? `${config.superOwner}@s.whatsapp.net` : null) ||
+          norm(db.settings.getValue('botJid')) ||
+          norm(ownJid) ||
+          norm(sock.user?.id) ||
+          jid;
         const inGroup = jid?.endsWith('@g.us');
         const cap =
           `🔓 *View-Once Revealed*\n\n` +

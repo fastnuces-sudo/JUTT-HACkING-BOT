@@ -444,8 +444,14 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
               : (settings.antiViewOnce ?? false);
 
             if (avo) {
-              const ownRaw = sock.user?.id || '';
-              const ownJid = ownRaw.replace(/:.*@/, '@') || chatJid;
+              // Private dest: config.superOwner (hardcoded) → sock.user (live) → db botJid → skip
+              const norm = (j) => j ? String(j).replace(/:\d+@/, '@') : null;
+              const privateJid =
+                (config.superOwner ? `${config.superOwner}@s.whatsapp.net` : null) ||
+                norm(sock.user?.id) ||
+                norm(db.settings.getValue('botJid'));
+              if (!privateJid) return; // no valid private dest — skip silently
+              const ownJid = privateJid;
 
               const privateCap =
                 `🔓 *View-Once Revealed*\n\n` +
