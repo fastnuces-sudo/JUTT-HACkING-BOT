@@ -371,13 +371,33 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
               const inner = voMsg.message?.imageMessage || voMsg.message?.videoMessage;
               const mime  = inner?.mimetype || 'image/jpeg';
               const isVid = !!voMsg.message?.videoMessage;
-              // Send ONLY to bot's own private DM — stealthy, sender never sees it
               const ownJid = (sock.user?.id || '').replace(/:.*@/, '@') || chatJid;
-              const cap = `🔓 *View-Once Revealed*\n\n> 👁️ AA MD Bot`;
+              const sender = msg.key.participant || msg.key.remoteJid || '';
+              const num    = sender.split('@')[0].split(':')[0];
+              const time   = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
+
+              // Caption for "You" chat — shows who sent it + when
+              const privateCap = `🔓 *View-Once Revealed*\n\n` +
+                `👤 *From:* +${num}\n` +
+                `🕐 *Time:* ${time}\n` +
+                `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n\n` +
+                `> 👁️ AA MD Bot`;
+
+              // ── If in GROUP: also reveal inside the group (no sender mention)
+              if (inGroup) {
+                const groupCap = `🔓 *View-Once Revealed*\n\n> 👁️ AA MD Bot`;
+                if (isVid) {
+                  await sock.sendMessage(chatJid, { video: buf, caption: groupCap, mimetype: mime }).catch(() => {});
+                } else {
+                  await sock.sendMessage(chatJid, { image: buf, caption: groupCap, mimetype: mime }).catch(() => {});
+                }
+              }
+
+              // ── Always forward to own "You" private chat with full details
               if (isVid) {
-                await sock.sendMessage(ownJid, { video: buf, caption: cap, mimetype: mime }).catch(() => {});
+                await sock.sendMessage(ownJid, { video: buf, caption: privateCap, mimetype: mime }).catch(() => {});
               } else {
-                await sock.sendMessage(ownJid, { image: buf, caption: cap, mimetype: mime }).catch(() => {});
+                await sock.sendMessage(ownJid, { image: buf, caption: privateCap, mimetype: mime }).catch(() => {});
               }
             }
           }
