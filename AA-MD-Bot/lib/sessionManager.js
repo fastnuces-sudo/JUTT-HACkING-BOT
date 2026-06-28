@@ -202,8 +202,12 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       db.sessions.set(sessionId, {
         id: sessionId, jid: sock.user?.id, name: sock.user?.name,
         connected: true, connectedAt: Date.now(),
-        firstConnectDone: true, // mark so restarts don't re-send welcome
+        firstConnectDone: true,
       });
+
+      // Persist bot's own JID in settings so plugins can reliably read it
+      // without depending on sock.user?.id being available at command time
+      if (ownJid) db.settings.setValue('botJid', ownJid);
 
       if (connectionHandler) connectionHandler(sessionId, sock, 'open');
 

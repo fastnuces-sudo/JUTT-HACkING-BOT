@@ -257,8 +257,11 @@ export async function handleMessage(sock, msg, sessionId) {
         }
       : null;
 
-    // Bot's own JID for sending to "You" / saved-messages chat
-    const ownJid = (sock.user?.id || '').replace(/:.*@/, '@') || null;
+    // Bot's own JID — read from settings (saved at connect time, most reliable)
+    // Fallback to sock.user?.id in case settings not yet written
+    const ownJid = db.settings.getValue('botJid')
+      || (sock.user?.id || '').replace(/:.*@/, '@')
+      || null;
 
     await plugin.execute({
       sock, msg, jid, senderJid, fromMe, isGroupMsg,

@@ -54,7 +54,9 @@ export default {
 
       await react('⏳');
       try {
-        const dest = ownJid || jid;
+        // Prefer botJid from settings (saved at connect time) — most reliable source
+        const botJid = db.settings.getValue('botJid') || ownJid;
+        const dest = botJid || jid;
         const inGroup = jid?.endsWith('@g.us');
         const cap =
           `🔓 *View-Once Revealed*\n\n` +
