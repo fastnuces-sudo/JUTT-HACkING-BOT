@@ -16,7 +16,10 @@ import { db } from './database.js';
 import config from '../config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const sessionDir = path.join(__dirname, '../session');
+// Railway volume: if DATA_DIR=/bot/session is set, sessions go under volume/sessions/
+const sessionDir = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'sessions')
+  : path.join(__dirname, '../session');
 fs.ensureDirSync(sessionDir);
 
 export const sessions = new Map();
@@ -182,22 +185,52 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
     if (connection === 'open') {
       wasRegistered = true;
-      reconnectAttempts.delete(sessionId); // reset conflict counter on successful connect
+      reconnectAttempts.delete(sessionId);
       sessionQRs.delete(sessionId);
       sessionStatus.set(sessionId, 'connected');
       const phone = sock.user?.id?.split('@')[0]?.split(':')[0] || '';
+      const ownJid = (sock.user?.id || '').replace(/:.*@/, '@');
       sessionInfo.set(sessionId, { id: sessionId, jid: sock.user?.id, name: sock.user?.name, phone });
       botEvents.emit('status', { sessionId, status: 'connected', user: sock.user });
       logger.info({ sessionId, name: sock.user?.name }, '✅ WhatsApp Connected!');
+
+      // Check if this is a FIRST-EVER connect (not a restart)
+      const existingSession = db.sessions.all()[sessionId];
+      const isFirstConnect = !existingSession?.firstConnectDone;
+
       db.sessions.set(sessionId, {
         id: sessionId, jid: sock.user?.id, name: sock.user?.name,
         connected: true, connectedAt: Date.now(),
+        firstConnectDone: true, // mark so restarts don't re-send welcome
       });
+
       if (connectionHandler) connectionHandler(sessionId, sock, 'open');
 
       // Go unavailable immediately so phone still gets push notifications
-      // (markOnlineOnConnect:false + this ensures bot runs silently in background)
       sock.sendPresenceUpdate('unavailable').catch(() => {});
+
+      // ── First-connect welcome — ONLY sent once, never on restart ────────────
+      if (isFirstConnect && ownJid) {
+        const time = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
+        setTimeout(async () => {
+          try {
+            await sock.sendMessage(ownJid, {
+              text:
+                `🤖 *AA MD Bot Connected!*\n\n` +
+                `✅ Bot successfully linked to your WhatsApp\n` +
+                `📱 *Number:* +${phone}\n` +
+                `🕐 *Time:* ${time}\n` +
+                `📋 *Session:* ${sessionId}\n\n` +
+                `━━━━━━━━━━━━━━━━\n` +
+                `📌 *Quick Start:*\n` +
+                `▸ Type *.menu* to see all commands\n` +
+                `▸ *.antiviewonce on* — auto-reveal view-once\n` +
+                `▸ *.help* — guide & tips\n\n` +
+                `> 🤖 *Powered by AA MD Bot | AA Mods*`,
+            });
+          } catch (_) {}
+        }, 3000); // 3s delay so connection fully stabilises first
+      }
     }
 
     if (connection === 'connecting') {
@@ -215,13 +248,27 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       logger.warn({ sessionId, reason, wasRegistered }, 'Connection closed');
 
       if (isLoggedOut) {
-        // Permanently logged out — clean session files
+        // Permanently logged out — clean session files + all user data for this session
         reconnectAttempts.delete(sessionId);
         sessionStatus.set(sessionId, 'logged_out');
         botEvents.emit('status', { sessionId, status: 'logged_out' });
+
+        // Remove session record + auth files
+        const loggedOutJid = sessions.get(sessionId)?.user?.id || '';
         db.sessions.delete(sessionId);
         await fs.remove(sessionPath).catch(() => {});
-        logger.info({ sessionId }, '🔴 Session logged out & removed');
+
+        // Clean up user data tied to the bot's own number for this session
+        if (loggedOutJid) {
+          const ownNum = loggedOutJid.replace(/:.*@/, '@');
+          db.users.delete(ownNum);
+          logger.info({ sessionId, ownNum }, '🗑️ User data removed on logout');
+        }
+
+        // Reset firstConnectDone so next scan triggers welcome again
+        // (already deleted from db.sessions above — no extra step needed)
+
+        logger.info({ sessionId }, '🔴 Session logged out & data removed');
 
       } else if (wasRegistered) {
         // 440 = connectionReplaced — another instance/device took over the session

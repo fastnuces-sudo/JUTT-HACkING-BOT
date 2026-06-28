@@ -3,7 +3,11 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbDir = path.join(__dirname, '../database');
+// Railway volume: set DATA_DIR=/bot/session in Railway env vars
+// Both sessions and database will live under the volume so data survives restarts
+const dbDir = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'database')
+  : path.join(__dirname, '../database');
 fs.ensureDirSync(dbDir);
 
 const dbFiles = {
