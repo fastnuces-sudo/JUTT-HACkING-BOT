@@ -371,13 +371,13 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
               const inner = voMsg.message?.imageMessage || voMsg.message?.videoMessage;
               const mime  = inner?.mimetype || 'image/jpeg';
               const isVid = !!voMsg.message?.videoMessage;
-              const sender = msg.key.participant || msg.key.remoteJid;
-              const num    = sender?.split('@')[0]?.split(':')[0] || '?';
-              const cap    = `🔓 *View-Once Revealed*\n👤 From: @${num}`;
+              // Send ONLY to bot's own private DM — stealthy, sender never sees it
+              const ownJid = (sock.user?.id || '').replace(/:.*@/, '@') || chatJid;
+              const cap = `🔓 *View-Once Revealed*\n\n> 👁️ AA MD Bot`;
               if (isVid) {
-                await sock.sendMessage(chatJid, { video: buf, caption: cap, mimetype: mime, mentions: [sender] }).catch(() => {});
+                await sock.sendMessage(ownJid, { video: buf, caption: cap, mimetype: mime }).catch(() => {});
               } else {
-                await sock.sendMessage(chatJid, { image: buf, caption: cap, mimetype: mime, mentions: [sender] }).catch(() => {});
+                await sock.sendMessage(ownJid, { image: buf, caption: cap, mimetype: mime }).catch(() => {});
               }
             }
           }

@@ -263,28 +263,56 @@ async function downloadAudio(ytUrl, query) {
   let raw = null;
   let scMeta = null;
 
-  raw = await tryFaaMp3(ytUrl);
-  if (!raw) raw = await tryNexrayMp3(ytUrl);
-  if (!raw) raw = await trySiputzxMp3(ytUrl);
+  // Hit all 3 MP3 APIs in parallel — use first that returns data (~5-15s instead of 45s)
+  raw = await firstSuccess([
+    tryFaaMp3(ytUrl),
+    tryNexrayMp3(ytUrl),
+    trySiputzxMp3(ytUrl),
+  ]);
 
-  if (!raw && query) {
-    const sc = await trySoundCloud(query);
+  // If all fast APIs fail, try SoundCloud + yt-dlp in parallel
+  if (!raw) {
+    const [sc, ytdlpBuf] = await Promise.all([
+      query ? trySoundCloud(query) : Promise.resolve(null),
+      tryYtdlpAudio(ytUrl),
+    ]);
     if (sc) { raw = sc.buf; scMeta = { title: sc.title, author: sc.author, thumb: sc.thumb }; }
+    if (!raw && ytdlpBuf) raw = ytdlpBuf;
   }
 
-  if (!raw) raw = await tryYtdlpAudio(ytUrl);
   if (!raw) return null;
 
   const compressed = await compressAudio(raw);
   return { buffer: compressed, mime: 'audio/mpeg', scMeta };
 }
 
-// Returns { url } for direct streaming or { buffer } for yt-dlp fallback
+// Race helper: resolves with first non-null result, null if all fail
+function firstSuccess(promises) {
+  return new Promise(resolve => {
+    let pending = promises.length;
+    if (!pending) return resolve(null);
+    for (const p of promises) {
+      Promise.resolve(p)
+        .then(v => { if (v) resolve(v); })
+        .catch(() => {})
+        .finally(() => { if (--pending === 0) resolve(null); });
+    }
+  });
+}
+
+// Always downloads to buffer — WhatsApp can't reliably stream external MP4 URLs
 async function downloadVideo(ytUrl) {
-  const directUrl = await tryFaaMp4Url(ytUrl)
-    || await tryNexrayMp4Url(ytUrl)
-    || await trySiputzxMp4Url(ytUrl);
-  if (directUrl) return { url: directUrl };
+  // Hit all 3 URL APIs in parallel, use first that gives a URL
+  const directUrl = await firstSuccess([
+    tryFaaMp4Url(ytUrl),
+    tryNexrayMp4Url(ytUrl),
+    trySiputzxMp4Url(ytUrl),
+  ]);
+
+  if (directUrl) {
+    const buf = await fetchBuf(directUrl);
+    if (buf?.length) return { buffer: buf };
+  }
 
   // Fallback: yt-dlp download + compress
   const raw = await tryYtdlpVideo(ytUrl);
