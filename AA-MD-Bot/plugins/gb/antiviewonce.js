@@ -54,9 +54,11 @@ export default {
 
       await react('⏳');
       try {
-        // Prefer botJid from settings (saved at connect time) — most reliable source
-        const botJid = db.settings.getValue('botJid') || ownJid;
-        const dest = botJid || jid;
+        // Normalize JID — strip device suffix (:5) so self-chat works correctly
+        const normJid = (j) => j ? j.replace(/:\d+@/, '@') : null;
+        // Chain: DB setting → ownJid param → sock.user.id → current chat (last resort)
+        const rawJid = db.settings.getValue('botJid') || ownJid || sock.user?.id;
+        const dest = normJid(rawJid) || jid;
         const inGroup = jid?.endsWith('@g.us');
         const cap =
           `🔓 *View-Once Revealed*\n\n` +

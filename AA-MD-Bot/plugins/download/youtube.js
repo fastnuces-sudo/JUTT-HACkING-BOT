@@ -197,12 +197,12 @@ async function tryYtdlpAudio(ytUrl) {
   return null;
 }
 
-// ── Video API sources — return direct URL (no buffer download) ────────────────
+// ── Video API sources — return direct URL ─────────────────────────────────────
 
 async function tryFaaMp4Url(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp4?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.result?.download_url;
+    const u = d?.result?.download_url || d?.result?.url;
     if (u) return u;
   } catch {}
   return null;
@@ -211,7 +211,7 @@ async function tryFaaMp4Url(ytUrl) {
 async function tryNexrayMp4Url(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.result?.url;
+    const u = d?.result?.url || d?.data?.url;
     if (u) return u;
   } catch {}
   return null;
@@ -220,8 +220,32 @@ async function tryNexrayMp4Url(ytUrl) {
 async function trySiputzxMp4Url(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.siputzx.my.id/api/d/ytmp4?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.data?.url;
+    const u = d?.data?.url || d?.result?.url;
     if (u) return u;
+  } catch {}
+  return null;
+}
+
+async function tryRanaBotsMp4Url(ytUrl) {
+  try {
+    const { data: d } = await axios.get(
+      `https://api.rankerbots.com/api/ytmp4?url=${encodeURIComponent(ytUrl)}`,
+      { timeout: 18000 }
+    );
+    const u = d?.download_url || d?.url || d?.result?.url;
+    if (u) return u;
+  } catch {}
+  return null;
+}
+
+async function tryAagatzMp4Url(ytUrl) {
+  try {
+    const { data: d } = await axios.get(
+      `https://api.agatz.xyz/api/ytmp4?url=${encodeURIComponent(ytUrl)}`,
+      { timeout: 18000 }
+    );
+    const u = d?.data?.url || d?.url || d?.result;
+    if (u && typeof u === 'string') return u;
   } catch {}
   return null;
 }
@@ -300,25 +324,38 @@ function firstSuccess(promises) {
   });
 }
 
-// Always downloads to buffer — WhatsApp can't reliably stream external MP4 URLs
+// Timeout helper — resolves null after ms if promise hasn't resolved yet
+function withTimeout(ms, promise) {
+  return Promise.race([
+    promise,
+    new Promise(r => setTimeout(() => r(null), ms)),
+  ]);
+}
+
+// Returns { url } if API gives a working link, { buffer } if yt-dlp succeeds, null if all fail.
+// Total time cap: ~85s so the plugin can always show an error within 90s.
 async function downloadVideo(ytUrl) {
-  // Hit all 3 URL APIs in parallel, use first that gives a URL
-  const directUrl = await firstSuccess([
+  // Step 1: Race 5 API sources in parallel (20s max to get a URL)
+  const directUrl = await withTimeout(20000, firstSuccess([
     tryFaaMp4Url(ytUrl),
     tryNexrayMp4Url(ytUrl),
     trySiputzxMp4Url(ytUrl),
-  ]);
+    tryRanaBotsMp4Url(ytUrl),
+    tryAagatzMp4Url(ytUrl),
+  ]));
 
   if (directUrl) {
-    const buf = await fetchBuf(directUrl);
+    // Step 2: Try to download buffer in 35s
+    const buf = await withTimeout(35000, fetchBuf(directUrl));
     if (buf?.length) return { buffer: buf };
+    // Buffer download timed out / failed — return URL so WhatsApp fetches it directly
+    return { url: directUrl };
   }
 
-  // Fallback: yt-dlp download + compress
-  const raw = await tryYtdlpVideo(ytUrl);
+  // Step 3: yt-dlp fallback (30s cap — avoids multi-client 3-min hang)
+  const raw = await withTimeout(30000, tryYtdlpVideo(ytUrl));
   if (!raw) return null;
-  const compressed = await compressVideo(raw);
-  return { buffer: compressed };
+  return { buffer: raw };
 }
 
 // ── UI captions ───────────────────────────────────────────────────────────────
@@ -407,14 +444,25 @@ export default {
             }, { quoted: msg });
           }
 
-          const vdata = await downloadVideo(ytUrl);
-          if (!vdata) return reply('❌ Video download failed — all sources returned error.');
+          // 90s hard cap — always shows error if all sources fail
+          const vdata = await withTimeout(90000, downloadVideo(ytUrl));
+          if (!vdata) {
+            await react('❌');
+            return reply(
+              `❌ *Video download failed*\n\n` +
+              `All download sources timed out or returned an error.\n\n` +
+              `💡 *Try:*\n` +
+              `• Paste the YouTube link directly: ${prefix}video <link>\n` +
+              `• Try again after a minute`
+            );
+          }
 
           const vcap = meta
             ? buildVideoCaption(meta, botName)
             : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
 
-          // Prefer direct URL delivery (fast, no size limit); fallback to buffer
+          // { url } → WhatsApp fetches it directly (API gave URL but buffer timed out)
+          // { buffer } → we upload it (downloaded locally)
           const videoPayload = vdata.url
             ? { video: { url: vdata.url }, mimetype: 'video/mp4', caption: vcap }
             : { video: vdata.buffer, mimetype: 'video/mp4', caption: vcap };
