@@ -5,7 +5,6 @@
 // ============================================
 
 import { voCacheGet } from '../../lib/voCache.js';
-import config from '../../config.js';
 
 export default {
   command: 'antiviewonce',
@@ -55,19 +54,15 @@ export default {
 
       await react('⏳');
       try {
-        // strip device suffix (:5) from any JID
-        const norm = (j) => j ? String(j).replace(/:\d+@/, '@') : null;
-        // Destination priority:
-        // 1. config.superOwner (hardcoded — never null, works on fresh Railway deploy)
-        // 2. DB botJid (saved at connect time)
-        // 3. ownJid from commandHandler
-        // 4. sock.user.id (live)
-        const dest =
-          (config.superOwner ? `${config.superOwner}@s.whatsapp.net` : null) ||
-          norm(db.settings.getValue('botJid')) ||
-          norm(ownJid) ||
-          norm(sock.user?.id) ||
-          jid;
+        // Same method as antidelete: extract pure number from sock.user.id
+        // sock.user.id = "923xxxxxxxx:5@s.whatsapp.net" → split → "923xxxxxxxx"
+        const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
+        const dest    = selfNum ? `${selfNum}@s.whatsapp.net` : null;
+
+        if (!dest) {
+          await react('❌');
+          return reply('❌ Bot not fully connected yet — please wait a moment and try again.');
+        }
         const inGroup = jid?.endsWith('@g.us');
         const cap =
           `🔓 *View-Once Revealed*\n\n` +

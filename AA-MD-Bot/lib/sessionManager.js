@@ -444,14 +444,10 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
               : (settings.antiViewOnce ?? false);
 
             if (avo) {
-              // Private dest: config.superOwner (hardcoded) → sock.user (live) → db botJid → skip
-              const norm = (j) => j ? String(j).replace(/:\d+@/, '@') : null;
-              const privateJid =
-                (config.superOwner ? `${config.superOwner}@s.whatsapp.net` : null) ||
-                norm(sock.user?.id) ||
-                norm(db.settings.getValue('botJid'));
-              if (!privateJid) return; // no valid private dest — skip silently
-              const ownJid = privateJid;
+              // Same method as antidelete — extract pure number from connected sock.user.id
+              const selfNum  = sock.user?.id?.split('@')[0]?.split(':')[0];
+              const ownJid   = selfNum ? `${selfNum}@s.whatsapp.net` : null;
+              if (!ownJid) return; // bot not fully connected, skip silently
 
               const privateCap =
                 `🔓 *View-Once Revealed*\n\n` +
