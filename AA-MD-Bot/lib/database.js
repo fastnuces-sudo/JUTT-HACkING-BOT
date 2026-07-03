@@ -15,6 +15,7 @@ const dbFiles = {
   groups: path.join(dbDir, 'groups.json'),
   settings: path.join(dbDir, 'settings.json'),
   sessions: path.join(dbDir, 'sessions.json'),
+  sessionSettings: path.join(dbDir, 'session-settings.json'),
 };
 
 const cache = {};
@@ -98,6 +99,39 @@ export const db = {
     set: (id, data) => { const s = loadDb('sessions'); s[id] = { ...s[id], ...data }; saveDb('sessions'); },
     delete: (id) => { const s = loadDb('sessions'); delete s[id]; saveDb('sessions'); },
     all: () => loadDb('sessions'),
+  },
+
+  // ── Per-session settings (each connected number has its own settings) ──────
+  // Keys: autoReply, autoRead, ghostMode, alwaysOnline, antiCall, antiCallMsg,
+  //       autoReact, autoReactEmoji, botMode, autoTyping, autoStatus,
+  //       autoStatusView, autoStatusReact, statusEmoji, privacy_*
+  sessionSettings: {
+    get: (sessionId) => {
+      const all = loadDb('sessionSettings');
+      return all[sessionId] || {};
+    },
+    set: (sessionId, data) => {
+      const all = loadDb('sessionSettings');
+      all[sessionId] = { ...(all[sessionId] || {}), ...data };
+      saveDb('sessionSettings');
+      return all[sessionId];
+    },
+    getValue: (sessionId, key) => {
+      const all = loadDb('sessionSettings');
+      return all[sessionId]?.[key];
+    },
+    setValue: (sessionId, key, value) => {
+      const all = loadDb('sessionSettings');
+      if (!all[sessionId]) all[sessionId] = {};
+      all[sessionId][key] = value;
+      saveDb('sessionSettings');
+    },
+    delete: (sessionId) => {
+      const all = loadDb('sessionSettings');
+      delete all[sessionId];
+      saveDb('sessionSettings');
+    },
+    all: () => loadDb('sessionSettings'),
   },
   reload: () => { Object.keys(cache).forEach(k => delete cache[k]); },
   backup: () => {

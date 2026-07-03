@@ -151,10 +151,15 @@ export async function handleMessage(sock, msg, sessionId) {
     const isGroupMsg = isGroup(jid);
     const settings = db.settings.get();
 
+    // Per-session settings override global — session-specific features go here
+    const sessSets = db.sessionSettings.get(sessionId);
+    // Merge: session settings take priority over global for per-number features
+    const eff = (key, fallback) => (sessSets[key] !== undefined ? sessSets[key] : (settings[key] !== undefined ? settings[key] : fallback));
+
     // fromMe = self-chat ("You" tab) — always treated as owner
     const owner = isOwner(senderJid) || fromMe;
 
-    const botMode = settings.botMode || 'public';
+    const botMode = eff('botMode', 'public');
     if (botMode === 'private' && !owner && !fromMe) return;
 
     if (settings.maintenanceMode && !owner) {
@@ -162,13 +167,13 @@ export async function handleMessage(sock, msg, sessionId) {
       return;
     }
 
-    if (settings.autoRead && !fromMe) {
+    if (eff('autoRead', false) && !fromMe) {
       await sock.readMessages([msg.key]).catch(() => {});
     }
 
     // Auto-react to every incoming message (not own messages)
-    if (settings.autoReact && !fromMe) {
-      const emoji = settings.autoReactEmoji ?? config.autoReactEmoji ?? '❤️';
+    if (eff('autoReact', false) && !fromMe) {
+      const emoji = eff('autoReactEmoji', config.autoReactEmoji ?? '❤️');
       sock.sendMessage(jid, { react: { text: emoji, key: msg.key } }).catch(() => {});
     }
 
@@ -239,7 +244,7 @@ export async function handleMessage(sock, msg, sessionId) {
       } catch {}
     }
 
-    if (settings.autoTyping && !fromMe) {
+    if (eff('autoTyping', false) && !fromMe) {
       await sock.sendPresenceUpdate('composing', jid).catch(() => {});
     }
 
@@ -267,6 +272,23 @@ export async function handleMessage(sock, msg, sessionId) {
       || (sock.user?.id || '').replace(/:.*@/, '@')
       || null;
 
+    // Per-session settings accessor — bound to this session's sessionId
+    // Plugins use sessionSettings.get/set instead of db.settings for per-number features
+    const sessionSettings = {
+      get: (key) => db.sessionSettings.getValue(sessionId, key),
+      set: (key, val) => db.sessionSettings.setValue(sessionId, key, val),
+      getAll: () => db.sessionSettings.get(sessionId),
+      setAll: (data) => db.sessionSettings.set(sessionId, data),
+      // Convenience: reads session first, falls back to global setting
+      eff: (key, fallback) => {
+        const sv = db.sessionSettings.getValue(sessionId, key);
+        if (sv !== undefined) return sv;
+        const gv = db.settings.getValue(key);
+        if (gv !== undefined) return gv;
+        return fallback;
+      },
+    };
+
     await plugin.execute({
       sock, msg, jid, senderJid, fromMe, isGroupMsg,
       command, args, text: argText, sessionId,
@@ -276,6 +298,7 @@ export async function handleMessage(sock, msg, sessionId) {
       send: (t, opts) => sendMsg(sock, jid, t, opts),
       sendMedia: (content) => sendMedia(sock, jid, msg, content),
       db, config,
+      sessionSettings,
       quoted,
       ownJid,
       getQuoted: () => _quotedMsg || null,
@@ -290,7 +313,7 @@ export async function handleMessage(sock, msg, sessionId) {
       });
     }
 
-    if (settings.autoTyping) {
+    if (eff('autoTyping', false)) {
       await sock.sendPresenceUpdate('paused', jid).catch(() => {});
     }
   } catch (err) {

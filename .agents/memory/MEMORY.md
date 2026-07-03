@@ -1,0 +1,1 @@
+- [Per-session settings architecture](per-session-settings.md) — each connected WhatsApp number has independent settings via db.sessionSettings; session overrides global, both fall back gracefully.

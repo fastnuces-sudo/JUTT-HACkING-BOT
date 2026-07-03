@@ -1,27 +1,37 @@
 // ============================================
 // AA MD Bot - Always Online (GB WhatsApp Feature)
-// Keep presence as "online" permanently
+// Per-number: each connected number has its own always-online
 // ============================================
 
-let _interval = null;
+// Per-session interval map — prevents one number from controlling another
+const _intervals = new Map(); // sessionId → intervalId
+
+// Exported so ghost.js can stop the interval when enabling ghost mode
+export function stopAlwaysOnline(sessionId) {
+  if (_intervals.has(sessionId)) {
+    clearInterval(_intervals.get(sessionId));
+    _intervals.delete(sessionId);
+  }
+}
 
 export default {
   command: 'alwaysonline',
   alias: ['onlinemode', 'keeponline', 'stayonline', 'ao'],
   category: 'gb',
-  description: 'Always appear online on WhatsApp',
+  description: 'Always appear online on WhatsApp (per connected number)',
   usage: '.alwaysonline on/off',
   ownerOnly: true,
 
-  async execute({ reply, args, sock, db }) {
-    const toggle = args[0]?.toLowerCase();
-    const current = db.settings.getValue('alwaysOnline') ?? false;
+  async execute({ reply, args, sock, sessionId, sessionSettings }) {
+    const toggle  = args[0]?.toLowerCase();
+    const current = sessionSettings.get('alwaysOnline') ?? false;
 
     if (!toggle || !['on', 'off'].includes(toggle)) {
       return reply(
         `🟢 *Always Online*\n` +
         `Status: *${current ? 'ON ✅' : 'OFF ❌'}*\n\n` +
-        `*GB WhatsApp Feature* — Stay permanently online\n\n` +
+        `*GB WhatsApp Feature* — Stay permanently online\n` +
+        `⚠️ *Per number:* Only applies to this connected number.\n\n` +
         `━━━━━━━━━━━━━━━━\n` +
         `▸ *.alwaysonline on*  — Always appear online\n` +
         `▸ *.alwaysonline off* — Normal online status\n\n` +
@@ -31,31 +41,33 @@ export default {
     }
 
     const val = toggle === 'on';
-    db.settings.setValue('alwaysOnline', val);
+    sessionSettings.set('alwaysOnline', val);
 
     if (val) {
-      // Turn off ghost mode if it was on
-      db.settings.setValue('ghostMode', false);
-      // Start presence interval
-      if (_interval) clearInterval(_interval);
-      _interval = setInterval(async () => {
+      // Turn off ghost mode for this session
+      sessionSettings.set('ghostMode', false);
+      // Clear any existing interval for this session
+      stopAlwaysOnline(sessionId);
+      // Start new interval for this session only
+      const iv = setInterval(async () => {
         try { await sock.sendPresenceUpdate('available'); } catch {}
       }, 10000);
-      // Immediate update
+      _intervals.set(sessionId, iv);
       try { await sock.sendPresenceUpdate('available'); } catch {}
       return reply(
         `🟢 *Always Online* is now *ON ✅*\n\n` +
-        `You will now appear *permanently online* to everyone.\n` +
-        `Ghost Mode has been turned off.\n\n` +
+        `This number will appear *permanently online*.\n` +
+        `Ghost Mode has been turned off.\n` +
+        `Other connected numbers are *not affected*.\n\n` +
         `Use *.alwaysonline off* to stop.\n\n` +
         `> 🤖 *Powered by AA MD Bot*`
       );
     } else {
-      if (_interval) { clearInterval(_interval); _interval = null; }
+      stopAlwaysOnline(sessionId);
       try { await sock.sendPresenceUpdate('unavailable'); } catch {}
       return reply(
         `⚫ *Always Online* is now *OFF ❌*\n\n` +
-        `Your online status is back to normal.\n\n` +
+        `This number's online status is back to normal.\n\n` +
         `> 🤖 *Powered by AA MD Bot*`
       );
     }

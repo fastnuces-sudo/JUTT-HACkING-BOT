@@ -45,29 +45,37 @@ export function setConnectionHandler(fn) { connectionHandler = fn; }
 // Handles status@broadcast messages: auto-view, auto-react, auto-save
 async function handleStatusMessage(sock, msg, sessionId) {
   try {
-    const settings = db.settings.get();
     const senderJid = msg.key.participant || msg.key.remoteJid;
 
     // Skip own statuses
     if (msg.key.fromMe) return;
 
-    // 1) Auto-View: mark the status as read
-    const autoView = settings.autoStatusView ?? config.autoStatusView ?? true;
+    // Helper: session setting → global setting → config fallback
+    const eff = (key, fallback) => {
+      const sv = db.sessionSettings.getValue(sessionId, key);
+      if (sv !== undefined) return sv;
+      const gv = db.settings.getValue(key);
+      if (gv !== undefined) return gv;
+      return fallback;
+    };
+
+    // 1) Auto-View: mark the status as read (per-session)
+    const autoView = eff('autoStatusView', config.autoStatusView ?? true);
     if (autoView) {
       await sock.readMessages([msg.key]).catch(() => {});
     }
 
-    // 2) Auto-React: react with a heart emoji
-    const autoReact = settings.autoStatusReact ?? config.autoStatusReact ?? true;
-    const statusEmoji = settings.statusEmoji ?? config.statusEmoji ?? '❤️';
+    // 2) Auto-React: react with a heart emoji (per-session)
+    const autoReact    = eff('autoStatusReact', config.autoStatusReact ?? true);
+    const statusEmoji  = eff('statusEmoji', config.statusEmoji ?? '❤️');
     if (autoReact) {
       await sock.sendMessage('status@broadcast', {
         react: { text: statusEmoji, key: msg.key },
       }).catch(() => {});
     }
 
-    // 3) Auto-Save/Forward: forward the status to owner DM
-    const autoSave = settings.autoStatus ?? config.autoStatus ?? false;
+    // 3) Auto-Save/Forward: forward the status to owner DM (per-session)
+    const autoSave = eff('autoStatus', config.autoStatus ?? false);
     if (autoSave) {
       const ownerNum = (config.ownerNumber?.[0] || '').replace(/\D/g, '');
       if (!ownerNum) return;
@@ -485,21 +493,28 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
       if (isJidBroadcast(msg.key.remoteJid)) continue;
 
-      // ── Auto Read: silently mark message as read ──────────────
+      // ── Auto Read: silently mark message as read (per-session) ──
       try {
-        if (db.settings.getValue('autoRead')) {
+        // Check session setting first, fall back to global
+        const autoRead = db.sessionSettings.getValue(sessionId, 'autoRead')
+          ?? db.settings.getValue('autoRead');
+        if (autoRead) {
           await sock.readMessages([msg.key]).catch(() => {});
         }
       } catch {}
 
-      // ── Auto Reply: respond to DMs automatically ──────────────
+      // ── Auto Reply: respond to DMs automatically (per-session) ──
       try {
-        const isDm       = !msg.key.remoteJid?.endsWith('@g.us') && !msg.key.remoteJid?.endsWith('@broadcast');
-        const isFromMe   = msg.key.fromMe;
-        const autoReplyMsg = db.settings.getValue('autoReply');
+        const isDm     = !msg.key.remoteJid?.endsWith('@g.us') && !msg.key.remoteJid?.endsWith('@broadcast');
+        const isFromMe = msg.key.fromMe;
+        // Session-specific autoReply — only triggers for THIS connected number
+        // Falls back to global setting so existing users aren't broken
+        const autoReplyMsg = db.sessionSettings.getValue(sessionId, 'autoReply')
+          ?? db.settings.getValue('autoReply');
         if (isDm && !isFromMe && autoReplyMsg) {
           const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-          const isCmd = text?.startsWith(db.settings.getValue('prefix') || '.');
+          const prefix = db.settings.getValue('prefix') || '.';
+          const isCmd  = text?.startsWith(prefix);
           if (!isCmd) {
             await sock.sendMessage(msg.key.remoteJid, {
               text: `🤖 *Auto Reply*\n\n${autoReplyMsg}\n\n> Powered by AA MD Bot`,
@@ -546,16 +561,18 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     } catch {}
   });
 
-  // ── Anti-Call Handler ──────────────────────────────────────────────────────
+  // ── Anti-Call Handler (per-session) ───────────────────────────────────────
   sock.ev.on('call', async (calls) => {
     try {
-      const settings = db.settings.get();
-      if (!settings.antiCall) return;
+      // Check session-specific setting first, fall back to global
+      const antiCall = db.sessionSettings.getValue(sessionId, 'antiCall')
+        ?? db.settings.getValue('antiCall');
+      if (!antiCall) return;
       for (const call of calls) {
         if (call.status !== 'offer') continue;
         await sock.rejectCall(call.id, call.from).catch(() => {});
-        // Use owner-defined custom message if set, else default
-        const customMsg = settings.antiCallMsg?.trim();
+        const customMsg = (db.sessionSettings.getValue(sessionId, 'antiCallMsg')
+          ?? db.settings.getValue('antiCallMsg'))?.trim();
         const replyText = customMsg
           ? customMsg
           : `📵 *Auto Reject*\n\nSorry, this bot cannot receive calls.\n\n> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`;

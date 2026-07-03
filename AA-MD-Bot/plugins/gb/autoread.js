@@ -1,25 +1,26 @@
 // ============================================
 // AA MD Bot - Auto Read (GB WhatsApp Feature)
-// Automatically mark messages as read (no blue ticks shown to others)
+// Per-number: each connected number has its own autoread setting
 // ============================================
 
 export default {
   command: 'autoread',
   alias: ['autoseen', 'readall', 'markread'],
   category: 'gb',
-  description: 'Auto-mark all messages as read silently',
+  description: 'Auto-mark all messages as read silently (per connected number)',
   usage: '.autoread on/off',
   ownerOnly: true,
 
-  async execute({ reply, args, db }) {
-    const toggle = args[0]?.toLowerCase();
-    const current = db.settings.getValue('autoRead') ?? false;
+  async execute({ reply, args, sessionSettings }) {
+    const toggle  = args[0]?.toLowerCase();
+    const current = sessionSettings.get('autoRead') ?? false;
 
     if (!toggle || !['on', 'off'].includes(toggle)) {
       return reply(
         `👁️ *Auto Read*\n` +
         `Status: *${current ? 'ON ✅' : 'OFF ❌'}*\n\n` +
-        `*GB WhatsApp Feature* — Silently mark all msgs as read\n\n` +
+        `*GB WhatsApp Feature* — Silently mark all msgs as read\n` +
+        `⚠️ *Per number:* Only applies to this connected number.\n\n` +
         `━━━━━━━━━━━━━━━━\n` +
         `▸ *.autoread on*  — Mark all incoming messages as read\n` +
         `▸ *.autoread off* — Stop auto-reading\n\n` +
@@ -30,11 +31,11 @@ export default {
     }
 
     const val = toggle === 'on';
-    db.settings.setValue('autoRead', val);
+    sessionSettings.set('autoRead', val);
     return reply(
       `👁️ *Auto Read* is now *${val ? 'ON ✅' : 'OFF ❌'}*\n\n` +
       (val
-        ? `All incoming messages will be marked as read automatically.`
+        ? `All incoming messages on *this number* will be marked as read automatically.`
         : `Messages will only be marked read when you open them.`) +
       `\n\n> 🤖 *Powered by AA MD Bot*`
     );

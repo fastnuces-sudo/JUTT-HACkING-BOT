@@ -1,0 +1,603 @@
+// ============ DECODED CODE - ORIGINAL STRUCTURE SAME ============
+
+const { generateWAMessageContent, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
+const { gmd, config, fetchJson } = require('../lib');
+const { PREFIX: prefix } = config;
+const axios = require('axios');
+const yts = require('yt-search');
+
+// ==================== YOUTUBE SEARCH ====================
+gmd({
+    pattern: 'yts',
+    alias: ['ytsearch', 'youtubesearch'],
+    desc: 'Search for YouTube Videos',
+    category: 'search',
+    react: '🔍',
+    filename: __filename,
+    use: '<search query>'
+}, async (sock, message, messageData, { from, args, reply }) => {
+    if (!args[0]) return reply('Please provide a search query!');
+    const query = args.join(' ');
+    try {
+        const searchResults = await yts(query);
+        if (!searchResults.videos.length) return reply('No videos found for the given query.');
+        
+        const firstVideo = searchResults.videos[0];
+        let resultText = '*YouTube Search Results:*\n\n';
+        
+        searchResults.videos.slice(0, 10).forEach((video, index) => {
+            resultText += `${index + 1}. *${video.title}*\n`;
+            resultText += `   Channel: ${video.author.name}\n`;
+            resultText += `   ⏱️ Duration: ${video.duration.timestamp}\n`;
+            resultText += `   👁️ Views: ${formatNumber(video.views)}\n`;
+            resultText += `   🔗 Link: ${video.url}\n`;
+            resultText += `   📅 Uploaded: ${video.ago}\n\n`;
+        });
+
+        const messageContent = {
+            image: { url: firstVideo.thumbnail },
+            caption: resultText,
+            contextInfo: {
+                mentionedJid: [messageData.sender],
+                forwardingScore: 5,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363420122180789@newsletter',
+                    newsletterName: 'JawadTechX',
+                    serverMessageId: 143
+                }
+            }
+        };
+        await sock.sendMessage(from, messageContent, { quoted: message });
+    } catch (error) {
+        console.log('Error in YouTube search:', error);
+        reply('❌ An error occurred while searching YouTube. Please try again later.');
+    }
+});
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    else {
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+}
+
+// ==================== BOT STATUS ====================
+gmd({
+    pattern: 'test2',
+    desc: 'Check if Bot is Active.',
+    react: '🖼️',
+    category: 'general',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        let statusText = '*BOT IS CURRENTLY ACTIVE!*';
+        const messageObj = {
+            text: statusText,
+            contextInfo: {
+                externalAdReply: {
+                    title: 'JawadTechX',
+                    sourceUrl: 'https://whatsapp.com/channel/0029Vb5axis2v1IloX5BQD2c',
+                    showAdAttribution: true,
+                    thumbnailUrl: '' + config.BOT_PIC
+                }
+            }
+        };
+        await sock.sendMessage(from, messageObj, { quoted: message });
+        await messageData.react('✅');
+    } catch (error) {
+        console.log('Error in test2 command:', error);
+        reply('❌ Error: ' + error.message);
+    }
+});
+
+// ==================== GITHUB STALK ====================
+gmd({
+    pattern: 'github',
+    alias: ['githubstalk', 'gitstalk'],
+    desc: 'Search/Stalk User on Github.',
+    react: '🌍',
+    category: 'stalker',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a username, e.g., *' + prefix + 'github mauricegift*');
+        const { data: userData } = await axios.get('https://api.github.com/users/' + q);
+        if (!userData) return reply('❌ No results found for username: *' + q + '*');
+
+        const user = userData;
+        const caption = `     *[ GITHUB USER INFO ]*
+     
+🚩 *Id :* ${user.id || 'N/A'}
+👤 *Name :* ${user.name || 'N/A'}
+🔖 *Username :* ${user.login || 'N/A'}
+📧 *Email :* ${user.email || 'N/A'}
+📍 *Location :* ${user.location || 'N/A'}
+🏢 *Company :* ${user.company || 'N/A'}
+🔓 *Public Repo URL :* ${user.repos_url || 'N/A'}
+🔐 *Public Gists URL :* ${user.gists_url || 'N/A'}
+💕 *Followers :* ${user.followers || '0'}
+👉 *Following :* ${user.following || '0'}
+📆 Created At : ${new Date(user.created_at).toLocaleString() || 'N/A'}
+🔄 Updated At : ${new Date(user.updated_at).toLocaleString() || 'N/A'}`;
+
+        const messageObj = {
+            image: { url: user.avatar_url || 'https://via.placeholder.com/150' },
+            caption: caption,
+            contextInfo: {
+                mentionedJid: [messageData.sender],
+                forwardingScore: 5,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363420122180789@newsletter',
+                    newsletterName: 'JawadTechX',
+                    serverMessageId: 143
+                }
+            }
+        };
+        await sock.sendMessage(from, messageObj, { quoted: message });
+        await messageData.react('✅');
+    } catch (error) {
+        console.log('Error fetching GitHub user data:', error);
+        reply('Error: ' + error.message);
+    }
+});
+
+// ==================== GOOGLE IMAGE SEARCH ====================
+gmd({
+    pattern: 'img',
+    alias: ['image', 'gimage', 'googleimage'],
+    desc: 'Search for Images from Google.',
+    react: '🖼️',
+    category: 'search',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a search query for the image.');
+        let results = await fetchJson(global.api + '/search/googleimage?apikey=' + global.myName + '&query=' + encodeURIComponent(q));
+        if (!results.result || results.result.length === 0) return reply('No images found for the given query.');
+        
+        let images = results.result.slice(0, 5);
+        for (let imgUrl of images) {
+            await sock.sendMessage(from, {
+                image: { url: imgUrl },
+                caption: '> ' + global.footer
+            }, { quoted: message });
+        }
+    } catch (error) {
+        console.log(error);
+        reply('Error: ' + error.message);
+    }
+});
+
+// ==================== PINTEREST IMAGE SEARCH ====================
+gmd({
+    pattern: 'img2',
+    alias: ['image2', 'pint', 'pinterest'],
+    desc: 'Search for Media from Pinterest.',
+    react: '🖼️',
+    category: 'search',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a search query.');
+        const apiUrl = global.api + '/search/pinterest?apikey=' + global.myName + '&query=' + encodeURIComponent(q);
+        const response = await axios.get(apiUrl);
+        const imageData = response.data.result;
+        
+        if (!imageData || imageData.length === 0) return reply('No images found for your search.');
+        
+        const imageUrls = imageData.slice(0, 6);
+        const downloadableImages = [];
+        
+        for (const url of imageUrls) {
+            try {
+                const imgResponse = await axios.get(url, { responseType: 'arraybuffer' });
+                if (imgResponse.status === 200) {
+                    downloadableImages.push({
+                        buffer: Buffer.from(imgResponse.data),
+                        directLink: url
+                    });
+                }
+            } catch (err) {
+                console.log('Failed to fetch image: ' + url);
+            }
+        }
+        
+        if (downloadableImages.length === 0) return reply('All image downloads failed.');
+        
+        const cards = await Promise.all(downloadableImages.map(async (img, index) => ({
+            header: {
+                title: 'Image ' + (index + 1),
+                hasMediaAttachment: true,
+                imageMessage: (await generateWAMessageContent(
+                    { image: img.buffer },
+                    { upload: sock.waUploadToServer }
+                )).imageMessage
+            },
+            body: { text: 'Search: ' + q },
+            footer: { text: '🔁 Swipe to see more' },
+            nativeFlowMessage: {
+                buttons: [{
+                    name: 'cta_url',
+                    buttonParamsJson: JSON.stringify({
+                        display_text: '🌐 View Image',
+                        url: img.directLink
+                    })
+                }]
+            }
+        })));
+
+        const interactiveMsg = generateWAMessageFromContent(from, {
+            viewOnceMessage: {
+                message: {
+                    messageContextInfo: {
+                        deviceListMetadata: {},
+                        deviceListMetadataVersion: 2
+                    },
+                    interactiveMessage: {
+                        body: { text: 'Search: ' + q },
+                        footer: { text: '📦 Showing ' + downloadableImages.length + ' images' },
+                        carouselMessage: { cards: cards }
+                    }
+                }
+            }
+        }, { quoted: message });
+        
+        await sock.relayMessage(from, interactiveMsg.message, { messageId: interactiveMsg.key.id });
+    } catch (error) {
+        console.log('Error in image command:', error);
+        reply('❌ An error occurred while fetching images.');
+    }
+});
+
+// ==================== PINTEREST SEARCH (ALTERNATIVE) ====================
+gmd({
+    pattern: 'pintimage',
+    alias: ['pinterestimage', 'pint'],
+    desc: 'Search for Media from Pinterest.',
+    react: '🖼️',
+    category: 'search',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a search query for the image.');
+        let results = await fetchJson(global.api + '/search/pinterest?apikey=' + global.myName + '&query=' + encodeURIComponent(q));
+        if (!results.result || results.result.length === 0) return reply('No images found for the given query.');
+        
+        let images = results.result.slice(0, 5);
+        for (let imgUrl of images) {
+            await sock.sendMessage(from, {
+                image: { url: imgUrl },
+                caption: '> ' + global.footer
+            }, { quoted: message });
+        }
+    } catch (error) {
+        console.log(error);
+        reply('Error: ' + error.message);
+    }
+});
+
+// ==================== GOOGLE SEARCH ====================
+gmd({
+    pattern: 'google',
+    alias: ['gsearch', 'ggle', 'googlesearch'],
+    desc: 'Search from Google.',
+    react: '🌍',
+    category: 'search',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a search query.');
+        let results = await fetchJson(global.api + '/search/google?apikey=' + global.myName + '&query=' + encodeURIComponent(q));
+        
+        if (results && results.success) {
+            const items = results.result;
+            if (items.length === 0) return reply('No results found for your query.');
+            
+            let textResult = 'Google Search Results For: *' + q + '*\n\n';
+            for (let item of items) {
+                textResult += '➣ *Title*: ' + item.title + '\n';
+                textResult += '➣ *Description*: ' + item.description + '\n';
+                textResult += '➣ *Link*: ' + item.url + '\n\n';
+            }
+            
+            const messageObj = {
+                text: textResult + '\n> ' + global.footer,
+                contextInfo: {
+                    mentionedJid: [messageData.sender],
+                    forwardingScore: 5,
+                    isForwarded: true,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: '120363420122180789@newsletter',
+                        newsletterName: 'JawadTechX',
+                        serverMessageId: 143
+                    }
+                }
+            };
+            await sock.sendMessage(from, messageObj, { quoted: message });
+            await messageData.react('✅');
+        } else reply('Unable to fetch search results. Please try again.');
+    } catch (error) {
+        console.log(error);
+        reply('❌ Error: ' + error.message);
+    }
+});
+
+// ==================== WIKIPEDIA SEARCH ====================
+gmd({
+    pattern: 'wikipedia',
+    alias: ['wikimedia', 'wiki', 'wikisearch'],
+    desc: 'Search from Wikimedia Commons.',
+    react: '🌍',
+    category: 'search',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a search query.');
+        let results = await fetchJson(global.api + '/search/wikimedia?apikey=' + global.myName + '&title=' + encodeURIComponent(q));
+        
+        if (results && results.success) {
+            const items = results.result;
+            if (items.length === 0) return reply('❌ No results found for your query.');
+            
+            let textResult = 'Wikimedia Search Results For: *' + q + '*\n\n';
+            for (let item of items) {
+                textResult += '➣ *Title*: ' + item.title + '\n';
+                textResult += '➣ *Description*: ' + item.description + '\n';
+                textResult += '➣ *Image*: ' + (item.image ? item.image : 'No image available') + '\n\n────────────────────────\n\n';
+            }
+            
+            const messageObj = {
+                text: textResult + '\n> ' + global.footer,
+                contextInfo: {
+                    mentionedJid: [messageData.sender],
+                    forwardingScore: 5,
+                    isForwarded: true,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: '120363420122180789@newsletter',
+                        newsletterName: 'JawadTechX',
+                        serverMessageId: 143
+                    }
+                }
+            };
+            await sock.sendMessage(from, messageObj, { quoted: message });
+            await messageData.react('✅');
+        } else reply('Unable to fetch search results. Please try again.');
+    } catch (error) {
+        console.log(error);
+        reply('Error: ' + error.message);
+    }
+});
+
+// ==================== WEATHER SEARCH ====================
+gmd({
+    pattern: 'weather',
+    alias: ['weathersearch', 'forecast'],
+    desc: 'Get the Current Weather of a location.',
+    react: '🌦️',
+    category: 'search',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a location for the weather search.');
+        let results = await fetchJson(global.api + '/search/weather?apikey=' + global.myName + '&location=' + encodeURIComponent(q));
+        
+        if (results && results.success) {
+            const weatherInfo = results.result.weather;
+            const mainInfo = results.result.main;
+            const windInfo = results.result.wind;
+            const sysInfo = results.result.sys;
+            const locationName = results.result.location;
+            const iconCode = weatherInfo.icon;
+            
+            let weatherText = 'Weather Info for *' + locationName + '*\n\n';
+            weatherText += '➣ *Weather*: ' + weatherInfo.main + ' - ' + weatherInfo.description + '\n';
+            weatherText += '➣ *Temperature*: ' + mainInfo.temp + '°C (Feels like: ' + mainInfo.feels_like + '°C)\n';
+            weatherText += '➣ *Humidity*: ' + mainInfo.humidity + '%\n';
+            weatherText += '➣ *Wind Speed*: ' + windInfo.speed + ' m/s\n';
+            weatherText += '➣ *Wind Gust*: ' + windInfo.gust + ' m/s\n';
+            weatherText += '➣ *Visibility*: ' + results.result.visibility / 1000 + ' km\n';
+            weatherText += '➣ *Country*: ' + sysInfo.country + '\n';
+            weatherText += '➣ *Sunrise*: ' + new Date(sysInfo.sunrise * 1000).toLocaleTimeString() + '\n';
+            weatherText += '➣ *Sunset*: ' + new Date(sysInfo.sunset * 1000).toLocaleTimeString() + '\n';
+            weatherText += '➣ *Icon*: ' + (iconCode ? 'https://openweathermap.org/img/wn/' + iconCode + '.png' : 'No icon available') + '\n\n';
+            
+            const messageObj = {
+                text: weatherText + '\n> ' + global.footer,
+                contextInfo: {
+                    mentionedJid: [messageData.sender],
+                    forwardingScore: 5,
+                    isForwarded: true,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: '120363420122180789@newsletter',
+                        newsletterName: 'JawadTechX',
+                        serverMessageId: 143
+                    }
+                }
+            };
+            await sock.sendMessage(from, messageObj, { quoted: message });
+            await messageData.react('✅');
+        } else reply('❌ Unable to fetch weather information. Please try again.');
+    } catch (error) {
+        console.log(error);
+        reply('❌ Error: ' + error.message);
+    }
+});
+
+// ==================== NPM PACKAGE SEARCH ====================
+gmd({
+    pattern: 'npm',
+    alias: ['npmstalk', 'npmsearch'],
+    desc: 'Get Information of a Package.',
+    react: '🤔',
+    category: 'stalker',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a package name for the npm search.');
+        let results = await fetchJson(global.api + '/search/npmsearch?apikey=' + global.myName + '&packagename=' + encodeURIComponent(q));
+        
+        if (results && results.success) {
+            const { name, description, version, packageLink, downloadLink, publishedDate, owner, dependencies, keywords, homepage, license, readme } = results.result;
+            const keywordStr = keywords.length > 0 ? keywords.join(', ') : 'N/A';
+            const depStr = dependencies ? Object.keys(dependencies).join(', ') : 'N/A';
+            
+            const textMsg = '_,*Here is your NPM Stalk Results:*\n\n' +
+                '*Name:* ' + name + '\n*Owner:* ' + owner + '\n*Version:* ' + version + '\n' +
+                '*Published:* ' + publishedDate + '\n*Description:* ' + description + '\n' +
+                '*Package Link:* ' + packageLink + '\n*Download Link:* ' + downloadLink + '\n' +
+                '*Homepage:* ' + homepage + '\n*License:* ' + license + '\n' +
+                '*Readme:* ' + (readme || 'N/A') + '\n> ' + global.footer;
+            
+            const messageObj = {
+                text: textMsg,
+                contextInfo: {
+                    mentionedJid: [messageData.sender],
+                    forwardingScore: 5,
+                    isForwarded: true,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: '120363420122180789@newsletter',
+                        newsletterName: 'JawadTechX',
+                        serverMessageId: 143
+                    }
+                }
+            };
+            await sock.sendMessage(from, messageObj, { quoted: message });
+            await messageData.react('✅');
+        } else reply('❌ Unable to fetch npm information. Please try again.');
+    } catch (error) {
+        console.log(error);
+        reply('Error: ' + error.message);
+    }
+});
+
+// ==================== LYRICS SEARCH ====================
+gmd({
+    pattern: 'lyrics',
+    alias: ['lyricssearch'],
+    desc: 'Get Lyrics Information.',
+    react: '🎶',
+    category: 'search',
+    filename: __filename
+}, async (sock, message, messageData, { from, quoted, body, args, q, reply }) => {
+    try {
+        if (!q) return reply('Please provide a song name for the lyrics search.');
+        let results = await fetchJson(global.api + '/search/lyrics?apikey=' + global.myName + '&query=' + encodeURIComponent(q));
+        
+        if (results && results.success) {
+            const messageObj = {
+                text: results.result,
+                contextInfo: {
+                    mentionedJid: [messageData.sender],
+                    forwardingScore: 5,
+                    isForwarded: true,
+                    forwardedNewsletterMessageInfo: {
+                        newsletterJid: '120363420122180789@newsletter',
+                        newsletterName: 'JawadTechX',
+                        serverMessageId: 143
+                    }
+                }
+            };
+            await sock.sendMessage(from, messageObj, { quoted: message });
+            await messageData.react('✅');
+        } else reply('❌ Unable to fetch lyrics information. Please try again.');
+    } catch (error) {
+        console.log(error);
+        reply('Error: ' + error.message);
+    }
+});
+
+// ==================== NEWS HEADLINES ====================
+gmd({
+    pattern: 'news',
+    desc: 'Get the Latest News Headlines.',
+    category: 'news',
+    react: '📰',
+    filename: __filename
+}, async (sock, message, messageData, { from, reply }) => {
+    try {
+        const apiKey = '0f2c43ab11324578a7b1709651736382';
+        const response = await axios.get('https://newsapi.org/v2/top-headlines?country=us&apiKey=' + apiKey);
+        const articles = response.data.articles;
+        
+        if (!articles || articles.length === 0) return reply('No news articles found.');
+        
+        for (let i = 0; i < Math.min(articles.length, 5); i++) {
+            const article = articles[i];
+            let caption = ('📰 *' + article.title + '*\n' +
+                (article.description || 'No description available') + '\n' +
+                '🔗 Link: ' + article.url + '\n> ' + global.footer + '\n\n' +
+                '────────────────────────\n\n').trim();
+            
+            if (article.urlToImage) {
+                await sock.sendMessage(from, {
+                    image: { url: article.urlToImage },
+                    caption: '> ' + global.footer
+                });
+            } else {
+                await sock.sendMessage(from, { text: caption });
+            }
+        }
+    } catch (error) {
+        console.log('Error fetching news:', error.message);
+        reply('Could not fetch news. Please try again later.');
+    }
+});
+
+// ==================== MOVIE INFO (OMDB) ====================
+gmd({
+    pattern: 'movie',
+    alias: ['imdb', 'omdb'],
+    desc: 'Fetch Detailed Information About a Movie.',
+    category: 'search',
+    react: '🎬',
+    filename: __filename
+}, async (sock, message, messageData, { from, reply, q, sender }) => {
+    try {
+        if (!q) return reply('*Please provide valid movie name!*');
+        let { data: movieData } = await axios.get('http://www.omdbapi.com/?apikey=742b2d09&t=' + q + '&plot=full');
+        if (!movieData || movieData.Response === 'False') return reply('_Provide a Series or movie name_');
+        
+        let infoText = '⚍⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚍\n' +
+            ' ```𝕄𝕆𝕍𝕀𝔼 𝕊𝔼𝔸ℝℂℍ```\n' +
+            '⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎⚎\n';
+        infoText += '🎬Title      : ' + movieData.Title + '\n';
+        infoText += '📅Year       : ' + movieData.Year + '\n';
+        infoText += '⭐Rated      : ' + movieData.Rated + '\n';
+        infoText += '📆Released   : ' + movieData.Released + '\n';
+        infoText += '⏳Runtime    : ' + movieData.Runtime + '\n';
+        infoText += '🌀Genre      : ' + movieData.Genre + '\n';
+        infoText += '✍Writer     : ' + movieData.Writer + '\n';
+        infoText += '📃Plot       : ' + movieData.Plot + '\n';
+        infoText += '👨Actors     : ' + movieData.Actors + '\n';
+        infoText += '🌐Language   : ' + movieData.Language + '\n';
+        infoText += '🌍Country    : ' + movieData.Country + '\n';
+        infoText += '🎖️Awards     : ' + movieData.Awards + '\n';
+        infoText += '📦BoxOffice  : ' + movieData.BoxOffice + '\n';
+        infoText += '🏙️Production : ' + movieData.Production + '\n';
+        infoText += '🌟imdbRating : ' + movieData.imdbRating + '\n';
+        infoText += '❎imdbVotes  : ' + movieData.imdbVotes + '\n\n';
+        
+        const messageObj = {
+            image: { url: movieData.Poster },
+            caption: infoText.trim(),
+            contextInfo: {
+                mentionedJid: [messageData.sender],
+                forwardingScore: 5,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363420122180789@newsletter',
+                    newsletterName: 'JawadTechX',
+                    serverMessageId: 143
+                }
+            }
+        };
+        await sock.sendMessage(from, messageObj, { quoted: message });
+        await messageData.react('✅');
+    } catch (error) {
+        console.log('Error in movie command:', error);
+        reply('Error: ' + error.message);
+    }
+});
