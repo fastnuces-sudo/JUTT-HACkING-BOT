@@ -1,32 +1,67 @@
-import { getLyrics } from '@fantox01/lyrics-scraper';
+// ============================================
+// AA MD Bot - Lyrics Search
+// Uses lrclib.net (free, no API key needed)
+// ============================================
+import axios from 'axios';
 
 export default {
   command: 'lyrics',
-  alias: ['lyric'],
+  alias: ['lyric', 'lyricssearch'],
   description: 'Get song lyrics',
   category: 'search',
+
   async execute({ sock, msg, jid, text, react, reply, prefix }) {
     if (!text) {
       await react('❔');
-      return reply(`Please provide an lyrics Search Term !\n\nExample: *${prefix}lyrics Heat waves*`);
+      return reply(`🎶 Please provide a song name!\n\nExample: *${prefix}lyrics Shape of You*`);
     }
-    await react('📃');
+
+    await react('🎶');
+
     try {
-      let result = await getLyrics(text);
-      if (result && result.status !== 500 && result.lyrics && result.thumbnail) {
-        let resText2 = `  *『  ⚡️ Lyrics Search Engine ⚡️  』*\n\n\n_Search Term:_ *${text}*\n\n\n*📍 Lyrics:* \n\n${result.lyrics}\n\n\n_*Powered by:*_ *Lyrics Scraper - by FantoX*\n\n_*Url:*_ https://github.com/FantoX/lyrics-scraper \n`;
-        await sock.sendMessage(jid, {
-          image: { url: result.thumbnail },
-          caption: resText2,
-        }, { quoted: msg });
-      } else {
+      const { data } = await axios.get(
+        `https://lrclib.net/api/search?q=${encodeURIComponent(text)}`,
+        { timeout: 12000 }
+      );
+
+      if (!data || data.length === 0) {
         await react('❌');
-        return reply(result?.message || `Unable to find lyrics for the song: *${text}*`);
+        return reply(`❌ No lyrics found for: *${text}*\n\nTry a different song name.`);
       }
+
+      // Pick best match (first result usually best)
+      const song = data[0];
+      const lyrics = song.plainLyrics || song.syncedLyrics?.replace(/\[\d+:\d+\.\d+\]\s*/g, '') || '';
+
+      if (!lyrics) {
+        await react('❌');
+        return reply(`❌ Lyrics not available for: *${song.trackName}*`);
+      }
+
+      // Trim if too long for WhatsApp
+      const MAX = 3500;
+      const trimmedLyrics = lyrics.length > MAX
+        ? lyrics.slice(0, MAX) + '\n\n_... (trimmed — too long)_'
+        : lyrics;
+
+      const caption =
+        `🎵 *『 Lyrics Search Engine 』*\n\n` +
+        `🎙️ *${song.trackName}*\n` +
+        `🎤 *${song.artistName}*\n` +
+        (song.albumName ? `💿 *${song.albumName}*\n` : '') +
+        (song.duration ? `⏱️ *${Math.floor(song.duration / 60)}:${String(song.duration % 60).padStart(2, '0')}*\n` : '') +
+        `\n━━━━━━━━━━━━━━━━\n\n` +
+        `${trimmedLyrics}\n\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `> 🤖 *Powered by AA MD Bot*`;
+
+      await sock.sendMessage(jid, { text: caption }, { quoted: msg });
+      await react('✅');
+
     } catch (err) {
-      console.error('Lyrics Error:', err);
+      console.error('Lyrics error:', err.message);
       await react('❌');
-      return reply(`An error occurred while fetching lyrics for: *${text}*`);
+      return reply(`❌ Error fetching lyrics: ${err.message?.slice(0, 60)}`);
     }
   },
 };
