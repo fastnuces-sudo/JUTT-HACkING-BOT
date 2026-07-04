@@ -19,6 +19,32 @@ const api = axios.create({ timeout: 20000 });
 
 // ── ffmpeg compress helpers ────────────────────────────────────────────────────
 
+// Always transcode to mp3 — used when source format is unknown (webm, m4a, etc.)
+// Returns a confirmed mp3 Buffer, or null if ffmpeg fails (caller falls through to Step 3).
+async function ensureMp3(inputBuf) {
+  await fs.ensureDir(TEMP);
+  const id  = Date.now();
+  // Give the temp input a .bin extension — ffmpeg auto-probes format regardless of extension
+  const inp = path.join(TEMP, `em_${id}_in.bin`);
+  const out = path.join(TEMP, `em_${id}_out.mp3`);
+  try {
+    await fs.writeFile(inp, inputBuf);
+    await execAsync(
+      `ffmpeg -i "${inp}" -b:a 128k -ar 44100 -ac 2 -y "${out}" -loglevel error`,
+      { timeout: 90000 }
+    );
+    if (await fs.pathExists(out)) {
+      const buf = await fs.readFile(out);
+      if (buf.length > 0) return buf;
+    }
+  } catch {}
+  finally {
+    await fs.remove(inp).catch(() => {});
+    await fs.remove(out).catch(() => {});
+  }
+  return null; // ffmpeg failed — caller must fall through to next step
+}
+
 async function compressAudio(inputBuf) {
   if (inputBuf.length < 8 * 1024 * 1024) return inputBuf;
   await fs.ensureDir(TEMP);
@@ -299,28 +325,39 @@ function withTimeout(ms, promise) {
 }
 
 // ── Audio orchestrator ────────────────────────────────────────────────────────
-// Fast path: yt-dlp --get-url gives a streaming URL in ~5-8s, WhatsApp fetches it directly.
-// API race runs in parallel — if any API finishes first, use that.
-// Fallback: full yt-dlp download + compress.
+// Always downloads and sends as a buffer so WhatsApp plays it directly.
+// CDN/stream URLs are NOT sent raw — they expire quickly and may not play.
 //
-// Returns: { url, mime } | { buffer, mime } | null
+// Step 1: Race API sources (mp3 buffers, fastest when they work)
+// Step 2: yt-dlp stream URL → fetch buffer → compress if needed
+// Step 3: yt-dlp full download with ffmpeg conversion (guaranteed, slower)
+//
+// Returns: { buffer, mime } | null
 
 async function downloadAudio(ytUrl) {
-  // Primary: race yt-dlp stream URL vs API sources (whichever responds first)
-  // tv_embedded client supports bestaudio format; android does not
-  const ytdlpStreamPromise = tryYtdlpStreamUrl(ytUrl, 'bestaudio', 'tv_embedded')
-    .then(u => u ? { url: u, mime: 'audio/webm' } : null);
-
-  const apiRace = firstSuccess([
+  // Step 1 — API race: fastest when available (20s cap)
+  const apiResult = await withTimeout(20000, firstSuccess([
     tryKeithMp3(ytUrl),
     tryFaaMp3(ytUrl),
     tryNexrayMp3(ytUrl),
-  ]);
+  ]));
+  if (apiResult?.buffer?.length) return apiResult;
 
-  const result = await withTimeout(28000, firstSuccess([ytdlpStreamPromise, apiRace]));
-  if (result) return result;
+  // Step 2 — yt-dlp stream URL → fetch buffer → transcode to mp3
+  // ensureMp3() returns null on ffmpeg failure → falls through to Step 3.
+  const streamUrl = await withTimeout(18000,
+    tryYtdlpStreamUrl(ytUrl, 'bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio', 'tv_embedded')
+  );
+  if (streamUrl) {
+    const rawBuf = await withTimeout(90000, fetchBuf(streamUrl));
+    if (rawBuf?.length) {
+      const mp3 = await ensureMp3(rawBuf);
+      if (mp3) return { buffer: mp3, mime: 'audio/mpeg' };
+      // ensureMp3 failed → fall through to Step 3 (full yt-dlp conversion)
+    }
+  }
 
-  // Fallback: full download with conversion (slower but guaranteed)
+  // Step 3 — Full yt-dlp download + ffmpeg conversion to mp3 (always works, ~30-120s)
   const raw = await tryYtdlpAudio(ytUrl);
   if (!raw) return null;
   const compressed = await compressAudio(raw);
@@ -328,35 +365,32 @@ async function downloadAudio(ytUrl) {
 }
 
 // ── Video orchestrator ────────────────────────────────────────────────────────
-// Fast path: yt-dlp --get-url gives a direct video URL in ~5-8s.
-// API race runs in parallel — if any API finishes first, use that.
-// Fallback: full yt-dlp download.
+// Always downloads and sends as a buffer — CDN URLs expire and may not stream.
 //
-// Returns: { url } | { buffer } | null
+// Step 1: Race for a direct mp4 URL (yt-dlp or API) — fast, ~5-15s
+// Step 2: Fetch that URL into a buffer (90s cap)
+// Step 3: yt-dlp full video download (guaranteed, ~60-180s)
+//
+// Returns: { buffer } | null
 
 async function downloadVideo(ytUrl) {
-  // Primary: race yt-dlp stream URL vs API sources
-  const ytdlpStreamPromise = tryYtdlpStreamUrl(ytUrl, 'best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best')
-    .then(u => u ? u : null);
-
-  const apiRace = firstSuccess([
+  // Step 1 — Race for the best direct video URL
+  const directUrl = await withTimeout(28000, firstSuccess([
+    tryYtdlpStreamUrl(ytUrl, 'best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best'),
     tryGtechMp4Url(ytUrl),
     tryFaaMp4Url(ytUrl),
     tryNexrayMp4Url(ytUrl),
     tryAagatzMp4Url(ytUrl),
-  ]);
-
-  const directUrl = await withTimeout(28000, firstSuccess([ytdlpStreamPromise, apiRace]));
+  ]));
 
   if (directUrl) {
-    // Try buffer download (35s cap) — if it times out, send URL directly
-    const buf = await withTimeout(35000, fetchBuf(directUrl));
+    // Step 2 — Download the buffer (90s cap; videos are larger than audio)
+    const buf = await withTimeout(90000, fetchBuf(directUrl));
     if (buf?.length) return { buffer: buf };
-    return { url: directUrl };
   }
 
-  // Fallback: full yt-dlp download
-  const raw = await withTimeout(120000, tryYtdlpVideo(ytUrl));
+  // Step 3 — Full yt-dlp download as last resort
+  const raw = await withTimeout(180000, tryYtdlpVideo(ytUrl));
   if (!raw) return null;
   return { buffer: raw };
 }
@@ -447,7 +481,7 @@ export default {
           }
 
           const vdata = await downloadVideo(ytUrl);
-          if (!vdata) {
+          if (!vdata?.buffer?.length) {
             await react('❌');
             return reply(
               `❌ *Video download failed*\n\n` +
@@ -462,11 +496,7 @@ export default {
             ? buildVideoCaption(meta, botName)
             : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
 
-          const videoPayload = vdata.url
-            ? { video: { url: vdata.url }, mimetype: 'video/mp4', caption: vcap }
-            : { video: vdata.buffer, mimetype: 'video/mp4', caption: vcap };
-
-          await sock.sendMessage(jid, videoPayload, { quoted: msg });
+          await sock.sendMessage(jid, { video: vdata.buffer, mimetype: 'video/mp4', caption: vcap }, { quoted: msg });
           await react('✅');
           break;
         }
@@ -478,12 +508,8 @@ export default {
           const ytUrl = extractUrl(query);
           if (!ytUrl) return reply(`❌ Please provide a valid YouTube URL.\n\nTo search by name: *${prefix}play <song name>*`);
           const adata = await downloadAudio(ytUrl);
-          if (!adata) return reply('❌ MP3 download failed — all sources returned error.');
-          if (adata.url) {
-            await sock.sendMessage(jid, { audio: { url: adata.url }, mimetype: adata.mime || 'audio/mp4', ptt: false }, { quoted: msg });
-          } else {
-            await sock.sendMessage(jid, { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
-          }
+          if (!adata?.buffer?.length) return reply('❌ MP3 download failed — all sources returned error.');
+          await sock.sendMessage(jid, { audio: adata.buffer, mimetype: adata.mime || 'audio/mpeg', ptt: false }, { quoted: msg });
           await react('✅');
           break;
         }
@@ -499,12 +525,8 @@ export default {
           const directUrl = extractUrl(query);
           if (directUrl) {
             const adata = await downloadAudio(directUrl);
-            if (!adata) return reply('❌ Download failed — all sources returned error.');
-            if (adata.url) {
-              await sock.sendMessage(jid, { audio: { url: adata.url }, mimetype: adata.mime || 'audio/mp4', ptt: false }, { quoted: msg });
-            } else {
-              await sock.sendMessage(jid, { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
-            }
+            if (!adata?.buffer?.length) return reply('❌ Download failed — all sources returned error.');
+            await sock.sendMessage(jid, { audio: adata.buffer, mimetype: adata.mime || 'audio/mpeg', ptt: false }, { quoted: msg });
             await react('✅');
             break;
           }
@@ -516,18 +538,14 @@ export default {
           if (meta.thumbnail) {
             await sock.sendMessage(jid, {
               image: { url: meta.thumbnail },
-              caption: buildAudioCaption(meta, botName),
+              caption: `${buildAudioCaption(meta, botName)}\n\n⏳ _Downloading audio..._`,
             }, { quoted: msg });
           }
 
           const adata = await downloadAudio(meta.url);
-          if (!adata) return reply(`❌ Found *${meta.title}* but download failed — all sources returned error.`);
+          if (!adata?.buffer?.length) return reply(`❌ Found *${meta.title}* but download failed — all sources returned error.`);
 
-          if (adata.url) {
-            await sock.sendMessage(jid, { audio: { url: adata.url }, mimetype: adata.mime || 'audio/mp4', ptt: false }, { quoted: msg });
-          } else {
-            await sock.sendMessage(jid, { audio: adata.buffer, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
-          }
+          await sock.sendMessage(jid, { audio: adata.buffer, mimetype: adata.mime || 'audio/mpeg', ptt: false }, { quoted: msg });
           await react('✅');
           break;
         }

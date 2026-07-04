@@ -14,7 +14,7 @@ import { EventEmitter } from 'events';
 import { logger } from './logger.js';
 import { db } from './database.js';
 import config from '../config.js';
-import { voCacheSet } from './voCache.js';
+import { voCacheSet, voCacheGet } from './voCache.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Railway volume: if DATA_DIR=/bot/session is set, sessions go under volume/sessions/
@@ -519,6 +519,55 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             await sock.sendMessage(msg.key.remoteJid, {
               text: `🤖 *Auto Reply*\n\n${autoReplyMsg}\n\n> Powered by AA MD Bot`,
             }).catch(() => {});
+          }
+        }
+      } catch {}
+
+      // ── ViewOnce Keyword Reveal ──────────────────────────────────
+      // When the owner replies to a cached view-once with their secret keyword,
+      // the bot silently forwards the revealed media to the owner's own "You" chat.
+      try {
+        const voKeyword = db.settings.getValue('voKeyword');
+        if (voKeyword) {
+          const msgText = (
+            msg.message?.conversation ||
+            msg.message?.extendedTextMessage?.text || ''
+          ).trim();
+
+          if (msgText.toLowerCase() === voKeyword.toLowerCase()) {
+            // Identify the quoted (replied-to) message ID
+            const quotedId =
+              msg.message?.extendedTextMessage?.contextInfo?.stanzaId;
+
+            if (quotedId) {
+              const cached = voCacheGet(quotedId);
+              if (cached) {
+                // Verify the sender is the owner (fromMe OR owner number)
+                const senderNum = (msg.key.participant || msg.key.remoteJid || '')
+                  .split('@')[0].split(':')[0];
+                const ownerNum  = (config.ownerNumber?.[0] || '').replace(/\D/g, '');
+                const isOwner   = msg.key.fromMe || (ownerNum && senderNum === ownerNum);
+
+                if (isOwner) {
+                  const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
+                  const ownJid  = selfNum ? `${selfNum}@s.whatsapp.net` : null;
+                  if (ownJid) {
+                    const cap =
+                      `🔓 *View-Once Revealed*\n\n` +
+                      `👤 *From:* +${cached.num}\n` +
+                      `🕐 *Time:* ${cached.time}\n` +
+                      `📍 *Chat:* ${cached.inGroup ? 'Group' : 'DM'}\n\n` +
+                      `> 👁️ *Revealed via keyword — AA MD Bot*`;
+                    await sock.sendMessage(
+                      ownJid,
+                      cached.isVid
+                        ? { video: cached.buffer, caption: cap, mimetype: cached.mime }
+                        : { image: cached.buffer, caption: cap, mimetype: cached.mime }
+                    ).catch(() => {});
+                  }
+                }
+              }
+            }
           }
         }
       } catch {}
