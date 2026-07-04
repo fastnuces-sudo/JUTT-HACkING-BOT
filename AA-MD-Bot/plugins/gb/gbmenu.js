@@ -40,9 +40,18 @@ export default {
       `╭─── 🔓  *VIEW-ONCE & DELETE*\n` +
       `│  ▸ *${p}antiviewonce on/off*\n` +
       `│     View-once photos/videos auto-reveal\n` +
+      `│     + apni "You" chat mein forward\n` +
       `│\n` +
-      `│  ▸ *${p}antiviewonce* (reply karo)\n` +
-      `│     Kisi specific view-once ko reveal\n` +
+      `│  ▸ *${p}reveal* (view-once ko reply karo)\n` +
+      `│     Manually reveal → "You" private chat\n` +
+      `│\n` +
+      `│  ▸ *${p}voword <keyword>*  🆕\n` +
+      `│     Secret keyword set karo. Jab bhi koi\n` +
+      `│     view-once aaye, sirf woh keyword type\n` +
+      `│     karo reply mein — bot silently "You"\n` +
+      `│     chat mein reveal karke bhej dega\n` +
+      `│     Example: *${p}voword show*\n` +
+      `│  ▸ *${p}voword off* — keyword band karo\n` +
       `│\n` +
       `│  ▸ *${p}antidelete on/off*\n` +
       `│     Delete hone wale msgs recover karo\n` +

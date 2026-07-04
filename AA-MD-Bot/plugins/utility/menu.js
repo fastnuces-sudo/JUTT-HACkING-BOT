@@ -213,6 +213,37 @@ export default {
           menu += `│  ▸ *${pref}antispam*    — Spam filter\n`;
           menu += `│  ▸ *${pref}setprefix*   — Change prefix\n`;
           menu += `╰${'─'.repeat(32)}\n`;
+
+          menu += `\n╭─── 👁️  *VIEW-ONCE REVEAL*\n`;
+          menu += `│  ▸ *${pref}antiviewonce on/off*\n`;
+          menu += `│     Auto-reveal & forward all view-once\n`;
+          menu += `│\n`;
+          menu += `│  ▸ *${pref}reveal* (reply to view-once)\n`;
+          menu += `│     Manually reveal → "You" private chat\n`;
+          menu += `│\n`;
+          menu += `│  ▸ *${pref}voword <keyword>*  🆕\n`;
+          menu += `│     Secret keyword set karo — reply to\n`;
+          menu += `│     kisi bhi view-once ke sath keyword\n`;
+          menu += `│     type karo → silently "You" chat mein\n`;
+          menu += `│     revealed media forward ho jaye\n`;
+          menu += `│     Example: *${pref}voword show*\n`;
+          menu += `│  ▸ *${pref}voword off* — keyword hatao\n`;
+          menu += `╰${'─'.repeat(32)}\n`;
+
+          menu += `\n╭─── 🎵  *YOUTUBE DOWNLOADER*  🆕\n`;
+          menu += `│  ▸ *${pref}play <song name>*  — Audio download\n`;
+          menu += `│  ▸ *${pref}video <name/link>* — Video download\n`;
+          menu += `│  ▸ *${pref}mp3 <yt link>*     — Direct mp3\n`;
+          menu += `│  ▸ *${pref}mp4 <yt link>*     — Direct mp4\n`;
+          menu += `│  _Seedha WhatsApp mein baj ta hai!_\n`;
+          menu += `╰${'─'.repeat(32)}\n`;
+
+          menu += `\n╭─── 🔍  *NEW SEARCH COMMANDS*  🆕\n`;
+          menu += `│  ▸ *${pref}lyrics <song>*  — Song lyrics\n`;
+          menu += `│  ▸ *${pref}npm <package>*  — NPM package info\n`;
+          menu += `│  ▸ *${pref}img <query>*    — 5 images search\n`;
+          menu += `│  ▸ *${pref}test2*          — Bot status card\n`;
+          menu += `╰${'─'.repeat(32)}\n`;
         }
 
         // ── Super Owner Tools box ────────────────────────────────────────────
