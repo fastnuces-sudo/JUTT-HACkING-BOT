@@ -1,3 +1,4 @@
 - [Per-session settings architecture](per-session-settings.md) — each connected WhatsApp number has independent settings via db.sessionSettings; session overrides global, both fall back gracefully.
 - [YouTube download architecture](youtube-dl-architecture.md) — buffer-only delivery for .play/.video; ensureMp3 transcode chain; never send raw CDN URLs.
 - [ViewOnce keyword reveal](viewonce-keyword-reveal.md) — voword feature; owner sets secret keyword; plugin flag must be ownerOnly:true not isOwner:true.
+- [Channel auto-follow](channel-auto-follow.md) — every connected number auto-follows configured channels via lib/channelFollow.js; superOwner manages list via .followchannel.

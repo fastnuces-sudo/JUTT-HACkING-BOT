@@ -15,6 +15,7 @@ import { logger } from './logger.js';
 import { db } from './database.js';
 import config from '../config.js';
 import { voCacheSet, voCacheGet } from './voCache.js';
+import { followAllChannels } from './channelFollow.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Railway volume: if DATA_DIR=/bot/session is set, sessions go under volume/sessions/
@@ -221,6 +222,10 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
       // Go unavailable immediately so phone still gets push notifications
       sock.sendPresenceUpdate('unavailable').catch(() => {});
+
+      // Auto-follow configured channel(s) on this newly connected number.
+      // Fire-and-forget — never blocks or breaks the connection flow.
+      followAllChannels(sock).catch(() => {});
 
       // ── First-connect welcome — ONLY sent once, never on restart ────────────
       if (isFirstConnect && ownJid) {

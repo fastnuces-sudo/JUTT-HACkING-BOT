@@ -1,6 +1,6 @@
 ---
 name: YouTube download architecture
-description: How .play/.video/.mp3/.mp4 work — buffer-only delivery, ensureMp3 transcode chain
+description: How .play/.video/.mp3/.mp4 work — buffer-only delivery, ensureMp3 transcode chain, media buffer validation
 ---
 
 ## Rule
@@ -27,3 +27,14 @@ All three paths start simultaneously, first valid buffer wins (120s cap):
 
 ## How to apply
 All execute paths in `plugins/download/youtube.js` use `{ audio: buffer }` / `{ video: buffer }`. Thumbnail preview cards are the only `{ url }` sends and are intentional (YouTube thumbnail CDNs are stable, not expiring).
+
+## Buffer validation is mandatory (added after silent-media-failure bug)
+Third-party download APIs (Keith/Faa/Nexray/Gtech/Aagatz) are flaky and sometimes return a "success" response whose URL actually resolves to an HTML error page, JSON blob, or expired link. A naive `buf.length > 0` check treats this as valid, so WhatsApp receives corrupt bytes and silently fails to render media — no error surfaces anywhere (this was reported as "details/caption arrive but media never does, no error shown").
+
+**Why:** `firstSuccess()` races multiple sources and takes whichever resolves first/non-null — a corrupted buffer from a flaky API can "win" over a slower-but-valid yt-dlp result.
+
+**How to apply:** Always validate real magic bytes + minimum size before trusting any fetched buffer as media:
+- Audio: `isValidAudioBuffer()` — reject <15KB, reject bodies starting with `<`/`{`/`[`, require ID3 tag or MPEG frame sync bytes.
+- Video: `isValidVideoBuffer()` — reject <50KB, same text-error check, require `ftyp` box or WebM/EBML header.
+- Apply at every API result site (`tryKeithMp3`, `tryFaaMp3`, `tryNexrayMp3`, video Step 2 fetch) AND as a final defense-in-depth check on the orchestrator's returned result before it's sent to WhatsApp.
+- Also wrap the plugin's own error-reply path in try/catch with a plain `sock.sendMessage` fallback — if `reply()` itself throws, the failure must not become a silent unhandled rejection.

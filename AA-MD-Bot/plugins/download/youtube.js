@@ -107,6 +107,37 @@ async function fetchBuf(url) {
   return null;
 }
 
+// ── Media validation — reject error pages/JSON masquerading as media ─────────
+// Flaky third-party APIs sometimes return a "success" URL that actually points
+// to an expired link, HTML error page, or JSON blob. Downloading that "works"
+// (non-empty buffer) but produces silent, unplayable media on WhatsApp with no
+// error surfaced. Verify real magic bytes + minimum size before trusting a buffer.
+
+function looksLikeTextError(buf) {
+  const head = buf.slice(0, 32).toString('utf8').trim();
+  return head.startsWith('<') || head.startsWith('{') || head.startsWith('[') || /^(error|not found|forbidden)/i.test(head);
+}
+
+function isValidAudioBuffer(buf) {
+  if (!buf || buf.length < 15000) return false; // real songs are always >15KB
+  if (looksLikeTextError(buf)) return false;
+  // ID3 tag ('ID3') or raw MPEG frame sync (0xFFEx-0xFFFx)
+  if (buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) return true;
+  if (buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0) return true;
+  return false;
+}
+
+function isValidVideoBuffer(buf) {
+  if (!buf || buf.length < 50000) return false; // real clips are always >50KB
+  if (looksLikeTextError(buf)) return false;
+  // mp4/mov 'ftyp' box normally sits at byte offset 4
+  const sig = buf.slice(4, 12).toString('ascii');
+  if (sig.includes('ftyp')) return true;
+  // webm/mkv EBML header
+  if (buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) return true;
+  return false;
+}
+
 // ── Title similarity scorer ───────────────────────────────────────────────────
 
 function scoreMatch(title, query) {
@@ -233,7 +264,7 @@ async function tryKeithMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.data?.downloadUrl;
-    if (u) { const buf = await fetchBuf(u); if (buf) return { buffer: buf, mime: 'audio/mpeg' }; }
+    if (u) { const buf = await fetchBuf(u); if (isValidAudioBuffer(buf)) return { buffer: buf, mime: 'audio/mpeg' }; }
   } catch {}
   return null;
 }
@@ -242,7 +273,7 @@ async function tryFaaMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.mp3;
-    if (u) { const buf = await fetchBuf(u); if (buf) return { buffer: buf, mime: 'audio/mpeg' }; }
+    if (u) { const buf = await fetchBuf(u); if (isValidAudioBuffer(buf)) return { buffer: buf, mime: 'audio/mpeg' }; }
   } catch {}
   return null;
 }
@@ -251,7 +282,7 @@ async function tryNexrayMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.url;
-    if (u) { const buf = await fetchBuf(u); if (buf) return { buffer: buf, mime: 'audio/mpeg' }; }
+    if (u) { const buf = await fetchBuf(u); if (isValidAudioBuffer(buf)) return { buffer: buf, mime: 'audio/mpeg' }; }
   } catch {}
   return null;
 }
@@ -392,7 +423,7 @@ async function downloadAudio(ytUrl) {
     ),
   ]));
 
-  if (result?.buffer?.length) return result;
+  if (isValidAudioBuffer(result?.buffer)) return result;
   return null;
 }
 
@@ -418,12 +449,12 @@ async function downloadVideo(ytUrl) {
   if (directUrl) {
     // Step 2 — Download the buffer (90s cap; videos are larger than audio)
     const buf = await withTimeout(90000, fetchBuf(directUrl));
-    if (buf?.length) return { buffer: buf };
+    if (isValidVideoBuffer(buf)) return { buffer: buf };
   }
 
   // Step 3 — Full yt-dlp download as last resort
   const raw = await withTimeout(180000, tryYtdlpVideo(ytUrl));
-  if (!raw) return null;
+  if (!raw?.length || raw.length < 50000) return null;
   return { buffer: raw };
 }
 
@@ -584,8 +615,15 @@ export default {
       }
     } catch (err) {
       console.error('[ YouTube ]', err.message);
-      await react('❌');
-      reply(`❌ Error: ${err.message}`);
+      await react('❌').catch(() => {});
+      try {
+        await reply(`❌ Error: ${err.message}`);
+      } catch (replyErr) {
+        // Last-resort plain send if the watermarked reply() itself fails —
+        // ensures the user is never left with silence and no explanation.
+        console.error('[ YouTube ] reply failed too', replyErr.message);
+        await sock.sendMessage(jid, { text: `❌ Error: ${err.message}` }, { quoted: msg }).catch(() => {});
+      }
     }
   },
 };
