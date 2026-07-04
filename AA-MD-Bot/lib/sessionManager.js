@@ -423,18 +423,28 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
                    || msg.message?.viewOnceMessageV2Extension;
         if (voMsg) {
           // ── Always download & cache — needed for .reveal even if auto-reveal is OFF
-          const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
-          const silentLog = pino({ level: 'silent' });
+          // Use downloadContentFromMessage directly on the inner media message —
+          // this is the proven-reliable path (same one .reveal used to use when it
+          // worked correctly), unlike the high-level downloadMediaMessage helper
+          // which was silently failing here and left voCache permanently empty,
+          // breaking both .reveal-from-cache and the voword keyword-reveal feature.
+          const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
 
-          // CRITICAL: pass inner message directly, not the viewOnce wrapper
-          // downloadMediaMessage needs { imageMessage } or { videoMessage } at top level
           const innerContent = voMsg.message; // { imageMessage:{} } or { videoMessage:{} }
-          const fakeMsg = { key: msg.key, message: innerContent };
+          const isVidMsg = !!innerContent?.videoMessage;
+          const mediaMsg = innerContent?.imageMessage || innerContent?.videoMessage;
 
-          const buf = await downloadMediaMessage(
-            fakeMsg, 'buffer', {},
-            { reuploadRequest: sock.updateMediaMessage, logger: silentLog }
-          ).catch(() => null);
+          let buf = null;
+          if (mediaMsg) {
+            try {
+              const stream = await downloadContentFromMessage(mediaMsg, isVidMsg ? 'video' : 'image');
+              const chunks = [];
+              for await (const chunk of stream) chunks.push(chunk);
+              buf = Buffer.concat(chunks);
+            } catch (e) {
+              logger.warn({ err: e.message }, 'ViewOnce cache download failed');
+            }
+          }
 
           if (buf?.length) {
             const inner  = innerContent?.imageMessage || innerContent?.videoMessage;

@@ -2,24 +2,46 @@
 // AA MD Bot - Anti View Once + .reveal
 // Auto-reveal view-once & manual reveal to private "You" chat
 // Uses voCache for reliable .reveal (quoted copies have no valid media keys)
+// NOTE: This is the ONLY plugin that should own antiviewonce/reveal/viewonce
+// commands. Do not add duplicate plugins for these — command names are
+// first-come-first-served in the plugin loader, and duplicates silently
+// shadow each other causing hard-to-diagnose behavior (e.g. reveal posting
+// in the wrong chat, or the toggle writing to a settings key nobody reads).
 // ============================================
 
 import { voCacheGet } from '../../lib/voCache.js';
 
 export default {
   command: 'antiviewonce',
-  alias: ['aviewonce', 'viewonce', 'avo', 'reveal'],
+  alias: ['aviewonce', 'viewonce', 'avo', 'reveal', 'rv', 'unviewonce', 'antiview', 'noviewonce'],
   category: 'gb',
   description: 'Reveal view-once photos & videos / toggle auto-reveal',
   usage: '.antiviewonce on/off  |  reply to view-once with .reveal',
 
-  async execute({ reply, react, args, sock, jid, msg, db, quoted, ownJid, command }) {
+  async execute({ reply, react, args, sock, jid, msg, db, quoted, ownJid, command, isOwner, isGroupMsg }) {
     const toggle = args[0]?.toLowerCase();
-    const isReveal = command === 'reveal';
+    const isReveal = command === 'reveal' || command === 'rv' || command === 'unviewonce';
 
     // ── Toggle mode ────────────────────────────────────────────────
     if (!isReveal && (toggle === 'on' || toggle === 'off')) {
       const val = toggle === 'on';
+
+      if (isGroupMsg) {
+        const group = db.groups.get(jid) || {};
+        db.groups.set(jid, { ...group, antiviewonce: val });
+        return reply(
+          `👁️ *Anti View-Once* is now *${val ? 'ON ✅' : 'OFF ❌'}* for this group.\n` +
+          (val
+            ? 'View-once photos/videos sent here will be revealed automatically.'
+            : 'View-once media will stay hidden in this group.')
+        );
+      }
+
+      // DM — owner only for the global setting
+      if (!isOwner) {
+        return reply('⚠️ Only the bot owner can set global anti-view-once from DM.');
+      }
+
       db.settings.setValue('antiViewOnce', val);
       return reply(
         `🔓 *Anti View-Once* is now *${val ? 'ON ✅' : 'OFF ❌'}*\n\n` +
@@ -85,7 +107,9 @@ export default {
     }
 
     // ── Status / help ──────────────────────────────────────────────
-    const current = db.settings.getValue('antiViewOnce') ?? false;
+    const current = isGroupMsg
+      ? (db.groups.get(jid)?.antiviewonce ?? db.settings.getValue('antiViewOnce') ?? false)
+      : (db.settings.getValue('antiViewOnce') ?? false);
     return reply(
       `🔓 *Anti View-Once*\n` +
       `Status: *${current ? 'ON ✅' : 'OFF ❌'}*\n\n` +

@@ -20,3 +20,17 @@ Owner sets a secret keyword via `.voword <word>`. Replying to any cached view-on
 
 ## How to apply
 If adding any new owner-only plugin, use `ownerOnly: true` in the export. `isOwner` is a function name in commandHandler, not a plugin flag.
+
+## Duplicate plugin commands silently shadow each other
+`pluginLoader.js`'s `getPlugin()` checks `plugins.has(cmd)` before checking `aliases`. If two plugin files both declare the same literal `command:` (or one declares as `command` what another only declares as an `alias`), whichever loads later (directories load alphabetically) wins outright — no warning, no error. This previously caused `.reveal` to route to an unrelated plugin that ignored `voCache` and sent media to the current chat instead of the owner's self chat, and caused `.antiviewonce on/off` to write to a differently-cased settings key (`antiviewonce` vs `antiViewOnce`) than the code that reads it.
+
+**Why:** Multiple plugins were independently written for the same feature (view-once reveal) across `plugins/gb/`, `plugins/group/`, and `plugins/media/` without checking for existing command/alias overlap.
+
+**How to apply:** Before adding a plugin, grep the whole `plugins/` tree for the exact `command` and every intended `alias` string. Keep one canonical plugin per command family — do not create a second plugin file "for groups" or "for a variant" of a command that already exists elsewhere.
+
+## voCache population bug (2026-07-04)
+The auto-cache-on-receive step in `lib/sessionManager.js` used Baileys' high-level `downloadMediaMessage(fakeMsg, ...)` wrapped in `.catch(() => null)` to fill `voCache` for every incoming view-once. This failed silently in production (no cache ever populated), which broke both `.reveal`-from-cache and the voword keyword-reveal path with zero error trace — while the *unrelated* duplicate `media/reveal.js` plugin (see above) still "worked" because it used a different method, `downloadContentFromMessage(mediaMsg, mediaType)` on the inner image/videoMessage directly, masking the real problem.
+
+**Why:** Two different Baileys download methods were used for the same job across different files; the untested one silently failed and its failure was swallowed by a `.catch(() => null)`.
+
+**How to apply:** For downloading media from a view-once (or any) message object in this codebase, always use `downloadContentFromMessage(innerMediaMsg, 'image'|'video')` + manual stream-to-buffer — it's the proven-reliable method here. Avoid the high-level `downloadMediaMessage` helper for view-once wrappers, and never swallow download errors with a bare `.catch(() => null)` — log them so failures are diagnosable.
