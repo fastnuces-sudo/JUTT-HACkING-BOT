@@ -137,6 +137,35 @@ function isValidAudioBuffer(buf) {
   return false;
 }
 
+// Recognizes ANY real audio container (not just mp3) so we don't throw away
+// valid audio that third-party APIs return in flac/ogg/wav/m4a — we transcode
+// those to mp3 via ffmpeg instead of rejecting them as "invalid".
+function isKnownAudioContainer(buf) {
+  if (!buf || buf.length < 15000) return false;
+  if (looksLikeTextError(buf)) return false;
+  if (isValidAudioBuffer(buf)) return true; // mp3
+  if (buf[0] === 0x66 && buf[1] === 0x4c && buf[2] === 0x61 && buf[3] === 0x43) return true; // FLAC 'fLaC'
+  if (buf[0] === 0x4f && buf[1] === 0x67 && buf[2] === 0x67 && buf[3] === 0x53) return true; // OGG 'OggS'
+  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) return true; // WAV/RIFF
+  const sig = buf.slice(4, 12).toString('ascii'); // mp4/m4a 'ftyp' box at offset 4
+  if (sig.includes('ftyp')) return true;
+  if (buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) return true; // webm/mkv EBML
+  return false;
+}
+
+// Fetches a URL and returns a guaranteed-mp3 { buffer, mime } — accepts any
+// real audio container from third-party APIs and transcodes to mp3 if needed.
+async function fetchAsMp3(url) {
+  const buf = await fetchBuf(url);
+  if (!buf) return null;
+  if (isValidAudioBuffer(buf)) return { buffer: buf, mime: 'audio/mpeg' };
+  if (isKnownAudioContainer(buf)) {
+    const mp3 = await ensureMp3(buf);
+    if (isValidAudioBuffer(mp3)) return { buffer: mp3, mime: 'audio/mpeg' };
+  }
+  return null;
+}
+
 function isValidVideoBuffer(buf) {
   if (!buf || buf.length < 50000) return false; // real clips are always >50KB
   if (looksLikeTextError(buf)) return false;
@@ -271,7 +300,7 @@ async function tryKeithMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.data?.downloadUrl;
-    if (u) { const buf = await fetchBuf(u); if (isValidAudioBuffer(buf)) return { buffer: buf, mime: 'audio/mpeg' }; }
+    if (u) return await fetchAsMp3(u);
   } catch {}
   return null;
 }
@@ -280,7 +309,7 @@ async function tryFaaMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.mp3;
-    if (u) { const buf = await fetchBuf(u); if (isValidAudioBuffer(buf)) return { buffer: buf, mime: 'audio/mpeg' }; }
+    if (u) return await fetchAsMp3(u);
   } catch {}
   return null;
 }
@@ -289,7 +318,7 @@ async function tryNexrayMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp3?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.url;
-    if (u) { const buf = await fetchBuf(u); if (isValidAudioBuffer(buf)) return { buffer: buf, mime: 'audio/mpeg' }; }
+    if (u) return await fetchAsMp3(u);
   } catch {}
   return null;
 }
