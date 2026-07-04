@@ -8,10 +8,15 @@ Never send a raw YouTube CDN URL as audio/video payload in WhatsApp. Always buff
 
 **Why:** YouTube CDN URLs expire within minutes. WhatsApp may not fetch them before expiry, causing silent playback failure.
 
-## Audio pipeline (downloadAudio)
-1. Race API sources (Keith, Faa, Nexray) — return mp3 buffer directly (20s cap)
-2. yt-dlp `--get-url` → fetch buffer → `ensureMp3()` → confirmed mp3 buffer
-3. `tryYtdlpAudio()` — full yt-dlp `-x --audio-format mp3` conversion (fallback, slow)
+## Audio pipeline (downloadAudio) — TRUE parallel race (~6s typical)
+NEVER fetch DASH/bestaudio stream URL directly — YouTube throttles it to playback speed (tested: 3MB took 107s).
+
+All three paths start simultaneously, first valid buffer wins (120s cap):
+- **Path A** `downloadAudioFromVideo()`: progressive mp4 URL (android client) → fetchBuf (fast, not throttled) → `ffmpeg -vn` strip video → mp3. Tested: 6.3s total.
+- **Path B** API race (Keith/Faa/Nexray): fastest when online, often down.
+- **Path C** `tryYtdlpAudio()`: full yt-dlp `-x --audio-format mp3` download. Tested: 6.2s.
+
+`firstSuccess()` resolves null cleanly when all paths fail.
 
 `ensureMp3()` returns **null** on ffmpeg failure (never returns original buffer with wrong MIME). Step 2 null → falls through to Step 3.
 

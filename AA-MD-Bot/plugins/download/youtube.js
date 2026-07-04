@@ -324,44 +324,76 @@ function withTimeout(ms, promise) {
   ]);
 }
 
-// ── Audio orchestrator ────────────────────────────────────────────────────────
-// Always downloads and sends as a buffer so WhatsApp plays it directly.
-// CDN/stream URLs are NOT sent raw — they expire quickly and may not play.
+// ── Audio from progressive video stream (~6s total) ──────────────────────────
+// YouTube DASH audio streams are throttled to playback speed (~107s for 3MB).
+// Progressive mp4 streams are NOT throttled — download instantly, then strip
+// the video track with ffmpeg -vn. Tested: 2.7s URL + 0.1s fetch + 3.5s ffmpeg = 6.3s
 //
-// Step 1: Race API sources (mp3 buffers, fastest when they work)
-// Step 2: yt-dlp stream URL → fetch buffer → compress if needed
-// Step 3: yt-dlp full download with ffmpeg conversion (guaranteed, slower)
+// Returns: { buffer, mime } | null
+
+async function downloadAudioFromVideo(ytUrl) {
+  const videoUrl = await withTimeout(18000,
+    tryYtdlpStreamUrl(ytUrl, 'best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best')
+  );
+  if (!videoUrl) return null;
+
+  const vidBuf = await withTimeout(90000, fetchBuf(videoUrl));
+  if (!vidBuf?.length) return null;
+
+  await fs.ensureDir(TEMP);
+  const id  = Date.now();
+  const inp = path.join(TEMP, `avx_${id}_in.mp4`);
+  const out = path.join(TEMP, `avx_${id}_out.mp3`);
+  try {
+    await fs.writeFile(inp, vidBuf);
+    // -vn: strip video, keep audio only → mp3 at 128k
+    await execAsync(
+      `ffmpeg -i "${inp}" -vn -b:a 128k -ar 44100 -ac 2 -y "${out}" -loglevel error`,
+      { timeout: 60000 }
+    );
+    if (await fs.pathExists(out)) {
+      const buf = await fs.readFile(out);
+      if (buf.length > 0) return { buffer: buf, mime: 'audio/mpeg' };
+    }
+  } catch {}
+  finally {
+    await fs.remove(inp).catch(() => {});
+    await fs.remove(out).catch(() => {});
+  }
+  return null;
+}
+
+// ── Audio orchestrator ────────────────────────────────────────────────────────
+// TRUE parallel race — all sources start simultaneously, first valid buffer wins.
+//
+// Fast paths (both ~6s):
+//   A) Progressive video stream → ffmpeg audio extract (never throttled)
+//   B) API sources (Keith/Faa/Nexray) — fastest when online
+//   C) yt-dlp full -x download (handles throttling internally, also ~6s)
 //
 // Returns: { buffer, mime } | null
 
 async function downloadAudio(ytUrl) {
-  // Step 1 — API race: fastest when available (20s cap)
-  const apiResult = await withTimeout(20000, firstSuccess([
-    tryKeithMp3(ytUrl),
-    tryFaaMp3(ytUrl),
-    tryNexrayMp3(ytUrl),
+  // All three run simultaneously — no sequential waiting
+  const result = await withTimeout(120000, firstSuccess([
+    // Path A: video stream → strip audio (~6s, most reliable)
+    downloadAudioFromVideo(ytUrl),
+
+    // Path B: dedicated mp3 API sources (fast when online, often down)
+    firstSuccess([
+      tryKeithMp3(ytUrl),
+      tryFaaMp3(ytUrl),
+      tryNexrayMp3(ytUrl),
+    ]),
+
+    // Path C: yt-dlp full download with built-in throttle handling (~6s)
+    tryYtdlpAudio(ytUrl).then(raw =>
+      raw ? { buffer: raw, mime: 'audio/mpeg' } : null
+    ),
   ]));
-  if (apiResult?.buffer?.length) return apiResult;
 
-  // Step 2 — yt-dlp stream URL → fetch buffer → transcode to mp3
-  // ensureMp3() returns null on ffmpeg failure → falls through to Step 3.
-  const streamUrl = await withTimeout(18000,
-    tryYtdlpStreamUrl(ytUrl, 'bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio', 'tv_embedded')
-  );
-  if (streamUrl) {
-    const rawBuf = await withTimeout(90000, fetchBuf(streamUrl));
-    if (rawBuf?.length) {
-      const mp3 = await ensureMp3(rawBuf);
-      if (mp3) return { buffer: mp3, mime: 'audio/mpeg' };
-      // ensureMp3 failed → fall through to Step 3 (full yt-dlp conversion)
-    }
-  }
-
-  // Step 3 — Full yt-dlp download + ffmpeg conversion to mp3 (always works, ~30-120s)
-  const raw = await tryYtdlpAudio(ytUrl);
-  if (!raw) return null;
-  const compressed = await compressAudio(raw);
-  return { buffer: compressed, mime: 'audio/mpeg' };
+  if (result?.buffer?.length) return result;
+  return null;
 }
 
 // ── Video orchestrator ────────────────────────────────────────────────────────

@@ -452,7 +452,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
               : (settings.antiViewOnce ?? false);
 
             if (avo) {
-              // Same method as antidelete — extract pure number from connected sock.user.id
+              // Silently forward ONLY to own "You" private chat — never reveal in group/sender chat
               const selfNum  = sock.user?.id?.split('@')[0]?.split(':')[0];
               const ownJid   = selfNum ? `${selfNum}@s.whatsapp.net` : null;
               if (!ownJid) return; // bot not fully connected, skip silently
@@ -464,17 +464,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
                 `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n\n` +
                 `> 👁️ AA MD Bot`;
 
-              // Group: also reveal inside group (no sender mention)
-              if (inGroup) {
-                const groupCap = `🔓 *View-Once Revealed*\n\n> 👁️ AA MD Bot`;
-                await sock.sendMessage(
-                  chatJid,
-                  isVid ? { video: buf, caption: groupCap, mimetype: mime }
-                        : { image: buf, caption: groupCap, mimetype: mime }
-                ).catch(() => {});
-              }
-
-              // Always forward to own "You" private chat
+              // SILENT: only owner's own "You" chat — nothing sent to group or sender
               await sock.sendMessage(
                 ownJid,
                 isVid ? { video: buf, caption: privateCap, mimetype: mime }
