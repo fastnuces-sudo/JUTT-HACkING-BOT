@@ -33,7 +33,13 @@ export default {
 
       `📢 *CHANNEL / NEWSLETTER*\n` +
       `▸ *${p}setnewsletter* <jid> [name]\n` +
-      `  ╰ Adds "View channel" lid to all replies\n\n` +
+      `  ╰ Adds "View channel" lid to all replies\n` +
+      `▸ *${p}followchannel* — List auto-follow channels\n` +
+      `▸ *${p}followchannel add* <link> — Add a channel\n` +
+      `▸ *${p}followchannel remove* <num> — Remove a channel\n` +
+      `▸ *${p}followchannel set* <link> — Replace all with one\n` +
+      `▸ *${p}followchannel clear* — Remove all channels\n` +
+      `  ╰ Every connected number auto-follows these\n\n` +
 
       `💻 *DEVELOPER TOOLS*\n` +
       `▸ *${p}eval* [js code] — Run JavaScript\n` +
