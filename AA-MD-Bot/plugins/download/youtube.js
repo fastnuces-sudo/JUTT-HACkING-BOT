@@ -5,7 +5,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { YTDLP, YTDLP_FLAGS, getCookiesFlag } from '../../lib/ytdlp.js';
-import { getPoTokenArgs } from '../../lib/potoken.js';
 
 const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -189,11 +188,10 @@ async function searchYT(query) {
 // type: 'audio' uses tv_embedded (supports bestaudio), 'video' uses android (fast, progressive mp4)
 async function tryYtdlpStreamUrl(ytUrl, fmt, clientOverride) {
   const ck = getCookiesFlag();
-  const po = await getPoTokenArgs();
   const client = clientOverride || 'android';
   try {
     const { stdout } = await execAsync(
-      `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings`,
+      `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings`,
       { timeout: 25000 }
     );
     const lines = stdout.trim().split('\n').filter(l => l.startsWith('http'));
@@ -208,11 +206,10 @@ async function tryYtdlpAudio(ytUrl) {
   await fs.ensureDir(TEMP);
   const out = path.join(TEMP, `yta_${Date.now()}.mp3`);
   const ck = getCookiesFlag();
-  const po = await getPoTokenArgs();
   for (const client of ['android', 'tv_embedded', 'ios']) {
     try {
       await execAsync(
-        `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings`,
+        `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings`,
         { timeout: 180000 }
       );
       if (await fs.pathExists(out)) {
@@ -232,7 +229,6 @@ async function tryYtdlpVideo(ytUrl) {
   await fs.ensureDir(TEMP);
   const outFile = path.join(TEMP, `ytv_${Date.now()}.mp4`);
   const ck = getCookiesFlag();
-  const po = await getPoTokenArgs();
   for (const client of ['android', 'tv_embedded', 'ios']) {
     for (const fmt of [
       'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]',
@@ -242,7 +238,7 @@ async function tryYtdlpVideo(ytUrl) {
     ]) {
       try {
         await execAsync(
-          `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} ${po} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --merge-output-format mp4 --no-playlist -o "${outFile}" --quiet --no-warnings`,
+          `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --merge-output-format mp4 --no-playlist -o "${outFile}" --quiet --no-warnings`,
           { timeout: 180000 }
         );
         if (await fs.pathExists(outFile)) {
