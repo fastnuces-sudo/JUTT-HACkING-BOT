@@ -224,19 +224,48 @@ async function searchYT(query) {
 
 // ── yt-dlp: fast stream URL (no file download, ~5-8s) ─────────────────────────
 // Returns a direct YouTube CDN URL — WhatsApp fetches it directly. Super fast.
+//
+// IMPORTANT: cookies.txt is only attached to clients that actually support
+// cookie auth (web/mweb). Clients like android/tv_embedded/ios are SKIPPED
+// entirely by yt-dlp when cookies are present ("does not support cookies"),
+// and — worse — attaching a personal-account cookie to a server request can
+// make YouTube serve a degraded/empty format list even to cookie-capable
+// clients if the session looks suspicious from that IP. So: always try the
+// normal no-cookie clients FIRST (fast, reliable for public videos), and
+// only fall back to cookie-based clients for content that actually needs
+// login (age-restricted / private / members-only).
+
+const NO_COOKIE_CLIENTS = ['android', 'tv_embedded', 'ios'];
+const COOKIE_CLIENTS = ['web', 'mweb'];
 
 // type: 'audio' uses tv_embedded (supports bestaudio), 'video' uses android (fast, progressive mp4)
 async function tryYtdlpStreamUrl(ytUrl, fmt, clientOverride) {
-  const ck = getCookiesFlag();
   const client = clientOverride || 'android';
+
+  // Tier 1 — no cookies (proven reliable for public videos)
   try {
     const { stdout } = await execAsync(
-      `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings`,
+      `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" --extractor-args "youtube:player_client=${client}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings`,
       { timeout: 25000 }
     );
     const lines = stdout.trim().split('\n').filter(l => l.startsWith('http'));
     if (lines.length) return lines[0].trim();
   } catch (e) { warnIfBotCheck(e); }
+
+  // Tier 2 — cookies, only for clients that support them (age-restricted/private videos)
+  const ck = getCookiesFlag();
+  if (ck) {
+    for (const ckClient of COOKIE_CLIENTS) {
+      try {
+        const { stdout } = await execAsync(
+          `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${ckClient}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings`,
+          { timeout: 25000 }
+        );
+        const lines = stdout.trim().split('\n').filter(l => l.startsWith('http'));
+        if (lines.length) return lines[0].trim();
+      } catch (e) { warnIfBotCheck(e); }
+    }
+  }
   return null;
 }
 
@@ -245,8 +274,8 @@ async function tryYtdlpStreamUrl(ytUrl, fmt, clientOverride) {
 async function tryYtdlpAudio(ytUrl) {
   await fs.ensureDir(TEMP);
   const out = path.join(TEMP, `yta_${Date.now()}.mp3`);
-  const ck = getCookiesFlag();
-  for (const client of ['android', 'tv_embedded', 'ios']) {
+
+  const attempt = async (client, ck) => {
     try {
       await execAsync(
         `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings`,
@@ -258,7 +287,24 @@ async function tryYtdlpAudio(ytUrl) {
         if (buf.length > 0) return buf;
       }
     } catch (e) { warnIfBotCheck(e); }
+    return null;
+  };
+
+  // Tier 1 — no cookies
+  for (const client of NO_COOKIE_CLIENTS) {
+    const buf = await attempt(client, '');
+    if (buf) return buf;
   }
+
+  // Tier 2 — cookies, cookie-compatible clients only
+  const ck = getCookiesFlag();
+  if (ck) {
+    for (const client of COOKIE_CLIENTS) {
+      const buf = await attempt(client, ck);
+      if (buf) return buf;
+    }
+  }
+
   await fs.remove(out).catch(() => {});
   return null;
 }
@@ -268,14 +314,15 @@ async function tryYtdlpAudio(ytUrl) {
 async function tryYtdlpVideo(ytUrl) {
   await fs.ensureDir(TEMP);
   const outFile = path.join(TEMP, `ytv_${Date.now()}.mp4`);
-  const ck = getCookiesFlag();
-  for (const client of ['android', 'tv_embedded', 'ios']) {
-    for (const fmt of [
-      'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]',
-      'best[height<=480]',
-      'best[height<=720]',
-      'best',
-    ]) {
+  const FORMATS = [
+    'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]',
+    'best[height<=480]',
+    'best[height<=720]',
+    'best',
+  ];
+
+  const attempt = async (client, ck) => {
+    for (const fmt of FORMATS) {
       try {
         await execAsync(
           `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --merge-output-format mp4 --no-playlist -o "${outFile}" --quiet --no-warnings`,
@@ -288,7 +335,24 @@ async function tryYtdlpVideo(ytUrl) {
         }
       } catch (e) { warnIfBotCheck(e); }
     }
+    return null;
+  };
+
+  // Tier 1 — no cookies
+  for (const client of NO_COOKIE_CLIENTS) {
+    const buf = await attempt(client, '');
+    if (buf) return buf;
   }
+
+  // Tier 2 — cookies, cookie-compatible clients only
+  const ck = getCookiesFlag();
+  if (ck) {
+    for (const client of COOKIE_CLIENTS) {
+      const buf = await attempt(client, ck);
+      if (buf) return buf;
+    }
+  }
+
   await fs.remove(outFile).catch(() => {});
   return null;
 }
