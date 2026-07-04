@@ -44,7 +44,7 @@ export default {
         `▸ *.autoreply off* — Disable auto-reply\n` +
         `▸ *.autoreply status* — Check current message\n\n` +
         `📝 *Example:*\n` +
-        `_.autoreply Salam! Main abhi busy hoon, thodi der mein reply karta hoon_ 🙏\n\n` +
+        `_.autoreply Hi! I'm busy right now, will reply soon_ 🙏\n\n` +
         `> 🤖 *Powered by AA MD Bot*`
       );
     }

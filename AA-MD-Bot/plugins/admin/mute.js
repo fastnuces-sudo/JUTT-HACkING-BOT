@@ -11,7 +11,7 @@ export default {
       db.groups.set(jid, { muted: true });
       reply('🔇 Group has been *muted*. Only admins can send messages now.');
     } catch (err) {
-      reply(`❌ Failed to mute: ${err.message}`);
+      reply('❌ Failed to mute. Please try again in a few seconds.');
     }
   },
 };

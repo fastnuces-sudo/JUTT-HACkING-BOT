@@ -10,7 +10,7 @@ export default {
       const code = await sock.groupInviteCode(jid);
       reply(`🔗 *Group Invite Link*\n\nhttps://chat.whatsapp.com/${code}\n\n⚠️ Share carefully!`);
     } catch (err) {
-      reply(`❌ Failed to get link: ${err.message}`);
+      reply('❌ Failed to get link. Please try again in a few seconds.');
     }
   },
 };

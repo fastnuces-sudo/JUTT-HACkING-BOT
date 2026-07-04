@@ -17,7 +17,7 @@ export default {
       else if (status === '408') reply(`❌ +${number} is not on WhatsApp.`);
       else reply(`⚠️ Add result: ${status} for +${number}`);
     } catch (err) {
-      reply(`❌ Failed to add: ${err.message}`);
+      reply('❌ Failed to add. Please try again in a few seconds.');
     }
   },
 };

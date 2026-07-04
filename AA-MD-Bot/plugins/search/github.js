@@ -17,7 +17,7 @@ export default {
       GHuserInfo = ghRes.data;
     } catch (error) {
       await react('❌');
-      return reply(`GitHub user not found or API error: ${error.message}`);
+      return reply('❌ GitHub user not found. Please check the username and try again.');
     }
     const GhUserPP = GHuserInfo.avatar_url;
     let resText4 = `        *🏮 GitHub User Info 🏮*\n\n_🎀 Username:_ *${GHuserInfo.login}*\n_🧩 Name:_ *${GHuserInfo.name}*\n\n_🧣 Bio:_ *${GHuserInfo.bio}*\n\n_🍁 Total Followers:_ *${GHuserInfo.followers}*\n_🔖 Total Public Repos:_ *${GHuserInfo.public_repos}*\n_📌 Website:_ ${GHuserInfo.blog}\n`;

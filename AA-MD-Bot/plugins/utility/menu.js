@@ -222,12 +222,12 @@ export default {
           menu += `│     Manually reveal → "You" private chat\n`;
           menu += `│\n`;
           menu += `│  ▸ *${pref}voword <keyword>*  🆕\n`;
-          menu += `│     Secret keyword set karo — reply to\n`;
-          menu += `│     kisi bhi view-once ke sath keyword\n`;
-          menu += `│     type karo → silently "You" chat mein\n`;
-          menu += `│     revealed media forward ho jaye\n`;
+          menu += `│     Set a secret keyword — reply to\n`;
+          menu += `│     any view-once with that keyword\n`;
+          menu += `│     and it silently reveals & forwards\n`;
+          menu += `│     the media to your "You" chat\n`;
           menu += `│     Example: *${pref}voword show*\n`;
-          menu += `│  ▸ *${pref}voword off* — keyword hatao\n`;
+          menu += `│  ▸ *${pref}voword off* — remove the keyword\n`;
           menu += `╰${'─'.repeat(32)}\n`;
 
           menu += `\n╭─── 🎵  *YOUTUBE DOWNLOADER*  🆕\n`;
@@ -235,7 +235,7 @@ export default {
           menu += `│  ▸ *${pref}video <name/link>* — Video download\n`;
           menu += `│  ▸ *${pref}mp3 <yt link>*     — Direct mp3\n`;
           menu += `│  ▸ *${pref}mp4 <yt link>*     — Direct mp4\n`;
-          menu += `│  _Seedha WhatsApp mein baj ta hai!_\n`;
+          menu += `│  _Plays directly in WhatsApp!_\n`;
           menu += `╰${'─'.repeat(32)}\n`;
 
           menu += `\n╭─── 🔍  *NEW SEARCH COMMANDS*  🆕\n`;

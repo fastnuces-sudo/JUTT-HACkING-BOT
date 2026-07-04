@@ -67,9 +67,9 @@ export default {
 
     } catch (err) {
       if (err.message.includes('ffmpeg')) {
-        reply('❌ ffmpeg not installed. Install it with: `apt-get install ffmpeg`');
+        reply('❌ Sticker creation is temporarily unavailable. Please try again in a few seconds.');
       } else {
-        reply(`❌ Sticker creation failed: ${err.message}`);
+        reply('❌ Sticker creation failed. Please try again in a few seconds.');
       }
     }
   },

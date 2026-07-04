@@ -16,7 +16,7 @@ export default {
         mentions: members,
       }, { quoted: msg });
     } catch (err) {
-      reply(`❌ Failed: ${err.message}`);
+      reply('❌ Failed to tag everyone. Please try again in a few seconds.');
     }
   },
 };

@@ -17,7 +17,7 @@ export default {
       const names = mentions.map(m => `@${m.split('@')[0]}`).join(', ');
       reply(`✅ ${names} has been promoted to admin! 👑`, { mentions });
     } catch (err) {
-      reply(`❌ Failed to promote: ${err.message}`);
+      reply('❌ Failed to promote. Please try again in a few seconds.');
     }
   },
 };

@@ -20,7 +20,7 @@ export default {
         await reply(`✅ @${jidToKick.split('@')[0]} has been kicked!`, { mentions: [jidToKick] });
       }
     } catch (err) {
-      reply(`❌ Failed to kick: ${err.message}`);
+      reply('❌ Failed to kick. Please try again in a few seconds.');
     }
   },
 };

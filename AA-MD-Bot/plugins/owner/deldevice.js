@@ -17,7 +17,7 @@ export default {
       await deleteSession(sessionId);
       reply(`✅ Session *${sessionId}* has been deleted successfully.`);
     } catch (err) {
-      reply(`❌ Failed to delete session: ${err.message}`);
+      reply('❌ Failed to delete session. Please try again in a few seconds.');
     }
   },
 };

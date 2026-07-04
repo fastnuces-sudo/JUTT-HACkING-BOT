@@ -247,7 +247,7 @@ MediaFire
     } catch (e) {
       console.error('[ Downloader ]', e.message);
       await react('❌');
-      reply(`Error: ${e.message}`);
+      reply('❌ Download failed. Please try again in a few seconds.');
     }
   },
 };

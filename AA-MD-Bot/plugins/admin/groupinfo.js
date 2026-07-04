@@ -13,7 +13,7 @@ export default {
       const created = new Date(meta.creation * 1000).toLocaleDateString();
       reply(`👥 *Group Information*\n\n📛 Name: *${meta.subject}*\n🆔 ID: \`${jid}\`\n📝 Description: ${meta.desc || 'None'}\n👑 Owner: @${(meta.owner || '').split('@')[0]}\n👮 Admins: ${admins.length}\n👥 Members: *${members}*\n📅 Created: ${created}\n🔒 Settings: ${meta.announce ? 'Admins only' : 'Everyone'}`);
     } catch (err) {
-      reply(`❌ Failed to fetch group info: ${err.message}`);
+      reply('❌ Failed to fetch group info. Please try again in a few seconds.');
     }
   },
 };

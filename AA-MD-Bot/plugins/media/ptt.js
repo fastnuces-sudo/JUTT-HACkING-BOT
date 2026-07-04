@@ -51,7 +51,7 @@ export default {
       }, { quoted: msg });
 
     } catch (err) {
-      reply('❌ Conversion failed: ' + (err.message?.slice(0, 80) || 'Unknown error'));
+      reply('❌ Conversion failed. Please try again in a few seconds.');
     } finally {
       fs.remove(tmpIn).catch(() => {});
       fs.remove(tmpOut).catch(() => {});

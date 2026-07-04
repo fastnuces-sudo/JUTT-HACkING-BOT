@@ -23,7 +23,7 @@ export default {
         mimetype: 'image/webp',
       }, { quoted: msg });
     } catch (err) {
-      reply(`❌ Conversion failed: ${err.message}`);
+      reply('❌ Conversion failed. Please try again in a few seconds.');
     }
   },
 };

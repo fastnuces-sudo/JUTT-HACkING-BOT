@@ -79,7 +79,7 @@ export default {
           `⚠️ _Expires when bot restarts_`
         );
       } catch (err) {
-        return reply('❌ Failed to create: ' + err.message);
+        return reply('❌ Failed to create temp email. Please try again in a few seconds.');
       }
     }
 
@@ -113,7 +113,7 @@ export default {
         text += `📖 Read: *.tempmail read 1*`;
         return reply(text);
       } catch (err) {
-        return reply('❌ Inbox check failed: ' + err.message);
+        return reply('❌ Inbox check failed. Please try again in a few seconds.');
       }
     }
 
@@ -134,7 +134,7 @@ export default {
           `━━━━━━━━━━━━━━━━\n\n${body}`
         );
       } catch (err) {
-        return reply('❌ Failed to read: ' + err.message);
+        return reply('❌ Failed to read email. Please try again in a few seconds.');
       }
     }
 

@@ -12,7 +12,7 @@ export default {
       await sock.groupUpdateSubject(jid, text);
       reply(`✅ Group name changed to: *${text}*`);
     } catch (err) {
-      reply(`❌ Failed to change name: ${err.message}`);
+      reply('❌ Failed to change name. Please try again in a few seconds.');
     }
   },
 };

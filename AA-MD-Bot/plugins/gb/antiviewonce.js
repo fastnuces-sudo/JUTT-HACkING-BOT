@@ -101,7 +101,7 @@ export default {
         await react('✅');
       } catch (err) {
         await react('❌');
-        reply(`❌ Failed: ${err.message?.slice(0, 80)}`);
+        reply('❌ Failed to reveal. Please try again in a few seconds.');
       }
       return;
     }

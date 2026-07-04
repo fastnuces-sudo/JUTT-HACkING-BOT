@@ -33,7 +33,7 @@ export default {
       await fs.remove(inputPath).catch(() => {});
       await fs.remove(outputPath).catch(() => {});
     } catch (err) {
-      reply(`❌ Grayscale failed: ${err.message}`);
+      reply('❌ Grayscale failed. Please try again in a few seconds.');
     }
   },
 };

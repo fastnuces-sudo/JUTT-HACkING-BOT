@@ -80,7 +80,7 @@ export default {
 
       reply(summary);
     } catch (err) {
-      reply(`❌ Broadcast failed: ${err.message}`);
+      reply('❌ Broadcast failed. Please try again in a few seconds.');
     }
   },
 };

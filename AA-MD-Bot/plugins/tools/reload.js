@@ -12,7 +12,7 @@ export default {
       const count = await reloadPlugins();
       reply(`✅ *Plugins Reloaded!*\n\n📦 Total loaded: *${count}* plugins\n\nAll commands are now refreshed!`);
     } catch (err) {
-      reply(`❌ Reload failed: ${err.message}`);
+      reply('❌ Reload failed. Please try again in a few seconds.');
     }
   },
 };

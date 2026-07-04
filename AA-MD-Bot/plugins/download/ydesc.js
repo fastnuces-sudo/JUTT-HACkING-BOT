@@ -61,7 +61,7 @@ export default {
       await react('✅');
     } catch (err) {
       await react('❌');
-      reply('❌ YouTube search failed: ' + (err.message?.slice(0, 100) || 'Unknown error'));
+      reply('❌ YouTube search failed. Please try again in a few seconds.');
     }
   },
 };

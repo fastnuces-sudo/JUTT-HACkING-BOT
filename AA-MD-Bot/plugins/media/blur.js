@@ -42,7 +42,7 @@ export default {
       await fs.remove(inputPath).catch(() => {});
       await fs.remove(outputPath).catch(() => {});
     } catch (err) {
-      reply(`❌ Blur failed: ${err.message}`);
+      reply('❌ Blur failed. Please try again in a few seconds.');
     }
   },
 };

@@ -48,7 +48,7 @@ export default {
       await fs.remove(inputPath).catch(() => {});
       await fs.remove(outputPath).catch(() => {});
     } catch (err) {
-      reply(`❌ Conversion failed: ${err.message}`);
+      reply('❌ Conversion failed. Please try again in a few seconds.');
     }
   },
 };

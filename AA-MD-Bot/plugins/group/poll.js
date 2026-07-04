@@ -19,7 +19,7 @@ export default {
         },
       }, { quoted: msg });
     } catch (err) {
-      reply(`❌ Poll failed: ${err.message}`);
+      reply('❌ Poll failed. Please try again in a few seconds.');
     }
   },
 };

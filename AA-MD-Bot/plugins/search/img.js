@@ -102,7 +102,7 @@ export default {
     } catch (err) {
       console.error('Img search error:', err.message);
       await react('❌');
-      return reply(`❌ Image search failed: ${err.message?.slice(0, 60)}`);
+      return reply('❌ Image search failed. Please try again in a few seconds.');
     }
   },
 };

@@ -22,7 +22,7 @@ export default {
       const recent = allLines.slice(-lines);
       reply(`📋 *Recent Logs (${recent.length} lines)*\n\n\`\`\`${recent.join('\n').substring(0, 3000)}\`\`\``);
     } catch (err) {
-      reply(`❌ Failed to read logs: ${err.message}`);
+      reply('❌ Failed to read logs. Please try again in a few seconds.');
     }
   },
 };

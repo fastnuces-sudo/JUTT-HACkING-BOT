@@ -34,7 +34,7 @@ export default {
       await fs.remove(inputPath).catch(() => {});
       await fs.remove(outputPath).catch(() => {});
     } catch (err) {
-      reply(`❌ Flip failed: ${err.message}`);
+      reply('❌ Flip failed. Please try again in a few seconds.');
     }
   },
 };

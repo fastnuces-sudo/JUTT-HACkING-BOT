@@ -27,7 +27,7 @@ export default {
       }, seconds * 1000);
     } catch (err) {
       await react('❌');
-      reply(`❌ Failed: ${err.message?.slice(0, 60)}`);
+      reply('❌ Failed. Please try again in a few seconds.');
     }
   },
 };

@@ -11,7 +11,7 @@ export default {
       await sock.groupUpdateDescription(jid, text);
       reply(`✅ Group description updated!`);
     } catch (err) {
-      reply(`❌ Failed to update description: ${err.message}`);
+      reply('❌ Failed to update description. Please try again in a few seconds.');
     }
   },
 };

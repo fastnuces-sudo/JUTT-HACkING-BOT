@@ -25,7 +25,7 @@ export default {
           `📵 *Anti-Call Message*\n\n` +
           `Current message:\n_${currentMsg || '(default — not set)'}_ \n\n` +
           `Usage: *.anticall msg <your message>*\n` +
-          `Example: *.anticall msg Bhai bot ha, call mat karo 😅*\n\n` +
+          `Example: *.anticall msg Sorry, this is a bot, please don't call 😅*\n\n` +
           `To reset to default: *.anticall msgreset*`
         );
       }

@@ -11,7 +11,7 @@ export default {
       const backupDir = db.backup();
       reply(`✅ *Database Backup Complete*\n\n📁 Saved to: ${backupDir}\n\n📦 Files backed up:\n• users.json\n• groups.json\n• settings.json\n• sessions.json`);
     } catch (err) {
-      reply(`❌ Backup failed: ${err.message}`);
+      reply('❌ Backup failed. Please try again in a few seconds.');
     }
   },
 };

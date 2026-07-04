@@ -13,7 +13,7 @@ export default {
       await reply(`📱 *Creating session:* ${sessionId}\n\n⏳ Scan the QR code that appears in the console/terminal.`);
       await createSession(sessionId);
     } catch (err) {
-      reply(`❌ Failed to create session: ${err.message}`);
+      reply('❌ Failed to create session. Please try again in a few seconds.');
     }
   },
 };

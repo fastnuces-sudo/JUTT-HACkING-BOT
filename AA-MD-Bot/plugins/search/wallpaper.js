@@ -32,7 +32,7 @@ export default {
     } catch (err) {
       console.error('[ WALLPAPER ] Error:', err.message);
       await react('❌');
-      return reply(`Wallpaper search failed: ${err.message}`);
+      return reply('❌ Wallpaper search failed. Please try again in a few seconds.');
     }
   },
 };

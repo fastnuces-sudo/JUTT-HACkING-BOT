@@ -717,12 +717,12 @@ export default {
       console.error('[ YouTube ]', err.message);
       await react('❌').catch(() => {});
       try {
-        await reply(`❌ Error: ${err.message}`);
+        await reply('❌ Download failed. Please try again in a few seconds.');
       } catch (replyErr) {
         // Last-resort plain send if the watermarked reply() itself fails —
         // ensures the user is never left with silence and no explanation.
         console.error('[ YouTube ] reply failed too', replyErr.message);
-        await sock.sendMessage(jid, { text: `❌ Error: ${err.message}` }, { quoted: msg }).catch(() => {});
+        await sock.sendMessage(jid, { text: '❌ Download failed. Please try again in a few seconds.' }, { quoted: msg }).catch(() => {});
       }
     }
   },

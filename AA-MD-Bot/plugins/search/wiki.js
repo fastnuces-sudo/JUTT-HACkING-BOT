@@ -38,7 +38,7 @@ export default {
       }
       console.error('[ WIKI ] Error:', err.message);
       await react('❌');
-      return reply(`Wikipedia search failed: ${err.message}`);
+      return reply('❌ Wikipedia search failed. Please try again in a few seconds.');
     }
   },
 };

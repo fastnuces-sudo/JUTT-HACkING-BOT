@@ -13,7 +13,7 @@ export default {
       const names = mentions.map(m => `@${m.split('@')[0]}`).join(', ');
       reply(`✅ ${names} has been demoted from admin.`, { mentions });
     } catch (err) {
-      reply(`❌ Failed to demote: ${err.message}`);
+      reply('❌ Failed to demote. Please try again in a few seconds.');
     }
   },
 };

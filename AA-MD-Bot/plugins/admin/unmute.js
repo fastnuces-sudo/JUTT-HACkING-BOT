@@ -11,7 +11,7 @@ export default {
       db.groups.set(jid, { muted: false });
       reply('🔊 Group has been *unmuted*. Everyone can send messages now.');
     } catch (err) {
-      reply(`❌ Failed to unmute: ${err.message}`);
+      reply('❌ Failed to unmute. Please try again in a few seconds.');
     }
   },
 };

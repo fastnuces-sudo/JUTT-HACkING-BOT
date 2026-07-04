@@ -13,7 +13,7 @@ export default {
       const buffer = await sock.downloadMediaMessage({ message: quoted ? { imageMessage: hasImage } : msg.message, key: msg.key });
       await sock.sendMessage(jid, { image: buffer, caption: text }, { quoted: msg });
     } catch (err) {
-      reply(`❌ Caption failed: ${err.message}`);
+      reply('❌ Caption failed. Please try again in a few seconds.');
     }
   },
 };

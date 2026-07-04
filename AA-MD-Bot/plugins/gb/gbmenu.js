@@ -14,116 +14,116 @@ export default {
       `║  📱  *GB WHATSAPP FEATURES*      ║\n` +
       `║       AA MD Bot  v3.0            ║\n` +
       `╚══════════════════════════════════╝\n\n` +
-      `GB WhatsApp jaise features seedha\nbot ke zariye use karo!\n\n` +
+      `GB WhatsApp-like features, right through\nthe bot!\n\n` +
 
       `╭─── 👻  *PRIVACY & STEALTH*\n` +
       `│  ▸ *${p}ghost on/off*\n` +
-      `│     Offline dikhao jabke bot active\n` +
+      `│     Appear offline while bot stays active\n` +
       `│\n` +
       `│  ▸ *${p}alwaysonline on/off*\n` +
-      `│     Hamesha online dikhao\n` +
+      `│     Always appear online\n` +
       `│\n` +
       `│  ▸ *${p}privacy*\n` +
-      `│     Last seen, profile pic, blue ticks\n` +
-      `│     control karo\n` +
+      `│     Control last seen, profile pic,\n` +
+      `│     blue ticks\n` +
       `│\n` +
       `│  ▸ *${p}privacy lockdown*\n` +
-      `│     Sab kuch hide karo ek command se\n` +
+      `│     Hide everything with one command\n` +
       `│\n` +
       `│  ▸ *${p}privacy bluetick on/off*\n` +
-      `│     Blue ticks on/off karo\n` +
+      `│     Toggle blue ticks on/off\n` +
       `│\n` +
       `│  ▸ *${p}anticall on/off*\n` +
-      `│     Incoming calls block karo\n` +
+      `│     Block incoming calls\n` +
       `╰${'─'.repeat(34)}\n\n` +
 
       `╭─── 🔓  *VIEW-ONCE & DELETE*\n` +
       `│  ▸ *${p}antiviewonce on/off*\n` +
-      `│     View-once photos/videos auto-reveal\n` +
-      `│     + apni "You" chat mein forward\n` +
+      `│     Auto-reveal view-once photos/videos\n` +
+      `│     + forward them to your "You" chat\n` +
       `│\n` +
-      `│  ▸ *${p}reveal* (view-once ko reply karo)\n` +
+      `│  ▸ *${p}reveal* (reply to a view-once)\n` +
       `│     Manually reveal → "You" private chat\n` +
       `│\n` +
       `│  ▸ *${p}voword <keyword>*  🆕\n` +
-      `│     Secret keyword set karo. Jab bhi koi\n` +
-      `│     view-once aaye, sirf woh keyword type\n` +
-      `│     karo reply mein — bot silently "You"\n` +
-      `│     chat mein reveal karke bhej dega\n` +
+      `│     Set a secret keyword. Whenever a\n` +
+      `│     view-once arrives, just type that\n` +
+      `│     keyword as a reply — the bot will\n` +
+      `│     silently reveal it in your "You" chat\n` +
       `│     Example: *${p}voword show*\n` +
-      `│  ▸ *${p}voword off* — keyword band karo\n` +
+      `│  ▸ *${p}voword off* — turn off the keyword\n` +
       `│\n` +
       `│  ▸ *${p}antidelete on/off*\n` +
-      `│     Delete hone wale msgs recover karo\n` +
-      `│     (DM + Groups dono mein kaam karta)\n` +
+      `│     Recover deleted messages\n` +
+      `│     (works in both DMs and Groups)\n` +
       `╰${'─'.repeat(34)}\n\n` +
 
       `╭─── 💾  *SAVE & DOWNLOAD*\n` +
-      `│  ▸ *${p}statussave* (status forward karo)\n` +
-      `│     Kisi ka bhi status save karo\n` +
+      `│  ▸ *${p}statussave* (forward a status)\n` +
+      `│     Save anyone's status\n` +
       `│\n` +
       `│  ▸ *${p}pp <number>*\n` +
-      `│     Kisi ka bhi full profile pic dekho\n` +
+      `│     View anyone's full profile picture\n` +
       `│     Example: ${p}pp 923001234567\n` +
       `╰${'─'.repeat(34)}\n\n` +
 
       `╭─── 🤖  *AUTO FEATURES*\n` +
       `│  ▸ *${p}autoreply <message>*\n` +
-      `│     Busy hone par auto reply karo\n` +
-      `│     Example: ${p}autoreply Main busy hoon\n` +
+      `│     Auto reply when you're busy\n` +
+      `│     Example: ${p}autoreply I'm busy right now\n` +
       `│\n` +
       `│  ▸ *${p}autoreply off*\n` +
-      `│     Auto reply band karo\n` +
+      `│     Turn off auto reply\n` +
       `│\n` +
       `│  ▸ *${p}autoreply status*\n` +
-      `│     Abhi ka auto reply message dekho\n` +
+      `│     View the current auto reply message\n` +
       `│\n` +
       `│  ▸ *${p}autoread on/off*\n` +
-      `│     Sab msgs silently read karo\n` +
+      `│     Silently read all messages\n` +
       `│\n` +
       `│  ▸ *${p}autostatusseen on/off*\n` +
-      `│     Sab statuses auto dekho\n` +
+      `│     Auto-view all statuses\n` +
       `╰${'─'.repeat(34)}\n\n` +
 
       `╭─── 📅  *MESSAGING TOOLS*\n` +
       `│  ▸ *${p}schedule 5m <message>*\n` +
-      `│     Delay ke baad message bhejo\n` +
-      `│     Example: ${p}schedule 10m Salam!\n` +
+      `│     Send a message after a delay\n` +
+      `│     Example: ${p}schedule 10m Hello!\n` +
       `│\n` +
       `│  ▸ *${p}flood 5 <message>*\n` +
-      `│     Message N baar bhejo 👑\n` +
+      `│     Send a message N times 👑\n` +
       `│\n` +
       `│  ▸ *${p}typing <seconds>*\n` +
-      `│     Fake typing dikhao\n` +
+      `│     Show fake typing indicator\n` +
       `│\n` +
       `│  ▸ *${p}recording <seconds>*\n` +
-      `│     Fake recording dikhao\n` +
+      `│     Show fake recording indicator\n` +
       `│\n` +
       `│  ▸ *${p}broadcast <message>* 👑\n` +
-      `│     Sab groups mein message bhejo\n` +
+      `│     Send a message to all groups\n` +
       `╰${'─'.repeat(34)}\n\n` +
 
       `╭─── 👁️  *TRACKING & ALERTS*\n` +
       `│  ▸ *${p}onlinealert <number>*\n` +
-      `│     Jab koi online aaye, alert aaye\n` +
+      `│     Get alerted when someone comes online\n` +
       `│     Example: ${p}onlinealert 923001234567\n` +
       `│\n` +
       `│  ▸ *${p}onlinealert list*\n` +
-      `│     Track hone wale contacts dekho\n` +
+      `│     View tracked contacts\n` +
       `│\n` +
       `│  ▸ *${p}onlinealert clear*\n` +
-      `│     Sab alerts remove karo\n` +
+      `│     Remove all alerts\n` +
       `╰${'─'.repeat(34)}\n\n` +
 
       `╭─── 🎭  *GROUP FEATURES*\n` +
-      `│  ▸ *${p}antibot on/off*    — Doosre bots block\n` +
-      `│  ▸ *${p}antilink on/off*   — Links block karo\n` +
-      `│  ▸ *${p}antidelete on/off* — Delete recover karo\n` +
+      `│  ▸ *${p}antibot on/off*    — Block other bots\n` +
+      `│  ▸ *${p}antilink on/off*   — Block links\n` +
+      `│  ▸ *${p}antidelete on/off* — Recover deletes\n` +
       `│  ▸ *${p}antiviewonce on/off*— View-once reveal\n` +
       `╰${'─'.repeat(34)}\n\n` +
 
-      `> 👑 *Commands marked 👑 owner-only hain*\n` +
-      `> 💡 *Koi bhi command type karo bina args ke — usage guide milega*` +
+      `> 👑 *Commands marked 👑 are owner-only*\n` +
+      `> 💡 *Type any command with no args to see its usage guide*` +
       W;
 
     return sock.sendMessage(jid, { text: menu }, { quoted: msg });

@@ -36,7 +36,7 @@ export default {
     } catch (err) {
       console.error('Sticker search error:', err.message);
       await react('❌');
-      return reply(`Sticker search failed: ${err.message}`);
+      return reply('❌ Sticker search failed. Please try again in a few seconds.');
     }
   },
 };
