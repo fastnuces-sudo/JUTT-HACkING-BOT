@@ -3,6 +3,19 @@
 // ============================================
 import config from '../../config.js';
 
+function formatUptime(seconds) {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const parts = [];
+  if (d) parts.push(`${d}d`);
+  if (h) parts.push(`${h}h`);
+  if (m) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+  return parts.join(' ');
+}
+
 export default {
   command: 'test2',
   alias: ['botstatus', 'status2'],
@@ -23,13 +36,29 @@ export default {
       } catch { /* no thumbnail — skip */ }
     }
 
+    const uptime = formatUptime(process.uptime());
+    const botName = config.botName || 'AA MD Bot';
+    const version = config.version ? `v${config.version}` : '';
+    const ping = Date.now() - (msg.messageTimestamp ? msg.messageTimestamp * 1000 : Date.now());
+    const pingText = Number.isFinite(ping) && ping >= 0 ? `${ping}ms` : 'instant';
+
+    const statusText =
+      `╔═══════════════════╗\n` +
+      `   ✅ *BOT IS ACTIVE*\n` +
+      `╚═══════════════════╝\n\n` +
+      `🤖 *${botName}* ${version} is up, running smoothly and ready to help you right now!\n\n` +
+      `⚡ *Response speed:* ${pingText}\n` +
+      `⏱️ *Uptime:* ${uptime}\n` +
+      `📶 *Connection:* Stable\n\n` +
+      `Type *.menu* anytime to see everything I can do. 💚`;
+
     await sock.sendMessage(jid, {
-      text: '✅ *BOT IS CURRENTLY ACTIVE!*',
+      text: statusText,
       contextInfo: {
         externalAdReply: {
-          title: config.botName || 'AA MD Bot',
+          title: `${botName} • Online & Ready`,
           body: 'Multi-Device WhatsApp Bot • Always Online',
-          sourceUrl: 'https://whatsapp.com/channel/0029Vb5axis2v1IloX5BQD2c',
+          sourceUrl: 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617',
           showAdAttribution: true,
           ...(thumbBuf?.length ? { thumbnail: thumbBuf } : {}),
           mediaType: 1,
