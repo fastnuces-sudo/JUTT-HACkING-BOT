@@ -2,3 +2,4 @@
 - [YouTube download architecture](youtube-dl-architecture.md) — buffer-only delivery for .play/.video; ensureMp3 transcode chain; never send raw CDN URLs.
 - [ViewOnce keyword reveal](viewonce-keyword-reveal.md) — voword feature; owner sets secret keyword; plugin flag must be ownerOnly:true not isOwner:true.
 - [Channel auto-follow](channel-auto-follow.md) — every connected number auto-follows configured channels via lib/channelFollow.js; superOwner manages list via .followchannel.
+- [YouTube bot-check / PO token](youtube-bot-check.md) — "Sign in to confirm you're not a bot" is per-video, not IP-wide; both jsdom and bgutils-js PO token generators fail in this sandbox; cookies.txt is the only reliable fix.

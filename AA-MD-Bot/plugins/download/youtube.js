@@ -4,9 +4,20 @@ import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { YTDLP, YTDLP_FLAGS, getCookiesFlag } from '../../lib/ytdlp.js';
+import { YTDLP, YTDLP_FLAGS, getCookiesFlag, COOKIES_PATH } from '../../lib/ytdlp.js';
 
 const execAsync = promisify(exec);
+let _botCheckWarned = false;
+function warnIfBotCheck(err) {
+  const msg = err?.stderr || err?.message || '';
+  if (/sign in to confirm/i.test(msg) && !_botCheckWarned) {
+    _botCheckWarned = true;
+    console.warn(
+      '[ YouTube ] ⚠️  YouTube is bot-checking download requests from this server.\n' +
+      `  Fix: add a real cookies.txt at ${COOKIES_PATH} (see cookies.txt.example for steps).`
+    );
+  }
+}
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMP = path.join(__dirname, '../../temp');
 
@@ -196,7 +207,7 @@ async function tryYtdlpStreamUrl(ytUrl, fmt, clientOverride) {
     );
     const lines = stdout.trim().split('\n').filter(l => l.startsWith('http'));
     if (lines.length) return lines[0].trim();
-  } catch {}
+  } catch (e) { warnIfBotCheck(e); }
   return null;
 }
 
@@ -217,7 +228,7 @@ async function tryYtdlpAudio(ytUrl) {
         await fs.remove(out).catch(() => {});
         if (buf.length > 0) return buf;
       }
-    } catch {}
+    } catch (e) { warnIfBotCheck(e); }
   }
   await fs.remove(out).catch(() => {});
   return null;
@@ -246,7 +257,7 @@ async function tryYtdlpVideo(ytUrl) {
           await fs.remove(outFile).catch(() => {});
           if (buf.length > 0) return buf;
         }
-      } catch {}
+      } catch (e) { warnIfBotCheck(e); }
     }
   }
   await fs.remove(outFile).catch(() => {});

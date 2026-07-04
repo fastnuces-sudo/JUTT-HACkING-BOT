@@ -1,0 +1,24 @@
+# YouTube cookies for .play / .video (bot-check bypass)
+#
+# WHY YOU NEED THIS:
+# YouTube now blocks many download requests from cloud/datacenter servers
+# (like Replit) with "Sign in to confirm you're not a bot" — even though
+# the bot code itself is working correctly. This affects a large chunk of
+# videos (tested and confirmed: some IDs work, most don't, without cookies).
+# There is no reliable token-generator workaround for this in a server
+# sandbox — real browser cookies are the fix YouTube itself points to.
+#
+# HOW TO GET REAL COOKIES (2 minutes):
+# 1. Install a browser extension: "Get cookies.txt LOCALLY" (Chrome/Firefox).
+# 2. Log into https://youtube.com in that browser with any Google account.
+# 3. Open youtube.com, click the extension icon, click "Export" / "Copy".
+# 4. Paste the exported content into a new file named exactly: cookies.txt
+#    (same folder as this example file, i.e. AA-MD-Bot/cookies.txt)
+# 5. Restart the bot workflow. .play and .video will auto-detect and use it.
+#
+# NOTES:
+# - cookies.txt is already in .gitignore — it will never be committed.
+# - Cookies expire after a while (weeks/months). If downloads start failing
+#   again with "Sign in to confirm you're not a bot", just re-export fresh
+#   cookies from your browser and replace the file.
+# - Use a throwaway/secondary Google account, not your primary one.
