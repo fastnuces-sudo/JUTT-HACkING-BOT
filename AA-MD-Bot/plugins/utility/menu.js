@@ -231,17 +231,31 @@ export default {
         menu += `│  ▸ *${pref}coinflip*           — Heads or tails\n`;
         menu += `│  ▸ *${pref}hack* <target>      — Hacking effect\n`;
         menu += `│  ▸ *${pref}love* Ali & Sara    — Love calculator\n`;
+        menu += `│  ▸ *${pref}fact*               — 💡 Random fun fact\n`;
+        menu += `│  ▸ *${pref}horoscope* aries    — ♈ Daily horoscope\n`;
+        menu += `│  ▸ *${pref}ttt*                — 🎲 Tic-tac-toe vs AI\n`;
+        menu += `│  ▸ *${pref}wordscramble*       — 🔤 Word unscramble game\n`;
         menu += `│\n`;
-        menu += `│  🎨  *LOGO & MEDIA*\n`;
+        menu += `│  🎨  *MEDIA*\n`;
         menu += `│  ▸ *${pref}logo* hacker|text   — 20+ logo styles\n`;
         menu += `│  ▸ *${pref}attp* <text>        — Neon sticker\n`;
+        menu += `│  ▸ *${pref}togif*              — 🎞️ Video/sticker → GIF\n`;
         menu += `│  ▸ *${pref}trim* 10 30         — Cut audio/video\n`;
         menu += `│\n`;
-        menu += `│  🔧  *TOOLS*\n`;
+        menu += `│  🔧  *TOOLS & UTILITY*\n`;
         menu += `│  ▸ *${pref}currency* 100 USD PKR — Live rates\n`;
+        menu += `│  ▸ *${pref}crypto* btc         — 💰 Live crypto price\n`;
+        menu += `│  ▸ *${pref}morse* encode hello — 📡 Morse code\n`;
         menu += `│  ▸ *${pref}element* Gold       — Periodic table\n`;
         menu += `│  ▸ *${pref}weather* Karachi    — Weather report\n`;
+        menu += `│  ▸ *${pref}getpp*              — 🖼️ Get profile picture\n`;
+        menu += `│  ▸ *${pref}note* save/get/list — 📝 Notes system\n`;
         menu += `│  ▸ *${pref}disap* 24h/7d/90d   — Disappearing msgs\n`;
+        menu += `│\n`;
+        menu += `│  👥  *GROUP ADMIN*\n`;
+        menu += `│  ▸ *${pref}purge*              — 🗑️ Delete replied msg\n`;
+        menu += `│  ▸ *${pref}antibadwords* on/off— 🚫 Block bad words\n`;
+        menu += `│  ▸ *${pref}antifake* on/off    — 🛡️ Block fake numbers\n`;
         menu += `╰${'─'.repeat(32)}\n`;
 
         // ── Owner Settings box — right after support (owners only) ──────────
@@ -255,6 +269,8 @@ export default {
           menu += `│  ▸ *${pref}anticall*    — Block calls\n`;
           menu += `│  ▸ *${pref}antispam*    — Spam filter\n`;
           menu += `│  ▸ *${pref}setprefix*   — Change prefix\n`;
+          menu += `│  ▸ *${pref}afk* reason  — 😴 Go AFK (auto-reply on)\n`;
+          menu += `│  ▸ *${pref}back*        — 👋 Return from AFK\n`;
           menu += `╰${'─'.repeat(32)}\n`;
 
           menu += `\n╭─── 👁️  *VIEW-ONCE REVEAL*\n`;

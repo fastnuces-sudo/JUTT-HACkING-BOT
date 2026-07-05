@@ -951,37 +951,60 @@ a{text-decoration:none;color:inherit}
 <script>
 /* ── DATA ── */
 const QUICK = [
-  {cmd:'.menu',        desc:'All commands list'},
-  {cmd:'.ai hello',   desc:'Chat with AI (GPT)'},
-  {cmd:'.islamic_menu',desc:'Islamic panel'},
-  {cmd:'.play <name>',desc:'🎵 YouTube audio'},
-  {cmd:'.video <name>',desc:'🎬 YouTube video'},
-  {cmd:'.tiktok <url>',desc:'TikTok download'},
-  {cmd:'.ig <url>',   desc:'Instagram download'},
-  {cmd:'.spotify <url>',desc:'Spotify track'},
-  {cmd:'.fb <url>',   desc:'Facebook video'},
-  {cmd:'.sticker',    desc:'Image/video → sticker'},
-  {cmd:'.attp AA MD Bot',desc:'✨ Animated sticker'},
-  {cmd:'.logo hacker|text',desc:'🎨 Stylized logo'},
-  {cmd:'.shazam',     desc:'🎵 Identify a song'},
-  {cmd:'.avv',        desc:'👁️ Reveal view-once (reply to it)'},
-  {cmd:'.voword show',desc:'👁️ View-once keyword'},
-  {cmd:'.antivv on',  desc:'👁️ Auto-reveal all view-once'},
-  {cmd:'.ss google.com',desc:'📸 Website screenshot'},
-  {cmd:'.imagine a cat',desc:'🖼️ AI image generation'},
-  {cmd:'.country Pakistan',desc:'🌍 Country info'},
-  {cmd:'.weather Karachi',desc:'🌤️ Weather forecast'},
-  {cmd:'.currency 100 USD PKR',desc:'💱 Currency convert'},
-  {cmd:'.element Gold',desc:'🧪 Periodic table'},
-  {cmd:'.hack Target',desc:'💻 Hack animation'},
-  {cmd:'.ping',       desc:'Bot ping / latency'},
+  // ── Core ──
+  {cmd:'.menu',             desc:'All commands list'},
+  {cmd:'.ai hello',         desc:'Chat with AI (GPT)'},
+  {cmd:'.islamic_menu',     desc:'Islamic panel'},
+  {cmd:'.ping',             desc:'Bot ping / latency'},
+  // ── Downloads ──
+  {cmd:'.play <name>',      desc:'🎵 YouTube audio'},
+  {cmd:'.video <name>',     desc:'🎬 YouTube video'},
+  {cmd:'.tiktok <url>',     desc:'TikTok download'},
+  {cmd:'.ig <url>',         desc:'Instagram download'},
+  {cmd:'.spotify <url>',    desc:'Spotify track'},
+  {cmd:'.fb <url>',         desc:'Facebook video'},
+  // ── Media ──
+  {cmd:'.sticker',          desc:'Image/video → sticker'},
+  {cmd:'.attp AA MD Bot',   desc:'✨ Animated text sticker'},
+  {cmd:'.logo hacker|text', desc:'🎨 Stylized logo image'},
+  {cmd:'.togif',            desc:'🎞️ Video/sticker → GIF (reply)'},
+  {cmd:'.shazam',           desc:'🎵 Identify a song'},
+  // ── Search & AI ──
+  {cmd:'.ss google.com',    desc:'📸 Website screenshot'},
+  {cmd:'.imagine a cat',    desc:'🖼️ AI image generation'},
+  {cmd:'.country Pakistan', desc:'🌍 Country info'},
+  {cmd:'.weather Karachi',  desc:'🌤️ Weather forecast'},
+  // ── Fun (new) ──
+  {cmd:'.fact',             desc:'💡 Random fun fact'},
+  {cmd:'.horoscope aries',  desc:'♈ Daily horoscope by sign'},
+  {cmd:'.ttt',              desc:'🎮 Tic-tac-toe vs AI'},
+  {cmd:'.wordscramble',     desc:'🔤 Word unscramble game'},
+  // ── Utility (new) ──
+  {cmd:'.getpp',            desc:'🖼️ Get profile picture (reply/mention)'},
+  {cmd:'.note save title text', desc:'📝 Save a note'},
+  {cmd:'.note get title',   desc:'📝 Get a saved note'},
+  // ── Tools (new) ──
+  {cmd:'.crypto btc',       desc:'💰 Live crypto price'},
+  {cmd:'.morse encode hello',desc:'📡 Text → Morse code'},
+  // ── Convert ──
+  {cmd:'.currency 100 USD PKR', desc:'💱 Currency convert'},
+  {cmd:'.element Gold',     desc:'🧪 Periodic table'},
+  // ── Owner/AFK ──
+  {cmd:'.afk brb',          desc:'😴 Set AFK — auto-reply on DMs'},
+  {cmd:'.back',             desc:'👋 Return from AFK mode'},
+  // ── Group admin (new) ──
+  {cmd:'.purge',            desc:'🗑️ Delete replied message (admin)'},
+  {cmd:'.antibadwords on',  desc:'🚫 Block bad words in group'},
+  {cmd:'.antifake on',      desc:'🛡️ Block fake-number joins'},
+  // ── Misc ──
+  {cmd:'.hack Target',      desc:'💻 Hack animation'},
 ];
 
 const CATS = [
   {ico:'☪️',lbl:'Islamic',    clr:'#25d366',cmds:['islamic_menu','dua_forgiveness','dua_rizq','dua_health','dua_morning','dua_evening','dua_sleep','zikr_subhanallah','zikr_alhamdulillah','zikr_astaghfirullah','hadith_smile','hadith_patience','kalima_tayyiba','darood_sharif','morning_adhkar','evening_adhkar','asmaul_husna','jaffery_menu','dua_kumayl','masoomeen14']},
   {ico:'🤖',lbl:'AI & Search',clr:'#3b82f6',cmds:['ai','gemini','gpt','imagine','country','shazam','ss','lyrics','movie','wiki','weather','anime','google','yts','npm','img','stickersearch','wallpaper']},
   {ico:'📥',lbl:'Downloads',  clr:'#f59e0b',cmds:['play','video','mp3','mp4','song','tiktok','ig','fb','spotify','dl','apk','ydesc','tts','ringtone','github']},
-  {ico:'🎨',lbl:'Media',      clr:'#ec4899',cmds:['sticker','attp','logo','trim','take','toaudio','blur','flip','grayscale','resize','ptt','steal','caption','sticker2img']},
+  {ico:'🎨',lbl:'Media',      clr:'#ec4899',cmds:['sticker','attp','logo','togif','trim','take','toaudio','blur','flip','grayscale','resize','ptt','steal','caption','sticker2img']},
   {ico:'🎮',lbl:'Fun',        clr:'#a855f7',cmds:['hack','love','emojimix','coinflip','joke','meme','roast','truth','dare','8ball','fortune','compliment','trivia','hangman','rps','ship','dice','wyr','quote','horoscope','wordscramble','tictactoe','fact','funfact']},
   {ico:'🔧',lbl:'Utility',    clr:'#06b6d4',cmds:['translate','calc','qr','currency','element','base64','password','shorturl','menu','ping','uptime','report','support','getpp','pfp','note','notes']},
   {ico:'🛠️',lbl:'Tools',      clr:'#64748b',cmds:['tts','sendaudio','sendvid','bgremove','enhance','ocr','hash','speedtest','morse','morseencode','crypto','coin']},
