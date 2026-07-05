@@ -6,7 +6,7 @@
 
 export default {
   command: 'antiviewonce',
-  alias: ['antivo', 'aviewonce'],
+  alias: ['antivo', 'aviewonce', 'antivv'],
   description: 'Toggle anti-viewonce feature (auto-reveal view-once media)',
   category: 'owner',
   ownerOnly: true,

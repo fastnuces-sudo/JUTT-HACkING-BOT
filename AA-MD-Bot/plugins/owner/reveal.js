@@ -52,8 +52,8 @@ async function dlBuf(mediaMsg, type) {
 }
 
 export default {
-  command: 'reveal',
-  alias: ['vv', 'vo', 'viewonce', 'openvv', 'showvo'],
+  command: 'avv',
+  alias: ['vv', 'reveal', 'vo', 'viewonce', 'openvv', 'showvo'],
   description: 'Reveal a view-once — reply to it, or pass a message ID',
   category: 'owner',
   ownerOnly: true,

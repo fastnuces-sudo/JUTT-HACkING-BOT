@@ -494,9 +494,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             msg.message?.extendedTextMessage?.text || ''
           ).trim();
 
-          if (msgText.startsWith('!reveal')) {
-            // Method 1: explicit msgId
-            const parts = msgText.split(' ');
+          if (/^[.!#]?(avv|vv|reveal)\s+\S/.test(msgText) || msgText.startsWith('!reveal')) {
+            // Method 1: explicit msgId via any reveal command variant
+            const parts = msgText.trim().split(/\s+/);
             const revealId = parts[1]?.trim();
             if (revealId) {
               await handleManualReveal(revealId, sock, msg.key.remoteJid);
