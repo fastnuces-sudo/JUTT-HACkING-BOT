@@ -18,7 +18,7 @@ import config from '../config.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Storage ───────────────────────────────────────────────────────────────────
-// Map keyed by message ID — stores buffer + metadata for manual !reveal
+// Map keyed by message ID — stores buffer + metadata for manual reveal
 export const viewOnceStore = new Map();
 const _MAX_STORE = 200;
 
@@ -31,10 +31,38 @@ const _PROCESSED_MAX = 200;
 const MEDIA_DIR = path.join(__dirname, '../media/viewonce');
 fs.ensureDirSync(MEDIA_DIR);
 
-// ── Periodic cleanup (5-minute TTL) ──────────────────────────────────────────
+// ── Persistent disk index — survives the 30-min in-memory TTL ────────────────
+// Maps msgId → { savedPath, mime, isVid, num, time, inGroup, caption, senderName }
+const INDEX_PATH = path.join(MEDIA_DIR, 'index.json');
+
+function loadIndex() {
+  try {
+    if (fs.existsSync(INDEX_PATH)) return JSON.parse(fs.readFileSync(INDEX_PATH, 'utf8'));
+  } catch {}
+  return {};
+}
+
+function saveIndexEntry(msgId, meta) {
+  try {
+    const idx = loadIndex();
+    // Prune to last 500 entries (each is ~300 bytes)
+    const keys = Object.keys(idx);
+    if (keys.length >= 500) delete idx[keys[0]];
+    idx[msgId] = meta;
+    fs.writeFileSync(INDEX_PATH, JSON.stringify(idx));
+  } catch {}
+}
+
+// Load entry from disk when no longer in memory (TTL expired)
+export function getIndexEntry(msgId) {
+  const idx = loadIndex();
+  return idx[msgId] || null;
+}
+
+// ── Periodic cleanup (30-minute TTL) ─────────────────────────────────────────
 export function cleanViewOnceStore() {
   const now = Date.now();
-  const TTL = 5 * 60 * 1000;
+  const TTL = 30 * 60 * 1000; // 30 minutes (was 5 min — extended so reveals work longer)
   for (const [key, val] of viewOnceStore.entries()) {
     if (now - val.timestamp > TTL) viewOnceStore.delete(key);
   }
@@ -131,18 +159,21 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
     const savedPath = path.join(MEDIA_DIR, fileName);
     try { fs.writeFileSync(savedPath, buf); } catch {}
 
-    // Store for !reveal <msgId>
+    // Store for reveal (in-memory + persistent disk index)
+    const senderName = sock.contacts?.[senderJid]?.name
+               || sock.contacts?.[senderJid]?.notify
+               || formatPhone(num);
     const entry = {
       buf, mime, isVid, num, time, inGroup,
-      caption, chatJid, senderJid,
-      senderName: sock.contacts?.[senderJid]?.name
-               || sock.contacts?.[senderJid]?.notify
-               || formatPhone(num),
+      caption, chatJid, senderJid, senderName,
       savedPath,
       timestamp: Date.now(),
     };
     viewOnceStore.set(msgId, entry);
     if (viewOnceStore.size > _MAX_STORE) viewOnceStore.delete(viewOnceStore.keys().next().value);
+
+    // Persist to disk index so reveal works even after the 30-min in-memory TTL
+    saveIndexEntry(msgId, { savedPath, mime, isVid, num, time, inGroup, caption, senderName });
 
     logger.info({ sessionId, msgId, savedPath, bytes: buf.length }, '✅ ViewOnce cached');
 
@@ -223,21 +254,43 @@ function extractText(m) {
   );
 }
 
-// Extract contextInfo from any message wrapper (handles ephemeral, documentWithCaption, etc.)
+// Extract contextInfo from any message wrapper.
+// Handles ephemeral, documentWithCaption, viewOnce, and all standard message types.
+// Walks the full wrapper chain to find a contextInfo that contains a stanzaId.
 function extractContextInfo(m) {
   if (!m) return null;
-  const norm = normalizeMsg(m);
-  return (
-    norm?.extendedTextMessage?.contextInfo ||
-    norm?.imageMessage?.contextInfo ||
-    norm?.videoMessage?.contextInfo ||
-    norm?.documentMessage?.contextInfo ||
-    norm?.audioMessage?.contextInfo ||
-    norm?.buttonsResponseMessage?.contextInfo ||
-    norm?.listResponseMessage?.contextInfo ||
-    norm?.stickerMessage?.contextInfo ||
-    null
-  );
+
+  // Walk the message tree: unwrap each known envelope type and collect contextInfo candidates
+  // We do a more thorough walk than normalizeMsg (which only handles 2 types).
+  function* walk(obj, depth = 0) {
+    if (!obj || depth > 8) return;
+    // Yield contextInfo from any known message type at this level
+    for (const key of [
+      'extendedTextMessage', 'imageMessage', 'videoMessage', 'documentMessage',
+      'audioMessage', 'buttonsResponseMessage', 'listResponseMessage',
+      'stickerMessage', 'contactMessage', 'locationMessage', 'templateButtonReplyMessage',
+    ]) {
+      if (obj[key]?.contextInfo) yield obj[key].contextInfo;
+    }
+    // Walk into known envelope/wrapper types
+    for (const wrapper of [
+      'ephemeralMessage', 'documentWithCaptionMessage',
+      'viewOnceMessage', 'viewOnceMessageV2', 'viewOnceMessageV2Extension',
+    ]) {
+      if (obj[wrapper]?.message) yield* walk(obj[wrapper].message, depth + 1);
+      if (obj[wrapper]) yield* walk(obj[wrapper], depth + 1); // some wrap without .message
+    }
+  }
+
+  // Return first contextInfo that has a stanzaId (the one that identifies the quoted message)
+  for (const ctx of walk(m)) {
+    if (ctx?.stanzaId) return ctx;
+  }
+  // Fall back to first contextInfo found (even without stanzaId — caller checks)
+  for (const ctx of walk(m)) {
+    return ctx;
+  }
+  return null;
 }
 
 // ── Reply-based reveal: owner replies to ANY msg with voKeyword ───────────────
@@ -304,19 +357,37 @@ export async function handleReplyReveal(msg, sock, sessionId) {
   }
 }
 
-// ── Manual reveal: owner sends !reveal <msgId> in private chat ────────────────
+// ── Manual reveal: by msgId (from !reveal, .reveal, or the reveal plugin) ─────
 export async function handleManualReveal(msgId, sock, replyJid) {
   const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
   const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
   if (!selfJid) return;
 
-  const stored = viewOnceStore.get(msgId?.trim());
+  const id = msgId?.trim();
+
+  // Check in-memory store first (fast path)
+  let stored = viewOnceStore.get(id);
+
+  // If not in memory, try recovering from disk index (survives 30-min TTL)
+  if (!stored) {
+    const meta = getIndexEntry(id);
+    if (meta?.savedPath) {
+      try {
+        const diskBuf = await fs.readFile(meta.savedPath);
+        if (diskBuf?.length > 0) {
+          stored = { ...meta, buf: diskBuf, timestamp: Date.now() };
+        }
+      } catch {}
+    }
+  }
+
   if (!stored) {
     await sock.sendMessage(replyJid, {
       text:
         `❌ *View-Once not found*\n\n` +
-        `Message ID not in cache (5 min TTL).\n` +
-        `Make sure the bot was running when the view-once arrived.\n\n` +
+        `Message ID not in cache.\n` +
+        `Make sure the bot was running when the view-once arrived,\n` +
+        `and that you're replying to the original message.\n\n` +
         `> 👁️ *AA MD Bot*`,
     }).catch(() => {});
     return;
@@ -336,6 +407,58 @@ export async function handleManualReveal(msgId, sock, replyJid) {
       ? { video: stored.buf, caption: cap, mimetype: stored.mime }
       : { image: stored.buf, caption: cap, mimetype: stored.mime }
   ).catch(() => {});
+}
+
+// ── Reveal by quoted/replied message — used by .reveal plugin ─────────────────
+// Pass the full `msg` of the owner's command message. Extracts the quoted msgId
+// and reveals that view-once. Returns true if found, false if not in cache.
+export async function handleRevealByReply(msg, sock) {
+  const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
+  const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
+  if (!selfJid) return false;
+
+  // Extract the quoted message ID from contextInfo
+  const ctxInfo = extractContextInfo(msg.message);
+  const stanzaId = ctxInfo?.stanzaId;
+  if (!stanzaId) return false;
+
+  // Check in-memory store
+  let stored = viewOnceStore.get(stanzaId);
+
+  // Fall back to disk if not in memory
+  if (!stored) {
+    const meta = getIndexEntry(stanzaId);
+    if (meta?.savedPath) {
+      try {
+        const diskBuf = await fs.readFile(meta.savedPath);
+        if (diskBuf?.length > 0) stored = { ...meta, buf: diskBuf, timestamp: Date.now() };
+      } catch {}
+    }
+  }
+
+  if (!stored) return false;
+
+  const tz      = config.timezone || 'Asia/Karachi';
+  const date    = moment().tz(tz).format('DD/MM/YYYY');
+  const timeStr = moment().tz(tz).format('HH:mm:ss');
+
+  const cap =
+    `🔓 *View-Once Revealed*\n\n` +
+    `👤 *From:* ${formatPhone(stored.num)}\n` +
+    `📅 *Date:* ${date}\n` +
+    `⏰ *Time:* ${timeStr}\n` +
+    `📍 *Chat:* ${stored.inGroup ? 'Group' : 'DM'}\n` +
+    `💬 *Caption:* "${stored.caption || 'None'}"\n\n` +
+    `> 👁️ *AA MD Bot*`;
+
+  await sock.sendMessage(
+    selfJid,
+    stored.isVid
+      ? { video: stored.buf, caption: cap, mimetype: stored.mime }
+      : { image: stored.buf, caption: cap, mimetype: stored.mime }
+  ).catch(() => {});
+
+  return true;
 }
 
 // ── Init: call once at startup ────────────────────────────────────────────────

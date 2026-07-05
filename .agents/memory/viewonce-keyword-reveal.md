@@ -1,47 +1,34 @@
 ---
-name: ViewOnce implementation (post-rewrite)
-description: How the new lib-based ViewOnce system works — replaces old plugin+voCache approach
+name: ViewOnce keyword reveal
+description: How the voword/reveal feature works, what was fixed, and key architecture decisions.
 ---
 
-## Architecture
+# ViewOnce keyword reveal
 
-All ViewOnce logic lives in `AA-MD-Bot/lib/antiViewOnce.js` (new, replaces voCache.js + antiviewonce plugin + voword plugin).
+## How it works
+- Owner sets a secret keyword via `.voword <keyword>` → stored in `db.settings.getValue('voKeyword')`
+- When any view-once arrives, `handleViewOnceMessage()` in `lib/antiViewOnce.js` downloads and stores it:
+  - In-memory: `viewOnceStore` (Map, keyed by `msg.key.id`, 30-min TTL)
+  - On disk: `media/viewonce/<filename>` + index at `media/viewonce/index.json` (maps msgId → metadata)
+- Auto-reveal to "You" chat if `antiViewOnce` setting is ON or caption contains keyword
+- Keyword reply: owner replies to a view-once with the keyword → `handleReplyReveal()` in sessionManager triggers
+- `.reveal` plugin: owner sends `.reveal` as a reply (no ID needed) OR `.reveal <msgId>`
 
-`sessionManager.js` feeds it from **two** event paths:
-- `messages.upsert` → `handleViewOnceMessage(msg, sock, sessionId)`
-- `messages.update` → same (for delayed/retry delivery — WhatsApp delivers view-once as empty placeholder first)
+## What was fixed
+- TTL extended from 5 min → 30 min (so reveals work if user takes time to respond)
+- Persistent disk index added (`media/viewonce/index.json`) so `handleManualReveal` falls back to disk after TTL
+- `extractContextInfo()` hardened to walk the full message wrapper chain (ephemeral, viewOnce, documentWithCaption) to find `stanzaId`
+- `.reveal` plugin created at `plugins/owner/reveal.js` — previously only `!reveal <msgId>` worked (hardcoded in sessionManager)
+- `handleRevealByReply()` exported from `lib/antiViewOnce.js` for the plugin to use
 
-## Dedup design (critical)
+## Plugin flag rule
+- Plugin must use `ownerOnly: true` (not `isOwner: true` which doesn't exist as a plugin flag)
 
-`_processed.add(msgId)` is marked **only after the buffer downloads successfully**. This allows `messages.update` to retry if `messages.upsert` found the wrapper but the download returned empty (common with delayed VO delivery).
+## Key files
+- `lib/antiViewOnce.js` — core logic: download, store, reveal functions
+- `plugins/owner/voword.js` — set/remove keyword
+- `plugins/owner/reveal.js` — `.reveal` command
+- `plugins/owner/antiviewonce.js` — toggle auto-reveal
+- `lib/sessionManager.js` lines 476-497 — keyword reply and `!reveal` dispatch
 
-## Config keys (db.settings)
-
-| Key | Purpose |
-|-----|---------|
-| `voKeyword` | If set, view-once captions containing this keyword auto-reveal to "You" chat |
-| `voAutoReply` | If set, bot sends this text to sender on every view-once received |
-| `antiViewOnce` | true/false — auto-forward ALL view-once to "You" chat (global) |
-| `groups.<jid>.antiviewonce` | per-group toggle |
-
-## Reveal methods (two, both active)
-
-**Method 1 — `!reveal <msgId>`:** Owner sends this text in any chat (gated by `fromMe`). Fallback when reply-reveal isn't possible.
-
-**Method 2 — Reply with keyword (primary):** Owner replies to the view-once message with voKeyword text. Bot extracts `contextInfo.stanzaId` from the reply, looks up viewOnceStore, and sends media to "You" chat. Includes 3 s retry loop (6 × 500 ms) for delayed `messages.update` delivery edge case.
-
-`extractText()` and `extractContextInfo()` helpers in antiViewOnce.js use `normalizeMsg()` to unwrap ephemeral/documentWithCaption/all wrapper types before extracting.
-
-## voword plugin
-
-`plugins/owner/voword.js` — sets/removes `db.settings.voKeyword` (note: uses `db` arg from commandHandler, NOT `settings` — `settings` is not passed by commandHandler).
-
-## Deleted files
-
-- `lib/voCache.js` — replaced by `viewOnceStore` Map in antiViewOnce.js
-- `plugins/gb/antiviewonce.js` — replaced by lib
-- `plugins/owner/voword.js` — replaced by db.settings.voKeyword direct config
-
-## Menus updated
-
-`plugins/utility/menu.js` and `plugins/gb/gbmenu.js` updated to reference `!reveal <msgId>` instead of `.reveal` / `.voword`.
+**Why:** The 5-min TTL caused reveals to fail if the owner didn't act immediately. The hardcoded `!reveal` prefix meant `.reveal` (bot prefix) silently did nothing.

@@ -582,19 +582,47 @@ async function downloadAudio(ytUrl) {
   return null;
 }
 
+// ── Video via progressive stream URL (mirrors downloadAudioFromVideo — proven reliable) ─────
+// .play works because downloadAudioFromVideo fetches a full progressive mp4 via android client,
+// then strips the audio. We do the same but keep the video track. This is the most reliable
+// path because we know the URL format works on this server.
+//
+// Returns: { buffer } | null
+
+async function downloadVideoFromStreamUrl(ytUrl) {
+  const videoUrl = await withTimeout(22000,
+    tryYtdlpStreamUrl(
+      ytUrl,
+      'best[height<=480][ext=mp4]/best[height<=480]/best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best'
+    )
+  );
+  if (!videoUrl) return null;
+
+  const vidBuf = await withTimeout(90000, fetchBuf(videoUrl));
+  if (!isValidVideoBuffer(vidBuf)) return null;
+
+  // Transcode to H.264/AAC so WhatsApp plays it; fall back to raw if ffmpeg fails
+  const playable = await withTimeout(180000, ensurePlayableMp4(vidBuf));
+  return { buffer: playable?.length ? playable : vidBuf };
+}
+
 // ── Video orchestrator ────────────────────────────────────────────────────────
 // Always downloads and sends as a buffer — CDN URLs expire and may not stream.
 //
-// Step 1: Race for a direct mp4 URL (yt-dlp or API) — fast, ~5-15s
+// Step 0: Progressive stream URL (same proven path as .play audio) — most reliable
+// Step 1: Race for a direct mp4 URL (third-party APIs) — fast when online
 // Step 2: Fetch that URL into a buffer (90s cap)
-// Step 3: yt-dlp full video download (guaranteed, ~60-180s)
+// Step 3: yt-dlp full video download (last resort, ~60-180s)
 //
 // Returns: { buffer } | null
 
 async function downloadVideo(ytUrl) {
-  // Step 1 — Race for the best direct video URL
+  // Step 0 — Progressive stream (same URL path that works for .play) — run first
+  const streamResult = await withTimeout(120000, downloadVideoFromStreamUrl(ytUrl));
+  if (streamResult?.buffer?.length) return streamResult;
+
+  // Step 1 — Race third-party API URLs (fast when online, often down)
   const directUrl = await withTimeout(28000, firstSuccess([
-    tryYtdlpStreamUrl(ytUrl, 'best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best'),
     tryGtechMp4Url(ytUrl),
     tryFaaMp4Url(ytUrl),
     tryNexrayMp4Url(ytUrl),
