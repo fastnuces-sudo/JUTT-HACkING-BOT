@@ -30,7 +30,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "mkdir -p /home/runner/.local/bin && ([ -f /home/runner/.local/bin/yt-dlp ] || (curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /home/runner/.local/bin/yt-dlp && chmod +x /home/runner/.local/bin/yt-dlp)) && cd AA-MD-Bot && npm install --prefer-offline 2>/dev/null; node index.js"
+args = "mkdir -p /home/runner/.local/bin && ([ -f /home/runner/.local/bin/yt-dlp ] || (curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /home/runner/.local/bin/yt-dlp && chmod +x /home/runner/.local/bin/yt-dlp)) && ([ -f /home/runner/.deno/bin/deno ] || curl -fsSL https://deno.land/install.sh | sh) && cd AA-MD-Bot && npm install --prefer-offline 2>/dev/null; node index.js"
 waitForPort = 5000
 
 [agent]
@@ -44,10 +44,6 @@ timeoutMs = 20000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
 
 [[ports]]
 localPort = 19724

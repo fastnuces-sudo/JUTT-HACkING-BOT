@@ -189,7 +189,7 @@ export async function handleMessage(sock, msg, sessionId) {
       return;
     }
 
-    const { command, args, text: argText } = parsed;
+    const { command, args, text: argText, prefix } = parsed;
 
     if (isBanned(senderJid) && !owner) {
       await reply(sock, msg, '❌ You are banned from using this bot.').catch(() => {});
@@ -291,7 +291,7 @@ export async function handleMessage(sock, msg, sessionId) {
 
     await plugin.execute({
       sock, msg, jid, senderJid, fromMe, isGroupMsg,
-      command, args, text: argText, sessionId,
+      command, args, text: argText, prefix, sessionId,
       isOwner: owner, isSudo: owner,
       reply: (t, opts) => reply(sock, msg, t, opts),
       react: (e) => react(sock, msg, e),

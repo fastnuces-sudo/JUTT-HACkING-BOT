@@ -22,3 +22,18 @@ yt-dlp player clients split into two groups: `android`/`tv_embedded`/`ios` do NO
 
 ## Third-party mp3/mp4 API fallbacks go stale fast
 The API race sources in `plugins/download/youtube.js` (Keith, Faa, Nexray, Gtech, Agatz) are free unofficial YouTube-downloader APIs that come and go. As of 2026-07-04, all three mp3 APIs (Keith/Faa/Nexray) were confirmed dead (500 error, HTML error page, empty response respectively). This doesn't break the feature since they're raced in parallel with yt-dlp and yt-dlp wins when they're down — but don't assume they're alive without testing, and don't rely on them as the primary path.
+
+## Deno is required for yt-dlp's "n" challenge — Node is NOT supported (confirmed 2026-07-05)
+Real-world/less-popular videos (e.g. niche religious/regional songs, not just bot-checked ones) returned ONLY storyboard (mhtml thumbnail) formats — no audio/video streams at all — even though the request didn't show "sign in to confirm you're not a bot". Root cause: yt-dlp needs a working JS runtime to solve YouTube's nsig ("n" parameter) anti-throttling challenge; without it, YouTube silently strips all real media formats. `--js-runtimes "node:<path>"` looked correct but yt-dlp's own runtime check reports Node (even v20/v22) as **"unsupported"** for its JS challenge engine (EJS) — only Deno works. Fix: install Deno (`curl -fsSL https://deno.land/install.sh | sh`) and pass `--js-runtimes "deno:<path>"` instead. This must be installed persistently in the workflow startup command (not just the shell PATH), same pattern as the existing yt-dlp auto-install.
+
+**Why:** Without this, `yt-dlp -F` on an affected video shows only `sb0`-`sb3` (storyboard) formats and a `WARNING: ... n challenge solving failed` — a silent, hard-to-diagnose failure that looks identical to "no formats available" from other causes.
+
+**How to apply:** `lib/ytdlp.js` resolves Deno (not Node) for `YTDLP_FLAGS`. If yt-dlp download failures resurface, first check `yt-dlp -v -F <url>` output for "JS runtimes: none" or "(unsupported)" before assuming it's a bot-check or dead API issue.
+
+## 'web' client fails even with valid cookies — use mweb/tv/tv_embedded instead (confirmed 2026-07-05)
+Contrary to earlier assumption, `tv_embedded` DOES accept `--cookies` in the installed yt-dlp version (it's bot-checked without cookies but works fine with them) — it was wrongly excluded from the cookie-tier client list. Meanwhile `web` consistently fails with "Requested format is not available" even with valid cookies on this server. Confirmed working cookie-tier clients (tested against a real failing video end-to-end, both audio -x and video -f download): `mweb`, `tv_embedded`, `tv`. `COOKIE_CLIENTS` in `plugins/download/youtube.js` should be `['mweb', 'tv_embedded', 'tv']`, not `['web', 'mweb']`.
+
+## Plugins never actually received `prefix` (silent bug affecting 20+ plugins)
+`lib/commandHandler.js` destructured `{ command, args, text }` from `parseCommand()` but dropped the `prefix` field it also returns, and never included `prefix` in the object passed to `plugin.execute()`. Every plugin using `prefix` in its execute signature (menu.js, youtube.js, github.js, weather.js, and 15+ others) silently got `undefined`, producing messages like `undefinedvideo <link>` instead of `.video <link>`. Fixed by adding `prefix` to both the destructure and the `plugin.execute({...})` call site in `commandHandler.js`.
+
+**Why:** This is a "looks right in the plugin file, breaks at the call site" class of bug — grepping only the plugin files (which correctly use `${prefix}`) never reveals it; the wiring must be checked in the handler that invokes plugins.

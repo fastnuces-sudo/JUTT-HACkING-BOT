@@ -21,25 +21,30 @@ function resolveYtdlp() {
 
 export const YTDLP = resolveYtdlp();
 
-// Resolve Node.js binary for yt-dlp JS extraction engine
-function resolveNode() {
+// Resolve Deno binary for yt-dlp's JS challenge solver (nsig/"n" parameter).
+// IMPORTANT: yt-dlp's JS challenge engine (EJS) only supports Deno right now —
+// Node.js (even v20/v22) is explicitly marked "unsupported" by yt-dlp's own
+// runtime check. Without a working JS runtime, YouTube serves ONLY storyboard
+// (mhtml) formats for many videos — no audio/video streams at all. This is
+// what caused "all sources returned error" for real-world/less-popular videos.
+function resolveDeno() {
   const candidates = [
-    process.execPath,                                                    // current Node process
-    '/nix/store/1lagpgadaybvs1n2312gysg2phjk89y8-nodejs-20.20.0-wrapped/bin/node',
-    '/usr/local/bin/node',
-    '/usr/bin/node',
+    `${process.env.HOME || '/home/runner'}/.deno/bin/deno`, // installed via deno.land/install.sh
+    '/usr/local/bin/deno',
+    '/usr/bin/deno',
   ];
   for (const p of candidates) {
     if (existsSync(p)) return p;
   }
-  return 'node';
+  return 'deno'; // fallback: rely on PATH
 }
 
 // Common flags for all yt-dlp invocations:
-// --js-runtimes node:PATH → use Node.js for JS extraction (proper YouTube support)
+// --js-runtimes deno:PATH → required for YouTube's "n" challenge (nsig) —
+//   without this, only images/storyboards are returned for many videos.
 // --no-check-certificate  → skip SSL issues in sandboxed environments
-const _nodePath = resolveNode();
-export const YTDLP_FLAGS = `--js-runtimes "node:${_nodePath}" --no-check-certificate`;
+const _denoPath = resolveDeno();
+export const YTDLP_FLAGS = `--js-runtimes "deno:${_denoPath}" --no-check-certificate`;
 
 // Returns --cookies flag string if cookies.txt exists, else empty string
 const COOKIES_PATH = path.join(__dirname, '..', 'cookies.txt');

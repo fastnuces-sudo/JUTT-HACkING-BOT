@@ -236,7 +236,12 @@ async function searchYT(query) {
 // login (age-restricted / private / members-only).
 
 const NO_COOKIE_CLIENTS = ['android', 'tv_embedded', 'ios'];
-const COOKIE_CLIENTS = ['web', 'mweb'];
+// Confirmed by direct testing: 'web' fails ("Requested format is not
+// available") even with valid cookies on this server. 'mweb', 'tv', and
+// 'tv_embedded' all successfully return real formats when cookies are
+// attached (tv_embedded is bot-checked WITHOUT cookies, but works WITH them —
+// it is not cookie-incompatible, contrary to earlier assumption).
+const COOKIE_CLIENTS = ['mweb', 'tv_embedded', 'tv'];
 
 // type: 'audio' uses tv_embedded (supports bestaudio), 'video' uses android (fast, progressive mp4)
 async function tryYtdlpStreamUrl(ytUrl, fmt, clientOverride) {
