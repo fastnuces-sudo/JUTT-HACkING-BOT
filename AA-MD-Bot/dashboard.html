@@ -44,7 +44,7 @@ a{text-decoration:none;color:inherit}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── CONNECT SCREEN ── */
-#screen-connect{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px}
+#screen-connect{position:relative;z-index:1;width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px}
 
 .cs-brand{display:flex;align-items:center;gap:14px;margin-bottom:34px}
 .cs-brand-logo{width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid rgba(37,211,102,.5);box-shadow:0 0 30px var(--glow)}
@@ -236,26 +236,52 @@ a{text-decoration:none;color:inherit}
 .sc-fill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1)}
 
 /* sessions */
-.sess-list{display:flex;flex-direction:column;gap:9px}
+.sess-list{display:flex;flex-direction:column;gap:11px}
 .sess-card{
-  display:flex;align-items:center;gap:13px;
-  background:var(--card);border:1px solid var(--border);border-radius:14px;
-  padding:13px 16px;transition:border-color .2s,background .2s
+  display:flex;align-items:center;gap:15px;
+  background:linear-gradient(135deg,rgba(13,20,33,.95),rgba(8,13,24,.98));
+  border:1px solid var(--border2);border-radius:18px;
+  padding:16px 18px;transition:border-color .25s,box-shadow .25s,transform .2s;
+  position:relative;overflow:hidden
 }
-.sess-card:hover{border-color:rgba(37,211,102,.22);background:rgba(13,20,33,.9)}
+.sess-card::before{content:'';position:absolute;top:-1px;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(37,211,102,.3),transparent)}
+.sess-card:hover{border-color:rgba(37,211,102,.35);box-shadow:0 8px 30px rgba(0,0,0,.4);transform:translateY(-2px)}
+.sess-av-wrap{position:relative;flex-shrink:0}
 .sess-av{
-  width:40px;height:40px;border-radius:50%;
-  background:linear-gradient(135deg,rgba(37,211,102,.2),rgba(18,140,126,.2));
-  border:1.5px solid rgba(37,211,102,.25);
-  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0
+  width:48px;height:48px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(37,211,102,.15),rgba(18,140,126,.25));
+  border:2px solid rgba(37,211,102,.3);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:0 0 18px rgba(37,211,102,.12)
+}
+.sess-online-dot{
+  position:absolute;bottom:1px;right:1px;width:12px;height:12px;
+  border-radius:50%;background:var(--green);
+  border:2px solid var(--card);box-shadow:0 0 8px rgba(37,211,102,.8);
+  animation:pulse-r 2s infinite
 }
 .sess-info{flex:1;min-width:0}
-.sess-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sess-tag{font-size:11px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:5px}
+.sess-name{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.sess-tag{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-bottom:6px}
+.sess-meta{display:flex;gap:5px;flex-wrap:wrap}
+.sess-badge{
+  background:rgba(37,211,102,.07);border:1px solid rgba(37,211,102,.16);
+  border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;
+  color:rgba(37,211,102,.75);white-space:nowrap
+}
+.sess-badge.bb{background:rgba(59,130,246,.07);border-color:rgba(59,130,246,.2);color:#93c5fd}
+.sess-badge.by{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.2);color:#fde68a}
+.sess-right{display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0}
+.sess-live-pill{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.22);
+  border-radius:20px;padding:5px 12px;font-size:11px;font-weight:800;color:var(--green)
+}
+.sess-type{font-size:10px;color:var(--muted2);font-weight:600;text-align:right}
 .btn-add-s{
   background:rgba(37,211,102,.09);color:var(--green);
-  border:1px solid rgba(37,211,102,.22);border-radius:10px;
-  padding:9px 16px;font-size:12px;font-weight:700;transition:all .2s;margin-top:11px
+  border:1px solid rgba(37,211,102,.22);border-radius:12px;
+  padding:10px 18px;font-size:12px;font-weight:700;transition:all .2s;margin-top:12px
 }
 .btn-add-s:hover{background:rgba(37,211,102,.18);transform:translateY(-1px)}
 
@@ -637,7 +663,8 @@ a{text-decoration:none;color:inherit}
         <span class="chip" onclick="cpCmd('.botzip')">.botzip</span>
         <span class="chip" onclick="cpCmd('.attp AA MD Bot')">.attp</span>
         <span class="chip" onclick="cpCmd('.ss google.com')">.ss</span>
-        <span class="chip g" onclick="cpCmd('.reveal')">.reveal</span>
+        <span class="chip g" onclick="cpCmd('.avv')">.avv</span>
+        <span class="chip g" onclick="cpCmd('.vv')">.vv</span>
       </div>
       <div style="font-size:10px;color:var(--muted2);white-space:nowrap">Tap to copy</div>
     </div>
@@ -708,9 +735,9 @@ a{text-decoration:none;color:inherit}
           </div>
           <div class="mf">
             <div class="mf-body">
-              <div class="mf-title">👁️ View-Once Reveal — .reveal</div>
+              <div class="mf-title">👁️ View-Once Reveal — .avv / .vv</div>
               <div class="mf-tags"><span>Images</span><span>Videos</span><span>Groups &amp; DMs</span></div>
-              <div class="mf-desc">Reply to any view-once message with <code style="color:var(--green)">.reveal</code>. Set an auto-keyword with <code style="color:var(--green)">.voword</code>.</div>
+              <div class="mf-desc">Reply to any view-once with <code style="color:var(--green)">.avv</code> or <code style="color:var(--green)">.vv</code> to reveal it. Enable auto-reveal with <code style="color:var(--green)">.antivv on</code>. Set a reply keyword with <code style="color:var(--green)">.voword</code>.</div>
             </div>
             <div class="mf-foot">👁️ Saved privately to your "You" chat</div>
           </div>
@@ -815,9 +842,9 @@ const QUICK = [
   {cmd:'.attp AA MD Bot',desc:'✨ Animated sticker'},
   {cmd:'.logo hacker|text',desc:'🎨 Stylized logo'},
   {cmd:'.shazam',     desc:'🎵 Identify a song'},
-  {cmd:'.reveal',     desc:'👁️ Reveal view-once'},
+  {cmd:'.avv',        desc:'👁️ Reveal view-once (reply to it)'},
   {cmd:'.voword show',desc:'👁️ View-once keyword'},
-  {cmd:'.antiviewonce on',desc:'👁️ Auto-reveal all'},
+  {cmd:'.antivv on',  desc:'👁️ Auto-reveal all view-once'},
   {cmd:'.ss google.com',desc:'📸 Website screenshot'},
   {cmd:'.imagine a cat',desc:'🖼️ AI image generation'},
   {cmd:'.country Pakistan',desc:'🌍 Country info'},
@@ -837,7 +864,7 @@ const CATS = [
   {ico:'🔧',lbl:'Utility',    clr:'#06b6d4',cmds:['translate','calc','qr','currency','element','base64','password','shorturl','menu','ping','uptime','report','support']},
   {ico:'🛠️',lbl:'Tools',      clr:'#64748b',cmds:['tts','sendaudio','sendvid','bgremove','enhance','ocr','hash','speedtest']},
   {ico:'👥',lbl:'Group',      clr:'#10b981',cmds:['kick','promote','demote','mute','unmute','tagall','hidetag','antilink','antidelete','antiviewonce','antibot','welcome','goodbye','warn','groupinfo','link','disap','disap1','disap7','disap90']},
-  {ico:'👑',lbl:'Owner',      clr:'#ef4444',cmds:['bs','mode','anticall','autostatus','statusview','statusreact','autoreply','autoread','voword','reveal','antiviewonce','setprefix','privacy','botzip','addowner','maintenance','broadcast','eval','restart']},
+  {ico:'👑',lbl:'Owner',      clr:'#ef4444',cmds:['bs','mode','anticall','autostatus','statusview','statusreact','autoreply','autoread','voword','avv','vv','antivv','antiviewonce','setprefix','privacy','botzip','addowner','maintenance','broadcast','eval','restart']},
   {ico:'💰',lbl:'Economy',    clr:'#eab308',cmds:['balance','daily','transfer','work','rob','leaderboard','invest','shop','buy','sell']},
   {ico:'⭐',lbl:'Levels',     clr:'#f97316',cmds:['rank','xp','leaderboard','level','profile']},
 ];
@@ -857,9 +884,9 @@ const SETS = [
   {cmd:'.mode private',   desc:'PRIVATE: only you respond',          eg:'.mode private'},
   {cmd:'.anticall on',    desc:'Reject all incoming calls',          eg:'.anticall on'},
   {cmd:'.antidelete on',  desc:'Anti-delete in groups & DMs',        eg:'.antidelete on'},
-  {cmd:'.antiviewonce on',desc:'Auto-reveal all view-once to You chat',eg:'.antiviewonce on'},
+  {cmd:'.antivv on',      desc:'Auto-reveal all view-once to You chat',eg:'.antivv on'},
   {cmd:'.voword show',    desc:'Set keyword to reveal view-once on reply',eg:'.voword show'},
-  {cmd:'.reveal',         desc:'Reply to a view-once to reveal it',  eg:'.reveal'},
+  {cmd:'.avv / .vv',      desc:'Reply to a view-once to reveal it',  eg:'.avv'},
   {cmd:'.autostatus on',  desc:'Auto save & forward statuses to DM', eg:'.autostatus on'},
   {cmd:'.statusview on',  desc:'Auto view all statuses silently',    eg:'.statusview on'},
   {cmd:'.autoread on',    desc:'Mark all messages as read',          eg:'.autoread on'},
@@ -920,43 +947,63 @@ function cpCmd(txt, el) {
 }
 
 /* ── SCREENS ── */
+const SCREEN_DISPLAY={'screen-loading':'flex','screen-connect':'flex','screen-dash':'block'};
 function show(id){
   ['screen-loading','screen-connect','screen-dash'].forEach(s=>{
     const el=document.getElementById(s);
-    el.style.display=s===id?'block':'none';
+    el.style.display=s===id?(SCREEN_DISPLAY[s]||'block'):'none';
   });
 }
 function showDash(){show('screen-dash');loadStats();}
 function goConnect(){csReset();show('screen-connect');}
 
 /* ── SESSIONS ── */
-function renderSessions(sessions){
-  const conn=sessions.filter(s=>s.status==='connected');
-  const el=document.getElementById('sess-list');
+let _lastStats = {};
+function renderSessions(sessions, stats){
+  if(stats) _lastStats = stats;
+  const conn = sessions.filter(s=>s.status==='connected');
+  const el   = document.getElementById('sess-list');
   if(!el) return;
 
-  // Hero status
-  const htxt=document.getElementById('hero-status-txt');
-  if(htxt) htxt.textContent=conn.length?`${conn.length} Session${conn.length>1?'s':''} Active`:'No sessions connected';
+  const htxt = document.getElementById('hero-status-txt');
+  if(htxt) htxt.textContent = conn.length
+    ? `${conn.length} Session${conn.length>1?'s':''} Active`
+    : 'No sessions connected';
 
   if(!conn.length){
-    el.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:12px">No connected sessions — click "Connect Another Account" below.</div>`;
+    el.innerHTML=`<div style="font-size:13px;color:var(--muted);padding:14px 4px">No connected sessions — click "Connect Another Account" below.</div>`;
     return;
   }
-  el.innerHTML=conn.map((s,i)=>{
-    // Use display name if available, never show the numeric ID/phone
-    const name = s.name || `Bot Account ${conn.length>1?'#'+(i+1):''}`;
+
+  const uptime  = _lastStats.uptime  || '--';
+  const plugins = _lastStats.plugins || '172';
+  const version = _lastStats.version || '3.0';
+
+  el.innerHTML = conn.map((s,i) => {
+    const name = s.name || `Bot Account${conn.length>1?' #'+(i+1):''}`;
     return `<div class="sess-card">
-      <div class="sess-av">🤖</div>
+      <div class="sess-av-wrap">
+        <div class="sess-av">🤖</div>
+        <div class="sess-online-dot"></div>
+      </div>
       <div class="sess-info">
         <div class="sess-name">${esc(name)}</div>
-        <div class="sess-tag"><span class="dot dot-g"></span> Connected &amp; Active</div>
+        <div class="sess-tag"><span class="dot dot-g"></span> Connected &amp; Active · WhatsApp MD</div>
+        <div class="sess-meta">
+          <span class="sess-badge">v${esc(version)}</span>
+          <span class="sess-badge bb">${plugins}+ Plugins</span>
+          <span class="sess-badge by">↑ ${esc(uptime)}</span>
+        </div>
+      </div>
+      <div class="sess-right">
+        <div class="sess-live-pill"><span class="pulse-ring"></span> LIVE</div>
+        <div class="sess-type">Multi-Device</div>
       </div>
     </div>`;
   }).join('');
 }
 
-function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function esc(s){const d=document.createElement('div');d.textContent=String(s);return d.innerHTML}
 
 
 /* ── STATS ── */
@@ -973,9 +1020,9 @@ async function loadStats(){
     if(rm&&d.ram){
       rm.textContent=d.ram+' MB';
       const pct=Math.min((d.ram/512)*100,100);
-      if(rb){rb.style.width=pct+'%';rb.style.background=pct>80?'linear-gradient(90deg,#991b1b,#ef4444)':pct>60?'linear-gradient(90deg,#b45309,#f59e0b)':'linear-gradient(90deg,#b45309,#f59e0b)';}
+      if(rb){rb.style.width=pct+'%';rb.style.background=pct>80?'linear-gradient(90deg,#991b1b,#ef4444)':'linear-gradient(90deg,#b45309,#f59e0b)';}
     }
-    renderSessions(d.sessions||[]);
+    renderSessions(d.sessions||[], d);
   }catch{}
 }
 
