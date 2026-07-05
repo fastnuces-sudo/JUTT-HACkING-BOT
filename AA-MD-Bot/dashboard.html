@@ -252,13 +252,6 @@ a{text-decoration:none;color:inherit}
 .sess-info{flex:1;min-width:0}
 .sess-name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sess-tag{font-size:11px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:5px}
-.sess-btns{display:flex;gap:7px;flex-shrink:0}
-.btn-discon{
-  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
-  border-radius:8px;padding:6px 12px;font-size:11px;font-weight:600;
-  color:#fca5a5;transition:all .2s
-}
-.btn-discon:hover{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.45)}
 .btn-add-s{
   background:rgba(37,211,102,.09);color:var(--green);
   border:1px solid rgba(37,211,102,.22);border-radius:10px;
@@ -959,24 +952,12 @@ function renderSessions(sessions){
         <div class="sess-name">${esc(name)}</div>
         <div class="sess-tag"><span class="dot dot-g"></span> Connected &amp; Active</div>
       </div>
-      <div class="sess-btns">
-        <button class="btn-discon" onclick="disconnectSess('${q(s.id)}')">✕ Disconnect</button>
-      </div>
     </div>`;
   }).join('');
 }
 
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
-async function disconnectSess(id){
-  if(!confirm('Disconnect this session?\nThe bot will stop on this account.')) return;
-  try{
-    const r=await fetch('/api/session/'+encodeURIComponent(id),{method:'DELETE'});
-    const d=await r.json();
-    if(d.ok){toast('✅ Session disconnected');setTimeout(loadStats,1200);}
-    else toast('❌ '+(d.error||'Failed'));
-  }catch(e){toast('❌ '+e.message);}
-}
 
 /* ── STATS ── */
 async function loadStats(){
