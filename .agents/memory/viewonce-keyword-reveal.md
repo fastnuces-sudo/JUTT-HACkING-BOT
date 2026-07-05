@@ -34,3 +34,10 @@ The auto-cache-on-receive step in `lib/sessionManager.js` used Baileys' high-lev
 **Why:** Two different Baileys download methods were used for the same job across different files; the untested one silently failed and its failure was swallowed by a `.catch(() => null)`.
 
 **How to apply:** For downloading media from a view-once (or any) message object in this codebase, always use `downloadContentFromMessage(innerMediaMsg, 'image'|'video')` + manual stream-to-buffer — it's the proven-reliable method here. Avoid the high-level `downloadMediaMessage` helper for view-once wrappers, and never swallow download errors with a bare `.catch(() => null)` — log them so failures are diagnosable.
+
+## Never use Baileys' `normalizeMessageContent()` to detect view-once wrappers (2026-07-05)
+WhatsApp sometimes wraps view-once media in `ephemeralMessage` (when disappearing messages is on for the chat). It's tempting to call Baileys' `normalizeMessageContent(msg.message)` to unwrap that before checking for `viewOnceMessage`/`viewOnceMessageV2`/`viewOnceMessageV2Extension` — but that helper *recursively* unwraps ALL future-proof containers, including the viewOnce wrapper itself, in the same loop. By the time it returns, you already have the raw `imageMessage`/`videoMessage` with no trace that it was ever view-once, so any check for the viewOnce wrapper on its output always fails silently.
+
+**Why:** `normalizeMessageContent`'s internal `getFutureProofMessage()` treats `ephemeralMessage` and `viewOnceMessage*` as equally "unwrap and continue" cases — there's no way to stop it at just the ephemeral layer.
+
+**How to apply:** To detect view-once while still knowing it was view-once, manually unwrap only `ephemeralMessage`/`documentWithCaptionMessage` in a small loop yourself, stop as soon as you hit a `viewOnceMessage*` key, then read the inner media from `voMsg.message.imageMessage/videoMessage`. Do not delegate this unwrapping to `normalizeMessageContent`.

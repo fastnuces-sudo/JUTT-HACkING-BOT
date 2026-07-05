@@ -4,7 +4,6 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   isJidBroadcast,
-  normalizeMessageContent,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import fs from 'fs-extra';
@@ -420,10 +419,19 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       // ── Anti View-Once: cache + auto-reveal view-once media ─────
       try {
         // WhatsApp may wrap view-once media inside an ephemeralMessage (when
-        // disappearing messages is on for the chat), so unwrap ephemeral first
-        // via Baileys' own normalizeMessageContent before checking for the
-        // viewOnce wrapper — checking msg.message directly misses this case.
-        const normalized = normalizeMessageContent(msg.message) || msg.message;
+        // disappearing messages is on for the chat). IMPORTANT: we must NOT
+        // use Baileys' normalizeMessageContent() here — it recursively
+        // unwraps viewOnceMessage/V2/V2Extension too, so by the time it
+        // returns you already have the raw imageMessage/videoMessage and
+        // all trace of the message having been "view-once" is gone. So we
+        // manually unwrap ONLY the ephemeral (and similar non-viewOnce)
+        // container(s), stopping as soon as we hit a viewOnce wrapper.
+        let normalized = msg.message;
+        for (let i = 0; i < 5; i++) {
+          if (normalized?.ephemeralMessage) { normalized = normalized.ephemeralMessage.message; continue; }
+          if (normalized?.documentWithCaptionMessage) { normalized = normalized.documentWithCaptionMessage.message; continue; }
+          break;
+        }
         const voMsg = normalized?.viewOnceMessage
                    || normalized?.viewOnceMessageV2
                    || normalized?.viewOnceMessageV2Extension;
