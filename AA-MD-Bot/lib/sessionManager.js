@@ -334,21 +334,130 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   const _msgCache = new Map();
   const _CACHE_MAX = 60;
 
+  // Dedup guard — a view-once message can reach us twice (once as an empty
+  // placeholder via messages.upsert, once with real content via
+  // messages.update). Without this we'd try to download+cache it twice.
+  const _voHandled = new Set();
+  const _VO_HANDLED_MAX = 200;
+
+  // ── Anti View-Once: cache + auto-reveal view-once media ─────────────────
+  // Extracted so both messages.upsert (normal delivery) and messages.update
+  // (delayed/retry delivery — see below) can feed it the same way. WhatsApp
+  // frequently delivers view-once media as an EMPTY placeholder in the
+  // initial messages.upsert event (msg.message has no real content yet) and
+  // only fills it in moments later via a messages.update event once the
+  // media key/ciphertext is available. Relying on messages.upsert alone
+  // silently drops every such view-once — this was the root cause of
+  // .reveal / voword always reporting "not in cache".
+  async function cacheViewOnceIfPresent(msg, sessionId) {
+    if (!msg?.message || !msg?.key?.id) return;
+    if (_voHandled.has(msg.key.id)) return; // already cached from the other event
+    try {
+      let normalized = msg.message;
+      for (let i = 0; i < 5; i++) {
+        if (normalized?.ephemeralMessage) { normalized = normalized.ephemeralMessage.message; continue; }
+        if (normalized?.documentWithCaptionMessage) { normalized = normalized.documentWithCaptionMessage.message; continue; }
+        break;
+      }
+      const voMsg = normalized?.viewOnceMessage
+                 || normalized?.viewOnceMessageV2
+                 || normalized?.viewOnceMessageV2Extension;
+
+      let mediaMsg = null;
+      let isVidMsg = false;
+      if (voMsg?.message?.imageMessage) {
+        mediaMsg = voMsg.message.imageMessage;
+        isVidMsg = false;
+      } else if (voMsg?.message?.videoMessage) {
+        mediaMsg = voMsg.message.videoMessage;
+        isVidMsg = true;
+      } else if (normalized?.imageMessage?.viewOnce) {
+        mediaMsg = normalized.imageMessage;
+        isVidMsg = false;
+      } else if (normalized?.videoMessage?.viewOnce) {
+        mediaMsg = normalized.videoMessage;
+        isVidMsg = true;
+      }
+
+      if (!mediaMsg) return;
+
+      logger.info({ sessionId, msgId: msg.key.id, chat: msg.key.remoteJid, isVidMsg }, '👁️ ViewOnce message detected — attempting cache');
+      _voHandled.add(msg.key.id);
+      if (_voHandled.size > _VO_HANDLED_MAX) _voHandled.delete(_voHandled.values().next().value);
+
+      const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
+
+      let buf = null;
+      try {
+        const stream = await downloadContentFromMessage(mediaMsg, isVidMsg ? 'video' : 'image');
+        const chunks = [];
+        for await (const chunk of stream) chunks.push(chunk);
+        buf = Buffer.concat(chunks);
+      } catch (e) {
+        logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce cache download failed');
+      }
+
+      if (!buf?.length) return;
+
+      const mime   = mediaMsg.mimetype || 'image/jpeg';
+      const isVid  = isVidMsg;
+      const sender = msg.key.participant || msg.key.remoteJid || '';
+      const num    = sender.split('@')[0].split(':')[0];
+      const chatJid = msg.key.remoteJid;
+      const inGroup = chatJid?.endsWith('@g.us');
+      const time   = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
+
+      // Cache the buffer so .reveal can serve it by message ID
+      voCacheSet(msg.key.id, { buffer: buf, mime, isVid, num, time, inGroup });
+
+      // ── Auto-forward only if antiviewonce is ON ───────────
+      const settings = db.settings.get();
+      const grpSet   = inGroup ? db.groups.get(chatJid) : null;
+      const avo      = inGroup
+        ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
+        : (settings.antiViewOnce ?? false);
+
+      if (avo) {
+        const selfNum  = sock.user?.id?.split('@')[0]?.split(':')[0];
+        const ownJid   = selfNum ? `${selfNum}@s.whatsapp.net` : null;
+        if (!ownJid) return; // bot not fully connected, skip silently
+
+        const privateCap =
+          `🔓 *View-Once Revealed*\n\n` +
+          `👤 *From:* +${num}\n` +
+          `🕐 *Time:* ${time}\n` +
+          `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n\n` +
+          `> 👁️ AA MD Bot`;
+
+        await sock.sendMessage(
+          ownJid,
+          isVid ? { video: buf, caption: privateCap, mimetype: mime }
+                : { image: buf, caption: privateCap, mimetype: mime }
+        ).catch(() => {});
+      }
+    } catch (e) {
+      logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce cache block threw');
+    }
+  }
+
+  // Delayed/retry delivery path — fires when WhatsApp fills in a message's
+  // real content after an initial empty placeholder (very common for
+  // view-once media). Without this listener those messages never get cached.
+  sock.ev.on('messages.update', async (updates) => {
+    for (const update of updates) {
+      try {
+        const content = update?.update?.message;
+        if (!content) continue;
+        const msg = { key: update.key, message: content };
+        await cacheViewOnceIfPresent(msg, sessionId);
+      } catch {}
+    }
+  });
+
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
     for (const msg of messages) {
       if (!msg.message) continue;
-
-      // TEMP DIAG — remove once view-once detection is confirmed fixed.
-      // Logs every incoming message's top-level type so we can see exactly
-      // what key WhatsApp uses for view-once media in this client version,
-      // even if a later block throws/swallows before reaching its own log.
-      try {
-        const keys = Object.keys(msg.message);
-        if (!(keys.length === 1 && keys[0] === 'conversation') && !msg.message.senderKeyDistributionMessage) {
-          logger.info({ sessionId, msgId: msg.key.id, keys }, '🔬 DIAG: incoming message keys');
-        }
-      } catch {}
 
       // ── Anti-Delete: detect protocolMessage REVOKE ────────────
       const proto = msg.message?.protocolMessage;
@@ -428,126 +537,8 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       }
 
       // ── Anti View-Once: cache + auto-reveal view-once media ─────
-      try {
-        // WhatsApp may wrap view-once media inside an ephemeralMessage (when
-        // disappearing messages is on for the chat). IMPORTANT: we must NOT
-        // use Baileys' normalizeMessageContent() here — it recursively
-        // unwraps viewOnceMessage/V2/V2Extension too, so by the time it
-        // returns you already have the raw imageMessage/videoMessage and
-        // all trace of the message having been "view-once" is gone. So we
-        // manually unwrap ONLY the ephemeral (and similar non-viewOnce)
-        // container(s), stopping as soon as we hit a viewOnce wrapper.
-        let normalized = msg.message;
-        for (let i = 0; i < 5; i++) {
-          if (normalized?.ephemeralMessage) { normalized = normalized.ephemeralMessage.message; continue; }
-          if (normalized?.documentWithCaptionMessage) { normalized = normalized.documentWithCaptionMessage.message; continue; }
-          break;
-        }
-        const voMsg = normalized?.viewOnceMessage
-                   || normalized?.viewOnceMessageV2
-                   || normalized?.viewOnceMessageV2Extension;
-
-        // TEMP DIAGNOSTIC — remove once view-once detection is confirmed fixed.
-        // Logs the raw shape of any message carrying image/video so we can see
-        // exactly where WhatsApp is putting the viewOnce flag in this client version.
-        if (normalized?.imageMessage || normalized?.videoMessage || voMsg) {
-          try {
-            logger.info({
-              sessionId,
-              topLevelKeys: Object.keys(msg.message || {}),
-              normalizedKeys: Object.keys(normalized || {}),
-              hasVoWrapper: !!voMsg,
-              imageMessageViewOnce: normalized?.imageMessage?.viewOnce,
-              videoMessageViewOnce: normalized?.videoMessage?.viewOnce,
-              voMsgInnerKeys: voMsg?.message ? Object.keys(voMsg.message) : null,
-            }, '🔬 DIAG: media message shape');
-          } catch {}
-        }
-
-        // Resolve the actual media message + its type, from either the
-        // container wrapper (voMsg.message.imageMessage/videoMessage) or a
-        // plain image/video message flagged with `viewOnce: true` directly
-        // (some clients skip the wrapper entirely).
-        let mediaMsg = null;
-        let isVidMsg = false;
-        if (voMsg?.message?.imageMessage) {
-          mediaMsg = voMsg.message.imageMessage;
-          isVidMsg = false;
-        } else if (voMsg?.message?.videoMessage) {
-          mediaMsg = voMsg.message.videoMessage;
-          isVidMsg = true;
-        } else if (normalized?.imageMessage?.viewOnce) {
-          mediaMsg = normalized.imageMessage;
-          isVidMsg = false;
-        } else if (normalized?.videoMessage?.viewOnce) {
-          mediaMsg = normalized.videoMessage;
-          isVidMsg = true;
-        }
-
-        if (mediaMsg) {
-          logger.info({ sessionId, msgId: msg.key.id, chat: msg.key.remoteJid, isVidMsg }, '👁️ ViewOnce message detected — attempting cache');
-          // ── Always download & cache — needed for .reveal even if auto-reveal is OFF
-          // Use downloadContentFromMessage directly on the inner media message —
-          // this is the proven-reliable path (same one .reveal used to use when it
-          // worked correctly), unlike the high-level downloadMediaMessage helper
-          // which was silently failing here and left voCache permanently empty,
-          // breaking both .reveal-from-cache and the voword keyword-reveal feature.
-          const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
-
-          let buf = null;
-          try {
-            const stream = await downloadContentFromMessage(mediaMsg, isVidMsg ? 'video' : 'image');
-            const chunks = [];
-            for await (const chunk of stream) chunks.push(chunk);
-            buf = Buffer.concat(chunks);
-          } catch (e) {
-            logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce cache download failed');
-          }
-
-          if (buf?.length) {
-            const mime   = mediaMsg.mimetype || 'image/jpeg';
-            const isVid  = isVidMsg;
-            const sender = msg.key.participant || msg.key.remoteJid || '';
-            const num    = sender.split('@')[0].split(':')[0];
-            const chatJid = msg.key.remoteJid;
-            const inGroup = chatJid?.endsWith('@g.us');
-            const time   = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
-
-            // Cache the buffer so .reveal can serve it by message ID
-            voCacheSet(msg.key.id, { buffer: buf, mime, isVid, num, time, inGroup });
-
-            // ── Auto-forward only if antiviewonce is ON ───────────
-            const settings = db.settings.get();
-            const grpSet   = inGroup ? db.groups.get(chatJid) : null;
-            const avo      = inGroup
-              ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
-              : (settings.antiViewOnce ?? false);
-
-            if (avo) {
-              // Silently forward ONLY to own "You" private chat — never reveal in group/sender chat
-              const selfNum  = sock.user?.id?.split('@')[0]?.split(':')[0];
-              const ownJid   = selfNum ? `${selfNum}@s.whatsapp.net` : null;
-              if (!ownJid) return; // bot not fully connected, skip silently
-
-              const privateCap =
-                `🔓 *View-Once Revealed*\n\n` +
-                `👤 *From:* +${num}\n` +
-                `🕐 *Time:* ${time}\n` +
-                `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n\n` +
-                `> 👁️ AA MD Bot`;
-
-              // SILENT: only owner's own "You" chat — nothing sent to group or sender
-              await sock.sendMessage(
-                ownJid,
-                isVid ? { video: buf, caption: privateCap, mimetype: mime }
-                      : { image: buf, caption: privateCap, mimetype: mime }
-              ).catch(() => {});
-            }
-          }
-        }
-      } catch (e) {
-        logger.warn({ err: e.message, stack: e.stack }, '🔬 DIAG: ViewOnce block threw');
-      }
+      // (also fed by the messages.update listener above for delayed delivery)
+      await cacheViewOnceIfPresent(msg, sessionId);
 
       // ── Auto-Status handling (status@broadcast) ──────────────
       if (msg.key.remoteJid === 'status@broadcast') {
