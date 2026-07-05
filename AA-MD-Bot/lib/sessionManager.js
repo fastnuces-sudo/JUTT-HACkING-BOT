@@ -4,6 +4,7 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   isJidBroadcast,
+  normalizeMessageContent,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import fs from 'fs-extra';
@@ -418,11 +419,37 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
       // ── Anti View-Once: cache + auto-reveal view-once media ─────
       try {
-        const voMsg = msg.message?.viewOnceMessage
-                   || msg.message?.viewOnceMessageV2
-                   || msg.message?.viewOnceMessageV2Extension;
-        if (voMsg) {
-          logger.info({ sessionId, msgId: msg.key.id, chat: msg.key.remoteJid }, '👁️ ViewOnce message detected — attempting cache');
+        // WhatsApp may wrap view-once media inside an ephemeralMessage (when
+        // disappearing messages is on for the chat), so unwrap ephemeral first
+        // via Baileys' own normalizeMessageContent before checking for the
+        // viewOnce wrapper — checking msg.message directly misses this case.
+        const normalized = normalizeMessageContent(msg.message) || msg.message;
+        const voMsg = normalized?.viewOnceMessage
+                   || normalized?.viewOnceMessageV2
+                   || normalized?.viewOnceMessageV2Extension;
+
+        // Resolve the actual media message + its type, from either the
+        // container wrapper (voMsg.message.imageMessage/videoMessage) or a
+        // plain image/video message flagged with `viewOnce: true` directly
+        // (some clients skip the wrapper entirely).
+        let mediaMsg = null;
+        let isVidMsg = false;
+        if (voMsg?.message?.imageMessage) {
+          mediaMsg = voMsg.message.imageMessage;
+          isVidMsg = false;
+        } else if (voMsg?.message?.videoMessage) {
+          mediaMsg = voMsg.message.videoMessage;
+          isVidMsg = true;
+        } else if (normalized?.imageMessage?.viewOnce) {
+          mediaMsg = normalized.imageMessage;
+          isVidMsg = false;
+        } else if (normalized?.videoMessage?.viewOnce) {
+          mediaMsg = normalized.videoMessage;
+          isVidMsg = true;
+        }
+
+        if (mediaMsg) {
+          logger.info({ sessionId, msgId: msg.key.id, chat: msg.key.remoteJid, isVidMsg }, '👁️ ViewOnce message detected — attempting cache');
           // ── Always download & cache — needed for .reveal even if auto-reveal is OFF
           // Use downloadContentFromMessage directly on the inner media message —
           // this is the proven-reliable path (same one .reveal used to use when it
@@ -431,28 +458,19 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
           // breaking both .reveal-from-cache and the voword keyword-reveal feature.
           const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
 
-          const innerContent = voMsg.message; // { imageMessage:{} } or { videoMessage:{} }
-          const isVidMsg = !!innerContent?.videoMessage;
-          const mediaMsg = innerContent?.imageMessage || innerContent?.videoMessage;
-
           let buf = null;
-          if (mediaMsg) {
-            try {
-              const stream = await downloadContentFromMessage(mediaMsg, isVidMsg ? 'video' : 'image');
-              const chunks = [];
-              for await (const chunk of stream) chunks.push(chunk);
-              buf = Buffer.concat(chunks);
-            } catch (e) {
-              logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce cache download failed');
-            }
-          } else {
-            logger.warn({ sessionId, msgId: msg.key.id }, 'ViewOnce: no inner image/video message found');
+          try {
+            const stream = await downloadContentFromMessage(mediaMsg, isVidMsg ? 'video' : 'image');
+            const chunks = [];
+            for await (const chunk of stream) chunks.push(chunk);
+            buf = Buffer.concat(chunks);
+          } catch (e) {
+            logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce cache download failed');
           }
 
           if (buf?.length) {
-            const inner  = innerContent?.imageMessage || innerContent?.videoMessage;
-            const mime   = inner?.mimetype || 'image/jpeg';
-            const isVid  = !!innerContent?.videoMessage;
+            const mime   = mediaMsg.mimetype || 'image/jpeg';
+            const isVid  = isVidMsg;
             const sender = msg.key.participant || msg.key.remoteJid || '';
             const num    = sender.split('@')[0].split(':')[0];
             const chatJid = msg.key.remoteJid;
