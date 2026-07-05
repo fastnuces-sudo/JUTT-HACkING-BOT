@@ -79,6 +79,56 @@ async function compressAudio(inputBuf) {
   return inputBuf;
 }
 
+// Ensures the buffer is a real, WhatsApp-playable H.264/AAC mp4.
+// Root cause of "video arrives but won't play": yt-dlp/APIs often hand back
+// webm/vp9+opus streams (or mp4 containers with vp9/av1 video inside) which
+// many yt-dlp format strings happily match on fallback ("best[height<=480]"
+// with no codec constraint). WhatsApp mobile clients expect H.264 video +
+// AAC audio — anything else silently fails to play even though the file
+// downloaded fine. We probe the real codec and transcode only if needed.
+async function ensurePlayableMp4(inputBuf) {
+  if (!inputBuf?.length) return null;
+  await fs.ensureDir(TEMP);
+  const id  = Date.now();
+  const inp = path.join(TEMP, `vpc_${id}_in.bin`);
+  const out = path.join(TEMP, `vpc_${id}_out.mp4`);
+  try {
+    await fs.writeFile(inp, inputBuf);
+    let vcodec = '', acodec = '';
+    try {
+      const { stdout } = await execAsync(
+        `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "${inp}"`,
+        { timeout: 20000 }
+      );
+      vcodec = stdout.trim().toLowerCase();
+      const { stdout: astdout } = await execAsync(
+        `ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "${inp}"`,
+        { timeout: 20000 }
+      );
+      acodec = astdout.trim().toLowerCase();
+    } catch {}
+
+    // Already H.264 video + AAC audio (or no audio track) in a real mp4 — safe to send as-is
+    if (vcodec === 'h264' && (acodec === 'aac' || acodec === '')) {
+      return inputBuf;
+    }
+
+    await execAsync(
+      `ffmpeg -i "${inp}" -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -ar 44100 -movflags +faststart -y "${out}" -loglevel error`,
+      { timeout: 180000 }
+    );
+    if (await fs.pathExists(out)) {
+      const outBuf = await fs.readFile(out);
+      if (outBuf.length > 0) return outBuf;
+    }
+  } catch {}
+  finally {
+    await fs.remove(inp).catch(() => {});
+    await fs.remove(out).catch(() => {});
+  }
+  return null;
+}
+
 async function compressVideo(inputBuf) {
   await fs.ensureDir(TEMP);
   const id  = Date.now();
@@ -554,13 +604,18 @@ async function downloadVideo(ytUrl) {
   if (directUrl) {
     // Step 2 — Download the buffer (90s cap; videos are larger than audio)
     const buf = await withTimeout(90000, fetchBuf(directUrl));
-    if (isValidVideoBuffer(buf)) return { buffer: buf };
+    if (isValidVideoBuffer(buf)) {
+      const playable = await withTimeout(180000, ensurePlayableMp4(buf));
+      if (playable?.length) return { buffer: playable };
+    }
   }
 
   // Step 3 — Full yt-dlp download as last resort
   const raw = await withTimeout(180000, tryYtdlpVideo(ytUrl));
   if (!raw?.length || raw.length < 50000) return null;
-  return { buffer: raw };
+  const playableRaw = await withTimeout(180000, ensurePlayableMp4(raw));
+  if (!playableRaw?.length) return null;
+  return { buffer: playableRaw };
 }
 
 // ── UI captions ───────────────────────────────────────────────────────────────
