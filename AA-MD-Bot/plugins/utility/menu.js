@@ -201,6 +201,36 @@ export default {
         menu += `│  🌐 https://aa-mods.vercel.app/\n`;
         menu += `╰${'─'.repeat(32)}\n`;
 
+        // ── Featured Commands — visible to ALL users ─────────────────────────
+        menu += `\n╭─── 🆕  *FEATURED COMMANDS*\n`;
+        menu += `│\n`;
+        menu += `│  ⬇️  *DOWNLOADS*\n`;
+        menu += `│  ▸ *${pref}play* <song name>   — 🎵 Audio\n`;
+        menu += `│  ▸ *${pref}video* <name/link>  — 🎬 Video\n`;
+        menu += `│  ▸ *${pref}tiktok* <link>      — TikTok\n`;
+        menu += `│  ▸ *${pref}ig* <link>          — Instagram\n`;
+        menu += `│  ▸ *${pref}spotify* <link>     — Spotify\n`;
+        menu += `│  ▸ *${pref}fb* <link>          — Facebook\n`;
+        menu += `│  ▸ *${pref}dl* <any link>      — Universal\n`;
+        menu += `│\n`;
+        menu += `│  🤖  *AI & SEARCH*\n`;
+        menu += `│  ▸ *${pref}ai* / *${pref}gemini* <question>\n`;
+        menu += `│  ▸ *${pref}imagine* <prompt>   — AI Image\n`;
+        menu += `│  ▸ *${pref}shazam*             — Identify song\n`;
+        menu += `│  ▸ *${pref}ss* <url>           — Screenshot\n`;
+        menu += `│  ▸ *${pref}country* <name>     — Country info\n`;
+        menu += `│\n`;
+        menu += `│  🎬  *MEDIA*\n`;
+        menu += `│  ▸ *${pref}attp* <text>        — Neon sticker\n`;
+        menu += `│  ▸ *${pref}sticker*            — Image → sticker\n`;
+        menu += `│  ▸ *${pref}trim* 10 30         — Cut audio/video\n`;
+        menu += `│  ▸ *${pref}take* Pack|Author   — Rename sticker\n`;
+        menu += `│\n`;
+        menu += `│  🎮  *FUN*\n`;
+        menu += `│  ▸ *${pref}emojimix* 😂 ❤️    — Emoji Kitchen\n`;
+        menu += `│  ▸ *${pref}coinflip*           — Heads or tails\n`;
+        menu += `╰${'─'.repeat(32)}\n`;
+
         // ── Owner Settings box — right after support (owners only) ──────────
         if (isOwner) {
           menu += `\n╭─── ⚙️  *OWNER SETTINGS*\n`;
@@ -258,11 +288,12 @@ export default {
 
       // Skip owner/admin — they are shown in the fixed boxes above (for owners)
       // Non-owners never see owner category anyway due to OWNER_CATS filter
+      const LIMIT = 15;
       menu += catBox(emoji, cat.toUpperCase(), visibleCmds.length,
-        visibleCmds.slice(0, 9), pref, isSuperOwnerUser);
-      if (visibleCmds.length > 9) {
+        visibleCmds.slice(0, LIMIT), pref, isSuperOwnerUser);
+      if (visibleCmds.length > LIMIT) {
         menu = menu.replace(/╰─+\n$/, '');
-        menu += `│  _+${visibleCmds.length - 9} more → *${pref}menu ${cat}*_\n`;
+        menu += `│  _+${visibleCmds.length - LIMIT} more → *${pref}menu ${cat}*_\n`;
         menu += `╰${'─'.repeat(32)}\n`;
       }
     }
