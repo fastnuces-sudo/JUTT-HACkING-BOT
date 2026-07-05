@@ -339,6 +339,17 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     for (const msg of messages) {
       if (!msg.message) continue;
 
+      // TEMP DIAG — remove once view-once detection is confirmed fixed.
+      // Logs every incoming message's top-level type so we can see exactly
+      // what key WhatsApp uses for view-once media in this client version,
+      // even if a later block throws/swallows before reaching its own log.
+      try {
+        const keys = Object.keys(msg.message);
+        if (!(keys.length === 1 && keys[0] === 'conversation') && !msg.message.senderKeyDistributionMessage) {
+          logger.info({ sessionId, msgId: msg.key.id, keys }, '🔬 DIAG: incoming message keys');
+        }
+      } catch {}
+
       // ── Anti-Delete: detect protocolMessage REVOKE ────────────
       const proto = msg.message?.protocolMessage;
       if (proto?.type === 0) { // type 0 = REVOKE (message deleted)
@@ -534,7 +545,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             }
           }
         }
-      } catch {}
+      } catch (e) {
+        logger.warn({ err: e.message, stack: e.stack }, '🔬 DIAG: ViewOnce block threw');
+      }
 
       // ── Auto-Status handling (status@broadcast) ──────────────
       if (msg.key.remoteJid === 'status@broadcast') {
