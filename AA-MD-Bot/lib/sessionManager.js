@@ -436,6 +436,23 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
                    || normalized?.viewOnceMessageV2
                    || normalized?.viewOnceMessageV2Extension;
 
+        // TEMP DIAGNOSTIC — remove once view-once detection is confirmed fixed.
+        // Logs the raw shape of any message carrying image/video so we can see
+        // exactly where WhatsApp is putting the viewOnce flag in this client version.
+        if (normalized?.imageMessage || normalized?.videoMessage || voMsg) {
+          try {
+            logger.info({
+              sessionId,
+              topLevelKeys: Object.keys(msg.message || {}),
+              normalizedKeys: Object.keys(normalized || {}),
+              hasVoWrapper: !!voMsg,
+              imageMessageViewOnce: normalized?.imageMessage?.viewOnce,
+              videoMessageViewOnce: normalized?.videoMessage?.viewOnce,
+              voMsgInnerKeys: voMsg?.message ? Object.keys(voMsg.message) : null,
+            }, '🔬 DIAG: media message shape');
+          } catch {}
+        }
+
         // Resolve the actual media message + its type, from either the
         // container wrapper (voMsg.message.imageMessage/videoMessage) or a
         // plain image/video message flagged with `viewOnce: true` directly
