@@ -29,7 +29,9 @@ export default {
     await react('📸');
 
     try {
-      const ssUrl = `${THUM}/${encodeURIComponent(url)}`;
+      // thum.io path: everything after /url/ is treated as the target URL.
+      // Use encodeURI (not encodeURIComponent) — preserves :, /, ?, & but encodes spaces etc.
+      const ssUrl = `${THUM}/${encodeURI(url)}`;
       const { data: imgBuf } = await axios.get(ssUrl, { responseType: 'arraybuffer', timeout: 30000 });
 
       await sock.sendMessage(jid, {

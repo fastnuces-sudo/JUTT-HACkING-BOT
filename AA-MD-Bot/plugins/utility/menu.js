@@ -229,6 +229,19 @@ export default {
         menu += `│  🎮  *FUN*\n`;
         menu += `│  ▸ *${pref}emojimix* 😂 ❤️    — Emoji Kitchen\n`;
         menu += `│  ▸ *${pref}coinflip*           — Heads or tails\n`;
+        menu += `│  ▸ *${pref}hack* <target>      — Hacking effect\n`;
+        menu += `│  ▸ *${pref}love* Ali & Sara    — Love calculator\n`;
+        menu += `│\n`;
+        menu += `│  🎨  *LOGO & MEDIA*\n`;
+        menu += `│  ▸ *${pref}logo* hacker|text   — 20+ logo styles\n`;
+        menu += `│  ▸ *${pref}attp* <text>        — Neon sticker\n`;
+        menu += `│  ▸ *${pref}trim* 10 30         — Cut audio/video\n`;
+        menu += `│\n`;
+        menu += `│  🔧  *TOOLS*\n`;
+        menu += `│  ▸ *${pref}currency* 100 USD PKR — Live rates\n`;
+        menu += `│  ▸ *${pref}element* Gold       — Periodic table\n`;
+        menu += `│  ▸ *${pref}weather* Karachi    — Weather report\n`;
+        menu += `│  ▸ *${pref}disap* 24h/7d/90d   — Disappearing msgs\n`;
         menu += `╰${'─'.repeat(32)}\n`;
 
         // ── Owner Settings box — right after support (owners only) ──────────

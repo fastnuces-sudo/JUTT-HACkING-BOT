@@ -7,3 +7,4 @@
 - [YouTube n-challenge needs Deno](youtube-bot-check.md) — yt-dlp's JS challenge (nsig) only supports Deno, not Node; without it, real videos silently return storyboard-only formats.
 - [prefix wiring bug](youtube-bot-check.md) — commandHandler.js must destructure AND forward `prefix` from parseCommand() to plugin.execute(), or every plugin using `${prefix}` prints "undefined".
 - [External API deprecations](api-deprecations.md) — restcountries v3.1 deprecated (use countriesnow.space); pollinations gemini/mistral/llama removed (only openai model works now).
+- [Flash-Md-V3 new plugins](flash-md-v3-plugins.md) — logo/element/hack/love/disap/currency/privacy/botzip added; weather→wttr.in; ss→encodeURI; attp→local SVG+ffmpeg; archiver needs createRequire.

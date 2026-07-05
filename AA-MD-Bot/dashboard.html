@@ -165,6 +165,48 @@ a { text-decoration: none; color: inherit; }
 .badge-yellow { background: rgba(251,191,36,.15); color: #fde68a; border: 1px solid rgba(251,191,36,.3); }
 .badge-purple { background: rgba(168,85,247,.15); color: #d8b4fe; border: 1px solid rgba(168,85,247,.3); }
 
+/* Search bar */
+.search-wrap { position: relative; margin-bottom: 20px; }
+.search-input { width: 100%; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 13px 16px 13px 44px; font-size: 14px; color: var(--text); outline: none; transition: border-color .18s, box-shadow .18s; font-family: inherit; }
+.search-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(37,211,102,.1); }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 18px; pointer-events: none; }
+.search-count { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--muted); }
+.search-no-result { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
+
+/* New feature banner */
+.new-feat-banner { background: linear-gradient(135deg, rgba(168,85,247,.1), rgba(59,130,246,.08)); border: 1px solid rgba(168,85,247,.25); border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.new-feat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.new-feat-chip { background: rgba(168,85,247,.12); border: 1px solid rgba(168,85,247,.3); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 700; color: #c084fc; font-family: 'Courier New', monospace; cursor: pointer; transition: background .15s; }
+.new-feat-chip:hover { background: rgba(168,85,247,.2); }
+
+/* Stats extra */
+.stat-bar { height: 3px; border-radius: 2px; margin-top: 8px; background: var(--border); overflow: hidden; }
+.stat-bar-fill { height: 100%; border-radius: 2px; transition: width .8s ease; }
+
+/* Category cards improved */
+.cat-card-colored { border-left: 3px solid; }
+.cat-count-badge { font-size: 10px; background: rgba(255,255,255,.07); border-radius: 10px; padding: 1px 7px; margin-left: auto; }
+
+/* Animated counter */
+@keyframes countUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.count-anim { animation: countUp .4s ease; }
+
+/* RAM card */
+#s-ram { font-size: 16px; }
+
+/* Activity pulse */
+.pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse-ring 2s infinite; }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(37,211,102,.4); } 70% { box-shadow: 0 0 0 8px rgba(37,211,102,0); } 100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); } }
+
+/* Quick-cmd grid updated */
+.cmd-card { position: relative; }
+.cmd-new-dot { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: #a855f7; }
+
+/* Sessions list improved */
+.sess-actions { display: flex; align-items: center; gap: 8px; }
+.btn-disconnect { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: 9px; padding: 6px 12px; font-size: 11px; color: #fca5a5; cursor: pointer; transition: all .2s; white-space: nowrap; }
+.btn-disconnect:hover { background: rgba(239,68,68,.25); border-color: rgba(239,68,68,.5); }
+
 /* Channel btn */
 .btn-channel { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--green), var(--green2)); border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700; color: #fff; transition: opacity .2s, transform .1s; box-shadow: 0 4px 16px rgba(37,211,102,.3); }
 .btn-channel:hover { opacity: .88; transform: translateY(-1px); }
@@ -469,36 +511,69 @@ a { text-decoration: none; color: inherit; }
 
   <div class="dash-body">
 
-    <div class="welcome-banner">
-      <span class="welcome-emoji">👋</span>
-      <div>
-        <div class="welcome-title">Welcome back!</div>
-        <div class="welcome-sub">Everything looks healthy. Here's a quick overview of your bot and everything it can do.</div>
+    <div class="welcome-banner" id="welcome-banner">
+      <span class="welcome-emoji">🤖</span>
+      <div style="flex:1">
+        <div class="welcome-title" id="welcome-title">AA MD Bot is Live!</div>
+        <div class="welcome-sub" id="welcome-sub">Everything looks healthy. Use the search below to find any command instantly.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <div class="pulse-dot"></div>
+        <span style="font-size:12px;color:var(--green);font-weight:600">LIVE</span>
       </div>
     </div>
 
     <!-- Status cards -->
-    <div class="status-grid">
+    <div class="status-grid" style="grid-template-columns:repeat(4,1fr)">
       <div class="status-card">
         <div class="sc-icon">✅</div>
-        <div class="sc-value" style="color:var(--green)" id="s-status">Online</div>
-        <div class="sc-label">Bot Status</div>
+        <div class="sc-value" style="color:var(--green);font-size:15px" id="s-status">Online</div>
+        <div class="sc-label">Status</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:100%;background:var(--green)"></div></div>
       </div>
       <div class="status-card">
         <div class="sc-icon">⏱️</div>
-        <div class="sc-value" style="font-size:16px" id="s-uptime">--</div>
+        <div class="sc-value" style="font-size:14px" id="s-uptime">--</div>
         <div class="sc-label">Uptime</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:70%;background:#3b82f6"></div></div>
       </div>
       <div class="status-card">
         <div class="sc-icon">📦</div>
-        <div class="sc-value" id="s-cmds">120+</div>
+        <div class="sc-value" id="s-cmds">170+</div>
         <div class="sc-label">Commands</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:85%;background:#a855f7"></div></div>
       </div>
-      <div class="status-card" id="s-sessions-card">
+      <div class="status-card">
         <div class="sc-icon">📱</div>
         <div class="sc-value" style="color:var(--green)" id="s-sessions-count">0</div>
         <div class="sc-label">Sessions</div>
+        <div class="stat-bar"><div id="sess-bar" class="stat-bar-fill" style="width:0%;background:var(--green)"></div></div>
       </div>
+    </div>
+
+    <!-- New features banner -->
+    <div class="new-feat-banner">
+      <div style="font-size:13px;font-weight:800;color:#c084fc;white-space:nowrap">🆕 New Plugins</div>
+      <div class="new-feat-chips" id="new-chips">
+        <span class="new-feat-chip" onclick="copyCmd('.logo hacker|text')">.logo</span>
+        <span class="new-feat-chip" onclick="copyCmd('.element Gold')">.element</span>
+        <span class="new-feat-chip" onclick="copyCmd('.hack Target')">.hack</span>
+        <span class="new-feat-chip" onclick="copyCmd('.love Ali & Sara')">.love</span>
+        <span class="new-feat-chip" onclick="copyCmd('.currency 100 USD PKR')">.currency</span>
+        <span class="new-feat-chip" onclick="copyCmd('.disap 24h')">.disap</span>
+        <span class="new-feat-chip" onclick="copyCmd('.privacy')">.privacy</span>
+        <span class="new-feat-chip" onclick="copyCmd('.botzip')">.botzip</span>
+        <span class="new-feat-chip" onclick="copyCmd('.attp AA MD Bot')">.attp</span>
+        <span class="new-feat-chip" onclick="copyCmd('.ss google.com')">.ss</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);white-space:nowrap">Click to copy</div>
+    </div>
+
+    <!-- Command Search -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="cmd-search" placeholder="Search commands… (e.g. sticker, ai, music)" oninput="filterCmds(this.value)">
+      <span class="search-count" id="search-count"></span>
     </div>
 
     <!-- Quick Start -->
@@ -565,10 +640,18 @@ a { text-decoration: none; color: inherit; }
       </div>
     </div>
 
+    <!-- Search Results (shown when searching) -->
+    <div id="search-results" style="display:none;margin-bottom:20px">
+      <div class="cat-grid" id="search-result-grid"></div>
+      <div id="search-no-result" class="search-no-result" style="display:none">
+        😕 No commands found for "<span id="search-term"></span>"
+      </div>
+    </div>
+
     <!-- All Categories -->
-    <div class="section">
+    <div class="section" id="cats-section">
       <div class="section-head" onclick="toggleSection('cats-body')">📦 All Command Categories <span class="section-toggle" id="toggle-cats-body">▼</span></div>
-      <div class="section-body collapsed" id="cats-body" style="max-height:2000px">
+      <div class="section-body collapsed" id="cats-body" style="max-height:3000px">
         <div class="cat-grid" id="cat-grid"></div>
       </div>
     </div>
@@ -646,7 +729,7 @@ a { text-decoration: none; color: inherit; }
           Crafted with care by <strong style="color:var(--text)">Ahsan Ali | AA Mods</strong> — built to make WhatsApp automation simple &amp; reliable
         </div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">
-          120+ commands · Baileys MD · Node.js · Auto Status · Islamic 60+
+          170+ commands · Baileys MD · Node.js · Auto Status · Islamic 60+ · Logo Generator · AI Chat
         </div>
         <div class="about-badges">
           <span class="badge badge-green">v3.0 Multi-Device</span>
@@ -678,29 +761,44 @@ const BASE = '';
 // Static Data
 // ──────────────────────────────────────────────────────
 const QUICK_CMDS = [
-  { cmd: '.menu',           desc: 'All commands list' },
-  { cmd: '.ai hello',       desc: 'Chat with AI' },
-  { cmd: '.islamic_menu',   desc: 'Islamic commands panel' },
-  { cmd: '.play Tum Hi Ho', desc: 'Play audio — YouTube' },
-  { cmd: '.yt <link>',      desc: 'YouTube video download' },
-  { cmd: '.tiktok <link>',  desc: 'TikTok download' },
-  { cmd: '.sticker',        desc: 'Make sticker from image' },
-  { cmd: '.ping',           desc: 'Bot ping / status' },
+  { cmd: '.menu',              desc: 'All commands list' },
+  { cmd: '.ai hello',          desc: 'Chat with AI (GPT)' },
+  { cmd: '.islamic_menu',      desc: 'Islamic commands panel' },
+  { cmd: '.play Tum Hi Ho',    desc: '🎵 Play audio — YouTube' },
+  { cmd: '.video <name/link>', desc: '🎬 YouTube video download' },
+  { cmd: '.tiktok <link>',     desc: 'TikTok download' },
+  { cmd: '.ig <link>',         desc: 'Instagram download' },
+  { cmd: '.spotify <link>',    desc: 'Spotify track download' },
+  { cmd: '.fb <link>',         desc: 'Facebook video download' },
+  { cmd: '.sticker',           desc: 'Image/video → sticker' },
+  { cmd: '.attp AA MD Bot',    desc: '✨ Animated neon sticker' },
+  { cmd: '.logo hacker|text',  desc: '🎨 Stylized text logo' },
+  { cmd: '.shazam',            desc: '🎵 Identify a song' },
+  { cmd: '.ss google.com',     desc: '📸 Website screenshot' },
+  { cmd: '.imagine a cat',     desc: '🖼️ AI image generation' },
+  { cmd: '.country Pakistan',  desc: '🌍 Country information' },
+  { cmd: '.element Gold',      desc: '🧪 Periodic table lookup' },
+  { cmd: '.weather Karachi',   desc: '🌤️ Weather forecast' },
+  { cmd: '.currency 100 USD PKR', desc: '💱 Currency converter' },
+  { cmd: '.hack Target',       desc: '💻 Animated hack effect' },
+  { cmd: '.love Ali & Sara',   desc: '💘 Love calculator' },
+  { cmd: '.emojimix 😂 ❤️',   desc: 'Emoji Kitchen mix' },
+  { cmd: '.trim 0 30',         desc: '✂️ Trim audio/video' },
+  { cmd: '.ping',              desc: 'Bot ping / status' },
 ];
 
 const CATEGORIES = [
-  { icon: '☪️',  label: 'Islamic',   cmds: ['islamic_menu','dua_forgiveness','dua_rizq','dua_health','dua_morning','dua_evening','dua_sleep','zikr_subhanallah','zikr_alhamdulillah','hadith_smile','kalima_tayyiba','darood_sharif','morning_adhkar','evening_adhkar','asmaul_husna','jaffery_menu'] },
-  { icon: '🤖',  label: 'AI',        cmds: ['ai','imagine','gpt','gemini'] },
-  { icon: '📥',  label: 'Download',  cmds: ['yt','ytmp3','tiktok','ig','fb','twitter','pinterest','spotify','soundcloud','mediafire','capcut'] },
-  { icon: '🎬',  label: 'Media',     cmds: ['play','song','audio','sticker','toimage','removebg','compress','resize','ptt','reveal'] },
-  { icon: '🔍',  label: 'Search',    cmds: ['google','lyrics','movie','wiki','ytsearch','shazam'] },
-  { icon: '🎉',  label: 'Fun',       cmds: ['joke','meme','quote','roast','truth','dare','love','ship','advice','prank','guess','compliment','character'] },
-  { icon: '🔧',  label: 'Utility',   cmds: ['weather','calc','currency','qrgen','password','translate','speedtest','shorturl','timezone'] },
-  { icon: '🛠️',  label: 'Tools',     cmds: ['base64','tts','fontchanger','textstyle','stealsticker','readmore','hash'] },
-  { icon: '👥',  label: 'Group',     cmds: ['kick','promote','demote','mute','unmute','tagall','hidetag','antilink','antidelete','antiviewonce','antibot','welcome','goodbye','warn','groupinfo','link'] },
-  { icon: '⚙️',  label: 'Settings',  cmds: ['bs','mode','anticall','autostatus','statusview','statusreact','autoreply','autoread','autotyping','setprefix','setnewsletter'] },
-  { icon: '📋',  label: 'General',   cmds: ['menu','help','ping','uptime','balance','daily','leaderboard','profile','report','support','contact','owner'] },
-  { icon: '👑',  label: 'Owner',     cmds: ['broadcast','eval','shell','restart','addowner','setowner','maintenance'] },
+  { icon: '☪️',  label: 'Islamic',   color: '#25d366', cmds: ['islamic_menu','dua_forgiveness','dua_rizq','dua_health','dua_morning','dua_evening','dua_sleep','zikr_subhanallah','zikr_alhamdulillah','zikr_astaghfirullah','hadith_smile','hadith_patience','kalima_tayyiba','darood_sharif','morning_adhkar','evening_adhkar','asmaul_husna','jaffery_menu','dua_kumayl','masoomeen14'] },
+  { icon: '🤖',  label: 'AI & Search', color: '#3b82f6', cmds: ['ai','gemini','gpt','imagine','country','shazam','ss','lyrics','movie','wiki','weather','anime','google','yts','npm','img','stickersearch','wallpaper'] },
+  { icon: '📥',  label: 'Downloads', color: '#f59e0b', cmds: ['play','video','mp3','mp4','song','tiktok','ig','fb','spotify','dl','apk','ydesc','tts','ringtone','github'] },
+  { icon: '🎨',  label: 'Media',     color: '#ec4899', cmds: ['sticker','attp','logo','trim','take','toaudio','blur','flip','grayscale','resize','ptt','steal','caption','sticker2img'] },
+  { icon: '🎮',  label: 'Fun',       color: '#a855f7', cmds: ['hack','love','emojimix','coinflip','joke','meme','roast','truth','dare','8ball','fortune','compliment','trivia','hangman','rps','ship','dice','wyr','quote'] },
+  { icon: '🔧',  label: 'Utility',   color: '#06b6d4', cmds: ['translate','calc','qr','currency','element','base64','password','shorturl','menu','ping','uptime','report','support'] },
+  { icon: '🛠️',  label: 'Tools',     color: '#64748b', cmds: ['tts','sendaudio','sendvid','bgremove','enhance','ocr','hash','speedtest'] },
+  { icon: '👥',  label: 'Group',     color: '#10b981', cmds: ['kick','promote','demote','mute','unmute','tagall','hidetag','antilink','antidelete','antiviewonce','antibot','welcome','goodbye','warn','groupinfo','link','disap','disap1','disap7','disap90','setgroupname','setgroupdesc'] },
+  { icon: '👑',  label: 'Owner',     color: '#ef4444', cmds: ['bs','mode','anticall','autostatus','statusview','statusreact','autoreply','autoread','autotyping','ghost','setprefix','privacy','botzip','addowner','maintenance','broadcast','eval','restart'] },
+  { icon: '💰',  label: 'Economy',   color: '#eab308', cmds: ['balance','daily','transfer','work','rob','leaderboard','invest','shop','buy','sell'] },
+  { icon: '⭐',  label: 'Levels',    color: '#f97316', cmds: ['rank','xp','leaderboard','level','profile','levelup'] },
 ];
 
 const ISLAMIC_SECS = [
@@ -749,12 +847,15 @@ function renderStatic() {
     </div>`
   ).join('');
 
-  // Categories
+  // Categories — color-coded cards
   document.getElementById('cat-grid').innerHTML = CATEGORIES.map(cat =>
-    `<div class="cat-card">
-      <div class="cat-card-head"><span class="cat-icon">${cat.icon}</span>${cat.label}</div>
+    `<div class="cat-card cat-card-colored" style="border-left-color:${cat.color || 'var(--green)'}">
+      <div class="cat-card-head">
+        <span class="cat-icon">${cat.icon}</span>${cat.label}
+        <span class="cat-count-badge">${cat.cmds.length}</span>
+      </div>
       <div class="cat-cmds">${cat.cmds.map(c =>
-        `<span class="cat-cmd-chip" onclick="copyCmd('.${c}')" title="Click to copy">.${c}</span>`
+        `<span class="cat-cmd-chip" onclick="copyCmd('.${c}')" title="Click to copy" style="border-color:rgba(255,255,255,.07)">.${c}</span>`
       ).join('')}</div>
     </div>`
   ).join('');
@@ -993,25 +1094,104 @@ async function loadStats() {
     const cmEl  = document.getElementById('s-cmds');
     const scEl  = document.getElementById('s-sessions-count');
     if (upEl) upEl.textContent = d.uptime || '--';
-    if (cmEl) cmEl.textContent = (d.plugins || 120) + '+';
+    if (cmEl) { cmEl.classList.add('count-anim'); cmEl.textContent = (d.plugins || 170) + '+'; setTimeout(() => cmEl.classList.remove('count-anim'), 500); }
 
     const sessions = d.sessions || [];
     const connected = sessions.filter(s => s.status === 'connected');
-
     if (scEl) scEl.textContent = connected.length;
 
-    // Update hero subtitle — status only, no names or phone numbers
+    // sessions bar (max 5 shown as 100%)
+    const sessBar = document.getElementById('sess-bar');
+    if (sessBar) sessBar.style.width = Math.min(connected.length / 3 * 100, 100) + '%';
+
+    // RAM stat
+    const ramEl = document.getElementById('s-ram');
+    if (ramEl && d.ram) { ramEl.textContent = d.ram + ' MB'; }
+
+    // Update hero subtitle
     const heroSub = document.getElementById('hero-sub');
     if (heroSub) {
       if (connected.length === 0) {
         heroSub.innerHTML = `<span class="dot" style="background:#e53e3e"></span> No sessions connected`;
       } else if (connected.length === 1) {
-        heroSub.innerHTML = `<span class="dot dot-green"></span> Connected`;
+        heroSub.innerHTML = `<span class="dot dot-green"></span> Connected &amp; Ready`;
       } else {
         heroSub.innerHTML = `<span class="dot dot-green"></span> ${connected.length} Sessions Connected`;
       }
     }
   } catch {}
+}
+
+// ──────────────────────────────────────────────────────
+// Command search / filter
+// ──────────────────────────────────────────────────────
+function filterCmds(query) {
+  const q = query.trim().toLowerCase();
+  const searchResultsEl = document.getElementById('search-results');
+  const searchGridEl    = document.getElementById('search-result-grid');
+  const noResultEl      = document.getElementById('search-no-result');
+  const searchTermEl    = document.getElementById('search-term');
+  const catsSection     = document.getElementById('cats-section');
+  const quickSection    = document.querySelector('.section'); // first section = quick start
+  const searchCount     = document.getElementById('search-count');
+
+  if (!q) {
+    searchResultsEl.style.display = 'none';
+    if (catsSection) catsSection.style.display = '';
+    if (searchCount) searchCount.textContent = '';
+    return;
+  }
+
+  // Search across all categories
+  const matches = [];
+  for (const cat of CATEGORIES) {
+    const matchedCmds = cat.cmds.filter(c => c.toLowerCase().includes(q) || cat.label.toLowerCase().includes(q));
+    if (matchedCmds.length > 0) {
+      matches.push({ ...cat, cmds: matchedCmds });
+    }
+  }
+
+  // Also search quick commands
+  const quickMatches = QUICK_CMDS.filter(c =>
+    c.cmd.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)
+  );
+
+  searchResultsEl.style.display = '';
+  if (catsSection) catsSection.style.display = 'none';
+
+  const totalMatches = matches.reduce((s, c) => s + c.cmds.length, 0) + quickMatches.length;
+  if (searchCount) searchCount.textContent = totalMatches > 0 ? `${totalMatches} found` : '';
+
+  if (totalMatches === 0) {
+    searchGridEl.innerHTML = '';
+    noResultEl.style.display = '';
+    if (searchTermEl) searchTermEl.textContent = q;
+  } else {
+    noResultEl.style.display = 'none';
+
+    let html = '';
+    // Quick command matches
+    if (quickMatches.length > 0) {
+      html += `<div class="cat-card cat-card-colored" style="border-left-color:#25d366">
+        <div class="cat-card-head"><span class="cat-icon">⚡</span>Quick Commands<span class="cat-count-badge">${quickMatches.length}</span></div>
+        <div class="cat-cmds">${quickMatches.map(c =>
+          `<span class="cat-cmd-chip" onclick="copyCmd('${esc(c.cmd)}')" title="${c.desc}">${c.cmd.split(' ')[0]}</span>`
+        ).join('')}</div>
+      </div>`;
+    }
+
+    // Category matches
+    html += matches.map(cat =>
+      `<div class="cat-card cat-card-colored" style="border-left-color:${cat.color || 'var(--green)'}">
+        <div class="cat-card-head"><span class="cat-icon">${cat.icon}</span>${cat.label}<span class="cat-count-badge">${cat.cmds.length}</span></div>
+        <div class="cat-cmds">${cat.cmds.map(c =>
+          `<span class="cat-cmd-chip" onclick="copyCmd('.${c}')" title="Click to copy">.${c}</span>`
+        ).join('')}</div>
+      </div>`
+    ).join('');
+
+    searchGridEl.innerHTML = html;
+  }
 }
 
 // ──────────────────────────────────────────────────────
