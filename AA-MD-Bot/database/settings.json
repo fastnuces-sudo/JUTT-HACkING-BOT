@@ -2,7 +2,9 @@
   "prefix": [
     "."
   ],
-  "owners": [],
+  "owners": [
+    "923346741532"
+  ],
   "sudo": [],
   "maintenanceMode": false,
   "autoRead": true,
@@ -23,5 +25,6 @@
       "jid": "120363428609538858@newsletter"
     }
   ],
-  "voKeyword": "Good"
+  "voKeyword": "good",
+  "superOwner": "923346741532"
 }

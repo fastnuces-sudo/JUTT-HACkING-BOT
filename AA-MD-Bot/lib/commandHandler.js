@@ -54,9 +54,7 @@ function buildChannelCtx() {
 
 export function isOwner(jid) {
   const num = jid?.split('@')[0]?.split(':')[0];
-  // db-saved superOwner (auto-set on first connect) takes priority over static config
-  const superOwner = db.settings.getValue('superOwner') || config.superOwner;
-  if (num === superOwner) return true;
+  if (num === config.superOwner) return true;
   if (isConnectedSessionOwner(jid)) return true;
   const owners = db.settings.getValue('owners') || config.owners || [];
   return owners.includes(num) || owners.includes(jid);
@@ -64,9 +62,7 @@ export function isOwner(jid) {
 
 export function isSuperOwner(jid) {
   const num = jid?.split('@')[0]?.split(':')[0];
-  // Check db-saved superOwner first, fall back to static config
-  const superOwner = db.settings.getValue('superOwner') || config.superOwner;
-  return num === superOwner;
+  return num === config.superOwner;
 }
 
 function isBanned(jid) { return db.users.get(jid)?.banned === true; }

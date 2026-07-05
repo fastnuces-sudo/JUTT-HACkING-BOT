@@ -182,15 +182,24 @@ async function startServer() {
       const sessList = getAllSessions();
       const catCounts = {};
       for (const [cat, cmds] of Object.entries(cats)) catCounts[cat] = cmds.length;
+      // Strip phone/jid from session data before sending to dashboard
+      const safeSessions = sessList.map(s => ({
+        id: s.id,
+        name: s.name || null,
+        status: s.status,
+        connectedAt: s.connectedAt || null,
+      }));
+      const ramMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         uptime: formatDuration(Date.now() - startTime),
         plugins: plugins.size,
         users: Object.keys(db.users.all()).length,
         groups: Object.keys(db.groups.all()).length,
-        sessions: sessList,
-        connectedSessions: sessList.filter(s => s.status === 'connected').length,
+        sessions: safeSessions,
+        connectedSessions: safeSessions.filter(s => s.status === 'connected').length,
         categories: catCounts,
+        ram: ramMB,
       }));
       return;
     }

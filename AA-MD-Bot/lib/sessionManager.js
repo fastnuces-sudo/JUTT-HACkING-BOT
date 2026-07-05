@@ -219,17 +219,13 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       if (ownJid) db.settings.setValue('botJid', ownJid);
 
       // ── Auto-save connected number as owner ──────────────────────────────
-      // So the "You" (self) chat and owner commands work without manual config.
+      // Ensures the bot's own number always has owner permissions without manual config.
+      // SuperOwner is NOT touched here — it stays as defined in config.js.
       if (phone) {
         const existingOwners = db.settings.getValue('owners') || config.owners || [];
         if (!existingOwners.includes(phone)) {
           db.settings.setValue('owners', [...existingOwners, phone]);
           logger.info({ phone }, '👤 Owner auto-saved from connected session');
-        }
-        // Save as superOwner only if not already set in db (first-time setup only)
-        if (!db.settings.getValue('superOwner')) {
-          db.settings.setValue('superOwner', phone);
-          logger.info({ phone }, '👑 SuperOwner auto-saved (first connect)');
         }
       }
 

@@ -6,5 +6,13 @@
     "connectedAt": 1783237307043,
     "firstConnectDone": true,
     "name": "AAKWB"
+  },
+  "923346741532": {
+    "id": "923346741532",
+    "jid": "923346741532:47@s.whatsapp.net",
+    "connected": true,
+    "connectedAt": 1783246292952,
+    "firstConnectDone": true,
+    "name": "AAKWB"
   }
 }
