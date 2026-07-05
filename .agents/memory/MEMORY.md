@@ -1,4 +1,5 @@
 - [Per-session settings architecture](per-session-settings.md) — each connected WhatsApp number has independent settings via db.sessionSettings; session overrides global, both fall back gracefully.
+- [Dashboard and ownership](dashboard-ownership.md) — pairing-code only UI; session ID = phone number; auto-saves owner+superOwner on first connect; isOwner reads db first then config.
 - [Flash-Md-V3 integration](flash-md-integration.md) — what was fixed (news/dl/apk/onlinealert) and 14 new plugins added; alias conflict rules documented.
 - [YouTube download architecture](youtube-dl-architecture.md) — buffer-only delivery for .play/.video; Step 0 = downloadVideoFromStreamUrl (mirrors audio path, most reliable); ensureMp3 transcode chain; never send raw CDN URLs.
 - [ViewOnce keyword reveal](viewonce-keyword-reveal.md) — voword+reveal feature; 30-min TTL; disk index fallback; .reveal plugin; extractContextInfo walks full wrapper chain.

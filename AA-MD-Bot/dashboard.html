@@ -3,474 +3,384 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AA MD Bot — Powerful WhatsApp Multi-Device Bot by AA Mods</title>
-
-<!-- SEO -->
-<meta name="description" content="AA MD Bot is a powerful WhatsApp Multi-Device bot with 147+ plugins: Islamic commands, music downloader, sticker maker, economy system, XP levels, group management, anti-delete, and much more. Developed by Ahsan Ali Wadani | AA Mods.">
-<meta name="keywords" content="AA MD Bot, WhatsApp Bot, WhatsApp Multi-Device Bot, AA Mods, Ahsan Ali Wadani, WhatsApp Bot Pakistan, Islamic WhatsApp Bot, Quran Bot, Sticker Bot, Music Bot, YouTube Downloader Bot, TikTok Downloader, group management bot, WhatsApp automation, baileys bot, WhatsApp chatbot, free WhatsApp bot, best WhatsApp bot 2025, AA MD Bot commands, WhatsApp multi-session bot">
-<meta name="author" content="Ahsan Ali Wadani — AA Mods">
-<meta name="robots" content="index, follow">
+<title>AA MD Bot — WhatsApp Multi-Device Bot by AA Mods</title>
+<meta name="description" content="AA MD Bot is a powerful WhatsApp Multi-Device bot with 170+ plugins. Developed by Ahsan Ali Wadani | AA Mods.">
 <meta name="theme-color" content="#25d366">
-<link rel="canonical" href="https://aa-md-bot.up.railway.app/">
-
-<!-- Open Graph -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://aa-md-bot.up.railway.app/">
-<meta property="og:title" content="AA MD Bot — Powerful WhatsApp Multi-Device Bot">
-<meta property="og:description" content="147+ plugins: Islamic commands, music, stickers, economy, group management & more. Free WhatsApp bot by AA Mods.">
-<meta property="og:image" content="https://aa-md-bot.up.railway.app/logo.webp">
-<meta property="og:image:width" content="200">
-<meta property="og:image:height" content="200">
-<meta property="og:site_name" content="AA MD Bot">
-<meta property="og:locale" content="en_US">
-
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="AA MD Bot — Powerful WhatsApp Multi-Device Bot">
-<meta name="twitter:description" content="147+ plugins: Islamic commands, music, stickers, economy, group management & more.">
-<meta name="twitter:image" content="https://aa-md-bot.up.railway.app/logo.webp">
-
-<!-- Favicon -->
 <link rel="icon" type="image/webp" href="/logo.webp">
-<link rel="shortcut icon" href="/logo.webp">
 <link rel="apple-touch-icon" href="/logo.webp">
-
-<!-- JSON-LD Structured Data -->
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "AA MD Bot",
-  "applicationCategory": "ChatApplication",
-  "operatingSystem": "Any",
-  "description": "Powerful WhatsApp Multi-Device bot with 147+ plugins: Islamic commands, music downloader, sticker maker, economy system, XP levels, group management, anti-delete, and much more.",
-  "url": "https://aa-md-bot.up.railway.app/",
-  "image": "https://aa-md-bot.up.railway.app/logo.jpeg",
-  "author": {
-    "@type": "Person",
-    "name": "Ahsan Ali Wadani",
-    "brand": "AA Mods"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "USD"
-  },
-  "featureList": "Islamic Commands, Music Downloader, Sticker Maker, Economy System, XP Levels, Group Management, Anti-Delete, Anti-Call, YouTube Downloader, TikTok Downloader"
-}
-</script>
-
-<!-- Critical resource preloads (LCP elements) -->
 <link rel="preload" href="/banner.webp" as="image" fetchpriority="high" type="image/webp">
 <link rel="preload" href="/logo.webp" as="image" fetchpriority="high" type="image/webp">
 <style>
 :root {
-  --bg: #0b0f1a;
-  --card: #111827;
-  --card2: #0d1525;
-  --border: #1e2a3a;
-  --green: #25d366;
+  --bg:     #07090f;
+  --card:   #0e1420;
+  --card2:  #0a1018;
+  --border: #1a2333;
+  --green:  #25d366;
   --green2: #128c7e;
-  --text: #e0e6f0;
-  --muted: #c0c7d4;
-  --red: #ef4444;
-  --yellow: #fbbf24;
-  --blue: #3b82f6;
+  --text:   #e2e8f4;
+  --muted:  #8899b0;
+  --red:    #ef4444;
+  --yellow: #f59e0b;
+  --blue:   #3b82f6;
   --purple: #a855f7;
 }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button{cursor:pointer;font-family:inherit}
+input{font-family:inherit}
+a{text-decoration:none;color:inherit}
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-button { cursor: pointer; font-family: inherit; }
-input { font-family: inherit; }
-a { text-decoration: none; color: inherit; }
-
-/* ── Connect Screen ── */
-.cs-wrap {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 16px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(37,211,102,.07) 0%, transparent 65%);
+/* ── CONNECT SCREEN ── */
+.cs-wrap{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px 16px;
+  background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(37,211,102,.09) 0%,transparent 70%);
 }
-.cs-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
-.cs-logo img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 28px rgba(37,211,102,.4); }
-.cs-logo-fallback { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green2)); display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 0 28px rgba(37,211,102,.4); }
-.cs-logo-text { font-size: 26px; font-weight: 900; background: linear-gradient(135deg, var(--green), var(--green2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.cs-logo-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.cs-logo{display:flex;align-items:center;gap:14px;margin-bottom:36px}
+.cs-logo img{width:56px;height:56px;border-radius:50%;object-fit:cover;box-shadow:0 0 32px rgba(37,211,102,.45)}
+.cs-logo-fb{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 0 32px rgba(37,211,102,.45)}
+.cs-logo-name{font-size:26px;font-weight:900;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.cs-logo-by{font-size:11px;color:var(--muted);margin-top:2px}
 
-.cs-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 32px; width: 100%; max-width: 440px; box-shadow: 0 24px 64px rgba(0,0,0,.4); }
-.cs-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
-.cs-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.cs-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:32px;width:100%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,.5)}
 
-.mode-tabs { display: flex; background: #080d16; border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 20px; }
-.mode-tab { flex: 1; padding: 9px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; color: var(--muted); background: transparent; transition: all .18s; }
-.mode-tab.active { background: var(--green); color: #fff; }
+/* form step */
+.cs-head{margin-bottom:24px}
+.cs-title{font-size:21px;font-weight:800;margin-bottom:4px}
+.cs-sub{font-size:13px;color:var(--muted);line-height:1.55}
 
-.field-label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-.field-input { width: 100%; background: #0d1525; border: 1.5px solid var(--border); border-radius: 10px; padding: 13px 15px; font-size: 15px; color: var(--text); outline: none; transition: border-color .18s; }
-.field-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(37,211,102,.1); }
-.field-input::placeholder { color: #374151; }
-.field-hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.field-wrap{position:relative}
+.field-flag{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none}
+.field-input{width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:12px;padding:14px 14px 14px 44px;font-size:16px;color:var(--text);outline:none;transition:border-color .18s,box-shadow .18s;letter-spacing:.04em}
+.field-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(37,211,102,.12)}
+.field-input::placeholder{color:#2a3a4a;font-size:15px}
+.field-hint{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
 
-.qr-hint { background: #0d1525; border: 1px solid #1e3a5f; border-radius: 9px; padding: 12px 14px; font-size: 13px; color: #7eb8f7; line-height: 1.75; margin-bottom: 4px; }
+.info-box{background:rgba(37,211,102,.06);border:1px solid rgba(37,211,102,.18);border-radius:10px;padding:12px 14px;font-size:12px;color:rgba(37,211,102,.85);line-height:1.8;margin-top:16px}
 
-.btn-connect { width: 100%; background: linear-gradient(135deg, var(--green), var(--green2)); border: none; border-radius: 11px; padding: 14px; font-size: 15px; font-weight: 700; color: #fff; margin-top: 16px; transition: opacity .18s, transform .1s; letter-spacing: .01em; }
-.btn-connect:hover { opacity: .88; transform: translateY(-1px); }
-.btn-connect:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.btn-primary{width:100%;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700;color:#fff;margin-top:20px;transition:opacity .18s,transform .1s;letter-spacing:.02em}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.cs-err{background:#1a0909;border:1px solid rgba(239,68,68,.4);border-radius:9px;padding:10px 14px;font-size:13px;color:#fca5a5;margin-top:14px;display:none}
+.cs-err.show{display:block}
 
-.cs-error { background: #1a0909; border: 1px solid rgba(239,68,68,.4); border-radius: 8px; padding: 10px 13px; font-size: 13px; color: #fca5a5; margin-top: 12px; display: none; }
-.cs-error.show { display: block; }
+/* code step */
+.code-step-head{text-align:center;margin-bottom:20px}
+.code-step-phone{font-size:13px;color:var(--muted);margin-top:4px}
+.code-step-phone strong{color:var(--text)}
 
-/* Pairing code */
-.pair-box { text-align: center; background: #0d1525; border: 2px solid rgba(37,211,102,.25); border-radius: 14px; padding: 24px 20px; margin: 4px 0 12px; }
-.pair-digits { font-family: 'Courier New', monospace; font-size: 38px; font-weight: 700; letter-spacing: 8px; color: var(--green); margin-bottom: 14px; }
-.pair-copy { background: rgba(37,211,102,.12); border: 1px solid rgba(37,211,102,.3); border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 700; color: var(--green); transition: background .2s; }
-.pair-copy:hover { background: rgba(37,211,102,.2); }
-.pair-steps { background: #0d1525; border: 1px solid #1e3a5f; border-radius: 9px; padding: 12px 14px; font-size: 12px; color: #7eb8f7; line-height: 1.9; margin-top: 10px; }
-.pair-steps strong { color: #bfdbfe; }
-.pair-status { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); margin-top: 10px; justify-content: center; }
+.pair-box{background:var(--card2);border:2px solid rgba(37,211,102,.3);border-radius:16px;padding:28px 20px;text-align:center;margin-bottom:16px;position:relative;overflow:hidden}
+.pair-box::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(37,211,102,.08),transparent 60%);pointer-events:none}
+.pair-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.pair-digits{font-family:'Courier New',monospace;font-size:42px;font-weight:900;letter-spacing:10px;color:var(--green);text-shadow:0 0 24px rgba(37,211,102,.4);margin-bottom:18px;min-height:52px;display:flex;align-items:center;justify-content:center}
+.pair-digits.loading{letter-spacing:4px;opacity:.4;animation:pulse-op 1.2s ease infinite}
+@keyframes pulse-op{0%,100%{opacity:.4}50%{opacity:.7}}
+.btn-copy{background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);border-radius:9px;padding:9px 22px;font-size:13px;font-weight:700;color:var(--green);transition:background .2s}
+.btn-copy:hover{background:rgba(37,211,102,.22)}
+.btn-copy.copied{background:rgba(37,211,102,.25);color:#fff}
 
-/* QR */
-.qr-box { text-align: center; padding: 8px 0 12px; }
-.qr-img-wrap { background: #fff; border-radius: 12px; padding: 14px; display: inline-block; margin: 8px 0; }
-.qr-img-wrap img { width: 180px; height: 180px; border-radius: 8px; display: block; }
-.qr-placeholder { width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 13px; flex-direction: column; gap: 8px; }
+.steps-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--muted);line-height:2;margin-bottom:14px}
+.steps-box strong{color:var(--text)}
+.step-row{display:flex;align-items:flex-start;gap:10px;padding:3px 0}
+.step-num{width:20px;height:20px;border-radius:50%;background:rgba(37,211,102,.15);border:1px solid rgba(37,211,102,.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--green);flex-shrink:0;margin-top:1px}
 
-/* Success */
-.pair-success { text-align: center; padding: 24px 0; }
-.pair-success-icon { font-size: 56px; filter: drop-shadow(0 0 16px rgba(37,211,102,.5)); }
-.pair-success-title { font-size: 18px; font-weight: 800; color: var(--green); margin-top: 10px; }
-.pair-success-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.pair-status{display:flex;align-items:center;justify-content:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:14px}
+.btn-back{width:100%;background:transparent;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12px;color:var(--muted);transition:border-color .2s,color .2s}
+.btn-back:hover{border-color:var(--green);color:var(--text)}
 
-/* Back btn */
-.btn-back { width: 100%; margin-top: 14px; background: transparent; border: 1px solid var(--border); border-radius: 9px; padding: 9px; font-size: 12px; color: var(--muted); transition: border-color .2s; }
-.btn-back:hover { border-color: var(--green); }
+/* done step */
+.done-wrap{text-align:center;padding:16px 0}
+.done-icon{font-size:64px;filter:drop-shadow(0 0 20px rgba(37,211,102,.6));margin-bottom:14px}
+.done-title{font-size:20px;font-weight:800;color:var(--green);margin-bottom:6px}
+.done-sub{font-size:13px;color:var(--muted)}
 
-/* Spinner / dot */
-.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: spin .65s linear infinite; vertical-align: middle; margin-right: 6px; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.dot-yellow { background: var(--yellow); animation: blink 1.4s infinite; }
-.dot-gray { background: #374151; }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+/* ── COMMON ATOMS ── */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;vertical-align:middle;margin-right:7px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-yellow{background:var(--yellow);animation:blink 1.4s infinite}
+.dot-gray{background:#374151}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:rgba(37,211,102,.12);color:var(--green);border:1px solid rgba(37,211,102,.2)}
+.badge-blue{background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.25)}
+.badge-yellow{background:rgba(245,158,11,.12);color:#fde68a;border:1px solid rgba(245,158,11,.25)}
+.badge-purple{background:rgba(168,85,247,.12);color:#d8b4fe;border:1px solid rgba(168,85,247,.25)}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse-ring 2s infinite}
+@keyframes pulse-ring{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5)}70%{box-shadow:0 0 0 9px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
 
-/* Badges */
-.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-.badge-green { background: rgba(37,211,102,.15); color: var(--green); border: 1px solid rgba(37,211,102,.25); }
-.badge-blue { background: rgba(59,130,246,.15); color: #93c5fd; border: 1px solid rgba(59,130,246,.3); }
-.badge-yellow { background: rgba(251,191,36,.15); color: #fde68a; border: 1px solid rgba(251,191,36,.3); }
-.badge-purple { background: rgba(168,85,247,.15); color: #d8b4fe; border: 1px solid rgba(168,85,247,.3); }
+/* ── DASHBOARD ── */
+.dash{min-height:100vh}
 
-/* Search bar */
-.search-wrap { position: relative; margin-bottom: 20px; }
-.search-input { width: 100%; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 13px 16px 13px 44px; font-size: 14px; color: var(--text); outline: none; transition: border-color .18s, box-shadow .18s; font-family: inherit; }
-.search-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(37,211,102,.1); }
-.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 18px; pointer-events: none; }
-.search-count { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--muted); }
-.search-no-result { text-align: center; color: var(--muted); font-size: 13px; padding: 20px; }
+/* hero */
+.dash-hero{position:relative;overflow:hidden}
+.dash-banner{width:100%;height:200px;object-fit:cover;display:block}
+.dash-banner-fb{width:100%;height:200px;background:linear-gradient(135deg,#080e1c 0%,#0a1628 50%,#0f1f3f 100%);display:block}
+.dash-hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(7,9,15,.15) 0%,rgba(7,9,15,.9) 100%)}
+.dash-hero-content{position:absolute;bottom:0;left:0;right:0;padding:18px 24px 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.dash-hero-left{display:flex;align-items:center;gap:14px}
+.dash-logo{width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid var(--green);box-shadow:0 0 18px rgba(37,211,102,.45);flex-shrink:0}
+.dash-logo-fb{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid var(--green);box-shadow:0 0 18px rgba(37,211,102,.45);flex-shrink:0}
+.dash-hero-title{font-size:20px;font-weight:900}
+.dash-hero-tag{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}
+.dash-hero-num{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.8);margin-top:5px;font-weight:600}
 
-/* New feature banner */
-.new-feat-banner { background: linear-gradient(135deg, rgba(168,85,247,.1), rgba(59,130,246,.08)); border: 1px solid rgba(168,85,247,.25); border-radius: 14px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.new-feat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.new-feat-chip { background: rgba(168,85,247,.12); border: 1px solid rgba(168,85,247,.3); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 700; color: #c084fc; font-family: 'Courier New', monospace; cursor: pointer; transition: background .15s; }
-.new-feat-chip:hover { background: rgba(168,85,247,.2); }
+/* channel bar */
+.channel-bar{background:linear-gradient(90deg,rgba(37,211,102,.1),rgba(18,140,126,.1));border-bottom:1px solid rgba(37,211,102,.18);padding:11px 22px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.channel-bar-txt{font-size:13px;color:#20c95e;font-weight:500}
+.btn-channel{display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:9px;padding:8px 18px;font-size:13px;font-weight:700;color:#fff;transition:opacity .2s,transform .1s;box-shadow:0 3px 14px rgba(37,211,102,.3)}
+.btn-channel:hover{opacity:.88;transform:translateY(-1px)}
+.btn-channel-big{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--green),var(--green2));border:none;border-radius:12px;padding:13px 28px;font-size:15px;font-weight:700;color:#fff;transition:opacity .2s,transform .1s;box-shadow:0 6px 24px rgba(37,211,102,.35)}
+.btn-channel-big:hover{opacity:.88;transform:translateY(-2px)}
 
-/* Stats extra */
-.stat-bar { height: 3px; border-radius: 2px; margin-top: 8px; background: var(--border); overflow: hidden; }
-.stat-bar-fill { height: 100%; border-radius: 2px; transition: width .8s ease; }
+.dash-body{max-width:900px;margin:0 auto;padding:22px 18px 56px}
 
-/* Category cards improved */
-.cat-card-colored { border-left: 3px solid; }
-.cat-count-badge { font-size: 10px; background: rgba(255,255,255,.07); border-radius: 10px; padding: 1px 7px; margin-left: auto; }
+/* welcome banner */
+.welcome-banner{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(37,211,102,.07),rgba(59,130,246,.05));border:1px solid rgba(37,211,102,.16);border-radius:16px;padding:16px 18px;margin-bottom:20px}
+.welcome-emoji{font-size:28px;flex-shrink:0}
+.welcome-title{font-size:15px;font-weight:800}
+.welcome-sub{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
 
-/* Animated counter */
-@keyframes countUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-.count-anim { animation: countUp .4s ease; }
+/* stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 16px;transition:border-color .2s,transform .2s,box-shadow .2s}
+.stat-card:hover{border-color:rgba(37,211,102,.3);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.sc-icon{font-size:18px;margin-bottom:6px}
+.sc-val{font-size:19px;font-weight:800}
+.sc-lbl{font-size:11px;color:var(--muted);margin-top:2px}
+.stat-bar{height:3px;border-radius:2px;background:var(--border);margin-top:7px;overflow:hidden}
+.stat-bar-fill{height:100%;border-radius:2px;transition:width .8s ease}
 
-/* RAM card */
-#s-ram { font-size: 16px; }
+/* sessions */
+.sess-list{display:flex;flex-direction:column;gap:8px}
+.sess-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:12px;transition:border-color .2s}
+.sess-row:hover{border-color:rgba(37,211,102,.25)}
+.sess-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sess-info{flex:1;min-width:0}
+.sess-name{font-size:14px;font-weight:700}
+.sess-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'Courier New',monospace}
 
-/* Activity pulse */
-.pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse-ring 2s infinite; }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(37,211,102,.4); } 70% { box-shadow: 0 0 0 8px rgba(37,211,102,0); } 100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); } }
+/* buttons in sessions */
+.btn-discon{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;padding:6px 12px;font-size:11px;color:#fca5a5;transition:all .2s;white-space:nowrap}
+.btn-discon:hover{background:rgba(239,68,68,.22);border-color:rgba(239,68,68,.5)}
+.btn-add-sess{background:rgba(37,211,102,.12);color:var(--green);border:1px solid rgba(37,211,102,.25);border-radius:9px;padding:8px 16px;font-size:12px;font-weight:600}
+.btn-add-sess:hover{background:rgba(37,211,102,.22)}
 
-/* Quick-cmd grid updated */
-.cmd-card { position: relative; }
-.cmd-new-dot { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: #a855f7; }
+/* new features banner */
+.new-feat-banner{background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(59,130,246,.06));border:1px solid rgba(168,85,247,.22);border-radius:14px;padding:13px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.new-feat-chips{display:flex;flex-wrap:wrap;gap:6px}
+.nfc{background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.28);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#c084fc;font-family:'Courier New',monospace;cursor:pointer;transition:background .15s}
+.nfc:hover{background:rgba(168,85,247,.2)}
 
-/* Sessions list improved */
-.sess-actions { display: flex; align-items: center; gap: 8px; }
-.btn-disconnect { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: 9px; padding: 6px 12px; font-size: 11px; color: #fca5a5; cursor: pointer; transition: all .2s; white-space: nowrap; }
-.btn-disconnect:hover { background: rgba(239,68,68,.25); border-color: rgba(239,68,68,.5); }
+/* search */
+.search-wrap{position:relative;margin-bottom:20px}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:17px;pointer-events:none}
+.search-input{width:100%;background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:13px 16px 13px 43px;font-size:14px;color:var(--text);outline:none;transition:border-color .18s,box-shadow .18s}
+.search-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(37,211,102,.1)}
+.search-count{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)}
 
-/* Channel btn */
-.btn-channel { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--green), var(--green2)); border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700; color: #fff; transition: opacity .2s, transform .1s; box-shadow: 0 4px 16px rgba(37,211,102,.3); }
-.btn-channel:hover { opacity: .88; transform: translateY(-1px); }
-.btn-channel-big { display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, var(--green), var(--green2)); border: none; border-radius: 12px; padding: 14px 28px; font-size: 15px; font-weight: 700; color: #fff; transition: opacity .2s, transform .1s; box-shadow: 0 6px 24px rgba(37,211,102,.35); }
-.btn-channel-big:hover { opacity: .88; transform: translateY(-2px); }
+/* section */
+.section{margin-bottom:26px}
+.section-head{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:11px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.section-head:after{content:'';flex:1;height:1px;background:var(--border)}
+.section-head:hover{color:var(--text)}
+.section-toggle{font-size:10px;opacity:.55;transition:transform .25s;flex-shrink:0}
+.section-body{overflow:hidden;transition:max-height .3s ease,opacity .25s}
+.section-body.collapsed{max-height:0!important;opacity:0;pointer-events:none}
 
-/* ── Dashboard ── */
-.dash { min-height: 100vh; background: var(--bg); }
+/* commands */
+.cmd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.cmd-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer;transition:border-color .2s,background .2s}
+.cmd-card:hover{border-color:rgba(37,211,102,.4);background:rgba(37,211,102,.04)}
+.cmd-card.copied{border-color:rgba(245,158,11,.4)}
+.cmd-card code{color:var(--green);font-size:13px;font-weight:700;font-family:'Courier New',monospace;display:block;margin-bottom:2px}
+.cmd-card.copied code{color:var(--yellow)}
+.cmd-card span{color:var(--muted);font-size:11px}
 
-.dash-hero { position: relative; overflow: hidden; }
-.dash-banner { width: 100%; height: 220px; object-fit: cover; display: block; }
-.dash-banner-fallback { width: 100%; height: 220px; display: block; background: linear-gradient(135deg, #0a1628 0%, #0d2040 50%, #1a1060 100%); }
-.dash-hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(11,15,26,.2) 0%, rgba(11,15,26,.85) 100%); }
-.dash-hero-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 24px 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.dash-hero-left { display: flex; align-items: center; gap: 14px; }
-.dash-logo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--green); box-shadow: 0 0 20px rgba(37,211,102,.4); flex-shrink: 0; }
-.dash-logo-fallback { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green2)); display: flex; align-items: center; justify-content: center; font-size: 22px; border: 2px solid var(--green); box-shadow: 0 0 20px rgba(37,211,102,.4); flex-shrink: 0; }
-.dash-hero-title { font-size: 22px; font-weight: 900; }
-.dash-hero-tagline { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 3px; font-weight: 500; }
-.dash-hero-sub { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
-.btn-disconnect { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); border-radius: 9px; padding: 8px 14px; font-size: 12px; color: #fca5a5; cursor: pointer; transition: all .2s; }
-.btn-disconnect:hover { background: rgba(239,68,68,.25); border-color: rgba(239,68,68,.5); }
-#toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1e2a1f; border: 1px solid rgba(37,211,102,.4); color: #e2ffe8; padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: 600; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,.5); opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; }
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-.channel-bar { background: linear-gradient(135deg, rgba(37,211,102,.12), rgba(18,140,126,.12)); border-bottom: 1px solid rgba(37,211,102,.2); padding: 12px 24px; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
-.channel-bar-text { font-size: 13px; color: #20c95e; font-weight: 500; }
-
-.dash-body { max-width: 900px; margin: 0 auto; padding: 24px 20px 48px; }
-
-/* Welcome banner */
-.welcome-banner { display: flex; align-items: center; gap: 16px; background: linear-gradient(135deg, rgba(37,211,102,.09), rgba(59,130,246,.06)); border: 1px solid rgba(37,211,102,.18); border-radius: 16px; padding: 18px 20px; margin-bottom: 22px; }
-.welcome-emoji { font-size: 30px; flex-shrink: 0; }
-.welcome-title { font-size: 15px; font-weight: 800; color: var(--text); }
-.welcome-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.55; }
-
-/* Status grid */
-.status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
-.sessions-list { display: flex; flex-direction: column; gap: 8px; }
-.sess-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-.sess-row:hover { border-color: rgba(37,211,102,.3); }
-.sess-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.sess-info { flex: 1; min-width: 0; }
-.sess-name { font-size: 14px; font-weight: 700; color: var(--text); }
-.sess-id { font-size: 11px; color: var(--muted); margin-top: 1px; }
-.sess-badge { font-size: 12px; font-weight: 600; white-space: nowrap; }
-.btn-connect-more { background: rgba(37,211,102,.15); color: var(--green); border: 1px solid rgba(37,211,102,.3); border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; }
-.status-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; transition: border-color .2s, transform .2s, box-shadow .2s; }
-.status-card:hover { border-color: rgba(37,211,102,.35); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.25); }
-.sc-icon { font-size: 20px; margin-bottom: 7px; }
-.sc-value { font-size: 20px; font-weight: 800; }
-.sc-label { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 3px; }
-
-/* Section */
-.section { margin-bottom: 28px; }
-.section-head { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
-.section-head:hover { color: var(--text); }
-.section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.section-toggle { font-size: 10px; margin-left: 2px; opacity: .6; transition: transform .25s; flex-shrink: 0; }
-.section-body { overflow: hidden; transition: max-height .3s ease, opacity .25s ease; }
-.section-body.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
-
-/* Quick commands */
-.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 8px; }
-.cmd-card { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 13px; cursor: pointer; transition: border-color .2s, background .2s; }
-.cmd-card:hover { border-color: rgba(37,211,102,.4); background: rgba(37,211,102,.04); }
-.cmd-card.copied { border-color: rgba(251,191,36,.4); }
-.cmd-card code { color: var(--green); font-size: 13px; font-weight: 700; font-family: 'Courier New', monospace; display: block; margin-bottom: 2px; }
-.cmd-card.copied code { color: var(--yellow); }
-.cmd-card span { color: var(--muted); font-size: 11px; }
+/* categories */
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:13px}
+.cat-card{background:var(--card);border:1px solid var(--border);border-left:3px solid;border-radius:14px;padding:14px}
+.cat-card-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px}
+.cat-icon{font-size:15px}
+.cat-count{font-size:10px;background:rgba(255,255,255,.06);border-radius:10px;padding:1px 7px;margin-left:auto}
+.cat-cmds{display:flex;flex-wrap:wrap;gap:5px}
+.cat-chip{background:#080d16;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:11px;font-family:'Courier New',monospace;color:var(--green);font-weight:700;cursor:pointer;transition:border-color .15s}
+.cat-chip:hover{border-color:rgba(37,211,102,.5)}
 
 /* Islamic */
-.islamic-card { background: linear-gradient(135deg, rgba(37,211,102,.06), rgba(18,140,126,.06)); border: 1px solid rgba(37,211,102,.2); border-radius: 16px; padding: 20px; }
-.islamic-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-.islamic-title { font-size: 16px; font-weight: 800; }
-.islamic-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.islamic-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-.islamic-section { background: rgba(0,0,0,.25); border: 1px solid rgba(37,211,102,.12); border-radius: 10px; padding: 12px 14px; }
-.islamic-section-title { font-size: 11px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
-.isl-cmd { font-size: 11px; font-family: 'Courier New', monospace; color: rgba(37,211,102,.8); font-weight: 600; padding: 2px 0; cursor: pointer; transition: color .15s; }
-.isl-cmd:hover { color: var(--green); }
-.isl-cmd-desc { color: var(--muted); font-size: 10px; font-family: inherit; }
+.islamic-card{background:linear-gradient(135deg,rgba(37,211,102,.05),rgba(18,140,126,.05));border:1px solid rgba(37,211,102,.18);border-radius:16px;padding:18px}
+.islamic-secs{display:grid;grid-template-columns:repeat(auto-fill,minmax(195px,1fr));gap:11px}
+.isl-sec{background:rgba(0,0,0,.2);border:1px solid rgba(37,211,102,.1);border-radius:10px;padding:12px 13px}
+.isl-sec-title{font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+.isl-cmd{font-size:11px;font-family:'Courier New',monospace;color:rgba(37,211,102,.75);font-weight:600;padding:2px 0;cursor:pointer;transition:color .15s}
+.isl-cmd:hover{color:var(--green)}
+.isl-desc{color:var(--muted);font-size:10px;font-family:inherit}
 
-/* Media flow */
-.media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.media-flow { background: var(--card2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.media-flow-details { padding: 14px 16px; }
-.media-flow-title { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
-.media-flow-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
-.media-flow-meta span { background: #080d16; border: 1px solid var(--border); border-radius: 5px; padding: 2px 8px; font-size: 11px; color: var(--muted); }
-.media-flow-desc { font-size: 11px; color: var(--muted); line-height: 1.55; }
-.media-flow-player { padding: 12px 16px; background: #080d16; text-align: center; color: var(--muted); font-size: 12px; border-top: 1px dashed var(--border); }
+/* media */
+.media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:10px}
+.mf{background:var(--card2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.mf-body{padding:14px 15px}
+.mf-title{font-size:13px;font-weight:700;margin-bottom:5px}
+.mf-meta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.mf-meta span{background:#080d16;border:1px solid var(--border);border-radius:5px;padding:2px 7px;font-size:11px;color:var(--muted)}
+.mf-desc{font-size:11px;color:var(--muted);line-height:1.55}
+.mf-foot{padding:10px 15px;background:#060a10;text-align:center;color:var(--muted);font-size:11px;border-top:1px dashed var(--border)}
 
-/* Categories */
-.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.cat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
-.cat-card-head { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 10px; }
-.cat-icon { font-size: 16px; }
-.cat-cmds { display: flex; flex-wrap: wrap; gap: 5px; }
-.cat-cmd-chip { background: #080d16; border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; font-size: 11px; font-family: 'Courier New', monospace; color: var(--green); font-weight: 700; cursor: pointer; transition: border-color .15s; }
-.cat-cmd-chip:hover { border-color: rgba(37,211,102,.5); }
+/* mode */
+.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mode-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all .2s}
+.mode-private:hover{border-color:#a855f7;box-shadow:0 4px 20px rgba(168,85,247,.15);transform:translateY(-2px)}
+.mode-public:hover{border-color:var(--green);box-shadow:0 4px 20px rgba(37,211,102,.15);transform:translateY(-2px)}
+.mode-icon{font-size:26px;margin-bottom:8px}
+.mode-title{font-size:14px;font-weight:800;margin-bottom:5px}
+.mode-private .mode-title{color:#c084fc}
+.mode-public .mode-title{color:var(--green)}
+.mode-desc{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px}
+.mode-cmd{font-family:'Courier New',monospace;font-size:12px;font-weight:700;display:inline-block;padding:4px 10px;border-radius:7px}
+.mode-private .mode-cmd{background:rgba(168,85,247,.1);color:#c084fc;border:1px solid rgba(168,85,247,.22)}
+.mode-public .mode-cmd{background:rgba(37,211,102,.1);color:var(--green);border:1px solid rgba(37,211,102,.22)}
 
-/* Mode cards */
-.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.mode-info-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 18px; cursor: pointer; transition: all .2s; }
-.mode-info-card:hover { transform: translateY(-2px); }
-.mode-private:hover { border-color: #a855f7; box-shadow: 0 4px 20px rgba(168,85,247,.15); }
-.mode-public:hover { border-color: var(--green); box-shadow: 0 4px 20px rgba(37,211,102,.15); }
-.mode-info-icon { font-size: 28px; margin-bottom: 8px; }
-.mode-info-title { font-size: 15px; font-weight: 800; margin-bottom: 5px; }
-.mode-private .mode-info-title { color: #c084fc; }
-.mode-public .mode-info-title { color: var(--green); }
-.mode-info-desc { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
-.mode-info-cmd { font-family: 'Courier New', monospace; font-size: 13px; font-weight: 700; display: inline-block; padding: 4px 10px; border-radius: 7px; }
-.mode-private .mode-info-cmd { background: rgba(168,85,247,.12); color: #c084fc; border: 1px solid rgba(168,85,247,.25); }
-.mode-public .mode-info-cmd { background: rgba(37,211,102,.12); color: var(--green); border: 1px solid rgba(37,211,102,.25); }
+/* settings */
+.settings-ref{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:12px;margin-top:13px}
+.setting-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 13px;cursor:pointer;transition:border-color .2s}
+.setting-item:hover{border-color:rgba(37,211,102,.28)}
+.setting-cmd{font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:var(--green);margin-bottom:4px}
+.setting-desc{font-size:11px;color:var(--muted);line-height:1.5}
+.setting-eg{font-family:'Courier New',monospace;font-size:10px;color:#3a4a5e;margin-top:3px}
 
-/* Settings */
-.settings-ref { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
-.settings-grid-ref { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 14px; }
-.setting-ref-item { background: var(--card2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: border-color .2s; }
-.setting-ref-item:hover { border-color: rgba(37,211,102,.3); }
-.setting-ref-cmd { font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700; color: var(--green); margin-bottom: 4px; }
-.setting-ref-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
-.setting-ref-example { font-family: 'Courier New', monospace; font-size: 10px; color: #4b5563; margin-top: 4px; }
+/* channel CTA */
+.channel-cta{background:linear-gradient(135deg,rgba(37,211,102,.07),rgba(18,140,126,.07));border:1px solid rgba(37,211,102,.18);border-radius:16px;padding:22px;text-align:center}
+.channel-cta-icon{font-size:38px;margin-bottom:9px}
+.channel-cta-title{font-size:17px;font-weight:800;margin-bottom:6px}
+.channel-cta-sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.65}
 
-/* Channel section */
-.channel-section { background: linear-gradient(135deg, rgba(37,211,102,.08), rgba(18,140,126,.08)); border: 1px solid rgba(37,211,102,.2); border-radius: 16px; padding: 24px; text-align: center; }
-.channel-icon { font-size: 40px; margin-bottom: 10px; }
-.channel-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
-.channel-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.65; }
+/* about */
+.about-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.about-logo{width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(37,211,102,.35);box-shadow:0 0 16px rgba(37,211,102,.2);flex-shrink:0}
+.about-logo-fb{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid rgba(37,211,102,.35);flex-shrink:0}
+.about-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 
-/* About */
-.about-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.about-logo { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(37,211,102,.4); box-shadow: 0 0 18px rgba(37,211,102,.25); flex-shrink: 0; }
-.about-logo-fallback { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--green2)); display: flex; align-items: center; justify-content: center; font-size: 26px; border: 2px solid rgba(37,211,102,.4); box-shadow: 0 0 18px rgba(37,211,102,.25); flex-shrink: 0; }
-.about-badges { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+/* disconnect btn */
+.btn-disconnect{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:8px 14px;font-size:12px;color:#fca5a5;transition:all .2s}
+.btn-disconnect:hover{background:rgba(239,68,68,.22);border-color:rgba(239,68,68,.45)}
 
-/* Responsive */
-@media (max-width: 600px) {
-  .status-grid { grid-template-columns: repeat(2, 1fr); }
-  .sess-row { padding: 10px 12px; }
-  .dash-hero-content { padding: 16px; }
-  .dash-body { padding: 16px 14px 48px; }
-  .channel-bar { padding: 10px 14px; }
-  .dash-banner, .dash-banner-fallback { height: 160px; }
-  .cat-grid { grid-template-columns: 1fr; }
-  .mode-cards { grid-template-columns: 1fr; }
-  .islamic-sections { grid-template-columns: 1fr 1fr; }
-  .settings-grid-ref { grid-template-columns: 1fr; }
+/* search results */
+#search-no-result{text-align:center;color:var(--muted);font-size:13px;padding:20px}
+
+/* toast */
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(80px);background:#162218;border:1px solid rgba(37,211,102,.4);color:#e2ffe8;padding:12px 24px;border-radius:14px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.5);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* loading */
+#screen-loading{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:var(--bg)}
+
+@media(max-width:600px){
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .dash-banner,.dash-banner-fb{height:150px}
+  .dash-body{padding:16px 14px 48px}
+  .cat-grid{grid-template-columns:1fr}
+  .mode-cards{grid-template-columns:1fr}
+  .islamic-secs{grid-template-columns:1fr 1fr}
+  .settings-grid{grid-template-columns:1fr}
+  .channel-bar{padding:10px 14px}
+  .dash-hero-content{padding:14px 16px 18px}
 }
-@media (max-width: 400px) {
-  .status-grid { grid-template-columns: 1fr 1fr; }
-  .islamic-sections { grid-template-columns: 1fr; }
-}
+@media(max-width:400px){.islamic-secs{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<!-- ════════════════ CONNECT SCREEN ════════════════ -->
-<main id="app-root">
+<!-- ════════ LOADING ════════ -->
+<div id="screen-loading">
+  <div style="width:46px;height:46px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div style="font-size:13px;color:var(--muted)">Connecting to bot…</div>
+</div>
+
+<!-- ════════ CONNECT SCREEN ════════ -->
 <div id="screen-connect" style="display:none">
 <div class="cs-wrap">
 
   <div class="cs-logo">
     <picture>
       <source srcset="/logo.webp" type="image/webp">
-      <img src="/logo.jpeg" alt="AA MD Bot Logo" width="60" height="60" fetchpriority="high" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <img src="/logo.jpeg" alt="AA MD Bot" width="56" height="56" fetchpriority="high"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
     </picture>
-    <div class="cs-logo-fallback" style="display:none" role="img" aria-label="AA MD Bot Logo">🤖</div>
+    <div class="cs-logo-fb" style="display:none">🤖</div>
     <div>
-      <div class="cs-logo-text">AA MD Bot</div>
-      <div class="cs-logo-sub">by Ahsan Ali | AA Mods</div>
+      <div class="cs-logo-name">AA MD Bot</div>
+      <div class="cs-logo-by">by Ahsan Ali Wadani · AA Mods</div>
     </div>
   </div>
 
   <div class="cs-card">
 
-    <!-- FORM step -->
+    <!-- FORM STEP -->
     <div id="cs-form">
-      <div class="cs-title">🤖 Connect WhatsApp Bot</div>
-      <div class="cs-sub">Link your number to start the bot</div>
-
-      <div class="mode-tabs">
-        <button class="mode-tab active" id="tab-pair" onclick="csMode('pair')">🔑 Pairing Code</button>
-        <button class="mode-tab" id="tab-qr" onclick="csMode('qr')">📷 QR Code</button>
+      <div class="cs-head">
+        <div class="cs-title">🔑 Connect WhatsApp</div>
+        <div class="cs-sub">Enter your WhatsApp number to get a pairing code — no QR scan needed.</div>
       </div>
 
-      <div id="pair-panel">
-        <label class="field-label" for="cs-phone">WhatsApp Number</label>
-        <input class="field-input" type="tel" id="cs-phone" placeholder="923001234567" maxlength="15" autocomplete="tel">
-        <p class="field-hint">Include country code, no + or spaces</p>
-        <div style="margin-top:14px">
-          <label class="field-label">Session Name <span style="font-weight:400;text-transform:none">(for multiple devices — optional)</span></label>
-          <input class="field-input" id="cs-sess-pair" placeholder="default" value="default" style="font-size:14px;padding:11px 14px">
-        </div>
+      <label class="field-label" for="cs-phone">WhatsApp Number</label>
+      <div class="field-wrap">
+        <span class="field-flag">📱</span>
+        <input class="field-input" type="tel" id="cs-phone"
+               placeholder="923001234567" maxlength="15" autocomplete="tel"
+               oninput="this.value=this.value.replace(/\D/g,'')">
+      </div>
+      <p class="field-hint">Country code + number, no + or spaces. Example: <strong style="color:var(--text)">923001234567</strong></p>
+
+      <div class="info-box">
+        📋 Open WhatsApp → <strong>Linked Devices → Link a Device → Link with phone number instead</strong> → enter the code shown here.
       </div>
 
-      <div id="qr-panel" style="display:none">
-        <div class="qr-hint">
-          📷 A QR code will appear after clicking Start.<br>
-          Open <strong>WhatsApp → Linked Devices → Link a Device</strong> and scan it.
-        </div>
-        <div style="margin-top:14px">
-          <label class="field-label">Session Name <span style="font-weight:400;text-transform:none">(for multiple devices — optional)</span></label>
-          <input class="field-input" id="cs-sess-qr" placeholder="default" value="default" style="font-size:14px;padding:11px 14px">
-        </div>
-      </div>
-
-      <div class="cs-error" id="cs-err"></div>
-      <button class="btn-connect" id="cs-btn" onclick="csConnect()">Start Bot →</button>
+      <div class="cs-err" id="cs-err"></div>
+      <button class="btn-primary" id="cs-btn" onclick="csConnect()">Get Pairing Code →</button>
     </div>
 
-    <!-- CODE step -->
+    <!-- CODE STEP -->
     <div id="cs-code-step" style="display:none">
-      <div class="cs-title">🔑 Enter Pairing Code</div>
-      <div class="cs-sub">Open WhatsApp and enter this code</div>
+      <div class="code-step-head">
+        <div class="cs-title">🔑 Your Pairing Code</div>
+        <div class="code-step-phone">For number: <strong id="cs-phone-display">—</strong></div>
+      </div>
+
       <div class="pair-box">
-        <div class="pair-digits" id="cs-code">----</div>
-        <button class="pair-copy" id="cs-copy-btn" onclick="csCopy()">📋 Copy Code</button>
+        <div class="pair-label">Enter this code in WhatsApp</div>
+        <div class="pair-digits loading" id="cs-code">⌛</div>
+        <button class="btn-copy" id="cs-copy-btn" onclick="csCopy()">📋 Copy Code</button>
       </div>
-      <div class="pair-steps">
-        <strong>Step 1</strong> — Open WhatsApp on your phone<br>
-        <strong>Step 2</strong> — Tap ⋮ Menu → Linked Devices → Link a Device<br>
-        <strong>Step 3</strong> — Tap "Link with phone number instead"<br>
-        <strong>Step 4</strong> — Enter the code above
+
+      <div class="steps-box">
+        <div class="step-row"><span class="step-num">1</span><span>Open WhatsApp on your phone</span></div>
+        <div class="step-row"><span class="step-num">2</span><span>Tap <strong>⋮ Menu</strong> → <strong>Linked Devices</strong> → <strong>Link a Device</strong></span></div>
+        <div class="step-row"><span class="step-num">3</span><span>Tap <strong>"Link with phone number instead"</strong></span></div>
+        <div class="step-row"><span class="step-num">4</span><span>Enter the 8-digit code above</span></div>
       </div>
-      <div class="pair-status"><span class="dot dot-yellow"></span> Waiting for code to be entered...</div>
+
+      <div class="pair-status"><span class="dot dot-yellow"></span> Waiting for you to enter the code…</div>
       <button class="btn-back" onclick="csReset()">← Start Over</button>
     </div>
 
-    <!-- QR step -->
-    <div id="cs-qr-step" style="display:none">
-      <div class="cs-title">📷 Scan QR Code</div>
-      <div class="cs-sub">Use WhatsApp camera to scan</div>
-      <div class="qr-box">
-        <div class="qr-img-wrap" style="display:inline-block">
-          <div class="qr-placeholder" id="cs-qr-ph">
-            <span style="font-size:32px">⏳</span>
-            QR Loading...
-          </div>
-          <img id="cs-qr-img" src="" alt="QR" style="width:180px;height:180px;border-radius:8px;display:none">
-        </div>
-        <div class="pair-status"><span class="dot dot-yellow"></span> Waiting for scan...</div>
-      </div>
-      <button class="btn-back" onclick="csReset()">← Start Over</button>
-    </div>
-
-    <!-- DONE step -->
+    <!-- DONE STEP -->
     <div id="cs-done-step" style="display:none">
-      <div class="pair-success">
-        <div class="pair-success-icon">✅</div>
-        <div class="pair-success-title">Bot Connected!</div>
-        <div class="pair-success-sub">Loading your dashboard...</div>
+      <div class="done-wrap">
+        <div class="done-icon">✅</div>
+        <div class="done-title">Connected!</div>
+        <div class="done-sub">Loading your dashboard…</div>
       </div>
     </div>
 
   </div>
-
-
 </div>
 </div>
 
-<!-- ════════════════ DASHBOARD SCREEN ════════════════ -->
+<!-- ════════ DASHBOARD ════════ -->
 <div id="screen-dash" style="display:none">
 <div class="dash">
 
@@ -478,129 +388,149 @@ a { text-decoration: none; color: inherit; }
   <div class="dash-hero">
     <picture>
       <source srcset="/banner.webp" type="image/webp">
-      <img src="/banner.jpeg" alt="AA MD Bot Dashboard Banner" class="dash-banner" width="1024" height="400" fetchpriority="high" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <img src="/banner.jpeg" alt="AA MD Bot Banner" class="dash-banner" width="1024" height="400" fetchpriority="high"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
     </picture>
-    <div class="dash-banner-fallback" style="display:none"></div>
+    <div class="dash-banner-fb" style="display:none"></div>
     <div class="dash-hero-overlay"></div>
     <div class="dash-hero-content">
       <div class="dash-hero-left">
         <picture>
           <source srcset="/logo.webp" type="image/webp">
-          <img src="/logo.jpeg" alt="AA MD Bot Logo" class="dash-logo" width="52" height="52" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <img src="/logo.jpeg" alt="AA MD Bot Logo" class="dash-logo" width="50" height="50"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         </picture>
-        <div class="dash-logo-fallback" style="display:none" role="img" aria-label="AA MD Bot Logo">🤖</div>
+        <div class="dash-logo-fb" style="display:none">🤖</div>
         <div>
           <div class="dash-hero-title">AA MD Bot</div>
-          <div class="dash-hero-tagline">Your friendly WhatsApp assistant, always on duty 💚</div>
-          <div class="dash-hero-sub" id="hero-sub">
-            <span class="dot dot-green"></span> Connected &amp; ready to help
+          <div class="dash-hero-tag">by Ahsan Ali Wadani · AA Mods</div>
+          <div class="dash-hero-num" id="hero-num">
+            <span class="dot dot-green"></span>
+            <span id="hero-num-text">Connected &amp; Ready</span>
           </div>
         </div>
       </div>
-      <button class="btn-disconnect" onclick="goConnect()">Connect Another →</button>
+      <button class="btn-disconnect" onclick="goConnect()">+ Connect Another</button>
     </div>
   </div>
 
   <!-- Channel bar -->
   <div class="channel-bar">
-    <span class="channel-bar-text">📢 Stay updated with new features &amp; tips:</span>
+    <span class="channel-bar-txt">📢 Stay updated with new features &amp; tips:</span>
     <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel">
-      📲 Follow WhatsApp Channel
+      📲 Follow Channel
     </a>
   </div>
 
   <div class="dash-body">
 
+    <!-- Welcome -->
     <div class="welcome-banner" id="welcome-banner">
       <span class="welcome-emoji">🤖</span>
       <div style="flex:1">
         <div class="welcome-title" id="welcome-title">AA MD Bot is Live!</div>
-        <div class="welcome-sub" id="welcome-sub">Everything looks healthy. Use the search below to find any command instantly.</div>
+        <div class="welcome-sub" id="welcome-sub">Bot is running. Use the search below to find any command instantly.</div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
         <div class="pulse-dot"></div>
-        <span style="font-size:12px;color:var(--green);font-weight:600">LIVE</span>
+        <span style="font-size:12px;color:var(--green);font-weight:700">LIVE</span>
       </div>
     </div>
 
-    <!-- Status cards -->
-    <div class="status-grid" style="grid-template-columns:repeat(4,1fr)">
-      <div class="status-card">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
         <div class="sc-icon">✅</div>
-        <div class="sc-value" style="color:var(--green);font-size:15px" id="s-status">Online</div>
-        <div class="sc-label">Status</div>
+        <div class="sc-val" style="color:var(--green);font-size:14px" id="s-status">Online</div>
+        <div class="sc-lbl">Status</div>
         <div class="stat-bar"><div class="stat-bar-fill" style="width:100%;background:var(--green)"></div></div>
       </div>
-      <div class="status-card">
+      <div class="stat-card">
         <div class="sc-icon">⏱️</div>
-        <div class="sc-value" style="font-size:14px" id="s-uptime">--</div>
-        <div class="sc-label">Uptime</div>
-        <div class="stat-bar"><div class="stat-bar-fill" style="width:70%;background:#3b82f6"></div></div>
+        <div class="sc-val" style="font-size:13px" id="s-uptime">--</div>
+        <div class="sc-lbl">Uptime</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="uptime-bar" style="width:60%;background:#3b82f6"></div></div>
       </div>
-      <div class="status-card">
+      <div class="stat-card">
         <div class="sc-icon">📦</div>
-        <div class="sc-value" id="s-cmds">170+</div>
-        <div class="sc-label">Commands</div>
-        <div class="stat-bar"><div class="stat-bar-fill" style="width:85%;background:#a855f7"></div></div>
+        <div class="sc-val" id="s-cmds">170+</div>
+        <div class="sc-lbl">Commands</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:88%;background:#a855f7"></div></div>
       </div>
-      <div class="status-card">
-        <div class="sc-icon">📱</div>
-        <div class="sc-value" style="color:var(--green)" id="s-sessions-count">0</div>
-        <div class="sc-label">Sessions</div>
-        <div class="stat-bar"><div id="sess-bar" class="stat-bar-fill" style="width:0%;background:var(--green)"></div></div>
+      <div class="stat-card">
+        <div class="sc-icon">💾</div>
+        <div class="sc-val" style="font-size:14px" id="s-ram">-- MB</div>
+        <div class="sc-lbl">RAM Used</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="ram-bar" style="width:40%;background:#f59e0b"></div></div>
       </div>
     </div>
 
-    <!-- New features banner -->
+    <!-- Sessions -->
+    <div class="section">
+      <div class="section-head" onclick="toggleSection('sess-body')">
+        📱 Connected Sessions <span class="section-toggle" id="toggle-sess-body">▼</span>
+      </div>
+      <div class="section-body" id="sess-body" style="max-height:600px">
+        <div class="sess-list" id="sess-list">
+          <div style="font-size:13px;color:var(--muted);padding:12px">Loading sessions…</div>
+        </div>
+        <div style="margin-top:10px">
+          <button class="btn-add-sess" onclick="goConnect()">＋ Connect Another Number</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- New features -->
     <div class="new-feat-banner">
-      <div style="font-size:13px;font-weight:800;color:#c084fc;white-space:nowrap">🆕 New Plugins</div>
+      <div style="font-size:13px;font-weight:800;color:#c084fc;white-space:nowrap">🆕 New</div>
       <div class="new-feat-chips" id="new-chips">
-        <span class="new-feat-chip" onclick="copyCmd('.logo hacker|text')">.logo</span>
-        <span class="new-feat-chip" onclick="copyCmd('.element Gold')">.element</span>
-        <span class="new-feat-chip" onclick="copyCmd('.hack Target')">.hack</span>
-        <span class="new-feat-chip" onclick="copyCmd('.love Ali & Sara')">.love</span>
-        <span class="new-feat-chip" onclick="copyCmd('.currency 100 USD PKR')">.currency</span>
-        <span class="new-feat-chip" onclick="copyCmd('.disap 24h')">.disap</span>
-        <span class="new-feat-chip" onclick="copyCmd('.privacy')">.privacy</span>
-        <span class="new-feat-chip" onclick="copyCmd('.botzip')">.botzip</span>
-        <span class="new-feat-chip" onclick="copyCmd('.attp AA MD Bot')">.attp</span>
-        <span class="new-feat-chip" onclick="copyCmd('.ss google.com')">.ss</span>
+        <span class="nfc" onclick="copyCmd('.logo hacker|text')">.logo</span>
+        <span class="nfc" onclick="copyCmd('.element Gold')">.element</span>
+        <span class="nfc" onclick="copyCmd('.hack Target')">.hack</span>
+        <span class="nfc" onclick="copyCmd('.love Ali & Sara')">.love</span>
+        <span class="nfc" onclick="copyCmd('.currency 100 USD PKR')">.currency</span>
+        <span class="nfc" onclick="copyCmd('.disap 24h')">.disap</span>
+        <span class="nfc" onclick="copyCmd('.privacy')">.privacy</span>
+        <span class="nfc" onclick="copyCmd('.botzip')">.botzip</span>
+        <span class="nfc" onclick="copyCmd('.attp AA MD Bot')">.attp</span>
+        <span class="nfc" onclick="copyCmd('.ss google.com')">.ss</span>
+        <span class="nfc" onclick="copyCmd('.reveal')">.reveal</span>
       </div>
-      <div style="font-size:10px;color:var(--muted);white-space:nowrap">Click to copy</div>
+      <div style="font-size:10px;color:var(--muted);white-space:nowrap">Tap to copy</div>
     </div>
 
-    <!-- Command Search -->
+    <!-- Search -->
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input class="search-input" id="cmd-search" placeholder="Search commands… (e.g. sticker, ai, music)" oninput="filterCmds(this.value)">
+      <input class="search-input" id="cmd-search" placeholder="Search commands… (sticker, music, ai, reveal…)" oninput="filterCmds(this.value)">
       <span class="search-count" id="search-count"></span>
     </div>
 
     <!-- Quick Start -->
     <div class="section">
-      <div class="section-head" onclick="toggleSection('quick-body')">⚡ Quick Start Commands <span class="section-toggle" id="toggle-quick-body">▼</span></div>
+      <div class="section-head" onclick="toggleSection('quick-body')">⚡ Quick Start <span class="section-toggle" id="toggle-quick-body">▼</span></div>
       <div class="section-body" id="quick-body" style="max-height:600px">
         <div class="cmd-grid" id="quick-grid"></div>
-        <p style="font-size:11px;color:var(--muted);margin-top:8px">💡 Click any command to copy it, then paste in WhatsApp</p>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">💡 Tap any command to copy, then paste in WhatsApp</p>
       </div>
     </div>
 
     <!-- Islamic -->
     <div class="section">
       <div class="section-head" onclick="toggleSection('islamic-body')">☪️ Islamic Commands <span class="section-toggle" id="toggle-islamic-body">▼</span></div>
-      <div class="section-body collapsed" id="islamic-body" style="max-height:1200px">
+      <div class="section-body collapsed" id="islamic-body" style="max-height:1400px">
         <div class="islamic-card">
-          <div class="islamic-head">
-            <span style="font-size:28px">☪️</span>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <span style="font-size:26px">☪️</span>
             <div>
-              <div class="islamic-title">Islamic Commands Panel</div>
-              <div class="islamic-sub">Duas, Zikr, Hadiths, Kalimas, Adhkar &amp; more</div>
+              <div style="font-size:15px;font-weight:800">Islamic Commands Panel</div>
+              <div style="font-size:12px;color:var(--muted)">Duas, Zikr, Hadiths, Kalimas, Adhkar &amp; more</div>
             </div>
-            <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel" style="margin-left:auto;font-size:12px;padding:7px 14px">📢 Channel</a>
+            <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel" style="margin-left:auto;font-size:12px;padding:6px 13px">📢 Channel</a>
           </div>
-          <div class="islamic-sections" id="islamic-grid"></div>
-          <div style="margin-top:14px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
-            <span>💡</span> Type <code style="color:var(--green);font-size:11px">.islamic_menu</code> in WhatsApp for full list
+          <div class="islamic-secs" id="islamic-grid"></div>
+          <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+            💡 Type <code style="color:var(--green);font-size:11px">.islamic_menu</code> in WhatsApp for the full list
           </div>
         </div>
       </div>
@@ -611,36 +541,37 @@ a { text-decoration: none; color: inherit; }
       <div class="section-head" onclick="toggleSection('media-body')">🎬 Media Commands <span class="section-toggle" id="toggle-media-body">▼</span></div>
       <div class="section-body collapsed" id="media-body" style="max-height:800px">
         <div class="media-grid">
-          <div class="media-flow">
-            <div class="media-flow-details">
-              <div class="media-flow-title">🎵 Play Audio — .play / .song</div>
-              <div class="media-flow-meta"><span>YouTube</span><span>yt-dlp</span><span>MP3</span></div>
-              <div class="media-flow-desc">Search by name or paste a YouTube URL. Bot shows info card then sends the MP3. <strong style="color:var(--green)">.play</strong> and <strong style="color:var(--green)">.song</strong> are identical.</div>
-              <div style="margin-top:8px;font-size:11px;color:var(--green)">.play Tum Hi Ho &nbsp;|&nbsp; .song Faded Alan Walker</div>
+          <div class="mf">
+            <div class="mf-body">
+              <div class="mf-title">🎵 Audio — .play / .song</div>
+              <div class="mf-meta"><span>YouTube</span><span>yt-dlp</span><span>MP3</span></div>
+              <div class="mf-desc">Search by name or paste a YouTube link. Bot sends the MP3 with info card.</div>
+              <div style="margin-top:7px;font-size:11px;color:var(--green)">.play Tum Hi Ho &nbsp;|&nbsp; .song Faded</div>
             </div>
-            <div class="media-flow-player">🎵 Audio plays here — info card first</div>
+            <div class="mf-foot">🎵 Audio delivered as MP3</div>
           </div>
-          <div class="media-flow">
-            <div class="media-flow-details">
-              <div class="media-flow-title">📹 Video — .video / .yt / .ytmp4</div>
-              <div class="media-flow-meta"><span>MP4</span><span>Max 10 min</span><span>64 MB</span></div>
-              <div class="media-flow-desc">Bot sends a <strong style="color:var(--text)">details card</strong> (title, size, thumbnail) first, then the actual video file.</div>
+          <div class="mf">
+            <div class="mf-body">
+              <div class="mf-title">📹 Video — .video / .mp4</div>
+              <div class="mf-meta"><span>MP4</span><span>H.264</span><span>64 MB</span></div>
+              <div class="mf-desc">Sends thumbnail card first, then the playable MP4 video file.</div>
+              <div style="margin-top:7px;font-size:11px;color:var(--green)">.video Tum Hi Ho &nbsp;|&nbsp; .mp4 &lt;link&gt;</div>
             </div>
-            <div class="media-flow-player">🎬 Video plays here — details first</div>
+            <div class="mf-foot">🎬 Transcoded to H.264/AAC</div>
           </div>
-          <div class="media-flow">
-            <div class="media-flow-details">
-              <div class="media-flow-title">👁️ Reveal View-Once — .reveal / .rv</div>
-              <div class="media-flow-meta"><span>Images</span><span>Videos</span><span>Groups &amp; DMs</span></div>
-              <div class="media-flow-desc">Reply to any view-once message with <code style="color:var(--green)">.reveal</code> to get it as normal media.</div>
+          <div class="mf">
+            <div class="mf-body">
+              <div class="mf-title">👁️ View-Once Reveal — .reveal</div>
+              <div class="mf-meta"><span>Images</span><span>Videos</span><span>Groups &amp; DMs</span></div>
+              <div class="mf-desc">Reply to any view-once with <code style="color:var(--green)">.reveal</code>. Media is sent to your "You" chat. Set a keyword with <code style="color:var(--green)">.voword</code> too.</div>
             </div>
-            <div class="media-flow-player">👁️ View-once revealed as normal media</div>
+            <div class="mf-foot">👁️ Saved to "You" private chat</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Search Results (shown when searching) -->
+    <!-- Search Results -->
     <div id="search-results" style="display:none;margin-bottom:20px">
       <div class="cat-grid" id="search-result-grid"></div>
       <div id="search-no-result" class="search-no-result" style="display:none">
@@ -661,22 +592,20 @@ a { text-decoration: none; color: inherit; }
       <div class="section-head" onclick="toggleSection('mode-body')">🔀 Bot Mode <span class="section-toggle" id="toggle-mode-body">▼</span></div>
       <div class="section-body collapsed" id="mode-body" style="max-height:400px">
         <div class="mode-cards">
-          <div class="mode-info-card mode-private" onclick="copyCmd('.mode private')" title="Click to copy">
-            <div class="mode-info-icon">🔒</div>
-            <div class="mode-info-title">Private Mode</div>
-            <div class="mode-info-desc">Only <strong>You (self-chat)</strong> can use commands. Perfect for personal use.</div>
-            <code class="mode-info-cmd">.mode private</code>
+          <div class="mode-card mode-private" onclick="copyCmd('.mode private')">
+            <div class="mode-icon">🔒</div>
+            <div class="mode-title">Private Mode</div>
+            <div class="mode-desc">Only <strong>you</strong> can use commands. Perfect for personal use.</div>
+            <code class="mode-cmd">.mode private</code>
           </div>
-          <div class="mode-info-card mode-public" onclick="copyCmd('.mode public')" title="Click to copy">
-            <div class="mode-info-icon">🌐</div>
-            <div class="mode-info-title">Public Mode</div>
-            <div class="mode-info-desc">Everyone can use commands — any number that messages the bot gets a response.</div>
-            <code class="mode-info-cmd">.mode public</code>
+          <div class="mode-card mode-public" onclick="copyCmd('.mode public')">
+            <div class="mode-icon">🌐</div>
+            <div class="mode-title">Public Mode</div>
+            <div class="mode-desc">Everyone who messages the bot gets a response.</div>
+            <code class="mode-cmd">.mode public</code>
           </div>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin-top:8px">
-          💡 In <strong style="color:var(--text)">Private mode</strong>, only your "You" chat responds. Click a card to copy the command.
-        </p>
+        <p style="font-size:11px;color:var(--muted);margin-top:9px">💡 Tap a card to copy the command, then paste it in WhatsApp.</p>
       </div>
     </div>
 
@@ -685,32 +614,24 @@ a { text-decoration: none; color: inherit; }
       <div class="section-head" onclick="toggleSection('settings-body')">⚙️ Bot Settings <span class="section-toggle" id="toggle-settings-body">▼</span></div>
       <div class="section-body collapsed" id="settings-body" style="max-height:1200px">
         <div class="settings-ref">
-          <div style="font-size:13px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px">
-            <span>ℹ️</span>
-            All settings controlled <strong style="color:var(--text)">via WhatsApp commands</strong>.
-            Type <code style="color:var(--green);font-size:12px">.bs</code> for full settings panel.
+          <div style="font-size:12px;color:var(--muted);margin-bottom:13px;display:flex;align-items:center;gap:7px">
+            <span>ℹ️</span> All settings via WhatsApp commands — type <code style="color:var(--green);font-size:12px">.bs</code> for the full panel.
           </div>
-          <div class="settings-grid-ref" id="settings-grid"></div>
+          <div class="settings-grid" id="settings-grid"></div>
         </div>
       </div>
     </div>
 
-
     <!-- Channel CTA -->
     <div class="section">
-      <div class="channel-section">
-        <div class="channel-icon">📢</div>
-        <div class="channel-title">Stay in the Loop — Join Our Channel</div>
-        <div class="channel-desc">
-          Be the first to know about new commands, feature drops, tips &amp; tricks, and behind-the-scenes updates.<br>
-          You're always welcome — join thousands of happy AA MD Bot users today. 💚
-        </div>
+      <div class="channel-cta">
+        <div class="channel-cta-icon">📢</div>
+        <div class="channel-cta-title">Stay in the Loop — Join Our Channel</div>
+        <div class="channel-cta-sub">New commands, feature drops, tips &amp; tricks, and updates — all in one place. Join thousands of happy AA MD Bot users. 💚</div>
         <a href="https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617" target="_blank" rel="noopener" class="btn-channel-big">
           📲 Follow Channel Now
         </a>
-        <div style="margin-top:12px;font-size:12px;color:rgba(255,255,255,.35)">
-          whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617
-        </div>
+        <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.25)">whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617</div>
       </div>
     </div>
 
@@ -718,18 +639,19 @@ a { text-decoration: none; color: inherit; }
     <div class="about-card">
       <picture>
         <source srcset="/logo.webp" type="image/webp">
-        <img src="/logo.jpeg" alt="AA MD Bot Logo" class="about-logo" width="60" height="60" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <img src="/logo.jpeg" alt="AA MD Bot Logo" class="about-logo" width="56" height="56"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       </picture>
-      <div class="about-logo-fallback" style="display:none">🤖</div>
+      <div class="about-logo-fb" style="display:none">🤖</div>
       <div style="flex:1">
-        <div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+        <div style="font-size:17px;font-weight:800;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
           AA MD Bot v3.0
         </div>
         <div style="font-size:12px;color:var(--muted);margin-top:3px">
-          Crafted with care by <strong style="color:var(--text)">Ahsan Ali | AA Mods</strong> — built to make WhatsApp automation simple &amp; reliable
+          Crafted by <strong style="color:var(--text)">Ahsan Ali Wadani · AA Mods</strong> — WhatsApp automation made simple &amp; reliable
         </div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">
-          170+ commands · Baileys MD · Node.js · Auto Status · Islamic 60+ · Logo Generator · AI Chat
+          170+ commands · Baileys MD · Node.js · Islamic 60+ · Auto Status · Logo · AI Chat
         </div>
         <div class="about-badges">
           <span class="badge badge-green">v3.0 Multi-Device</span>
@@ -745,21 +667,13 @@ a { text-decoration: none; color: inherit; }
 </div>
 </div>
 
-</main>
-
-<!-- Loading splash -->
-<div id="screen-loading" style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;background:var(--bg)">
-  <div style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite"></div>
-  <div style="font-size:14px;color:var(--muted)">Connecting to bot...</div>
-</div>
+<div id="toast"></div>
 
 <script>
 const CHANNEL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
 const BASE = '';
 
-// ──────────────────────────────────────────────────────
-// Static Data
-// ──────────────────────────────────────────────────────
+// ── Static Data ──────────────────────────────────────────────
 const QUICK_CMDS = [
   { cmd: '.menu',              desc: 'All commands list' },
   { cmd: '.ai hello',          desc: 'Chat with AI (GPT)' },
@@ -774,98 +688,90 @@ const QUICK_CMDS = [
   { cmd: '.attp AA MD Bot',    desc: '✨ Animated neon sticker' },
   { cmd: '.logo hacker|text',  desc: '🎨 Stylized text logo' },
   { cmd: '.shazam',            desc: '🎵 Identify a song' },
+  { cmd: '.reveal',            desc: '👁️ Reveal view-once (reply to it)' },
+  { cmd: '.voword show',       desc: '👁️ Set view-once keyword' },
+  { cmd: '.antiviewonce on',   desc: '👁️ Auto-reveal all view-once' },
   { cmd: '.ss google.com',     desc: '📸 Website screenshot' },
   { cmd: '.imagine a cat',     desc: '🖼️ AI image generation' },
   { cmd: '.country Pakistan',  desc: '🌍 Country information' },
-  { cmd: '.element Gold',      desc: '🧪 Periodic table lookup' },
   { cmd: '.weather Karachi',   desc: '🌤️ Weather forecast' },
   { cmd: '.currency 100 USD PKR', desc: '💱 Currency converter' },
+  { cmd: '.element Gold',      desc: '🧪 Periodic table lookup' },
   { cmd: '.hack Target',       desc: '💻 Animated hack effect' },
-  { cmd: '.love Ali & Sara',   desc: '💘 Love calculator' },
-  { cmd: '.emojimix 😂 ❤️',   desc: 'Emoji Kitchen mix' },
-  { cmd: '.trim 0 30',         desc: '✂️ Trim audio/video' },
-  { cmd: '.ping',              desc: 'Bot ping / status' },
+  { cmd: '.ping',              desc: 'Bot ping / latency' },
 ];
 
 const CATEGORIES = [
-  { icon: '☪️',  label: 'Islamic',   color: '#25d366', cmds: ['islamic_menu','dua_forgiveness','dua_rizq','dua_health','dua_morning','dua_evening','dua_sleep','zikr_subhanallah','zikr_alhamdulillah','zikr_astaghfirullah','hadith_smile','hadith_patience','kalima_tayyiba','darood_sharif','morning_adhkar','evening_adhkar','asmaul_husna','jaffery_menu','dua_kumayl','masoomeen14'] },
-  { icon: '🤖',  label: 'AI & Search', color: '#3b82f6', cmds: ['ai','gemini','gpt','imagine','country','shazam','ss','lyrics','movie','wiki','weather','anime','google','yts','npm','img','stickersearch','wallpaper'] },
-  { icon: '📥',  label: 'Downloads', color: '#f59e0b', cmds: ['play','video','mp3','mp4','song','tiktok','ig','fb','spotify','dl','apk','ydesc','tts','ringtone','github'] },
-  { icon: '🎨',  label: 'Media',     color: '#ec4899', cmds: ['sticker','attp','logo','trim','take','toaudio','blur','flip','grayscale','resize','ptt','steal','caption','sticker2img'] },
-  { icon: '🎮',  label: 'Fun',       color: '#a855f7', cmds: ['hack','love','emojimix','coinflip','joke','meme','roast','truth','dare','8ball','fortune','compliment','trivia','hangman','rps','ship','dice','wyr','quote'] },
-  { icon: '🔧',  label: 'Utility',   color: '#06b6d4', cmds: ['translate','calc','qr','currency','element','base64','password','shorturl','menu','ping','uptime','report','support'] },
-  { icon: '🛠️',  label: 'Tools',     color: '#64748b', cmds: ['tts','sendaudio','sendvid','bgremove','enhance','ocr','hash','speedtest'] },
-  { icon: '👥',  label: 'Group',     color: '#10b981', cmds: ['kick','promote','demote','mute','unmute','tagall','hidetag','antilink','antidelete','antiviewonce','antibot','welcome','goodbye','warn','groupinfo','link','disap','disap1','disap7','disap90','setgroupname','setgroupdesc'] },
-  { icon: '👑',  label: 'Owner',     color: '#ef4444', cmds: ['bs','mode','anticall','autostatus','statusview','statusreact','autoreply','autoread','autotyping','ghost','setprefix','privacy','botzip','addowner','maintenance','broadcast','eval','restart'] },
-  { icon: '💰',  label: 'Economy',   color: '#eab308', cmds: ['balance','daily','transfer','work','rob','leaderboard','invest','shop','buy','sell'] },
-  { icon: '⭐',  label: 'Levels',    color: '#f97316', cmds: ['rank','xp','leaderboard','level','profile','levelup'] },
+  { icon:'☪️', label:'Islamic',    color:'#25d366', cmds:['islamic_menu','dua_forgiveness','dua_rizq','dua_health','dua_morning','dua_evening','dua_sleep','zikr_subhanallah','zikr_alhamdulillah','zikr_astaghfirullah','hadith_smile','hadith_patience','kalima_tayyiba','darood_sharif','morning_adhkar','evening_adhkar','asmaul_husna','jaffery_menu','dua_kumayl','masoomeen14'] },
+  { icon:'🤖', label:'AI & Search', color:'#3b82f6', cmds:['ai','gemini','gpt','imagine','country','shazam','ss','lyrics','movie','wiki','weather','anime','google','yts','npm','img','stickersearch','wallpaper'] },
+  { icon:'📥', label:'Downloads',  color:'#f59e0b', cmds:['play','video','mp3','mp4','song','tiktok','ig','fb','spotify','dl','apk','ydesc','tts','ringtone','github'] },
+  { icon:'🎨', label:'Media',      color:'#ec4899', cmds:['sticker','attp','logo','trim','take','toaudio','blur','flip','grayscale','resize','ptt','steal','caption','sticker2img'] },
+  { icon:'🎮', label:'Fun',        color:'#a855f7', cmds:['hack','love','emojimix','coinflip','joke','meme','roast','truth','dare','8ball','fortune','compliment','trivia','hangman','rps','ship','dice','wyr','quote'] },
+  { icon:'🔧', label:'Utility',    color:'#06b6d4', cmds:['translate','calc','qr','currency','element','base64','password','shorturl','menu','ping','uptime','report','support'] },
+  { icon:'🛠️', label:'Tools',      color:'#64748b', cmds:['tts','sendaudio','sendvid','bgremove','enhance','ocr','hash','speedtest'] },
+  { icon:'👥', label:'Group',      color:'#10b981', cmds:['kick','promote','demote','mute','unmute','tagall','hidetag','antilink','antidelete','antiviewonce','antibot','welcome','goodbye','warn','groupinfo','link','disap','disap1','disap7','disap90'] },
+  { icon:'👑', label:'Owner',      color:'#ef4444', cmds:['bs','mode','anticall','autostatus','statusview','statusreact','autoreply','autoread','voword','reveal','antiviewonce','setprefix','privacy','botzip','addowner','maintenance','broadcast','eval','restart'] },
+  { icon:'💰', label:'Economy',    color:'#eab308', cmds:['balance','daily','transfer','work','rob','leaderboard','invest','shop','buy','sell'] },
+  { icon:'⭐', label:'Levels',     color:'#f97316', cmds:['rank','xp','leaderboard','level','profile'] },
 ];
 
 const ISLAMIC_SECS = [
-  { title: '🤲 Duas', cmds: [['dua_forgiveness','Forgiveness'],['dua_rizq','Rizq / Provision'],['dua_guidance','Guidance'],['dua_health','Good Health'],['dua_morning','Morning'],['dua_evening','Evening'],['dua_sleep','Before Sleep'],['dua_travel','Travel'],['dua_food','Before Eating'],['dua_exam','Studies/Exam'],['dua_anxiety','Anxiety & Stress'],['dua_parents','Parents']] },
-  { title: '📿 Zikr', cmds: [['zikr_astaghfirullah','Astaghfirullah'],['zikr_alhamdulillah','Alhamdulillah'],['zikr_subhanallah','SubhanAllah'],['zikr_allahuakbar','Allahu Akbar'],['zikr_lailahaillallah','La Ilaha Illallah'],['zikr_lahawla','La Hawla'],['zikr_bismillah','Bismillah'],['zikr_hasbunallah','Hasbunallah']] },
-  { title: '📜 Hadiths', cmds: [['hadith_good_morals','Good Morals'],['hadith_cleanliness','Cleanliness'],['hadith_truth','Truth'],['hadith_patience','Patience (Sabr)'],['hadith_smile','Smiling is Sadaqah'],['hadith_knowledge','Knowledge'],['hadith_neighbour','Good Neighbour']] },
-  { title: '☪️ 6 Kalimas', cmds: [['kalima_tayyiba','1st — Tayyiba'],['kalima_shahadat','2nd — Shahadat'],['kalima_tamjeed','3rd — Tamjeed'],['kalima_tauheed','4th — Tauheed'],['kalima_astaghfar','5th — Astaghfar'],['kalima_radde_kufr','6th — Radde Kufr']] },
-  { title: '💚 Adhkar & Specials', cmds: [['darood_sharif','Durood Ibrahim'],['morning_adhkar','Morning Adhkar'],['evening_adhkar','Evening Adhkar'],['asmaul_husna','99 Names of Allah'],['islam_fact','Islamic Fact'],['quran_reminder','Daily Reminder'],['prayers_info','5 Daily Prayers']] },
-  { title: '🌹 Fikra-e-Jaffery (Ahl al-Bayt ع)', cmds: [['jaffery_menu','Full Jaffery Menu'],['dua_kumayl','Dua Kumayl — Imam Ali ع'],['dua_arafah','Dua Arafah — Imam Husain ع'],['dua_tawassul','Dua Tawassul'],['dua_imam_zaman','Dua — Imam Mahdi ع'],['dua_nudba','Dua Nudba'],['ziyarat_ashura','Ziyarat Ashura'],['ziyarat_imam_ali','Ziyarat Imam Ali ع'],['salawat_aal','Salawat Aal-e-Muhammad'],['masoomeen14','14 Masoomeen ع'],['nahjul_balagha','Nahjul Balagha Quote'],['ghadeer_info','Ghadeer Khum']] },
+  { title:'🤲 Duas', cmds:[['dua_forgiveness','Forgiveness'],['dua_rizq','Rizq'],['dua_guidance','Guidance'],['dua_health','Health'],['dua_morning','Morning'],['dua_evening','Evening'],['dua_sleep','Before Sleep'],['dua_travel','Travel'],['dua_exam','Studies/Exam'],['dua_anxiety','Anxiety']] },
+  { title:'📿 Zikr', cmds:[['zikr_astaghfirullah','Astaghfirullah'],['zikr_alhamdulillah','Alhamdulillah'],['zikr_subhanallah','SubhanAllah'],['zikr_allahuakbar','Allahu Akbar'],['zikr_lailahaillallah','La Ilaha Illallah'],['zikr_lahawla','La Hawla'],['zikr_bismillah','Bismillah']] },
+  { title:'📜 Hadiths', cmds:[['hadith_good_morals','Good Morals'],['hadith_cleanliness','Cleanliness'],['hadith_truth','Truth'],['hadith_patience','Patience'],['hadith_smile','Smiling is Sadaqah'],['hadith_knowledge','Knowledge']] },
+  { title:'☪️ 6 Kalimas', cmds:[['kalima_tayyiba','1st — Tayyiba'],['kalima_shahadat','2nd — Shahadat'],['kalima_tamjeed','3rd — Tamjeed'],['kalima_tauheed','4th — Tauheed'],['kalima_astaghfar','5th — Astaghfar'],['kalima_radde_kufr','6th — Radde Kufr']] },
+  { title:'💚 Adhkar & Specials', cmds:[['darood_sharif','Durood Ibrahim'],['morning_adhkar','Morning Adhkar'],['evening_adhkar','Evening Adhkar'],['asmaul_husna','99 Names of Allah'],['islam_fact','Islamic Fact'],['prayers_info','5 Daily Prayers']] },
+  { title:'🌹 Fikra-e-Jaffery (Ahl al-Bayt ع)', cmds:[['jaffery_menu','Jaffery Menu'],['dua_kumayl','Dua Kumayl — Imam Ali ع'],['dua_arafah','Dua Arafah — Imam Husain ع'],['dua_tawassul','Dua Tawassul'],['dua_imam_zaman','Dua — Imam Mahdi ع'],['dua_nudba','Dua Nudba'],['ziyarat_ashura','Ziyarat Ashura'],['masoomeen14','14 Masoomeen ع'],['nahjul_balagha','Nahjul Balagha']] },
 ];
 
 const SETTINGS_REF = [
-  { cmd: '.bs',              desc: 'Full bot settings panel — all toggles in one place',                  example: '.bs' },
-  { cmd: '.mode public',     desc: 'PUBLIC: everyone can use commands',                                   example: '.mode public' },
-  { cmd: '.mode private',    desc: 'PRIVATE: only You (self-chat) can use commands',                     example: '.mode private' },
-  { cmd: '.anticall on',     desc: 'Reject all incoming calls',                                          example: '.anticall on' },
-  { cmd: '.antidelete on',   desc: 'Anti-delete in groups AND DMs globally',                             example: '.antidelete on' },
-  { cmd: '.antiviewonce on', desc: 'Reveal view-once in groups AND DMs globally',                        example: '.antiviewonce on' },
-  { cmd: '.autostatus on',   desc: 'Auto save & forward statuses to your DM',                           example: '.autostatus on' },
-  { cmd: '.statusview on',   desc: 'Auto view all statuses silently',                                    example: '.statusview on' },
-  { cmd: '.statusreact on',  desc: 'Auto react ❤️ to all statuses',                                     example: '.statusreact on' },
-  { cmd: '.autoread on',     desc: 'Mark all messages as read automatically',                            example: '.autoread on' },
-  { cmd: '.autotyping on',   desc: 'Show typing indicator while processing commands',                    example: '.autotyping on' },
-  { cmd: '.setprefix !',     desc: 'Change command prefix to any character',                             example: '.setprefix !' },
-  { cmd: '.setnewsletter',   desc: "Set Channel JID for real 'View channel' button on all replies",     example: '.setnewsletter 120363xxx@newsletter' },
+  { cmd:'.bs',              desc:'Full bot settings panel — all toggles in one place', example:'.bs' },
+  { cmd:'.mode public',     desc:'PUBLIC: everyone can use commands', example:'.mode public' },
+  { cmd:'.mode private',    desc:'PRIVATE: only You (self-chat) responds', example:'.mode private' },
+  { cmd:'.anticall on',     desc:'Reject all incoming calls automatically', example:'.anticall on' },
+  { cmd:'.antidelete on',   desc:'Anti-delete in groups AND DMs globally', example:'.antidelete on' },
+  { cmd:'.antiviewonce on', desc:'Auto-reveal view-once media to your "You" chat', example:'.antiviewonce on' },
+  { cmd:'.voword show',     desc:'Set a keyword — reply to any view-once with it to reveal', example:'.voword show' },
+  { cmd:'.reveal',          desc:'Reply to a view-once message to reveal it', example:'.reveal' },
+  { cmd:'.autostatus on',   desc:'Auto save & forward statuses to your DM', example:'.autostatus on' },
+  { cmd:'.statusview on',   desc:'Auto view all statuses silently', example:'.statusview on' },
+  { cmd:'.autoread on',     desc:'Mark all messages as read automatically', example:'.autoread on' },
+  { cmd:'.autotyping on',   desc:'Show typing indicator while processing', example:'.autotyping on' },
+  { cmd:'.setprefix !',     desc:'Change command prefix to any character', example:'.setprefix !' },
+  { cmd:'.setnewsletter',   desc:"Set Channel JID for 'View channel' button on all replies", example:'.setnewsletter 120363xxx@newsletter' },
 ];
 
-// ──────────────────────────────────────────────────────
-// Render static content
-// ──────────────────────────────────────────────────────
+// ── Render static content ─────────────────────────────────────
 function renderStatic() {
-  // Quick commands
   document.getElementById('quick-grid').innerHTML = QUICK_CMDS.map(c =>
     `<div class="cmd-card" onclick="copyCmd('${esc(c.cmd)}',this)" title="Click to copy">
       <code>${c.cmd}</code><span>${c.desc}</span>
     </div>`
   ).join('');
 
-  // Islamic
   document.getElementById('islamic-grid').innerHTML = ISLAMIC_SECS.map(s =>
-    `<div class="islamic-section">
-      <div class="islamic-section-title">${s.title}</div>
+    `<div class="isl-sec">
+      <div class="isl-sec-title">${s.title}</div>
       <div>${s.cmds.map(([c,d]) =>
-        `<div class="isl-cmd" onclick="copyCmd('.${c}')" title="Click to copy">.${c} <span class="isl-cmd-desc">— ${d}</span></div>`
+        `<div class="isl-cmd" onclick="copyCmd('.${c}')" title="Click to copy">.${c} <span class="isl-desc">— ${d}</span></div>`
       ).join('')}</div>
     </div>`
   ).join('');
 
-  // Categories — color-coded cards
   document.getElementById('cat-grid').innerHTML = CATEGORIES.map(cat =>
-    `<div class="cat-card cat-card-colored" style="border-left-color:${cat.color || 'var(--green)'}">
-      <div class="cat-card-head">
-        <span class="cat-icon">${cat.icon}</span>${cat.label}
-        <span class="cat-count-badge">${cat.cmds.length}</span>
-      </div>
+    `<div class="cat-card" style="border-left-color:${cat.color}">
+      <div class="cat-card-head"><span class="cat-icon">${cat.icon}</span>${cat.label}<span class="cat-count">${cat.cmds.length}</span></div>
       <div class="cat-cmds">${cat.cmds.map(c =>
-        `<span class="cat-cmd-chip" onclick="copyCmd('.${c}')" title="Click to copy" style="border-color:rgba(255,255,255,.07)">.${c}</span>`
+        `<span class="cat-chip" onclick="copyCmd('.${c}')" title="Click to copy">.${c}</span>`
       ).join('')}</div>
     </div>`
   ).join('');
 
-  // Settings
   document.getElementById('settings-grid').innerHTML = SETTINGS_REF.map(s =>
-    `<div class="setting-ref-item" onclick="copyCmd('${esc(s.example)}')">
-      <div class="setting-ref-cmd">${s.cmd}</div>
-      <div class="setting-ref-desc">${s.desc}</div>
-      <div class="setting-ref-example">e.g. ${s.example}</div>
+    `<div class="setting-item" onclick="copyCmd('${esc(s.example)}')">
+      <div class="setting-cmd">${s.cmd}</div>
+      <div class="setting-desc">${s.desc}</div>
+      <div class="setting-eg">e.g. ${s.example}</div>
     </div>`
   ).join('');
 }
@@ -873,17 +779,12 @@ function renderStatic() {
 function esc(s) { return s.replace(/'/g, "\\'"); }
 
 function toggleSection(bodyId) {
-  const body = document.getElementById(bodyId);
+  const body  = document.getElementById(bodyId);
   const arrow = document.getElementById('toggle-' + bodyId);
   if (!body) return;
-  const isCollapsed = body.classList.contains('collapsed');
-  if (isCollapsed) {
-    body.classList.remove('collapsed');
-    if (arrow) arrow.style.transform = 'rotate(0deg)';
-  } else {
-    body.classList.add('collapsed');
-    if (arrow) arrow.style.transform = 'rotate(-90deg)';
-  }
+  const collapsed = body.classList.contains('collapsed');
+  body.classList.toggle('collapsed', !collapsed);
+  if (arrow) arrow.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
 }
 
 let _copyTimer = null;
@@ -897,18 +798,17 @@ function copyCmd(txt, el) {
     clearTimeout(_copyTimer);
     _copyTimer = setTimeout(() => { el.classList.remove('copied'); code.textContent = orig; }, 1500);
   }
+  showToast('✅ Copied: ' + txt.split(' ')[0]);
 }
 
-// ──────────────────────────────────────────────────────
-// Screen management
-// ──────────────────────────────────────────────────────
+// ── Screens ───────────────────────────────────────────────────
 function show(id) {
   ['screen-loading','screen-connect','screen-dash'].forEach(s =>
-    document.getElementById(s).style.display = s === id ? (id === 'screen-connect' ? 'block' : 'block') : 'none'
+    document.getElementById(s).style.display = s === id ? 'block' : 'none'
   );
 }
 
-function showDash(info) {
+function showDash() {
   show('screen-dash');
   loadStats();
 }
@@ -918,39 +818,150 @@ function goConnect() {
   show('screen-connect');
 }
 
+// ── Sessions list ─────────────────────────────────────────────
+function renderSessions(sessions) {
+  const conn = sessions.filter(s => s.status === 'connected');
+  const el   = document.getElementById('sess-list');
+  if (!el) return;
+
+  if (!conn.length) {
+    el.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:12px">No connected sessions. Click "Connect Another Number" below.</div>`;
+    return;
+  }
+
+  el.innerHTML = conn.map(s => {
+    const phone = s.phone || s.id || '—';
+    const name  = s.name  || '';
+    const displayNum = phone.startsWith('+') ? phone : `+${phone}`;
+    return `<div class="sess-row">
+      <span class="sess-dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></span>
+      <div class="sess-info">
+        <div class="sess-name">${name ? name : displayNum}</div>
+        <div class="sess-sub">${name ? displayNum : 'WhatsApp Bot Account'}</div>
+      </div>
+      <button class="btn-discon" onclick="disconnectSession('${esc(s.id)}')">✕ Disconnect</button>
+    </div>`;
+  }).join('');
+}
+
 async function disconnectSession(id) {
-  if (!confirm(`Disconnect session "${id}"?\n\nThe bot will stop sending/receiving on this number.`)) return;
+  if (!confirm(`Disconnect this session?\n\nThe bot will stop on this number.`)) return;
   try {
     const r = await fetch(BASE + '/session/' + encodeURIComponent(id), { method: 'DELETE' });
     const d = await r.json();
-    if (d.ok) {
-      showToast(`✅ Session "${id}" disconnected`);
-      setTimeout(loadStats, 1200);
-    } else {
-      showToast('❌ ' + (d.error || 'Disconnect failed'));
+    if (d.ok) { showToast('✅ Session disconnected'); setTimeout(loadStats, 1200); }
+    else showToast('❌ ' + (d.error || 'Disconnect failed'));
+  } catch (e) { showToast('❌ Error: ' + e.message); }
+}
+
+// ── Stats ─────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch(BASE + '/api/stats');
+    const d = await r.json();
+
+    const upEl  = document.getElementById('s-uptime');
+    const cmEl  = document.getElementById('s-cmds');
+    const ramEl = document.getElementById('s-ram');
+    const ramBar= document.getElementById('ram-bar');
+
+    if (upEl) upEl.textContent  = d.uptime || '--';
+    if (cmEl) cmEl.textContent  = (d.plugins || 170) + '+';
+    if (ramEl && d.ram) {
+      ramEl.textContent = d.ram + ' MB';
+      const pct = Math.min((d.ram / 512) * 100, 100);
+      if (ramBar) { ramBar.style.width = pct + '%'; ramBar.style.background = pct > 80 ? 'var(--red)' : pct > 60 ? 'var(--yellow)' : '#f59e0b'; }
     }
-  } catch (e) {
-    showToast('❌ Error: ' + e.message);
+
+    const sessions = d.sessions || [];
+    const connected = sessions.filter(s => s.status === 'connected');
+
+    // Update hero number text
+    const heroNum = document.getElementById('hero-num-text');
+    if (heroNum) {
+      if (!connected.length) {
+        heroNum.textContent = 'No sessions connected';
+        document.querySelector('.dash-hero-num .dot')?.setAttribute('class', 'dot dot-gray');
+      } else if (connected.length === 1) {
+        const s = connected[0];
+        const phone = s.phone || s.id || '';
+        const displayNum = phone ? (phone.startsWith('+') ? phone : '+' + phone) : '';
+        heroNum.textContent = displayNum ? `Connected: ${displayNum}` : 'Connected & Ready';
+      } else {
+        heroNum.textContent = `${connected.length} Sessions Connected`;
+      }
+    }
+
+    renderSessions(sessions);
+  } catch {}
+}
+
+// ── Search ────────────────────────────────────────────────────
+function filterCmds(query) {
+  const q = query.trim().toLowerCase();
+  const srEl  = document.getElementById('search-results');
+  const sgEl  = document.getElementById('search-result-grid');
+  const noEl  = document.getElementById('search-no-result');
+  const stEl  = document.getElementById('search-term');
+  const catsSec = document.getElementById('cats-section');
+  const scEl  = document.getElementById('search-count');
+
+  if (!q) {
+    srEl.style.display = 'none';
+    if (catsSec) catsSec.style.display = '';
+    if (scEl) scEl.textContent = '';
+    return;
   }
+
+  const matches = CATEGORIES.map(cat => ({
+    ...cat,
+    cmds: cat.cmds.filter(c => c.toLowerCase().includes(q) || cat.label.toLowerCase().includes(q))
+  })).filter(c => c.cmds.length);
+
+  const quickMatches = QUICK_CMDS.filter(c =>
+    c.cmd.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)
+  );
+
+  srEl.style.display = '';
+  if (catsSec) catsSec.style.display = 'none';
+
+  const total = matches.reduce((s, c) => s + c.cmds.length, 0) + quickMatches.length;
+  if (scEl) scEl.textContent = total > 0 ? `${total} found` : '';
+
+  if (!total) {
+    sgEl.innerHTML = '';
+    noEl.style.display = '';
+    if (stEl) stEl.textContent = q;
+    return;
+  }
+
+  noEl.style.display = 'none';
+  let html = '';
+  if (quickMatches.length) {
+    html += `<div class="cat-card" style="border-left-color:#25d366">
+      <div class="cat-card-head"><span class="cat-icon">⚡</span>Quick Commands<span class="cat-count">${quickMatches.length}</span></div>
+      <div class="cat-cmds">${quickMatches.map(c =>
+        `<span class="cat-chip" onclick="copyCmd('${esc(c.cmd)}')" title="${c.desc}">${c.cmd.split(' ')[0]}</span>`
+      ).join('')}</div></div>`;
+  }
+  html += matches.map(cat =>
+    `<div class="cat-card" style="border-left-color:${cat.color}">
+      <div class="cat-card-head"><span class="cat-icon">${cat.icon}</span>${cat.label}<span class="cat-count">${cat.cmds.length}</span></div>
+      <div class="cat-cmds">${cat.cmds.map(c =>
+        `<span class="cat-chip" onclick="copyCmd('.${c}')">.${c}</span>`
+      ).join('')}</div></div>`
+  ).join('');
+  sgEl.innerHTML = html;
 }
 
-// ──────────────────────────────────────────────────────
-// Connect screen logic
-// ──────────────────────────────────────────────────────
-let _csMode = 'pair';
-let _csSessId = localStorage.getItem('mySessionId') || null;
-let _csPoll = null;
-
-function csMode(m) {
-  _csMode = m;
-  document.getElementById('tab-pair').classList.toggle('active', m === 'pair');
-  document.getElementById('tab-qr').classList.toggle('active', m === 'qr');
-  document.getElementById('pair-panel').style.display = m === 'pair' ? '' : 'none';
-  document.getElementById('qr-panel').style.display = m === 'qr' ? '' : 'none';
-}
+// ── Connect Screen ────────────────────────────────────────────
+let _csPhone  = '';
+let _csSessId = '';
+let _csPoll   = null;
+let _codePoll = null;
 
 function csStep(s) {
-  ['cs-form','cs-code-step','cs-qr-step','cs-done-step'].forEach(id =>
+  ['cs-form','cs-code-step','cs-done-step'].forEach(id =>
     document.getElementById(id).style.display = id === s ? '' : 'none'
   );
 }
@@ -958,103 +969,38 @@ function csStep(s) {
 function csErr(msg) {
   const el = document.getElementById('cs-err');
   el.textContent = msg; el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 5000);
+  setTimeout(() => el.classList.remove('show'), 6000);
 }
 
 function csReset() {
-  clearInterval(_csPoll); clearInterval(_qrPoll); clearInterval(_codePoll);
-  _csSessId = null;
-  localStorage.removeItem('mySessionId');
+  clearInterval(_csPoll); clearInterval(_codePoll);
+  _csSessId = ''; _csPhone = '';
   csStep('cs-form');
   const btn = document.getElementById('cs-btn');
-  btn.disabled = false; btn.textContent = 'Start Bot →';
-}
-
-let _qrPoll = null;
-let _codePoll = null;
-
-function csLoadQR() {
-  if (!_csSessId) return;
-  const img = document.getElementById('cs-qr-img');
-  const ph  = document.getElementById('cs-qr-ph');
-  const url = BASE + '/api/qr-image?session=' + encodeURIComponent(_csSessId) + '&t=' + Date.now();
-  const tmp = new Image();
-  tmp.onload = () => {
-    if (img) { img.src = url; img.style.display = 'block'; }
-    if (ph)  { ph.style.display = 'none'; }
-  };
-  tmp.onerror = () => {};
-  tmp.src = url;
-}
-
-function csStartQRPoll() {
-  clearInterval(_qrPoll);
-  csLoadQR();
-  _qrPoll = setInterval(csLoadQR, 2000);
+  if (btn) { btn.disabled = false; btn.textContent = 'Get Pairing Code →'; }
+  const codeEl = document.getElementById('cs-code');
+  if (codeEl) { codeEl.textContent = '⌛'; codeEl.className = 'pair-digits loading'; }
 }
 
 function csStartCodePoll() {
   clearInterval(_codePoll);
-  const el = document.getElementById('cs-code');
   _codePoll = setInterval(async () => {
     if (!_csSessId) return;
     try {
       const r = await fetch(BASE + '/api/pairing-code?session=' + encodeURIComponent(_csSessId));
       const d = await r.json();
-      if (d.code && el && el.textContent === '----') {
-        el.textContent = d.code;
+      if (d.code) {
+        const el = document.getElementById('cs-code');
+        if (el) {
+          // Format as XXXX-XXXX
+          const raw = d.code.replace(/-/g, '');
+          el.textContent = raw.length === 8 ? raw.slice(0,4) + '-' + raw.slice(4) : d.code;
+          el.className = 'pair-digits';
+        }
         clearInterval(_codePoll);
       }
     } catch {}
-  }, 1500);
-}
-
-async function csConnect() {
-  const btn = document.getElementById('cs-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span>Connecting...';
-
-  if (_csMode === 'pair') {
-    const phone = document.getElementById('cs-phone').value.replace(/\D/g, '');
-    const sess = (document.getElementById('cs-sess-pair').value.trim() || phone || 'default').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30) || 'default';
-    if (phone.length < 7 || phone.length > 15) {
-      csErr('Please enter a valid number with country code (e.g. 923001234567)');
-      btn.disabled = false; btn.textContent = 'Start Bot →'; return;
-    }
-    _csSessId = sess;
-    localStorage.setItem('mySessionId', sess);
-    try {
-      const r = await fetch(BASE + '/api/session/create', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sess, method: 'pairing', phoneNumber: phone })
-      });
-      const d = await r.json();
-      if (!d.ok) { csErr('❌ ' + (d.error || 'Server error')); btn.disabled = false; btn.textContent = 'Start Bot →'; return; }
-      btn.disabled = false; btn.textContent = 'Start Bot →';
-      document.getElementById('cs-code').textContent = '----';
-      csStep('cs-code-step');
-      csStartCodePoll();
-      csPollStatus();
-    } catch(e) { csErr('❌ ' + e.message); btn.disabled = false; btn.textContent = 'Start Bot →'; }
-  } else {
-    const sess = (document.getElementById('cs-sess-qr').value.trim() || 'default').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30) || 'default';
-    _csSessId = sess;
-    localStorage.setItem('mySessionId', sess);
-    csStep('cs-qr-step');
-    document.getElementById('cs-qr-img').style.display = 'none';
-    document.getElementById('cs-qr-ph').style.display = '';
-    try {
-      const r = await fetch(BASE + '/api/session/create', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sess, method: 'qr' })
-      });
-      const d = await r.json();
-      if (!d.ok) { csErr('❌ ' + (d.error || 'Error')); csReset(); return; }
-      csStartQRPoll();
-      csPollStatus();
-    } catch(e) { csErr('❌ ' + e.message); csReset(); }
-    btn.disabled = false; btn.textContent = 'Start Bot →';
-  }
+  }, 1000);
 }
 
 function csPollStatus() {
@@ -1065,177 +1011,89 @@ function csPollStatus() {
       const d = await r.json();
       const sess = (d.sessions || []).find(s => s.id === _csSessId && s.status === 'connected');
       if (sess) {
-        clearInterval(_csPoll);
-        clearInterval(_qrPoll);
-        clearInterval(_codePoll);
+        clearInterval(_csPoll); clearInterval(_codePoll);
         csStep('cs-done-step');
-        setTimeout(() => showDash(sess), 1000);
+        setTimeout(() => showDash(), 1100);
       }
     } catch {}
   }, 1800);
 }
 
-function csCopy() {
-  const code = document.getElementById('cs-code').textContent;
-  navigator.clipboard.writeText(code.replace(/-/g, '')).catch(() => {});
-  const btn = document.getElementById('cs-copy-btn');
-  btn.textContent = '✅ Copied!';
-  setTimeout(() => btn.textContent = '📋 Copy Code', 2000);
-}
+async function csConnect() {
+  const btn   = document.getElementById('cs-btn');
+  const phone = document.getElementById('cs-phone').value.replace(/\D/g,'');
 
-// ──────────────────────────────────────────────────────
-// Stats polling
-// ──────────────────────────────────────────────────────
-async function loadStats() {
-  try {
-    const r = await fetch(BASE + '/api/stats');
-    const d = await r.json();
-    const upEl  = document.getElementById('s-uptime');
-    const cmEl  = document.getElementById('s-cmds');
-    const scEl  = document.getElementById('s-sessions-count');
-    if (upEl) upEl.textContent = d.uptime || '--';
-    if (cmEl) { cmEl.classList.add('count-anim'); cmEl.textContent = (d.plugins || 170) + '+'; setTimeout(() => cmEl.classList.remove('count-anim'), 500); }
-
-    const sessions = d.sessions || [];
-    const connected = sessions.filter(s => s.status === 'connected');
-    if (scEl) scEl.textContent = connected.length;
-
-    // sessions bar (max 5 shown as 100%)
-    const sessBar = document.getElementById('sess-bar');
-    if (sessBar) sessBar.style.width = Math.min(connected.length / 3 * 100, 100) + '%';
-
-    // RAM stat
-    const ramEl = document.getElementById('s-ram');
-    if (ramEl && d.ram) { ramEl.textContent = d.ram + ' MB'; }
-
-    // Update hero subtitle
-    const heroSub = document.getElementById('hero-sub');
-    if (heroSub) {
-      if (connected.length === 0) {
-        heroSub.innerHTML = `<span class="dot" style="background:#e53e3e"></span> No sessions connected`;
-      } else if (connected.length === 1) {
-        heroSub.innerHTML = `<span class="dot dot-green"></span> Connected &amp; Ready`;
-      } else {
-        heroSub.innerHTML = `<span class="dot dot-green"></span> ${connected.length} Sessions Connected`;
-      }
-    }
-  } catch {}
-}
-
-// ──────────────────────────────────────────────────────
-// Command search / filter
-// ──────────────────────────────────────────────────────
-function filterCmds(query) {
-  const q = query.trim().toLowerCase();
-  const searchResultsEl = document.getElementById('search-results');
-  const searchGridEl    = document.getElementById('search-result-grid');
-  const noResultEl      = document.getElementById('search-no-result');
-  const searchTermEl    = document.getElementById('search-term');
-  const catsSection     = document.getElementById('cats-section');
-  const quickSection    = document.querySelector('.section'); // first section = quick start
-  const searchCount     = document.getElementById('search-count');
-
-  if (!q) {
-    searchResultsEl.style.display = 'none';
-    if (catsSection) catsSection.style.display = '';
-    if (searchCount) searchCount.textContent = '';
+  if (phone.length < 7 || phone.length > 15) {
+    csErr('Please enter a valid number with country code — e.g. 923001234567');
     return;
   }
 
-  // Search across all categories
-  const matches = [];
-  for (const cat of CATEGORIES) {
-    const matchedCmds = cat.cmds.filter(c => c.toLowerCase().includes(q) || cat.label.toLowerCase().includes(q));
-    if (matchedCmds.length > 0) {
-      matches.push({ ...cat, cmds: matchedCmds });
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Requesting code…';
+
+  // Use phone number as session ID
+  const sessId = phone;
+  _csPhone  = phone;
+  _csSessId = sessId;
+
+  // Show the number
+  const pd = document.getElementById('cs-phone-display');
+  if (pd) pd.textContent = '+' + phone;
+
+  try {
+    const r = await fetch(BASE + '/api/session/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: sessId, method: 'pairing', phoneNumber: phone })
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      csErr('❌ ' + (d.error || 'Server error'));
+      btn.disabled = false; btn.textContent = 'Get Pairing Code →';
+      return;
     }
-  }
-
-  // Also search quick commands
-  const quickMatches = QUICK_CMDS.filter(c =>
-    c.cmd.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q)
-  );
-
-  searchResultsEl.style.display = '';
-  if (catsSection) catsSection.style.display = 'none';
-
-  const totalMatches = matches.reduce((s, c) => s + c.cmds.length, 0) + quickMatches.length;
-  if (searchCount) searchCount.textContent = totalMatches > 0 ? `${totalMatches} found` : '';
-
-  if (totalMatches === 0) {
-    searchGridEl.innerHTML = '';
-    noResultEl.style.display = '';
-    if (searchTermEl) searchTermEl.textContent = q;
-  } else {
-    noResultEl.style.display = 'none';
-
-    let html = '';
-    // Quick command matches
-    if (quickMatches.length > 0) {
-      html += `<div class="cat-card cat-card-colored" style="border-left-color:#25d366">
-        <div class="cat-card-head"><span class="cat-icon">⚡</span>Quick Commands<span class="cat-count-badge">${quickMatches.length}</span></div>
-        <div class="cat-cmds">${quickMatches.map(c =>
-          `<span class="cat-cmd-chip" onclick="copyCmd('${esc(c.cmd)}')" title="${c.desc}">${c.cmd.split(' ')[0]}</span>`
-        ).join('')}</div>
-      </div>`;
-    }
-
-    // Category matches
-    html += matches.map(cat =>
-      `<div class="cat-card cat-card-colored" style="border-left-color:${cat.color || 'var(--green)'}">
-        <div class="cat-card-head"><span class="cat-icon">${cat.icon}</span>${cat.label}<span class="cat-count-badge">${cat.cmds.length}</span></div>
-        <div class="cat-cmds">${cat.cmds.map(c =>
-          `<span class="cat-cmd-chip" onclick="copyCmd('.${c}')" title="Click to copy">.${c}</span>`
-        ).join('')}</div>
-      </div>`
-    ).join('');
-
-    searchGridEl.innerHTML = html;
+    btn.disabled = false; btn.textContent = 'Get Pairing Code →';
+    csStep('cs-code-step');
+    csStartCodePoll();
+    csPollStatus();
+  } catch(e) {
+    csErr('❌ ' + e.message);
+    btn.disabled = false; btn.textContent = 'Get Pairing Code →';
   }
 }
 
-// ──────────────────────────────────────────────────────
-// SSE — real-time events
-// ──────────────────────────────────────────────────────
-let sse = null;
-let sseRetry = 1000;
+function csCopy() {
+  const code = (document.getElementById('cs-code')?.textContent || '').replace(/-/g,'');
+  if (!code || code === '⌛') return;
+  navigator.clipboard.writeText(code).catch(() => {});
+  const btn = document.getElementById('cs-copy-btn');
+  btn.textContent = '✅ Copied!'; btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = '📋 Copy Code'; btn.classList.remove('copied'); }, 2000);
+}
+
+// ── SSE — real-time updates ───────────────────────────────────
+let sse = null, sseRetry = 1000;
 
 function connectSSE() {
   if (sse) { try { sse.close(); } catch {} }
   sse = new EventSource(BASE + '/api/events');
 
-  sse.addEventListener('qr', e => {
-    const { sessionId } = JSON.parse(e.data);
-    if (document.getElementById('screen-connect').style.display !== 'none') {
-      // If this QR is for the session we're connecting, load it
-      if (!_csSessId || _csSessId === sessionId) {
-        if (!_csSessId) _csSessId = sessionId;
-        const step = document.getElementById('cs-qr-step');
-        if (step && step.style.display !== 'none') {
-          const ph  = document.getElementById('cs-qr-ph');
-          const img = document.getElementById('cs-qr-img');
-          const src = BASE + '/api/qr-image?session=' + encodeURIComponent(sessionId) + '&t=' + Date.now();
-          if (ph) ph.style.display = 'none';
-          if (img) { img.src = src; img.style.display = 'block'; }
-        }
-      }
-    }
-  });
-
   sse.addEventListener('pairingCode', e => {
     const { sessionId, code } = JSON.parse(e.data);
     if (!_csSessId || _csSessId === sessionId) {
       const el = document.getElementById('cs-code');
-      if (el && code) { el.textContent = code; clearInterval(_codePoll); }
+      if (el && code) {
+        const raw = code.replace(/-/g,'');
+        el.textContent = raw.length === 8 ? raw.slice(0,4) + '-' + raw.slice(4) : code;
+        el.className = 'pair-digits';
+        clearInterval(_codePoll);
+      }
     }
   });
 
   sse.addEventListener('pairingCodeError', e => {
     const { sessionId, error } = JSON.parse(e.data);
-    if (!_csSessId || _csSessId === sessionId) {
-      csErr('❌ ' + error);
-      csReset();
-    }
+    if (!_csSessId || _csSessId === sessionId) { csErr('❌ ' + error); csReset(); }
   });
 
   sse.addEventListener('status', e => {
@@ -1243,9 +1101,9 @@ function connectSSE() {
     if (d.status === 'connected') {
       if (document.getElementById('screen-connect').style.display !== 'none') {
         if (!_csSessId || _csSessId === d.sessionId) {
-          clearInterval(_csPoll); clearInterval(_qrPoll); clearInterval(_codePoll);
+          clearInterval(_csPoll); clearInterval(_codePoll);
           csStep('cs-done-step');
-          setTimeout(() => showDash({}), 900);
+          setTimeout(showDash, 1000);
         }
       }
       loadStats();
@@ -1261,9 +1119,7 @@ function connectSSE() {
   };
 }
 
-// ──────────────────────────────────────────────────────
-// Boot — check if already connected
-// ──────────────────────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────
 renderStatic();
 
 (async () => {
@@ -1271,11 +1127,8 @@ renderStatic();
     const r = await fetch(BASE + '/api/stats');
     const d = await r.json();
     const conn = (d.sessions || []).find(s => s.status === 'connected');
-    if (conn) {
-      showDash(conn);
-    } else {
-      show('screen-connect');
-    }
+    if (conn) { showDash(); }
+    else { show('screen-connect'); }
   } catch {
     show('screen-connect');
   }
@@ -1283,16 +1136,13 @@ renderStatic();
   setInterval(loadStats, 10000);
 })();
 
-let _toastTimer = null;
-function showToast(msg, duration = 3000) {
+function showToast(msg, dur=2500) {
   const el = document.getElementById('toast');
   if (!el) return;
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove('show'), dur);
 }
 </script>
-<div id="toast"></div>
 </body>
 </html>
