@@ -9,7 +9,8 @@
 // in the wrong chat, or the toggle writing to a settings key nobody reads).
 // ============================================
 
-import { voCacheGet } from '../../lib/voCache.js';
+import { voCacheGet, voCacheHas } from '../../lib/voCache.js';
+import logger from '../../lib/logger.js';
 
 export default {
   command: 'antiviewonce',
@@ -67,6 +68,7 @@ export default {
 
       const cached = voCacheGet(quotedId);
       if (!cached) {
+        logger.warn({ quotedId, hasIt: voCacheHas(quotedId) }, '.reveal: quoted message ID not found in voCache');
         return reply(
           `❌ *Media not in cache* — this view-once may have arrived before the bot started, or cache expired.\n\n` +
           `💡 Make sure *.antiviewonce on* is enabled so future view-once messages are auto-cached.\n\n` +

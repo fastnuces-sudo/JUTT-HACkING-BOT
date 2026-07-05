@@ -44,5 +44,20 @@
     "inventory": [],
     "lastSeen": 1781954864866,
     "deviceSource": "default"
+  },
+  "102353416007774@lid": {
+    "id": "102353416007774@lid",
+    "name": "",
+    "xp": 0,
+    "level": 1,
+    "balance": 1000,
+    "commandsUsed": 0,
+    "lastDaily": null,
+    "dailyStreak": 0,
+    "warnings": 0,
+    "banned": false,
+    "createdAt": 1783223336037,
+    "inventory": [],
+    "lastSeen": 1783223336037
   }
 }

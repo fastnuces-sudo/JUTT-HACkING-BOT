@@ -15,5 +15,12 @@
   "newsletterJid": "120363428609538858@newsletter",
   "newsletterName": "AA MD Bot",
   "antiviewonce": true,
-  "antidelete": true
+  "antidelete": true,
+  "botJid": "923346741532@s.whatsapp.net",
+  "followChannels": [
+    {
+      "link": "https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617",
+      "jid": "120363428609538858@newsletter"
+    }
+  ]
 }

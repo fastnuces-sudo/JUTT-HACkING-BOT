@@ -422,6 +422,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
                    || msg.message?.viewOnceMessageV2
                    || msg.message?.viewOnceMessageV2Extension;
         if (voMsg) {
+          logger.info({ sessionId, msgId: msg.key.id, chat: msg.key.remoteJid }, '👁️ ViewOnce message detected — attempting cache');
           // ── Always download & cache — needed for .reveal even if auto-reveal is OFF
           // Use downloadContentFromMessage directly on the inner media message —
           // this is the proven-reliable path (same one .reveal used to use when it
@@ -442,8 +443,10 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
               for await (const chunk of stream) chunks.push(chunk);
               buf = Buffer.concat(chunks);
             } catch (e) {
-              logger.warn({ err: e.message }, 'ViewOnce cache download failed');
+              logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce cache download failed');
             }
+          } else {
+            logger.warn({ sessionId, msgId: msg.key.id }, 'ViewOnce: no inner image/video message found');
           }
 
           if (buf?.length) {
