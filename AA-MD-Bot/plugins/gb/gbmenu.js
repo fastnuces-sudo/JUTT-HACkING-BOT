@@ -39,19 +39,13 @@ export default {
 
       `╭─── 🔓  *VIEW-ONCE & DELETE*\n` +
       `│  ▸ *${p}antiviewonce on/off*\n` +
-      `│     Auto-reveal view-once photos/videos\n` +
-      `│     + forward them to your "You" chat\n` +
+      `│     Auto-reveal ALL view-once → "You"\n` +
       `│\n` +
-      `│  ▸ *${p}reveal* (reply to a view-once)\n` +
-      `│     Manually reveal → "You" private chat\n` +
-      `│\n` +
-      `│  ▸ *${p}voword <keyword>*  🆕\n` +
-      `│     Set a secret keyword. Whenever a\n` +
-      `│     view-once arrives, just type that\n` +
-      `│     keyword as a reply — the bot will\n` +
-      `│     silently reveal it in your "You" chat\n` +
+      `│  ▸ *${p}voword <keyword>*\n` +
+      `│     Set secret keyword — reply to any\n` +
+      `│     view-once with keyword → "You" chat\n` +
       `│     Example: *${p}voword show*\n` +
-      `│  ▸ *${p}voword off* — turn off the keyword\n` +
+      `│  ▸ *${p}voword off* — remove keyword\n` +
       `│\n` +
       `│  ▸ *${p}antidelete on/off*\n` +
       `│     Recover deleted messages\n` +
@@ -119,7 +113,7 @@ export default {
       `│  ▸ *${p}antibot on/off*    — Block other bots\n` +
       `│  ▸ *${p}antilink on/off*   — Block links\n` +
       `│  ▸ *${p}antidelete on/off* — Recover deletes\n` +
-      `│  ▸ *${p}antiviewonce on/off*— View-once reveal\n` +
+      `│  ▸ *${p}antiviewonce on/off* — View-once reveal\n` +
       `╰${'─'.repeat(34)}\n\n` +
 
       `> 👑 *Commands marked 👑 are owner-only*\n` +

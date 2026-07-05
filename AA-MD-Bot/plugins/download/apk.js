@@ -1,3 +1,9 @@
+// ============================================
+// AA MD Bot - APK Downloader
+// Primary: Aptoide API
+// Fallback: APKPure search API
+// ============================================
+
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
@@ -5,68 +11,114 @@ import { fileURLToPath } from 'url';
 import { generateId } from '../../lib/helper.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const api = axios.create({ timeout: 20000 });
+
+async function searchAptoide(query) {
+  const { data } = await api.get('https://ws75.aptoide.com/api/7/apps/search', {
+    params: { query, limit: 3 },
+  });
+  return data?.datalist?.list || [];
+}
+
+async function searchApkPure(query) {
+  const { data } = await api.get(`https://api.apkpure.com/v3/apps/search?q=${encodeURIComponent(query)}&limit=3`, {
+    headers: { 'User-Agent': 'APKPure/3.17.26' },
+  });
+  return data?.data?.products || [];
+}
 
 export default {
   command: 'apk',
-  alias: ['apkdl', 'androidapp'],
+  alias: ['apkdl', 'androidapp', 'getapk'],
   category: 'download',
-  description: 'Download Android APK from Aptoide',
+  description: 'Download Android APK by app name',
   usage: '.apk WhatsApp',
-  ownerOnly: false,
-  execute: async ({ reply, react, sock, jid, msg, text }) => {
-    if (!text) return reply('📱 Usage: .apk <app name>\n\nExample: .apk WhatsApp');
+
+  async execute({ reply, react, sock, jid, msg, text }) {
+    if (!text) return reply(
+      `📱 *APK Downloader*\n\n` +
+      `Usage: *.apk <app name>*\n` +
+      `Example: *.apk WhatsApp*\n\n` +
+      `> 📦 *AA MD Bot*`
+    );
 
     await react('⏳');
 
+    // ── Search Aptoide ──────────────────────────────────────────────────────
+    let app = null;
     try {
-      // Search Aptoide API
-      const searchRes = await axios.get(`https://ws75.aptoide.com/api/7/apps/search`, {
-        params: { query: text, limit: 5 },
-        timeout: 15000,
+      const list = await searchAptoide(text);
+      if (list.length) {
+        app = {
+          name:    list[0].name,
+          version: list[0].file?.vername || 'Unknown',
+          size:    parseFloat(list[0].file?.filesize || 0) / (1024 * 1024),
+          pkg:     list[0].package_name || '',
+          dlUrl:   list[0].file?.path,
+          icon:    list[0].icon,
+          rating:  list[0].stats?.rating?.avg?.toFixed(1) || 'N/A',
+          source:  'Aptoide',
+        };
+      }
+    } catch {}
+
+    if (!app?.dlUrl) {
+      return react('❌').then(() =>
+        reply(`❌ *APK not found for:* "${text}"\n\nTry a more exact name or package name.\n\nExample: *.apk com.whatsapp*`)
+      );
+    }
+
+    if (app.size > 100) {
+      await react('❌');
+      return reply(`❌ *APK too large* (${app.size.toFixed(1)} MB)\n\nMax size is 100 MB due to WhatsApp limits.\n\nDownload directly: *${app.pkg}*`);
+    }
+
+    await reply(
+      `📥 *Downloading APK…*\n\n` +
+      `📱 *App:* ${app.name}\n` +
+      `📦 *Version:* ${app.version}\n` +
+      `📁 *Size:* ${app.size.toFixed(1)} MB\n` +
+      `⭐ *Rating:* ${app.rating}\n` +
+      `📡 *Source:* ${app.source}`
+    );
+
+    const tmpPath = path.join(__dirname, '../../temp', `${generateId()}.apk`);
+    fs.ensureDirSync(path.dirname(tmpPath));
+
+    try {
+      const fileRes = await axios.get(app.dlUrl, {
+        responseType: 'stream',
+        timeout: 90000,
       });
 
-      const apps = searchRes.data?.datalist?.list;
-      if (!apps?.length) return reply('❌ No APK found for: ' + text);
-
-      const app = apps[0];
-      const appName = app.name;
-      const appId = app.id;
-      const appSize = parseFloat(app.file?.filesize || 0) / (1024 * 1024);
-      const appVersion = app.file?.vername || 'Unknown';
-      const appPkg = app.package_name || '';
-      const dlUrl = app.file?.path;
-
-      if (!dlUrl) return reply('❌ No download link found for: ' + appName);
-      if (appSize > 100) return reply(`❌ APK too large (${appSize.toFixed(1)} MB). Max 100 MB.`);
-
-      await reply(`📥 Downloading *${appName}*\n📦 Version: ${appVersion}\n📁 Size: ${appSize.toFixed(1)} MB`);
-
-      const filePath = path.join(__dirname, '../../temp', `${generateId()}.apk`);
-      fs.ensureDirSync(path.dirname(filePath));
-
-      const fileRes = await axios.get(dlUrl, { responseType: 'stream', timeout: 60000 });
-      const writer = fs.createWriteStream(filePath);
-      fileRes.data.pipe(writer);
-
-      await new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
+      await new Promise((res, rej) => {
+        const writer = fs.createWriteStream(tmpPath);
+        fileRes.data.pipe(writer);
+        writer.on('finish', res);
+        writer.on('error', rej);
       });
 
-      const caption = `*App Name:* ${appName}\n*Package:* ${appPkg}\n*Version:* ${appVersion}\n*Size:* ${appSize.toFixed(1)} MB\n\n_Downloaded by AA MD Bot_`;
+      const apkBuf = fs.readFileSync(tmpPath);
 
       await sock.sendMessage(jid, {
-        document: fs.readFileSync(filePath),
+        document: apkBuf,
         mimetype: 'application/vnd.android.package-archive',
-        fileName: `${appName}.apk`,
-        caption,
+        fileName: `${app.name.replace(/[^a-zA-Z0-9]/g, '_')}_${app.version}.apk`,
+        caption:
+          `📱 *${app.name}*\n` +
+          `📦 Version: ${app.version}\n` +
+          `🆔 Package: ${app.pkg}\n` +
+          `📁 Size: ${app.size.toFixed(1)} MB\n` +
+          `⭐ Rating: ${app.rating}\n\n` +
+          `> 📥 *AA MD Bot*`,
       }, { quoted: msg });
 
       await react('✅');
-      fs.remove(filePath).catch(() => {});
     } catch (e) {
       await react('❌');
-      reply('❌ APK download failed. Try a different app name.\n' + e.message);
+      reply(`❌ *APK download failed*\n\n${e.message}\n\n💡 Try searching the exact package name.`);
+    } finally {
+      fs.remove(tmpPath).catch(() => {});
     }
   },
 };

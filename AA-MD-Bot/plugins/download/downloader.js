@@ -1,253 +1,266 @@
+// ============================================
+// AA MD Bot - Universal Multi-Platform Downloader
+// Primary: cobalt.tools (free, no key needed)
+// Platform fallbacks for each service
+// ============================================
+
 import axios from 'axios';
 
-const TT  = /(?<!\S)https?:\/\/(www\.)?(vm\.|vt\.|m\.)?tiktok\.com\/[^\s]+(?=\s|$)/gi;
+// URL detectors
+const TT  = /https?:\/\/(www\.)?(vm\.|vt\.|m\.)?tiktok\.com\/[^\s]+/gi;
 const IG  = /https?:\/\/(www\.)?instagram\.com\/[^\s]+/gi;
-const MF  = /(?<!\S)https?:\/\/(www\.)?mediafire\.com\/\S+(?=\s|$)/gi;
+const MF  = /https?:\/\/(www\.)?mediafire\.com\/\S+/gi;
 const PIN = /https?:\/\/(www\.)?(pinterest\.(com|fr|de|co\.uk|jp|ru|ca|it|com\.au|com\.mx|com\.br|es|pl)|pin\.it)\/[^\s]+/gi;
-const FB  = /(?<!\S)https?:\/\/(www\.|m\.|web\.)?facebook\.com\/[^\s]+(?=\s|$)/gi;
-const TW  = /(?<!\S)https?:\/\/(www\.)?(twitter\.com|x\.com)\/[^\s]+(?=\s|$)/gi;
-const VD  = /https?:\/\/(www\.)?videy\.co\/[^\s]+/gi;
-const TH  = /https?:\/\/(www\.)?threads\.(net|com)\/[^\s]+/gi;
-const MG  = /https?:\/\/mega\.nz\/[^\s]+/gi;
-const SC  = /(?<!\S)https?:\/\/(www\.|on\.)?soundcloud\.com\/[^\s]+(?=\s|$)/gi;
+const FB  = /https?:\/\/(www\.|m\.|web\.)?facebook\.com\/[^\s]+/gi;
+const TW  = /https?:\/\/(www\.)?(twitter\.com|x\.com)\/[^\s]+/gi;
+const SC  = /https?:\/\/(www\.|on\.)?soundcloud\.com\/[^\s]+/gi;
 const SP  = /https?:\/\/open\.spotify\.com\/[^\s]+/gi;
-const YT  = /https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[^\s]+/gi;
-const SF  = /https?:\/\/sfile\.co\/[^\s]+/gi;
+const YT  = /https?:\/\/(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/gi;
+const TH  = /https?:\/\/(www\.)?threads\.(net|com)\/[^\s]+/gi;
 
-const clean = (m) => m?.[0]?.replace(/[.,!?]$/, '');
+const clean = (m) => m?.[0]?.replace(/[.,!?;]$/, '');
 
-const ext = (txt) => {
+const extract = (txt) => {
   if (!txt) return null;
   let m;
   m = txt.match(TT);  if (m) return { type: 'tt',  url: clean(m) };
-  m = txt.match(IG);  if (m && !clean(m).includes('/stories/')) return { type: 'ig', url: clean(m) };
+  m = txt.match(IG);  if (m) { const u = clean(m); if (!u.includes('/stories/')) return { type: 'ig', url: u }; }
   m = txt.match(PIN); if (m) return { type: 'pin', url: clean(m) };
-  m = txt.match(FB);  if (m) { const u = clean(m); if (!u.includes('/login') && !u.includes('/dialog') && !u.includes('/plugins/')) return { type: 'fb', url: u }; }
+  m = txt.match(FB);  if (m) { const u = clean(m); if (!/\/(login|dialog|plugins)\//.test(u)) return { type: 'fb', url: u }; }
   m = txt.match(TW);  if (m) return { type: 'tw',  url: clean(m) };
-  m = txt.match(VD);  if (m) return { type: 'vd',  url: clean(m) };
   m = txt.match(TH);  if (m) return { type: 'th',  url: clean(m) };
-  m = txt.match(MG);  if (m) return { type: 'mg',  url: clean(m) };
   m = txt.match(SC);  if (m) return { type: 'sc',  url: clean(m) };
   m = txt.match(SP);  if (m) return { type: 'sp',  url: clean(m) };
   m = txt.match(YT);  if (m) return { type: 'yt',  url: clean(m) };
-  m = txt.match(SF);  if (m) return { type: 'sf',  url: clean(m) };
   m = txt.match(MF);  if (m) return { type: 'mf',  url: clean(m) };
   return null;
 };
 
 const api = axios.create({ timeout: 30000 });
 
-const tt  = async (url) => { const { data: d } = await api.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`); if (d.code !== 0 || !d.data) throw new Error(d.msg || 'TikTok API error'); return d.data.images?.length ? { type: 'image', data: d.data.images } : { type: 'video', data: d.data.play }; };
-const ig  = async (url) => { const { data: d } = await api.get(`https://api-faa.my.id/faa/igdl?url=${encodeURIComponent(url)}`); if (!d.status || !d.result?.url) throw new Error(d.message || 'Instagram API error'); return { urls: d.result.url, isVideo: d.result.metadata?.isVideo }; };
-const pin = async (url) => { const { data: d } = await api.get(`https://api-faa.my.id/faa/pin-down?url=${encodeURIComponent(url)}`); if (!d.status || !d.result?.medias) throw new Error(d.message || 'Pinterest API error'); return d.result.medias; };
-const fb  = async (url) => { const { data: d } = await api.get(`https://api-faa.my.id/faa/fbdownload?url=${encodeURIComponent(url)}`); if (!d.status || !d.result?.media) throw new Error(d.message || 'Facebook API error'); return d.result.media; };
-const tw  = async (url) => { const { data: d } = await api.get(`https://api.nexray.web.id/downloader/twitter?url=${encodeURIComponent(url)}`); if (!d.status || !d.result) throw new Error(d.message || 'Twitter/X API error'); return { type: d.result.type, data: d.result.download_url }; };
-const vd  = async (url) => { const { data: d } = await api.get(`https://api.nexray.web.id/downloader/videy?url=${encodeURIComponent(url)}`); if (!d.status || !d.result) throw new Error(d.message || 'Videy API error'); return d.result; };
-const mf  = async (url) => { const { data: d } = await api.get(`https://api-faa.my.id/faa/mediafire?url=${encodeURIComponent(url)}`); if (!d.status || !d.result) throw new Error(d.message || 'MediaFire API error'); return d.result; };
-const th  = async (url) => { const { data: d } = await api.get(`https://api.nexray.web.id/downloader/threads?url=${encodeURIComponent(url)}`); if (!d.status || !d.result?.media) throw new Error(d.message || 'Threads API error'); return d.result.media; };
-const mg  = async (url) => { const { data: d } = await api.get(`https://api.nexray.web.id/downloader/mega?url=${encodeURIComponent(url)}`); if (!d.status || !d.result) throw new Error(d.message || 'Mega API error'); return d.result; };
-const sc  = async (url) => { const { data: d } = await api.get(`https://api.nexray.web.id/downloader/soundcloud?url=${encodeURIComponent(url)}`); if (!d.status || !d.result?.url) throw new Error(d.message || 'SoundCloud API error'); return d.result; };
-const sp  = async (url) => { const { data: d } = await api.get(`https://api.nexray.web.id/downloader/spotify?url=${encodeURIComponent(url)}`); if (!d.status || !d.result?.url) throw new Error(d.message || 'Spotify API error'); return d.result; };
-const yt  = async (url) => { const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp3?url=${encodeURIComponent(url)}`); if (!d.status || !d.result?.url) throw new Error(d.message || 'YouTube API error'); return d.result; };
-const sf  = async (url) => { const { data: d } = await api.get(`https://api.nexray.web.id/downloader/sfile?url=${encodeURIComponent(url)}`); if (!d.status || !d.result?.url) throw new Error(d.message || 'Sfile API error'); return d.result; };
+// ── Cobalt.tools — free universal API ─────────────────────────────────────────
+async function cobalt(url, opts = {}) {
+  const { data } = await api.post('https://api.cobalt.tools/', {
+    url,
+    downloadMode: opts.mode || 'auto',
+    filenameStyle: 'pretty',
+    videoQuality: '720',
+    audioFormat: 'mp3',
+    ...opts,
+  }, {
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    timeout: 25000,
+  });
+  return data;
+}
 
+// ── Platform-specific fallbacks ────────────────────────────────────────────────
+async function tikwm(url) {
+  const { data: d } = await api.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
+  if (d.code !== 0 || !d.data) throw new Error(d.msg || 'TikTok API error');
+  return d.data.images?.length
+    ? { type: 'images', urls: d.data.images }
+    : { type: 'video',  url: d.data.play };
+}
+
+async function spotifyDown(url) {
+  const id = url.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/)?.[1];
+  if (!id) throw new Error('Invalid Spotify URL — must be a track link');
+  const { data } = await api.get(`https://api.spotifydown.com/download/${id}`, {
+    headers: { origin: 'https://spotifydown.com', referer: 'https://spotifydown.com' },
+  });
+  if (!data.success) throw new Error(data.error || 'Spotify download failed');
+  return { url: data.link, title: data.metadata?.title, artist: data.metadata?.artists };
+}
+
+async function faaApi(path, url) {
+  const { data: d } = await api.get(`https://api-faa.my.id/faa/${path}?url=${encodeURIComponent(url)}`);
+  if (!d.status) throw new Error(d.message || `${path} API error`);
+  return d.result;
+}
+
+// ── Main handler ───────────────────────────────────────────────────────────────
 export default {
   command: 'dl',
-  alias: ['download'],
-  description: 'Multi-platform media downloader (TikTok, Instagram, Facebook, Twitter/X, Pinterest, Threads, Videy, Mega, SoundCloud, Spotify, YouTube, MediaFire, Sfile)',
+  alias: ['download', 'save'],
+  description: 'Multi-platform downloader: TikTok, Instagram, Facebook, Twitter/X, Pinterest, Threads, SoundCloud, Spotify, YouTube, MediaFire',
   category: 'download',
 
-  execute: async ({ sock, msg, jid, args, text, react, reply, prefix }) => {
+  async execute({ sock, msg, jid, text, react, reply, prefix }) {
     let raw = text?.trim();
-
     if (!raw) {
       const quoted = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
       if (quoted) raw = (quoted.conversation || quoted.extendedTextMessage?.text || '').trim();
     }
+    if (!raw) return reply(
+      `*🔗 Universal Downloader*\n\n` +
+      `*Platforms:* TikTok • Instagram • Facebook • Twitter/X • Pinterest • Threads • SoundCloud • Spotify • YouTube • MediaFire\n\n` +
+      `*Usage:* ${prefix}dl <link>\n` +
+      `💡 Or just reply to any message containing a link`
+    );
 
-    if (!raw) {
-      return reply(`*Universal Downloader*
+    const detected = extract(raw);
+    if (!detected) return reply('❌ No supported link found. Paste a direct URL from one of the supported platforms.');
 
-*Supported Platforms:*
-TikTok • Instagram • Pinterest • Facebook
-Twitter/X • Threads • Videy • Mega
-SoundCloud • Spotify • YouTube • Sfile
-MediaFire
-
-*Usage:* ${prefix}dl <url>
-*Note:* Reply to a link also works`);
-    }
-
-    const url = ext(raw);
-    if (!url) return reply('Invalid URL. Please provide a valid link from supported platforms.');
-
-    await react('📥');
+    await react('⏳');
 
     try {
-      switch (url.type) {
-        case 'tt': {
-          const r = await tt(url.url);
-          if (r.type === 'video') {
-            await sock.sendMessage(jid, { video: { url: r.data }, mimetype: 'video/mp4' }, { quoted: msg });
-          } else if (r.type === 'image') {
-            if (!r.data?.length) throw new Error('No image data found');
-            for (const img of r.data) {
+      const { type, url } = detected;
+
+      // ── TikTok ──────────────────────────────────────────────────────────────
+      if (type === 'tt') {
+        let result;
+        try {
+          const c = await cobalt(url);
+          if (c.status === 'stream' || c.status === 'tunnel') {
+            await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '🎵 *TikTok via AA MD Bot*' }, { quoted: msg });
+          } else if (c.status === 'picker') {
+            for (const item of c.picker.slice(0, 4)) {
+              await sock.sendMessage(jid, item.type === 'video'
+                ? { video: { url: item.url }, mimetype: 'video/mp4' }
+                : { image: { url: item.url } }, { quoted: msg });
+            }
+          } else throw new Error('cobalt no stream');
+        } catch {
+          result = await tikwm(url);
+          if (result.type === 'video') {
+            await sock.sendMessage(jid, { video: { url: result.url }, mimetype: 'video/mp4', caption: '🎵 *TikTok via AA MD Bot*' }, { quoted: msg });
+          } else {
+            for (const img of result.urls.slice(0, 5)) {
               await sock.sendMessage(jid, { image: { url: img } }, { quoted: msg });
             }
           }
-          break;
-        }
-
-        case 'ig': {
-          const { urls, isVideo } = await ig(url.url);
-          if (!urls?.length) throw new Error('No media found');
-          for (const link of urls) {
-            if (isVideo) {
-              await sock.sendMessage(jid, { video: { url: link }, mimetype: 'video/mp4' }, { quoted: msg });
-            } else {
-              await sock.sendMessage(jid, { image: { url: link } }, { quoted: msg });
-            }
-          }
-          break;
-        }
-
-        case 'pin': {
-          const meds = await pin(url.url);
-          if (!meds?.length) throw new Error('No media found');
-          const imgs = meds.filter(m => m.type === 'image');
-          if (imgs.length > 0) {
-            for (const img of imgs) await sock.sendMessage(jid, { image: { url: img.url } }, { quoted: msg });
-          } else {
-            const vid = meds.find(m => m.type === 'video');
-            const gif = meds.find(m => m.type === 'gif');
-            if (vid) {
-              await sock.sendMessage(jid, { video: { url: vid.url }, mimetype: 'video/mp4' }, { quoted: msg });
-            } else if (gif) {
-              await sock.sendMessage(jid, { video: { url: gif.url }, gifPlayback: true }, { quoted: msg });
-            }
-          }
-          break;
-        }
-
-        case 'fb': {
-          const med = await fb(url.url);
-          if (med.video_hd || med.video_sd) {
-            await sock.sendMessage(jid, { video: { url: med.video_hd || med.video_sd }, mimetype: 'video/mp4' }, { quoted: msg });
-          } else if (med.photo_image) {
-            await sock.sendMessage(jid, { image: { url: med.photo_image } }, { quoted: msg });
-          } else {
-            throw new Error('No downloadable media found in this Facebook post');
-          }
-          break;
-        }
-
-        case 'tw': {
-          const r = await tw(url.url);
-          if (r.type === 'image') {
-            if (!r.data?.length) throw new Error('No image data found');
-            for (const img of r.data) await sock.sendMessage(jid, { image: { url: img.url } }, { quoted: msg });
-          } else if (r.type === 'video') {
-            if (!r.data?.length) throw new Error('No video data found');
-            const vqs = r.data.filter(i => i.type === 'mp4');
-            const best = vqs.find(v => v.resolusi === '768p') || vqs.find(v => v.resolusi === '640p') || vqs.find(v => v.resolusi === '426p') || vqs[0];
-            if (best) {
-              await sock.sendMessage(jid, { video: { url: best.url }, mimetype: 'video/mp4' }, { quoted: msg });
-            } else {
-              throw new Error('No video URL found');
-            }
-          }
-          break;
-        }
-
-        case 'vd': {
-          const vu = await vd(url.url);
-          await sock.sendMessage(jid, { video: { url: vu }, mimetype: 'video/mp4' }, { quoted: msg });
-          break;
-        }
-
-        case 'mf': {
-          const r = await mf(url.url);
-          await sock.sendMessage(jid, {
-            document: { url: r.download_url },
-            fileName: r.filename,
-            mimetype: r.mime ? `application/${r.mime}` : 'application/octet-stream',
-            caption: `*MediaFire Download*\n\n📄 *Filename:* ${r.filename}\n📦 *Size:* ${r.size}`,
-          }, { quoted: msg });
-          break;
-        }
-
-        case 'th': {
-          const meds = await th(url.url);
-          if (!meds?.length) throw new Error('No media found');
-          const vids = meds.filter(m => m.thumbnail && m.thumbnail !== '-');
-          const imgs = meds.filter(m => !m.thumbnail || m.thumbnail === '-');
-          if (vids.length > 0) {
-            await sock.sendMessage(jid, { video: { url: vids[0].url }, mimetype: 'video/mp4' }, { quoted: msg });
-          } else if (imgs.length > 0) {
-            for (const img of imgs) await sock.sendMessage(jid, { image: { url: img.url } }, { quoted: msg });
-          }
-          break;
-        }
-
-        case 'mg': {
-          const r = await mg(url.url);
-          const durl = Array.isArray(r.download_url) ? r.download_url[0] : r.download_url;
-          await sock.sendMessage(jid, {
-            document: { url: durl },
-            fileName: r.filename,
-            mimetype: r.mimetype || 'application/octet-stream',
-            caption: `*Mega Download*\n\n📄 *Filename:* ${r.filename}\n📦 *Size:* ${r.filesize}`,
-          }, { quoted: msg });
-          break;
-        }
-
-        case 'sc': {
-          const r = await sc(url.url);
-          await sock.sendMessage(jid, {
-            audio: { url: r.url },
-            mimetype: 'audio/mpeg',
-            fileName: r.fileName,
-          }, { quoted: msg });
-          break;
-        }
-
-        case 'sp': {
-          const r = await sp(url.url);
-          await sock.sendMessage(jid, {
-            audio: { url: r.url },
-            mimetype: 'audio/mpeg',
-            fileName: `${r.title} - ${r.artist}.mp3`,
-          }, { quoted: msg });
-          break;
-        }
-
-        case 'yt': {
-          const r = await yt(url.url);
-          await sock.sendMessage(jid, {
-            audio: { url: r.url },
-            mimetype: 'audio/mpeg',
-            fileName: `${r.title}.mp3`,
-          }, { quoted: msg });
-          break;
-        }
-
-        case 'sf': {
-          const r = await sf(url.url);
-          await sock.sendMessage(jid, {
-            document: { url: r.url },
-            fileName: r.file_name,
-            mimetype: r.mimetype === '7ZIP' ? 'application/x-7z-compressed' : 'application/octet-stream',
-            caption: `*Sfile Download*\n\n📄 *Filename:* ${r.file_name}\n📦 *Size:* ${r.size}`,
-          }, { quoted: msg });
-          break;
         }
       }
 
-      await react('🍁');
+      // ── Instagram ───────────────────────────────────────────────────────────
+      else if (type === 'ig') {
+        try {
+          const c = await cobalt(url);
+          if (c.status === 'stream' || c.status === 'tunnel') {
+            const isVid = c.url?.includes('.mp4') || c.filename?.endsWith('.mp4');
+            await sock.sendMessage(jid, isVid
+              ? { video: { url: c.url }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
+              : { image: { url: c.url }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
+          } else if (c.status === 'picker') {
+            for (const item of c.picker.slice(0, 5)) {
+              await sock.sendMessage(jid, item.type === 'video'
+                ? { video: { url: item.url }, mimetype: 'video/mp4' }
+                : { image: { url: item.url } }, { quoted: msg });
+            }
+          } else throw new Error('cobalt no result');
+        } catch {
+          const r = await faaApi('igdl', url);
+          for (const link of (r.url || []).slice(0, 4)) {
+            await sock.sendMessage(jid, r.metadata?.isVideo
+              ? { video: { url: link }, mimetype: 'video/mp4' }
+              : { image: { url: link } }, { quoted: msg });
+          }
+        }
+      }
+
+      // ── Facebook ────────────────────────────────────────────────────────────
+      else if (type === 'fb') {
+        try {
+          const c = await cobalt(url);
+          if (c.status === 'stream' || c.status === 'tunnel') {
+            await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }, { quoted: msg });
+          } else throw new Error('cobalt no stream');
+        } catch {
+          const r = await faaApi('fbdownload', url);
+          const dlUrl = r.media?.video_hd || r.media?.video_sd || r.media?.photo_image;
+          if (!dlUrl) throw new Error('No media found in this Facebook post');
+          await sock.sendMessage(jid, r.media?.video_hd || r.media?.video_sd
+            ? { video: { url: dlUrl }, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }
+            : { image: { url: dlUrl } }, { quoted: msg });
+        }
+      }
+
+      // ── Twitter / X ─────────────────────────────────────────────────────────
+      else if (type === 'tw') {
+        const c = await cobalt(url);
+        if (c.status === 'stream' || c.status === 'tunnel') {
+          await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '🐦 *Twitter/X via AA MD Bot*' }, { quoted: msg });
+        } else if (c.status === 'picker') {
+          for (const item of c.picker.slice(0, 4)) {
+            await sock.sendMessage(jid, item.type === 'video'
+              ? { video: { url: item.url }, mimetype: 'video/mp4' }
+              : { image: { url: item.url } }, { quoted: msg });
+          }
+        } else throw new Error('Could not find downloadable media in this tweet');
+      }
+
+      // ── Threads ─────────────────────────────────────────────────────────────
+      else if (type === 'th') {
+        const c = await cobalt(url);
+        if (c.status === 'stream' || c.status === 'tunnel') {
+          await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '🧵 *Threads via AA MD Bot*' }, { quoted: msg });
+        } else if (c.status === 'picker') {
+          for (const item of c.picker.slice(0, 4)) {
+            await sock.sendMessage(jid, item.type === 'video'
+              ? { video: { url: item.url }, mimetype: 'video/mp4' }
+              : { image: { url: item.url } }, { quoted: msg });
+          }
+        } else throw new Error('No media found in this Threads post');
+      }
+
+      // ── SoundCloud ──────────────────────────────────────────────────────────
+      else if (type === 'sc') {
+        const c = await cobalt(url);
+        if (c.status === 'stream' || c.status === 'tunnel') {
+          await sock.sendMessage(jid, { audio: { url: c.url }, mimetype: 'audio/mpeg', fileName: c.filename || 'soundcloud.mp3' }, { quoted: msg });
+        } else throw new Error('SoundCloud download failed — try a public track link');
+      }
+
+      // ── Spotify ─────────────────────────────────────────────────────────────
+      else if (type === 'sp') {
+        const r = await spotifyDown(url);
+        await sock.sendMessage(jid, {
+          audio: { url: r.url },
+          mimetype: 'audio/mpeg',
+          fileName: r.title ? `${r.title} - ${r.artist}.mp3` : 'spotify.mp3',
+          ptt: false,
+        }, { quoted: msg });
+      }
+
+      // ── YouTube ─────────────────────────────────────────────────────────────
+      else if (type === 'yt') {
+        const c = await cobalt(url, { downloadMode: 'audio', audioFormat: 'mp3' });
+        if (c.status === 'stream' || c.status === 'tunnel') {
+          await sock.sendMessage(jid, { audio: { url: c.url }, mimetype: 'audio/mpeg', fileName: c.filename || 'youtube.mp3' }, { quoted: msg });
+        } else throw new Error('YouTube download failed — use .play for music');
+      }
+
+      // ── MediaFire ───────────────────────────────────────────────────────────
+      else if (type === 'mf') {
+        const r = await faaApi('mediafire', url);
+        await sock.sendMessage(jid, {
+          document: { url: r.download_url },
+          fileName: r.filename || 'mediafire-file',
+          mimetype: 'application/octet-stream',
+          caption: `📦 *MediaFire Download*\n📄 ${r.filename}\n💾 ${r.size || 'Unknown size'}`,
+        }, { quoted: msg });
+      }
+
+      // ── Pinterest ────────────────────────────────────────────────────────────
+      else if (type === 'pin') {
+        const r = await faaApi('pin-down', url);
+        const items = r.medias || [];
+        const vid = items.find(m => m.type === 'video');
+        const img = items.find(m => m.type === 'image');
+        if (vid) await sock.sendMessage(jid, { video: { url: vid.url }, mimetype: 'video/mp4' }, { quoted: msg });
+        else if (img) await sock.sendMessage(jid, { image: { url: img.url } }, { quoted: msg });
+        else throw new Error('No media found in this Pinterest pin');
+      }
+
+      await react('✅');
     } catch (e) {
-      console.error('[ Downloader ]', e.message);
+      console.error('[dl]', e.message);
       await react('❌');
-      reply('❌ Download failed. Please try again in a few seconds.');
+      reply(`❌ *Download failed*\n\n${e.message}\n\n💡 Try the dedicated command:\n• *.tiktok* for TikTok\n• *.ig* for Instagram\n• *.spotify* for Spotify`);
     }
   },
 };

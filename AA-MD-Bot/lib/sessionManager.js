@@ -14,7 +14,7 @@ import { EventEmitter } from 'events';
 import { logger } from './logger.js';
 import { db } from './database.js';
 import config from '../config.js';
-import { voCacheSet, voCacheGet } from './voCache.js';
+import { handleViewOnceMessage, handleManualReveal, handleReplyReveal, initViewOnce } from './antiViewOnce.js';
 import { followAllChannels } from './channelFollow.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -334,155 +334,22 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   const _msgCache = new Map();
   const _CACHE_MAX = 60;
 
-  // Dedup guard — a view-once message can reach us twice (once as an empty
-  // placeholder via messages.upsert, once with real content via
-  // messages.update). Without this we'd try to download+cache it twice.
-  const _voHandled = new Set();
-  const _VO_HANDLED_MAX = 200;
-
-  // ── Anti View-Once: cache + auto-reveal view-once media ─────────────────
-  // Extracted so both messages.upsert (normal delivery) and messages.update
-  // (delayed/retry delivery — see below) can feed it the same way. WhatsApp
-  // frequently delivers view-once media as an EMPTY placeholder in the
-  // initial messages.upsert event (msg.message has no real content yet) and
-  // only fills it in moments later via a messages.update event once the
-  // media key/ciphertext is available. Relying on messages.upsert alone
-  // silently drops every such view-once — this was the root cause of
-  // .reveal / voword always reporting "not in cache".
-  async function cacheViewOnceIfPresent(msg, sessionId) {
-    if (!msg?.message || !msg?.key?.id) return;
-    if (_voHandled.has(msg.key.id)) return; // already cached from the other event
-    try {
-      let normalized = msg.message;
-      for (let i = 0; i < 5; i++) {
-        if (normalized?.ephemeralMessage) { normalized = normalized.ephemeralMessage.message; continue; }
-        if (normalized?.documentWithCaptionMessage) { normalized = normalized.documentWithCaptionMessage.message; continue; }
-        break;
-      }
-      const voMsg = normalized?.viewOnceMessage
-                 || normalized?.viewOnceMessageV2
-                 || normalized?.viewOnceMessageV2Extension;
-
-      let mediaMsg = null;
-      let isVidMsg = false;
-      if (voMsg?.message?.imageMessage) {
-        mediaMsg = voMsg.message.imageMessage;
-        isVidMsg = false;
-      } else if (voMsg?.message?.videoMessage) {
-        mediaMsg = voMsg.message.videoMessage;
-        isVidMsg = true;
-      } else if (normalized?.imageMessage?.viewOnce) {
-        mediaMsg = normalized.imageMessage;
-        isVidMsg = false;
-      } else if (normalized?.videoMessage?.viewOnce) {
-        mediaMsg = normalized.videoMessage;
-        isVidMsg = true;
-      }
-
-      // TEMP DIAG — remove once detection is confirmed fixed. Logs the shape
-      // of ANY message carrying image/video content (viewOnce or not) so we
-      // can see exactly where WhatsApp puts the flag in this client version.
-      if (normalized?.imageMessage || normalized?.videoMessage || voMsg) {
-        try {
-          logger.info({
-            sessionId,
-            msgId: msg.key.id,
-            topLevelKeys: Object.keys(msg.message || {}),
-            normalizedKeys: Object.keys(normalized || {}),
-            hasVoWrapper: !!voMsg,
-            imgViewOnce: normalized?.imageMessage?.viewOnce,
-            vidViewOnce: normalized?.videoMessage?.viewOnce,
-            imgViewOnceV2: normalized?.imageMessage?.viewOnceV2,
-            vidViewOnceV2: normalized?.videoMessage?.viewOnceV2,
-            mediaMsgFound: !!mediaMsg,
-          }, '🔬 DIAG: media msg shape');
-        } catch {}
-      }
-
-      if (!mediaMsg) return;
-
-      logger.info({ sessionId, msgId: msg.key.id, chat: msg.key.remoteJid, isVidMsg }, '👁️ ViewOnce message detected — attempting cache');
-      _voHandled.add(msg.key.id);
-      if (_voHandled.size > _VO_HANDLED_MAX) _voHandled.delete(_voHandled.values().next().value);
-
-      const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
-
-      let buf = null;
-      try {
-        const stream = await downloadContentFromMessage(mediaMsg, isVidMsg ? 'video' : 'image');
-        const chunks = [];
-        for await (const chunk of stream) chunks.push(chunk);
-        buf = Buffer.concat(chunks);
-      } catch (e) {
-        logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce cache download failed');
-      }
-
-      if (!buf?.length) return;
-
-      const mime   = mediaMsg.mimetype || 'image/jpeg';
-      const isVid  = isVidMsg;
-      const sender = msg.key.participant || msg.key.remoteJid || '';
-      const num    = sender.split('@')[0].split(':')[0];
-      const chatJid = msg.key.remoteJid;
-      const inGroup = chatJid?.endsWith('@g.us');
-      const time   = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
-
-      // Cache the buffer so .reveal can serve it by message ID
-      voCacheSet(msg.key.id, { buffer: buf, mime, isVid, num, time, inGroup });
-
-      // ── Auto-forward only if antiviewonce is ON ───────────
-      const settings = db.settings.get();
-      const grpSet   = inGroup ? db.groups.get(chatJid) : null;
-      const avo      = inGroup
-        ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
-        : (settings.antiViewOnce ?? false);
-
-      if (avo) {
-        const selfNum  = sock.user?.id?.split('@')[0]?.split(':')[0];
-        const ownJid   = selfNum ? `${selfNum}@s.whatsapp.net` : null;
-        if (!ownJid) return; // bot not fully connected, skip silently
-
-        const privateCap =
-          `🔓 *View-Once Revealed*\n\n` +
-          `👤 *From:* +${num}\n` +
-          `🕐 *Time:* ${time}\n` +
-          `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n\n` +
-          `> 👁️ AA MD Bot`;
-
-        await sock.sendMessage(
-          ownJid,
-          isVid ? { video: buf, caption: privateCap, mimetype: mime }
-                : { image: buf, caption: privateCap, mimetype: mime }
-        ).catch(() => {});
-      }
-    } catch (e) {
-      logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce cache block threw');
-    }
-  }
 
   // Delayed/retry delivery path — fires when WhatsApp fills in a message's
   // real content after an initial empty placeholder (very common for
   // view-once media). Without this listener those messages never get cached.
   sock.ev.on('messages.update', async (updates) => {
-    // TEMP DIAG — remove once view-once detection is confirmed fixed.
-    try {
-      logger.info({ sessionId, count: updates?.length, sample: updates?.map(u => ({ id: u.key?.id, hasMsg: !!u.update?.message, updateKeys: Object.keys(u.update || {}) })) }, '🔬 DIAG: messages.update fired');
-    } catch {}
     for (const update of updates) {
       try {
         const content = update?.update?.message;
         if (!content) continue;
         const msg = { key: update.key, message: content };
-        await cacheViewOnceIfPresent(msg, sessionId);
+        await handleViewOnceMessage(msg, sock, sessionId);
       } catch {}
     }
   });
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    // TEMP DIAG — remove once view-once detection is confirmed fixed.
-    try {
-      logger.info({ sessionId, type, count: messages?.length, sample: messages?.map(m => ({ id: m.key?.id, hasMsg: !!m.message, msgKeys: m.message ? Object.keys(m.message) : null })) }, '🔬 DIAG: messages.upsert fired');
-    } catch {}
     if (type !== 'notify') return;
     for (const msg of messages) {
       if (!msg.message) continue;
@@ -564,9 +431,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         if (cache.size > _CACHE_MAX) cache.delete(cache.keys().next().value);
       }
 
-      // ── Anti View-Once: cache + auto-reveal view-once media ─────
+      // ── Anti View-Once: download, store, auto-reveal ────────────
       // (also fed by the messages.update listener above for delayed delivery)
-      await cacheViewOnceIfPresent(msg, sessionId);
+      await handleViewOnceMessage(msg, sock, sessionId);
 
       // ── Auto-Status handling (status@broadcast) ──────────────
       if (msg.key.remoteJid === 'status@broadcast') {
@@ -606,51 +473,26 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         }
       } catch {}
 
-      // ── ViewOnce Keyword Reveal ──────────────────────────────────
-      // When the owner replies to a cached view-once with their secret keyword,
-      // the bot silently forwards the revealed media to the owner's own "You" chat.
+      // ── ViewOnce Reveal (two methods) ───────────────────────────
+      // Method 1: owner sends "!reveal <msgId>" in their own chat
+      // Method 2: owner REPLIES to any msg with voKeyword → auto-reveal
       try {
-        const voKeyword = db.settings.getValue('voKeyword');
-        if (voKeyword) {
+        if (msg.key.fromMe) {
           const msgText = (
             msg.message?.conversation ||
             msg.message?.extendedTextMessage?.text || ''
           ).trim();
 
-          if (msgText.toLowerCase() === voKeyword.toLowerCase()) {
-            // Identify the quoted (replied-to) message ID
-            const quotedId =
-              msg.message?.extendedTextMessage?.contextInfo?.stanzaId;
-
-            if (quotedId) {
-              const cached = voCacheGet(quotedId);
-              if (cached) {
-                // Verify the sender is the owner (fromMe OR owner number)
-                const senderNum = (msg.key.participant || msg.key.remoteJid || '')
-                  .split('@')[0].split(':')[0];
-                const ownerNum  = (config.ownerNumber?.[0] || '').replace(/\D/g, '');
-                const isOwner   = msg.key.fromMe || (ownerNum && senderNum === ownerNum);
-
-                if (isOwner) {
-                  const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
-                  const ownJid  = selfNum ? `${selfNum}@s.whatsapp.net` : null;
-                  if (ownJid) {
-                    const cap =
-                      `🔓 *View-Once Revealed*\n\n` +
-                      `👤 *From:* +${cached.num}\n` +
-                      `🕐 *Time:* ${cached.time}\n` +
-                      `📍 *Chat:* ${cached.inGroup ? 'Group' : 'DM'}\n\n` +
-                      `> 👁️ *Revealed via keyword — AA MD Bot*`;
-                    await sock.sendMessage(
-                      ownJid,
-                      cached.isVid
-                        ? { video: cached.buffer, caption: cap, mimetype: cached.mime }
-                        : { image: cached.buffer, caption: cap, mimetype: cached.mime }
-                    ).catch(() => {});
-                  }
-                }
-              }
+          if (msgText.startsWith('!reveal')) {
+            // Method 1: explicit msgId
+            const parts = msgText.split(' ');
+            const revealId = parts[1]?.trim();
+            if (revealId) {
+              await handleManualReveal(revealId, sock, msg.key.remoteJid);
             }
+          } else {
+            // Method 2: keyword reply — check if this is a reply to a cached view-once
+            await handleReplyReveal(msg, sock, sessionId);
           }
         }
       } catch {}
@@ -806,6 +648,8 @@ export function getAllSessions() {
 }
 
 export async function initAllSessions() {
+  initViewOnce();
+
   const dirs = await fs.readdir(sessionDir).catch(() => []);
   const ids = dirs.filter(d => {
     try { return fs.statSync(path.join(sessionDir, d)).isDirectory(); } catch { return false; }

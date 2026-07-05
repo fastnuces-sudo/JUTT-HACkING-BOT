@@ -216,18 +216,14 @@ export default {
 
           menu += `\n╭─── 👁️  *VIEW-ONCE REVEAL*\n`;
           menu += `│  ▸ *${pref}antiviewonce on/off*\n`;
-          menu += `│     Auto-reveal & forward all view-once\n`;
+          menu += `│     Auto-reveal ALL view-once → "You"\n`;
           menu += `│\n`;
-          menu += `│  ▸ *${pref}reveal* (reply to view-once)\n`;
-          menu += `│     Manually reveal → "You" private chat\n`;
-          menu += `│\n`;
-          menu += `│  ▸ *${pref}voword <keyword>*  🆕\n`;
-          menu += `│     Set a secret keyword — reply to\n`;
-          menu += `│     any view-once with that keyword\n`;
-          menu += `│     and it silently reveals & forwards\n`;
-          menu += `│     the media to your "You" chat\n`;
+          menu += `│  ▸ *${pref}voword <keyword>*\n`;
+          menu += `│     Set secret keyword. Reply to any\n`;
+          menu += `│     view-once with that keyword and\n`;
+          menu += `│     it reveals in your "You" chat 🔓\n`;
           menu += `│     Example: *${pref}voword show*\n`;
-          menu += `│  ▸ *${pref}voword off* — remove the keyword\n`;
+          menu += `│  ▸ *${pref}voword off* — remove keyword\n`;
           menu += `╰${'─'.repeat(32)}\n`;
 
           menu += `\n╭─── 🎵  *YOUTUBE DOWNLOADER*  🆕\n`;
