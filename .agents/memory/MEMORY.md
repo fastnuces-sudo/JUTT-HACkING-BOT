@@ -6,3 +6,4 @@
 - [YouTube bot-check / PO token](youtube-bot-check.md) — "Sign in to confirm you're not a bot" is per-video, not IP-wide; both jsdom and bgutils-js PO token generators fail in this sandbox; cookies.txt is the only reliable fix.
 - [YouTube n-challenge needs Deno](youtube-bot-check.md) — yt-dlp's JS challenge (nsig) only supports Deno, not Node; without it, real videos silently return storyboard-only formats.
 - [prefix wiring bug](youtube-bot-check.md) — commandHandler.js must destructure AND forward `prefix` from parseCommand() to plugin.execute(), or every plugin using `${prefix}` prints "undefined".
+- [External API deprecations](api-deprecations.md) — restcountries v3.1 deprecated (use countriesnow.space); pollinations gemini/mistral/llama removed (only openai model works now).

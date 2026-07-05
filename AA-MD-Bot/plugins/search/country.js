@@ -1,15 +1,34 @@
 // ============================================
 // AA MD Bot - Country Info
-// Uses restcountries.com (free, no key needed)
+// Uses countriesnow.space (free, no key needed)
 // ============================================
 
 import axios from 'axios';
 
-const BASE = 'https://restcountries.com/v3.1';
+const api = axios.create({ timeout: 12000 });
+const BASE = 'https://countriesnow.space/api/v0.1/countries';
 
-function fmt(n) {
-  if (!n) return 'N/A';
-  return n.toLocaleString();
+// countriesnow.space GET endpoints — all follow redirects automatically
+async function cnGet(path, country) {
+  try {
+    const { data } = await api.get(`${BASE}/${path}/q?country=${encodeURIComponent(country)}`);
+    if (!data?.error && data?.data) return data.data;
+  } catch {}
+  return null;
+}
+
+// Fallback for region: api.first.org
+async function fetchRegion(name) {
+  try {
+    const { data } = await api.get(
+      `https://api.first.org/data/v1/countries?q=${encodeURIComponent(name)}&limit=1`
+    );
+    if (data?.data) {
+      const code = Object.keys(data.data)[0];
+      return data.data[code]?.region || null;
+    }
+  } catch {}
+  return null;
 }
 
 export default {
@@ -33,57 +52,56 @@ export default {
 
     try {
       const query = text.trim();
-      let endpoint = `${BASE}/name/${encodeURIComponent(query)}?fullText=false`;
-      if (query.length <= 3) endpoint = `${BASE}/alpha/${encodeURIComponent(query)}`;
 
-      const { data } = await axios.get(endpoint, { timeout: 10000 });
-      const c = Array.isArray(data) ? data[0] : data;
+      // Fetch all data in parallel
+      const [capData, curData, flagData, region] = await Promise.all([
+        cnGet('capital', query),
+        cnGet('currency', query),
+        cnGet('flag/images', query),
+        fetchRegion(query),
+      ]);
 
-      const name       = c.name?.common || 'N/A';
-      const official   = c.name?.official || name;
-      const capital    = c.capital?.[0] || 'N/A';
-      const region     = c.region || 'N/A';
-      const subregion  = c.subregion || 'N/A';
-      const population = fmt(c.population);
-      const area       = fmt(c.area) + ' km²';
-      const languages  = Object.values(c.languages || {}).join(', ') || 'N/A';
-      const currencies = Object.values(c.currencies || {}).map(cu => `${cu.name} (${cu.symbol || '?'})`).join(', ') || 'N/A';
-      const timezone   = c.timezones?.[0] || 'N/A';
-      const tld        = c.tld?.[0] || 'N/A';
-      const calling    = '+' + (c.idd?.root || '').replace('+', '') + (c.idd?.suffixes?.[0] || '');
-      const flag       = c.flag || '';
-      const flagUrl    = c.flags?.png || c.flags?.svg;
-      const borders    = c.borders?.join(', ') || 'None (island or no borders)';
-      const independent = c.independent ? '✅ Yes' : '❌ No';
-      const unMember   = c.unMember ? '✅ Yes' : '❌ No';
+      // If we got nothing from countriesnow, country not found
+      if (!capData && !curData && !flagData) {
+        await react('❌');
+        return reply(
+          `❌ Country "*${query}*" not found.\n\n` +
+          `Try the full name (e.g. Pakistan, Saudi Arabia) or ISO code (e.g. PK, SA, US).`
+        );
+      }
+
+      const name     = capData?.name || curData?.name || flagData?.name || query;
+      const capital  = capData?.capital || 'N/A';
+      const iso2     = (capData?.iso2 || curData?.iso2 || flagData?.iso2 || '').toLowerCase();
+      const iso3     = capData?.iso3 || curData?.iso3 || flagData?.iso3 || '';
+      const currency = curData?.currency || 'N/A';
+      const flagUrl  = flagData?.flag || (iso2 ? `https://flagcdn.com/h80/${iso2}.png` : null);
+
+      // Unicode flag emoji from iso2
+      const unicodeFlag = iso2.length === 2
+        ? String.fromCodePoint(...[...iso2.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt(0)))
+        : '';
 
       const info =
-        `${flag} *${name}*\n` +
-        `🏛️ _${official}_\n\n` +
+        `${unicodeFlag} *${name}*\n\n` +
         `${'─'.repeat(28)}\n` +
-        `🏙️ *Capital:* ${capital}\n` +
-        `🌍 *Region:* ${region} > ${subregion}\n` +
-        `👥 *Population:* ${population}\n` +
-        `📐 *Area:* ${area}\n` +
-        `🗣️ *Language(s):* ${languages}\n` +
-        `💰 *Currency:* ${currencies}\n` +
-        `🕐 *Timezone:* ${timezone}\n` +
-        `🔗 *TLD:* ${tld}\n` +
-        `📞 *Calling Code:* ${calling}\n` +
-        `🤝 *UN Member:* ${unMember}\n` +
-        `🗺️ *Borders:* ${borders}\n\n` +
-        `> 🌍 *AA MD Bot*`;
+        `🏙️ *Capital:*      ${capital}\n` +
+        `🌍 *Region:*       ${region || 'N/A'}\n` +
+        `💰 *Currency:*     ${currency}\n` +
+        (iso2 ? `🌐 *ISO Code:*     ${iso2.toUpperCase()}${iso3 ? ` / ${iso3}` : ''}\n` : '') +
+        `\n> 🌍 *AA MD Bot*`;
 
       if (flagUrl) {
-        await sock.sendMessage(jid, { image: { url: flagUrl }, caption: info }, { quoted: msg });
+        await sock.sendMessage(jid, { image: { url: flagUrl }, caption: info }, { quoted: msg })
+          .catch(() => reply(info));
       } else {
         reply(info);
       }
       await react('✅');
+
     } catch (e) {
       await react('❌');
-      if (e.response?.status === 404) reply(`❌ Country "*${text}*" not found.\n\nTry the full name or ISO code (e.g. PK, SA, US).`);
-      else reply(`❌ Country lookup failed: ${e.message}`);
+      reply(`❌ Country lookup failed: ${e.message}`);
     }
   },
 };

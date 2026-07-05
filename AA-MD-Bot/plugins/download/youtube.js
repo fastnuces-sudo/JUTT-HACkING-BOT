@@ -606,7 +606,9 @@ async function downloadVideo(ytUrl) {
     const buf = await withTimeout(90000, fetchBuf(directUrl));
     if (isValidVideoBuffer(buf)) {
       const playable = await withTimeout(180000, ensurePlayableMp4(buf));
+      // Return transcoded version, or raw buffer as fallback if transcode failed
       if (playable?.length) return { buffer: playable };
+      return { buffer: buf };
     }
   }
 
@@ -614,8 +616,8 @@ async function downloadVideo(ytUrl) {
   const raw = await withTimeout(180000, tryYtdlpVideo(ytUrl));
   if (!raw?.length || raw.length < 50000) return null;
   const playableRaw = await withTimeout(180000, ensurePlayableMp4(raw));
-  if (!playableRaw?.length) return null;
-  return { buffer: playableRaw };
+  // Return transcoded version, or raw buffer as fallback if transcode failed
+  return { buffer: playableRaw?.length ? playableRaw : raw };
 }
 
 // ── UI captions ───────────────────────────────────────────────────────────────

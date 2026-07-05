@@ -1,14 +1,12 @@
 // ============================================
 // AA MD Bot - AI Chat
 // Uses pollinations.ai — completely free, no API key
-// Models: openai (GPT-4o), mistral, gemini, llama
-// Image gen: image.pollinations.ai
+// Model: openai (GPT-4o / GPT-OSS-20B)
 // ============================================
 
 import axios from 'axios';
 
-const CHAT_URL  = 'https://text.pollinations.ai/openai';
-const IMAGE_URL = 'https://image.pollinations.ai/prompt';
+const CHAT_URL = 'https://text.pollinations.ai/openai';
 
 const SYSTEM_PROMPT =
   'You are AA MD Bot, a helpful WhatsApp assistant made by AA Mods (Ahsan Ali Wadani). ' +
@@ -22,7 +20,6 @@ const MAX_MSG   = 12; // per JID
 
 function evictOldest() {
   if (_memory.size <= MAX_JIDS) return;
-  // evict the JID not used for the longest time
   let oldest = null, oldestTime = Infinity;
   for (const [j, t] of _lastUsed.entries()) {
     if (t < oldestTime) { oldest = j; oldestTime = t; }
@@ -43,7 +40,7 @@ function addHistory(jid, role, content) {
 
 function clearHistory(jid) { _memory.delete(jid); _lastUsed.delete(jid); }
 
-async function chat(jid, userMsg, model = 'openai') {
+async function chat(jid, userMsg) {
   addHistory(jid, 'user', userMsg);
   const messages = [
     { role: 'system', content: SYSTEM_PROMPT },
@@ -51,12 +48,11 @@ async function chat(jid, userMsg, model = 'openai') {
   ];
 
   const { data } = await axios.post(CHAT_URL, {
-    model,
+    model: 'openai',
     messages,
     temperature: 0.7,
     max_tokens: 1024,
   }, {
-    params: { model },
     headers: { 'Content-Type': 'application/json' },
     timeout: 30000,
   });
@@ -67,32 +63,22 @@ async function chat(jid, userMsg, model = 'openai') {
   return reply;
 }
 
-const MODELS = {
-  gpt: 'openai', openai: 'openai', gpt4: 'openai',
-  mistral: 'mistral', mist: 'mistral',
-  gemini: 'gemini', google: 'gemini',
-  llama: 'llama', meta: 'llama',
-};
-
 export default {
   command: 'ai',
   alias: ['gpt', 'gemini', 'aichat', 'chat', 'llama', 'mistral'],
-  description: 'Chat with AI (GPT-4o, Gemini, Mistral, Llama) — free, no key needed',
+  description: 'Chat with AI — free, no key needed',
   category: 'search',
 
   async execute({ command, text, reply, react, jid, prefix }) {
-    // Model selection from command alias
-    const model = MODELS[command.toLowerCase()] || 'openai';
-    const modelName = model === 'openai' ? 'GPT-4o' : model.charAt(0).toUpperCase() + model.slice(1);
-
     if (!text) return reply(
       `🤖 *AA MD Bot AI*\n\n` +
       `*Usage:* ${prefix}ai <your question>\n\n` +
-      `*Available models:*\n` +
-      `• ${prefix}ai / ${prefix}gpt — GPT-4o\n` +
-      `• ${prefix}gemini — Google Gemini\n` +
-      `• ${prefix}mistral — Mistral\n` +
-      `• ${prefix}llama — Meta Llama\n\n` +
+      `*Available commands:*\n` +
+      `• ${prefix}ai — Chat with AI\n` +
+      `• ${prefix}gpt — Chat with AI\n` +
+      `• ${prefix}gemini — Chat with AI\n` +
+      `• ${prefix}mistral — Chat with AI\n` +
+      `• ${prefix}llama — Chat with AI\n\n` +
       `*Image generation:*\n` +
       `• ${prefix}imagine <description>\n\n` +
       `*Clear chat history:*\n` +
@@ -107,9 +93,9 @@ export default {
 
     await react('🤖');
     try {
-      const response = await chat(jid, text, model);
+      const response = await chat(jid, text);
       await react('✅');
-      reply(`🤖 *${modelName}*\n\n${response}\n\n> 🤖 *AA MD Bot*`);
+      reply(`🤖 *AI*\n\n${response}\n\n> 🤖 *AA MD Bot*`);
     } catch (e) {
       await react('❌');
       reply(`❌ AI error: ${e.message}\n\nTry again in a few seconds.`);

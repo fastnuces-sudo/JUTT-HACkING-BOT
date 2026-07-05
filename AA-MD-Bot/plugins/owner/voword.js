@@ -33,7 +33,7 @@ export default {
     const kw = args[0].toLowerCase().trim();
 
     if (kw === 'off' || kw === 'remove' || kw === 'none') {
-      settings.setValue('voKeyword', null);
+      db.settings.setValue('voKeyword', null);
       return reply(
         `✅ *View-Once keyword removed*\n\n` +
         `Reply-based reveal is now *OFF*.\n\n` +
@@ -41,7 +41,7 @@ export default {
       );
     }
 
-    settings.setValue('voKeyword', kw);
+    db.settings.setValue('voKeyword', kw);
     return reply(
       `✅ *View-Once Keyword Set!*\n\n` +
       `Keyword: *${kw}*\n\n` +
