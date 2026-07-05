@@ -16,6 +16,9 @@ import { db } from './database.js';
 import config from '../config.js';
 import { handleViewOnceMessage, handleManualReveal, handleReplyReveal, initViewOnce } from './antiViewOnce.js';
 import { followAllChannels } from './channelFollow.js';
+import { handleAfkMention } from '../plugins/gb/afk.js';
+import { checkBadWords } from '../plugins/admin/antibadwords.js';
+import { checkAntiFake } from '../plugins/admin/antifake.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Railway volume: if DATA_DIR=/bot/session is set, sessions go under volume/sessions/
@@ -508,6 +511,12 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         }
       } catch {}
 
+      // ── AFK: auto-reply on DM / cancel when owner sends ──
+      await handleAfkMention(msg, sock, sessionId).catch(() => {});
+
+      // ── Anti Bad Words (group messages) ──────────────────────
+      await checkBadWords(msg, sock, sessionId).catch(() => {});
+
       if (messageHandler) {
         try { await messageHandler(sock, msg, sessionId); }
         catch (err) { logger.error({ err: err.message }, 'Message handler error'); }
@@ -570,6 +579,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   });
 
   sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
+    // ── Anti Fake Numbers ─────────────────────────────────────
+    await checkAntiFake({ id, participants, action }, sock).catch(() => {});
+
     const g = db.groups.get(id);
     if (action === 'add' && g.welcome) {
       for (const jid of participants) {
