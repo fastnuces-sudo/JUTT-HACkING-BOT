@@ -379,6 +379,26 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         isVidMsg = true;
       }
 
+      // TEMP DIAG — remove once detection is confirmed fixed. Logs the shape
+      // of ANY message carrying image/video content (viewOnce or not) so we
+      // can see exactly where WhatsApp puts the flag in this client version.
+      if (normalized?.imageMessage || normalized?.videoMessage || voMsg) {
+        try {
+          logger.info({
+            sessionId,
+            msgId: msg.key.id,
+            topLevelKeys: Object.keys(msg.message || {}),
+            normalizedKeys: Object.keys(normalized || {}),
+            hasVoWrapper: !!voMsg,
+            imgViewOnce: normalized?.imageMessage?.viewOnce,
+            vidViewOnce: normalized?.videoMessage?.viewOnce,
+            imgViewOnceV2: normalized?.imageMessage?.viewOnceV2,
+            vidViewOnceV2: normalized?.videoMessage?.viewOnceV2,
+            mediaMsgFound: !!mediaMsg,
+          }, '🔬 DIAG: media msg shape');
+        } catch {}
+      }
+
       if (!mediaMsg) return;
 
       logger.info({ sessionId, msgId: msg.key.id, chat: msg.key.remoteJid, isVidMsg }, '👁️ ViewOnce message detected — attempting cache');
@@ -444,6 +464,10 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   // real content after an initial empty placeholder (very common for
   // view-once media). Without this listener those messages never get cached.
   sock.ev.on('messages.update', async (updates) => {
+    // TEMP DIAG — remove once view-once detection is confirmed fixed.
+    try {
+      logger.info({ sessionId, count: updates?.length, sample: updates?.map(u => ({ id: u.key?.id, hasMsg: !!u.update?.message, updateKeys: Object.keys(u.update || {}) })) }, '🔬 DIAG: messages.update fired');
+    } catch {}
     for (const update of updates) {
       try {
         const content = update?.update?.message;
@@ -455,6 +479,10 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   });
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    // TEMP DIAG — remove once view-once detection is confirmed fixed.
+    try {
+      logger.info({ sessionId, type, count: messages?.length, sample: messages?.map(m => ({ id: m.key?.id, hasMsg: !!m.message, msgKeys: m.message ? Object.keys(m.message) : null })) }, '🔬 DIAG: messages.upsert fired');
+    } catch {}
     if (type !== 'notify') return;
     for (const msg of messages) {
       if (!msg.message) continue;

@@ -1,0 +1,568 @@
+Here's the complete implementation that captures ViewOnce messages, replies with a predefined keyword, and reveals the media to your private chat without the sender knowing.
+
+1. Main File: antiViewOnce.js
+javascript
+import moment from 'moment-timezone';
+import fs from 'fs';
+import path from 'path';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
+import CONFIG from './config.js';
+
+// Cache to prevent duplicate processing
+const viewOnceCache = new Set();
+export const viewOnceStore = new Map();
+
+// Configuration (can be moved to CONFIG)
+const VIEWONCE_CONFIG = {
+    // Keyword that triggers media reveal (set this to your secret keyword)
+    TRIGGER_KEYWORD: '!reveal', // Change this to your desired keyword
+    // Auto-reply message when someone sends view once
+    AUTO_REPLY: '👍', // Can be emoji, text, or empty string for no reply
+    // Save media to local storage
+    SAVE_MEDIA: true,
+    // Media save directory
+    MEDIA_DIR: './media/viewonce/',
+    // Send revealed media to your private chat (you)
+    FORWARD_TO_OWNER: true,
+};
+
+// Ensure media directory exists
+if (VIEWONCE_CONFIG.SAVE_MEDIA) {
+    if (!fs.existsSync(VIEWONCE_CONFIG.MEDIA_DIR)) {
+        fs.mkdirSync(VIEWONCE_CONFIG.MEDIA_DIR, { recursive: true });
+    }
+}
+
+/**
+ * Clean up old view once store entries
+ */
+export function cleanViewOnceStore() {
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    for (const [key, value] of viewOnceStore.entries()) {
+        if (now - value.timestamp > fiveMinutes) {
+            viewOnceStore.delete(key);
+        }
+    }
+}
+
+/**
+ * Extract text from any message type
+ */
+function extractMessageText(msg) {
+    if (!msg) return '';
+    
+    // Check for various message types
+    if (msg.conversation) return msg.conversation;
+    if (msg.extendedTextMessage?.text) return msg.extendedTextMessage.text;
+    if (msg.imageMessage?.caption) return msg.imageMessage.caption;
+    if (msg.videoMessage?.caption) return msg.videoMessage.caption;
+    if (msg.documentMessage?.caption) return msg.documentMessage.caption;
+    
+    return '';
+}
+
+/**
+ * Check if message contains the trigger keyword
+ */
+function containsTriggerKeyword(text) {
+    if (!text) return false;
+    const keyword = VIEWONCE_CONFIG.TRIGGER_KEYWORD.toLowerCase();
+    return text.toLowerCase().includes(keyword);
+}
+
+/**
+ * Get phone number from JID
+ */
+function getPhoneFromJid(jid) {
+    if (!jid) return null;
+    const match = jid.match(/^(\d+)(?=@|:)/);
+    return match ? match[1] : null;
+}
+
+/**
+ * Format phone number
+ */
+function formatPhoneNumber(phone) {
+    if (!phone) return 'Unknown';
+    const cleaned = phone.replace(/[^\d+]/g, '');
+    return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+}
+
+/**
+ * Get sender info
+ */
+async function getSenderInfo(jid, sock) {
+    let name = 'Unknown';
+    let number = getPhoneFromJid(jid) || jid.split('@')[0];
+    
+    try {
+        const contact = await sock.onWhatsApp(jid);
+        if (contact?.length > 0) {
+            name = contact[0].name || contact[0].pushname || number;
+        }
+    } catch (error) {
+        // Silent fail
+    }
+    
+    return { name, number };
+}
+
+/**
+ * Download and save media from view once message
+ */
+async function downloadViewOnceMedia(msg, sock, senderJid) {
+    try {
+        let mediaMessage = null;
+        let mediaType = 'unknown';
+        let fileName = null;
+        let mimetype = null;
+
+        // Determine media type
+        if (msg.message?.imageMessage) {
+            mediaMessage = msg.message.imageMessage;
+            mediaType = 'image';
+            mimetype = mediaMessage.mimetype || 'image/jpeg';
+            fileName = `viewonce_image_${Date.now()}.${mimetype.split('/')[1] || 'jpg'}`;
+        } else if (msg.message?.videoMessage) {
+            mediaMessage = msg.message.videoMessage;
+            mediaType = 'video';
+            mimetype = mediaMessage.mimetype || 'video/mp4';
+            fileName = `viewonce_video_${Date.now()}.${mimetype.split('/')[1] || 'mp4'}`;
+        } else {
+            return null;
+        }
+
+        // Download media
+        const mediaBuffer = await downloadMediaMessage(
+            msg,
+            'buffer',
+            {},
+            { 
+                logger: console,
+                reuploadRequest: sock.updateMediaMessage
+            }
+        );
+
+        if (!mediaBuffer) return null;
+
+        // Save to file if configured
+        let savedPath = null;
+        if (VIEWONCE_CONFIG.SAVE_MEDIA && fileName) {
+            savedPath = path.join(VIEWONCE_CONFIG.MEDIA_DIR, fileName);
+            fs.writeFileSync(savedPath, mediaBuffer);
+        }
+
+        // Store metadata
+        const mediaData = {
+            buffer: mediaBuffer,
+            type: mediaType,
+            fileName: fileName,
+            mimetype: mimetype,
+            savedPath: savedPath,
+            sender: senderJid,
+            timestamp: Date.now(),
+        };
+
+        return mediaData;
+    } catch (error) {
+        console.error('[VIEWONCE] Error downloading media:', error);
+        return null;
+    }
+}
+
+/**
+ * Main handler for ViewOnce messages
+ */
+export async function handleViewOnceMessage(msg, sock, getOwnerJid, getRealSenderJid) {
+    try {
+        // Check if it's a view once message
+        const isViewOnce = 
+            msg.message?.imageMessage?.viewOnce ||
+            msg.message?.videoMessage?.viewOnce ||
+            msg.message?.imageMessage?.viewOnceV2 ||
+            msg.message?.videoMessage?.viewOnceV2;
+
+        if (!isViewOnce) return;
+
+        const from = msg.key.remoteJid;
+        const senderJid = getRealSenderJid ? getRealSenderJid(msg) : msg.key.participant || from;
+        const msgId = msg.key.id;
+        
+        // Prevent self-processing
+        if (senderJid === sock.user.id) return;
+
+        // Check cache to prevent duplicate processing
+        const cacheKey = `${msgId}_${senderJid}`;
+        if (viewOnceCache.has(cacheKey)) return;
+        viewOnceCache.add(cacheKey);
+        setTimeout(() => viewOnceCache.delete(cacheKey), 10000);
+
+        // Get sender info
+        const sender = await getSenderInfo(senderJid, sock);
+        const formattedPhone = formatPhoneNumber(sender.number);
+        
+        // Extract caption/text from view once message
+        const caption = 
+            msg.message?.imageMessage?.caption ||
+            msg.message?.videoMessage?.caption ||
+            '';
+
+        console.log(`[VIEWONCE] Received view once from ${sender.name} (${formattedPhone})`);
+
+        // Store view once message for potential later use
+        viewOnceStore.set(msgId, {
+            ...msg,
+            sender: senderJid,
+            senderName: sender.name,
+            timestamp: Date.now(),
+            caption: caption,
+        });
+
+        // Check if message contains trigger keyword
+        const hasKeyword = containsTriggerKeyword(caption);
+        
+        if (hasKeyword) {
+            console.log(`[VIEWONCE] 🔑 Trigger keyword detected! Revealing media...`);
+            
+            // Download the media
+            const mediaData = await downloadViewOnceMedia(msg, sock, senderJid);
+            
+            if (mediaData) {
+                // Get owner JID (your private chat)
+                const ownerJid = getOwnerJid();
+                
+                if (ownerJid && VIEWONCE_CONFIG.FORWARD_TO_OWNER) {
+                    // Prepare message for owner
+                    const timestamp = moment().tz(CONFIG.TZ).format('DD/MM/YYYY HH:mm:ss');
+                    const date = moment().tz(CONFIG.TZ).format('DD/MM/YYYY');
+                    const time = moment().tz(CONFIG.TZ).format('HH:mm:ss');
+
+                    // Send info text to owner
+                    const infoText = `*📸 VIEW-ONCE REVEALED*\n\n` +
+                        `*👤 Sender:* ${sender.name}\n` +
+                        `*📞 Number:* ${formattedPhone}\n` +
+                        `*📅 Date:* ${date}\n` +
+                        `*⏰ Time:* ${time}\n` +
+                        `*🔑 Trigger:* "${caption}"\n` +
+                        `*📁 Type:* ${mediaData.type.toUpperCase()}\n` +
+                        `*📎 File:* ${mediaData.fileName || 'N/A'}\n\n` +
+                        `*💬 Original Caption:* "${caption || 'No caption'}"`;
+
+                    await sock.sendMessage(ownerJid, { 
+                        text: infoText,
+                        mentions: [senderJid]
+                    });
+
+                    // Send the actual media to owner (without view once flag)
+                    if (mediaData.type === 'image') {
+                        await sock.sendMessage(ownerJid, {
+                            image: mediaData.buffer,
+                            caption: `📸 Revealed View-Once Image from ${sender.name}\nOriginal: "${caption || 'No caption'}"`,
+                            mimetype: mediaData.mimetype,
+                        });
+                    } else if (mediaData.type === 'video') {
+                        await sock.sendMessage(ownerJid, {
+                            video: mediaData.buffer,
+                            caption: `🎥 Revealed View-Once Video from ${sender.name}\nOriginal: "${caption || 'No caption'}"`,
+                            mimetype: mediaData.mimetype,
+                        });
+                    }
+
+                    // Also send the saved file path if available
+                    if (mediaData.savedPath) {
+                        await sock.sendMessage(ownerJid, {
+                            text: `📁 File saved at: ${mediaData.savedPath}`
+                        });
+                    }
+
+                    console.log(`[VIEWONCE] ✅ Media sent to owner (${ownerJid})`);
+                }
+
+                // Send automatic reply (optional)
+                if (VIEWONCE_CONFIG.AUTO_REPLY) {
+                    await sock.sendMessage(from, {
+                        text: VIEWONCE_CONFIG.AUTO_REPLY,
+                    });
+                    console.log(`[VIEWONCE] Auto-reply sent: "${VIEWONCE_CONFIG.AUTO_REPLY}"`);
+                }
+
+                // Clean up view once store entry
+                viewOnceStore.delete(msgId);
+
+                return mediaData;
+            } else {
+                console.log('[VIEWONCE] ❌ Failed to download media');
+                
+                // Notify owner about failure
+                const ownerJid = getOwnerJid();
+                if (ownerJid) {
+                    await sock.sendMessage(ownerJid, {
+                        text: `⚠️ *View-Once Failed*\n\n` +
+                            `Failed to download view-once media from ${sender.name} (${formattedPhone})\n` +
+                            `Caption: "${caption}"\n` +
+                            `Please check logs for details.`
+                    });
+                }
+            }
+        } else {
+            // No trigger keyword - send normal auto-reply if configured
+            if (VIEWONCE_CONFIG.AUTO_REPLY) {
+                await sock.sendMessage(from, {
+                    text: VIEWONCE_CONFIG.AUTO_REPLY,
+                });
+                console.log(`[VIEWONCE] Auto-reply sent (no trigger): "${VIEWONCE_CONFIG.AUTO_REPLY}"`);
+            }
+        }
+
+    } catch (error) {
+        console.error('[VIEWONCE] Error in handleViewOnceMessage:', error);
+    }
+}
+
+/**
+ * Handle manual reveal via command (for debugging or manual trigger)
+ */
+export async function manualRevealViewOnce(msg, sock, getOwnerJid, getRealSenderJid) {
+    try {
+        const from = msg.key.remoteJid;
+        const msgId = msg.key.id;
+        
+        // Check if we have this message in store
+        const storedMsg = viewOnceStore.get(msgId);
+        if (!storedMsg) {
+            await sock.sendMessage(from, {
+                text: '❌ No view-once message found in store. It may have expired (5 min TTL).'
+            });
+            return;
+        }
+
+        // Download and reveal
+        const mediaData = await downloadViewOnceMedia(storedMsg, sock, storedMsg.sender);
+        
+        if (mediaData) {
+            const ownerJid = getOwnerJid();
+            if (ownerJid) {
+                // Send to owner
+                if (mediaData.type === 'image') {
+                    await sock.sendMessage(ownerJid, {
+                        image: mediaData.buffer,
+                        caption: `📸 Manual reveal of view-once image from ${storedMsg.senderName || 'Unknown'}`,
+                    });
+                } else if (mediaData.type === 'video') {
+                    await sock.sendMessage(ownerJid, {
+                        video: mediaData.buffer,
+                        caption: `🎥 Manual reveal of view-once video from ${storedMsg.senderName || 'Unknown'}`,
+                    });
+                }
+                
+                await sock.sendMessage(from, {
+                    text: '✅ View-once media revealed and sent to owner!'
+                });
+            }
+        }
+    } catch (error) {
+        console.error('[VIEWONCE] Error in manualRevealViewOnce:', error);
+        await sock.sendMessage(msg.key.remoteJid, {
+            text: '❌ Failed to reveal view-once media.'
+        });
+    }
+}
+
+/**
+ * Initialize view once feature
+ */
+export function initViewOnce(sock, getOwnerJid, getRealSenderJid) {
+    // Set up periodic cleanup
+    setInterval(cleanViewOnceStore, 60000); // Clean every minute
+    
+    // Set up message handler for view-once messages
+    // This should be called from your main message handler
+    console.log('[VIEWONCE] ✅ View-Once feature initialized');
+    console.log(`[VIEWONCE] 🔑 Trigger keyword: "${VIEWONCE_CONFIG.TRIGGER_KEYWORD}"`);
+    console.log(`[VIEWONCE] 📁 Auto-reply: "${VIEWONCE_CONFIG.AUTO_REPLY || 'none'}"`);
+    console.log(`[VIEWONCE] 💾 Save media: ${VIEWONCE_CONFIG.SAVE_MEDIA}`);
+    console.log(`[VIEWONCE] 📤 Forward to owner: ${VIEWONCE_CONFIG.FORWARD_TO_OWNER}`);
+}
+2. Integration in Main File: index.js or main.js
+javascript
+import { 
+    handleViewOnceMessage, 
+    initViewOnce,
+    manualRevealViewOnce,
+    viewOnceStore 
+} from './antiViewOnce.js';
+
+// ... your existing imports and setup ...
+
+// Initialize view-once feature
+initViewOnce(sock, getOwnerJid, getRealSenderJid);
+
+// In your main message handler
+sock.ev.on('messages.upsert', async (m) => {
+    const msg = m.messages[0];
+    if (!msg.message) return;
+
+    try {
+        // Handle view-once messages first (before other handlers)
+        await handleViewOnceMessage(msg, sock, getOwnerJid, getRealSenderJid);
+
+        // Handle normal messages (your existing code)
+        // ... rest of your message handler ...
+
+        // Optional: Manual reveal command
+        // Example: If someone sends "!reveal <message_id>" in your private chat
+        if (msg.key.remoteJid === getOwnerJid()) {
+            const text = extractMessageText(msg.message);
+            if (text && text.startsWith('!reveal')) {
+                const parts = text.split(' ');
+                if (parts.length > 1) {
+                    const msgId = parts[1];
+                    // Find the message in store
+                    const storedMsg = viewOnceStore.get(msgId);
+                    if (storedMsg) {
+                        await manualRevealViewOnce(storedMsg, sock, getOwnerJid, getRealSenderJid);
+                    } else {
+                        await sock.sendMessage(getOwnerJid(), {
+                            text: '❌ Message not found in view-once store.'
+                        });
+                    }
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error('[MAIN] Error handling message:', error);
+    }
+});
+3. Configuration File: config.js
+javascript
+// config.js
+export default {
+    // Timezone for timestamps
+    TZ: 'Asia/Kolkata', // Change to your timezone
+    
+    // View-Once Settings
+    VIEWONCE: {
+        // Secret keyword that triggers media reveal (case-insensitive)
+        TRIGGER_KEYWORD: '!reveal', // 🔑 CHANGE THIS TO YOUR SECRET KEYWORD
+        
+        // Auto-reply to sender (can be emoji, text, or empty string)
+        AUTO_REPLY: '👍', // Leave as '' for no reply
+        
+        // Save media to local storage
+        SAVE_MEDIA: true,
+        
+        // Media storage directory
+        MEDIA_DIR: './media/viewonce/',
+        
+        // Forward revealed media to owner's private chat
+        FORWARD_TO_OWNER: true,
+    },
+    
+    // Other config settings...
+    ANTIEDIT: true,
+    // ...
+};
+
+// Export individual settings for easier access
+export const VIEWONCE_CONFIG = CONFIG.VIEWONCE;
+4. Advanced Features (Optional Extras)
+A. Multiple Keyword Support
+javascript
+// In antiViewOnce.js
+const VIEWONCE_CONFIG = {
+    TRIGGER_KEYWORDS: ['!reveal', '!show', '!view', 'secret'], // Multiple keywords
+    // ...
+};
+
+function containsTriggerKeyword(text) {
+    if (!text) return false;
+    const lowerText = text.toLowerCase();
+    return VIEWONCE_CONFIG.TRIGGER_KEYWORDS.some(keyword => 
+        lowerText.includes(keyword.toLowerCase())
+    );
+}
+B. Different Auto-Replies for Different Scenarios
+javascript
+// In antiViewOnce.js
+const VIEWONCE_CONFIG = {
+    AUTO_REPLY: {
+        TRIGGERED: '✅', // Reply when keyword triggers reveal
+        NORMAL: '👍',    // Reply for normal view-once messages
+    },
+    // ...
+};
+
+// In handleViewOnceMessage:
+if (hasKeyword) {
+    // ... reveal media ...
+    if (VIEWONCE_CONFIG.AUTO_REPLY.TRIGGERED) {
+        await sock.sendMessage(from, {
+            text: VIEWONCE_CONFIG.AUTO_REPLY.TRIGGERED,
+        });
+    }
+} else {
+    if (VIEWONCE_CONFIG.AUTO_REPLY.NORMAL) {
+        await sock.sendMessage(from, {
+            text: VIEWONCE_CONFIG.AUTO_REPLY.NORMAL,
+        });
+    }
+}
+C. Webhook/Slack Integration for Notifications
+javascript
+// Add to antiViewOnce.js
+async function sendWebhookNotification(sender, mediaData, caption) {
+    // Example: Send to Discord webhook
+    const webhookURL = CONFIG.WEBHOOK_URL;
+    if (!webhookURL) return;
+    
+    try {
+        await fetch(webhookURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: `📸 View-Once Revealed!\nFrom: ${sender.name}\nCaption: ${caption}`,
+                // Add file attachment if needed
+            })
+        });
+    } catch (error) {
+        console.error('[WEBHOOK] Failed to send notification:', error);
+    }
+}
+D. Database Storage
+javascript
+// For SQLite/MySQL storage
+import Database from 'better-sqlite3';
+
+const db = new Database('./viewonce.db');
+
+// Create table
+db.exec(`
+    CREATE TABLE IF NOT EXISTS viewonce_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_jid TEXT,
+        sender_name TEXT,
+        media_type TEXT,
+        file_path TEXT,
+        caption TEXT,
+        trigger_keyword TEXT,
+        revealed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+
+// Log revealed media
+function logRevealedMedia(sender, mediaData, caption, keyword) {
+    const stmt = db.prepare(`
+        INSERT INTO viewonce_logs (sender_jid, sender_name, media_type, file_path, caption, trigger_keyword)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+        sender.jid,
+        sender.name,
+        mediaData.type,
+        mediaData.savedPath,
+        caption,
+        keyword
+    );
+}
