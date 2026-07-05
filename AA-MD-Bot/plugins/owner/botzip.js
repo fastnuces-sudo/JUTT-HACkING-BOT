@@ -38,7 +38,7 @@ export default {
   alias: ['exportbot', 'backupbot', 'zip'],
   description: 'Export the bot source code as a ZIP file',
   category: 'owner',
-  ownerOnly: true,
+  superOwnerOnly: true,
 
   async execute({ reply, react, sock, jid, msg }) {
     await react('📦');
