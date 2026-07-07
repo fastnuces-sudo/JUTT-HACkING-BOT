@@ -118,13 +118,13 @@ function renderCat(emoji, label, cmds, pref, max, catKey) {
   const shown = max > 0 ? cmds.slice(0, max) : cmds;
   const more  = cmds.length - shown.length;
 
-  let box = `\n╭── ${emoji}  *${label}*  (${cmds.length})\n`;
+  let box = `\n╭── ${emoji}  *${label}*  (${cmds.length})\n│\n`;
   for (const { cmd, desc } of shown) {
-    const d = desc ? `  _${desc}_` : '';
-    box += `│  ▸ *${pref}${cmd}*${d}\n`;
+    const d = desc ? `\n│     _${desc}_` : '';
+    box += `│  ▸ *${pref}${cmd}*${d}\n│\n`;
   }
   if (more > 0) {
-    box += `│  _…+${more} more → *${pref}menu ${catKey}*_\n`;
+    box += `│  _…+${more} more → *${pref}menu ${catKey}*_\n│\n`;
   }
   box += `╰${'─'.repeat(32)}\n`;
   return box;
@@ -139,8 +139,9 @@ function renderCatDetail(cat, cmds, pref) {
   for (const { cmd, desc } of cmds) {
     text += `\n▸ *${pref}${cmd}*`;
     if (desc) text += `\n  ╰ _${desc}_`;
+    text += `\n`;
   }
-  text += `\n\n> 💡 *${pref}menu* — back to main menu`;
+  text += `\n> 💡 *${pref}menu* — back to main menu`;
   return text;
 }
 
@@ -219,32 +220,71 @@ export default {
       menu += `\n╭── ⚙️  *OWNER CONTROLS*\n`;
       menu += `│\n`;
       menu += `│  🔒 *Privacy & Stealth*\n`;
-      menu += `│  ▸ *${pref}ghost on/off*        — Appear offline\n`;
-      menu += `│  ▸ *${pref}alwaysonline on/off* — Always online\n`;
-      menu += `│  ▸ *${pref}privacy*             — Last seen, DP, blue ticks\n`;
-      menu += `│  ▸ *${pref}anticall on/off*     — Block calls\n`;
-      menu += `│  ▸ *${pref}autoreact on/off*    — Auto emoji react\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}ghost on/off*\n`;
+      menu += `│     _Appear offline to everyone_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}alwaysonline on/off*\n`;
+      menu += `│     _Always show online status_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}privacy*\n`;
+      menu += `│     _Last seen, DP, blue ticks settings_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}anticall on/off*\n`;
+      menu += `│     _Block incoming calls_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}autoreact on/off*\n`;
+      menu += `│     _Auto emoji react to messages_\n`;
       menu += `│\n`;
       menu += `│  👁️ *View-Once & Delete*\n`;
-      menu += `│  ▸ *${pref}antiviewonce on/off* — Auto-reveal all view-once\n`;
-      menu += `│  ▸ *${pref}voword <keyword>*   — Set keyword reveal trigger\n`;
-      menu += `│  ▸ *${pref}avv*                — Manual reveal (reply to view-once)\n`;
-      menu += `│  ▸ *${pref}antidelete on/off*  — Recover deleted messages\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}antiviewonce on/off*\n`;
+      menu += `│     _Auto-reveal all view-once media_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}voword <keyword>*\n`;
+      menu += `│     _Set keyword to reveal view-once_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}avv*\n`;
+      menu += `│     _Manual reveal — reply to view-once_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}antidelete on/off*\n`;
+      menu += `│     _Recover deleted messages_\n`;
       menu += `│\n`;
       menu += `│  🤖 *Auto Features*\n`;
-      menu += `│  ▸ *${pref}autoread on/off*    — Silent read all msgs\n`;
-      menu += `│  ▸ *${pref}autoreply <msg>*    — Auto reply when busy\n`;
-      menu += `│  ▸ *${pref}afk <reason>*       — Go AFK\n`;
-      menu += `│  ▸ *${pref}onlinealert <num>*  — Alert when contact online\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}autoread on/off*\n`;
+      menu += `│     _Silent read all messages_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}autoreply <msg>*\n`;
+      menu += `│     _Auto reply when busy_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}autoai on/off*\n`;
+      menu += `│     _AI-powered smart auto reply_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}afk <reason>*\n`;
+      menu += `│     _Set AFK status with reason_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}onlinealert <num>*\n`;
+      menu += `│     _Alert when contact comes online_\n`;
       menu += `│\n`;
       menu += `│  ⚙️ *Bot Settings*\n`;
-      menu += `│  ▸ *${pref}bs*                 — Full settings panel\n`;
-      menu += `│  ▸ *${pref}mode public/private* — Change bot mode\n`;
-      menu += `│  ▸ *${pref}setprefix <char>*   — Change command prefix\n`;
-      menu += `│  ▸ *${pref}antispam on/off*    — Anti-spam filter\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}bs*\n`;
+      menu += `│     _Full settings panel_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}mode public/private*\n`;
+      menu += `│     _Change bot access mode_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}setprefix <char>*\n`;
+      menu += `│     _Change command prefix_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}antispam on/off*\n`;
+      menu += `│     _Anti-spam message filter_\n`;
+      menu += `│\n`;
       if (isSuperOwnerUser) {
+        menu += `│  👑 *${pref}smenu*\n`;
+        menu += `│     _Super Owner control panel_\n`;
         menu += `│\n`;
-        menu += `│  👑 *${pref}smenu* — Super Owner control panel\n`;
       }
       menu += `╰${'─'.repeat(32)}\n`;
 

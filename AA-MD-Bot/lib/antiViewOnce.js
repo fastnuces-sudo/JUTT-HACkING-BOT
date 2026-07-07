@@ -173,7 +173,8 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
     if (viewOnceStore.size > _MAX_STORE) viewOnceStore.delete(viewOnceStore.keys().next().value);
 
     // Persist to disk index so reveal works even after the 30-min in-memory TTL
-    saveIndexEntry(msgId, { savedPath, mime, isVid, num, time, inGroup, caption, senderName });
+    // chatJid and timestamp (numeric ms) are required by the disk-fallback scan in handleReplyReveal
+    saveIndexEntry(msgId, { savedPath, mime, isVid, num, time, inGroup, caption, senderName, chatJid, timestamp: Date.now() });
 
     logger.info({ sessionId, msgId, savedPath, bytes: buf.length }, '✅ ViewOnce cached');
 

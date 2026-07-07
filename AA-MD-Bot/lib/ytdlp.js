@@ -47,8 +47,16 @@ const _denoPath = resolveDeno();
 export const YTDLP_FLAGS = `--js-runtimes "deno:${_denoPath}" --no-check-certificate`;
 
 // Returns --cookies flag string if cookies.txt exists, else empty string
+// Use getCookiesFlag() only with exec() (shell string interpolation).
 const COOKIES_PATH = path.join(__dirname, '..', 'cookies.txt');
 export function getCookiesFlag() {
   return existsSync(COOKIES_PATH) ? `--cookies "${COOKIES_PATH}"` : '';
 }
+
+// Returns ['--cookies', '<path>'] array if cookies.txt exists, else []
+// Use getCookiesArgs() with execFile() (args array — avoids shell injection).
+export function getCookiesArgs() {
+  return existsSync(COOKIES_PATH) ? ['--cookies', COOKIES_PATH] : [];
+}
+
 export { COOKIES_PATH };

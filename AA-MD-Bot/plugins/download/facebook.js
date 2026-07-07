@@ -8,7 +8,7 @@
 import axios from 'axios';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { YTDLP, getCookiesFlag } from '../../lib/ytdlp.js';
+import { YTDLP, getCookiesArgs } from '../../lib/ytdlp.js';
 
 const execFileP  = promisify(execFile);
 const FB_RX      = /https?:\/\/(www\.|m\.|web\.)?facebook\.com\/[^\s]+|https?:\/\/fb\.watch\/[^\s]+/i;
@@ -85,7 +85,7 @@ async function ytdlpFb(url) {
     '--no-playlist',
     '--no-warnings',
     '--socket-timeout', '20',
-    ...getCookiesFlag(),
+    ...getCookiesArgs(),
   ];
   const { stdout } = await execFileP(YTDLP, args, { timeout: 40000 });
   const link = stdout.trim().split('\n')[0];

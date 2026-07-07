@@ -7,7 +7,7 @@
 import axios from 'axios';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { YTDLP, getCookiesFlag } from '../../lib/ytdlp.js';
+import { YTDLP, getCookiesArgs } from '../../lib/ytdlp.js';
 
 const execFileP = promisify(execFile);
 const api       = axios.create({ timeout: 18000 });
@@ -57,7 +57,7 @@ async function ytFallback(title, artist) {
     '--no-playlist',
     '--no-warnings',
     '--socket-timeout', '20',
-    ...getCookiesFlag(),
+    ...getCookiesArgs(),
   ];
   const { stdout } = await execFileP(YTDLP, args, { timeout: 40000 });
   const link = stdout.trim().split('\n')[0];
