@@ -1,3 +1,9 @@
+// ============================================
+// AA MD Bot - Menu
+// Clean, duplicate-free, role-aware menu
+// Owner-control commands hidden from public
+// ============================================
+
 import { plugins } from '../../lib/pluginLoader.js';
 import config from '../../config.js';
 import { db } from '../../lib/database.js';
@@ -7,6 +13,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// ── Banner ────────────────────────────────────────────────────────────────────
 const BANNER_PATHS = [
   path.join(__dirname, '../../banner.jpeg'),
   path.join(__dirname, '../../banner.jpg'),
@@ -18,6 +25,7 @@ function getBanner() {
   return null;
 }
 
+// ── Newsletter context ────────────────────────────────────────────────────────
 function getCtx() {
   const jid = global._AA_NEWSLETTER_JID;
   if (!jid) return null;
@@ -32,48 +40,109 @@ function getCtx() {
   };
 }
 
-const CAT_EMOJI = {
-  islamic: '☪️',  gb:       '📱',  download: '⬇️',  media: '🎬',
-  search:  '🔍',  fun:      '🎮',  utility: '🔧',
-  tools:   '🛠️',  economy:  '💰',  level: '⭐',
-  group:   '👥',  admin:    '🛡️',  owner: '👑',
-  general: '📋',  misc:     '📌',
+// ── Config ────────────────────────────────────────────────────────────────────
+const FOOTER = `\n> 🌐 *https://aa-mods.vercel.app/*\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*`;
+
+// Categories to skip entirely in public menu
+const SKIP = new Set(['owner', 'settings', 'ai']);
+// GB commands that are owner-only (personal bot settings)
+const GB_OWNER_CMDS = new Set(['afk','alwaysonline','autoread','autoreply','flood','ghost','onlinealert','typing','autoreact','anticall','antispam']);
+// Tools commands that are owner-only
+const TOOLS_OWNER_CMDS = new Set(['backup','dbstats','logs','reload','speedtest','system','memory']);
+
+// Category display config: emoji, display name, max commands shown
+const CAT_CFG = {
+  download:  { e: '⬇️',  n: 'DOWNLOADS',     max: 10 },
+  search:    { e: '🔍',  n: 'SEARCH & AI',    max: 10 },
+  media:     { e: '🎨',  n: 'MEDIA',          max: 10 },
+  fun:       { e: '🎮',  n: 'FUN & GAMES',    max: 12 },
+  economy:   { e: '💰',  n: 'ECONOMY',        max: 8  },
+  level:     { e: '⭐',  n: 'LEVEL & XP',     max: 5  },
+  group:     { e: '👥',  n: 'GROUP',          max: 10 },
+  admin:     { e: '🛡️', n: 'GROUP ADMIN',    max: 10 },
+  tools:     { e: '🔧',  n: 'TOOLS',          max: 8  },
+  utility:   { e: '🛠️', n: 'UTILITY',        max: 10 },
+  gb:        { e: '📱',  n: 'GB FEATURES',    max: 6  },
+  islamic:   { e: '☪️',  n: 'ISLAMIC',        max: 0  }, // summary only
+  general:   { e: '📋',  n: 'GENERAL',        max: 8  },
 };
+const CAT_ORDER = ['download','search','media','fun','economy','level','group','admin','tools','utility','gb','islamic'];
 
-const CAT_ORDER = {
-  islamic: 0, owner: 1, gb: 2, download: 3, media: 4,
-  search: 5, fun: 6, utility: 7, tools: 8, economy: 9,
-  level: 10, group: 11, admin: 12,
-};
-
-const SKIP_CATS  = new Set(['settings', 'ai']);
-const OWNER_CATS = new Set(['owner']);
-const SUMMARY_CATS = new Set(['islamic']);
-
-const W = `\n\n> 🌐 *https://aa-mods.vercel.app/*\n> 🤖 *Powered by AA MD Bot*\n> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
-
+// ── Greeting ──────────────────────────────────────────────────────────────────
 function greet() {
-  const h = new Date().getUTCHours() + 5;
-  if (h < 6)  return '🌙 Assalamualaikum';
+  const h = new Date().getUTCHours() + 5; // PKT offset
+  if (h < 6 || h >= 20) return '🌙 Assalamualaikum';
   if (h < 12) return '🌅 Assalamualaikum';
   if (h < 17) return '☀️  Assalamualaikum';
-  if (h < 20) return '🌆 Assalamualaikum';
-  return '🌙 Assalamualaikum';
+  return '🌆 Assalamualaikum';
 }
 
-// Draw a category box with its commands inside
-function catBox(emoji, label, count, cmds, pref, isSuperOwnerUser) {
-  const title = `${emoji}  *${label}*  (${count})`;
-  let box = `\n╭─── ${title}\n`;
-  for (const { main, short, desc, superOnly } of cmds) {
-    if (superOnly && !isSuperOwnerUser) continue;
-    const alias = short ? `/${pref}${short}` : '';
-    const lock  = superOnly ? ' 🔐' : '';
-    const d     = desc ? `  _${desc.slice(0, 30)}_` : '';
-    box += `│  ▸ *${pref}${main}*${alias}${lock}${d}\n`;
+// ── Build the plugin list deduplicated and role-filtered ──────────────────────
+function buildCategoryMap(isOwner, isSuperOwnerUser) {
+  const seen = new Set();     // by command name (main command)
+  const catMap = {};
+
+  for (const plugin of plugins.values()) {
+    const mainCmd = Array.isArray(plugin.command) ? plugin.command[0] : plugin.command;
+    if (!mainCmd) continue;
+    if (seen.has(mainCmd)) continue;
+    seen.add(mainCmd);
+
+    const cat = (plugin.category || 'general').toLowerCase();
+    if (SKIP.has(cat)) continue;
+
+    // Skip superOwner-only commands for non-superOwner users
+    if (plugin.superOwnerOnly && !isSuperOwnerUser) continue;
+
+    // Skip ownerOnly commands in GB and Tools for non-owners — they belong in owner section
+    if (!isOwner) {
+      if (plugin.ownerOnly) continue; // don't show any ownerOnly cmd in public menu
+      if (cat === 'gb' && GB_OWNER_CMDS.has(mainCmd)) continue;
+      if (cat === 'tools' && TOOLS_OWNER_CMDS.has(mainCmd)) continue;
+    }
+
+    if (!catMap[cat]) catMap[cat] = [];
+    catMap[cat].push({
+      cmd: mainCmd,
+      desc: (plugin.description || '').slice(0, 38),
+      ownerOnly: !!plugin.ownerOnly,
+      superOnly: !!plugin.superOwnerOnly,
+    });
   }
-  box += `╰${'─'.repeat(32)}\n`;
+
+  return catMap;
+}
+
+// ── Render a category box ─────────────────────────────────────────────────────
+function renderCat(emoji, label, cmds, pref, max) {
+  const shown = max > 0 ? cmds.slice(0, max) : cmds;
+  const more  = cmds.length - shown.length;
+
+  let box = `\n╭── ${emoji}  *${label}*  (${cmds.length})\n`;
+  for (const { cmd, desc } of shown) {
+    const d = desc ? `  _${desc}_` : '';
+    box += `│  ▸ *${pref}${cmd}*${d}\n`;
+  }
+  if (more > 0) {
+    box += `│  _+${more} more — *${pref}menu ${label.toLowerCase().replace(/ .*/,'')}*_\n`;
+  }
+  box += `╰${'─'.repeat(30)}\n`;
   return box;
+}
+
+// ── Single-category detail view ───────────────────────────────────────────────
+function renderCatDetail(cat, cmds, pref, isSuperOwnerUser) {
+  const cfg = CAT_CFG[cat] || { e: '📌', n: cat.toUpperCase() };
+  let text = `╔════════════════════════════════╗\n`;
+  text    += `║  ${cfg.e}  *${cfg.n} COMMANDS*\n`;
+  text    += `╚════════════════════════════════╝\n`;
+  for (const { cmd, desc, superOnly } of cmds) {
+    if (superOnly && !isSuperOwnerUser) continue;
+    text += `\n▸ *${pref}${cmd}*`;
+    if (desc) text += `\n  ╰ _${desc}_`;
+  }
+  text += `\n\n> 💡 *${pref}menu* — back to main menu`;
+  return text;
 }
 
 export default {
@@ -86,7 +155,7 @@ export default {
   async execute({ sock, jid, msg, isOwner, args, senderJid }) {
     const settings = db.settings.get();
     const pushName = msg.pushName || 'User';
-    const pref     = (settings.prefix ?? config.prefix)[0] ?? '.';
+    const pref     = (settings.prefix ?? config.prefix)?.[0] ?? '.';
     const mode     = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
     const isSuperOwnerUser = senderJid?.split('@')[0]?.split(':')[0] === config.superOwner;
     const role = isSuperOwnerUser ? '👑 Super Owner' : isOwner ? '🔑 Owner' : '👤 User';
@@ -94,218 +163,112 @@ export default {
     const upSec = Math.floor(process.uptime());
     const upH   = Math.floor(upSec / 3600);
     const upM   = Math.floor((upSec % 3600) / 60);
-    const upS   = upSec % 60;
-    const uptime = upH > 0 ? `${upH}h ${upM}m` : upM > 0 ? `${upM}m ${upS}s` : `${upS}s`;
+    const uptime = upH > 0 ? `${upH}h ${upM}m` : `${upM}m ${upSec % 60}s`;
     const usedMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
 
-    // Build category map
-    const seen = new Set();
-    const categories = {};
-    for (const plugin of plugins.values()) {
-      const fileKey = plugin.file || plugin.command;
-      if (seen.has(fileKey)) continue;
-      seen.add(fileKey);
-      const cat   = (plugin.category || 'general').toLowerCase();
-      const cmds  = [].concat(plugin.command);
-      const alias = [].concat(plugin.alias || []);
-      const main  = cmds[0];
-      const short = alias.find(a => a.length <= 6) || alias[0] || null;
-      const desc  = (plugin.description || '').slice(0, 40);
-      if (!categories[cat]) categories[cat] = [];
-      categories[cat].push({ main, short, desc, superOnly: !!plugin.superOwnerOnly });
-    }
-    const totalCmds = seen.size;
-    const ctx = getCtx();
+    const catMap    = buildCategoryMap(isOwner, isSuperOwnerUser);
+    const totalCmds = Object.values(catMap).reduce((s, a) => s + a.length, 0);
+    const ctx       = getCtx();
 
-    // ── Single-category view ──────────────────────────────
+    // ── Single-category detail view ───────────────────────────────────────────
     if (args[0]) {
-      const cat  = args[0].toLowerCase();
-      const cmds = categories[cat];
-      if (!cmds) {
-        const list = Object.keys(categories)
-          .filter(c => !SKIP_CATS.has(c))
-          .sort((a, b) => (CAT_ORDER[a] ?? 50) - (CAT_ORDER[b] ?? 50))
-          .map(c => `  ${CAT_EMOJI[c] || '📌'} *${c}*  (${categories[c].length})`)
+      const key = args[0].toLowerCase();
+      // Try matching by keyword
+      const matched = CAT_ORDER.find(c => c.startsWith(key)) || key;
+      const cmds    = catMap[matched];
+
+      if (!cmds?.length) {
+        const list = CAT_ORDER
+          .filter(c => catMap[c]?.length)
+          .map(c => `  ${(CAT_CFG[c] || {}).e || '📌'} *${c}*  (${catMap[c].length})`)
           .join('\n');
-        const payload = { text: `❌ *"${cat}"* not found.\n\n📦 *Categories:*\n\n${list}${W}` };
+        const payload = { text: `❌ Category *"${key}"* not found.\n\n📦 *Available:*\n${list}${FOOTER}` };
         if (ctx) payload.contextInfo = ctx;
         return sock.sendMessage(jid, payload, { quoted: msg });
       }
-      const emoji = CAT_EMOJI[cat] || '📌';
-      let text = `╔══════════════════════════════════╗\n`;
-      text    += `║  ${emoji}  *${cat.toUpperCase()} COMMANDS*\n`;
-      text    += `╚══════════════════════════════════╝\n`;
-      for (const { main, short, desc, superOnly } of cmds) {
-        if (superOnly && !isSuperOwnerUser) continue;
-        const alias = short ? ` / *${pref}${short}*` : '';
-        const lock  = superOnly ? ' 🔐' : '';
-        text += `\n▸ *${pref}${main}*${alias}${lock}`;
-        if (desc) text += `\n  ╰ _${desc}_`;
-      }
-      text += `\n\n> 💡 *${pref}menu* — back to full menu`;
-      text += W;
-      const payload = { text };
+
+      const cfg  = CAT_CFG[matched] || { e: '📌', n: matched.toUpperCase() };
+      let detail = renderCatDetail(matched, cmds, pref, isSuperOwnerUser);
+      detail    += FOOTER;
+      const payload = { text: detail };
       if (ctx) payload.contextInfo = ctx;
       return sock.sendMessage(jid, payload, { quoted: msg });
     }
 
-    // ── Full Menu ─────────────────────────────────────────
+    // ── Full menu ─────────────────────────────────────────────────────────────
     const greeting = isSuperOwnerUser
-      ? `🌟 *${greet()}, Ahsan Bhai!*\n👑 _Super Owner — Full Access_`
+      ? `👑 *${greet()}, Ahsan Bhai!*\n_Super Owner — Full Access_`
       : isOwner
         ? `🔑 *${greet()}, Owner!*\n_Bot control active_`
         : `✨ *${greet()}, ${pushName}!*\n_Welcome to AA MD Bot_`;
 
     let menu = '';
 
-    // Header
+    // ── Header ────────────────────────────────────────────────────────────────
     menu += `╔══════════════════════════════════╗\n`;
-    menu += `║  🤖  *A  A     M D     B  O  T*  ║\n`;
-    menu += `║  👨‍💻  Ahsan Ali Wadani | AA Mods   ║\n`;
-    menu += `║  🌐  aa-mods.vercel.app           ║\n`;
+    menu += `║  🤖  *A A   M D   B O T*         ║\n`;
+    menu += `║  👨‍💻  Ahsan Ali Wadani | AA Mods  ║\n`;
     menu += `╚══════════════════════════════════╝\n\n`;
     menu += `${greeting}\n`;
 
-    // Status box
-    menu += `\n╭─── 📊  *BOT STATUS*\n`;
-    menu += `│  🟢  Online    •  ⏱️  ${uptime}\n`;
-    menu += `│  💾  ${usedMB} MB RAM  •  📦  ${totalCmds}+ cmds\n`;
-    menu += `│  🔑  Prefix: *${pref}*   •  🔀  Mode: *${mode}*\n`;
-    menu += `│  🎭  Role:   *${role}*\n`;
-    menu += `╰${'─'.repeat(32)}\n`;
+    // ── Status ────────────────────────────────────────────────────────────────
+    menu += `\n╭── 📊  *STATUS*\n`;
+    menu += `│  🟢 Online  •  ⏱️ ${uptime}  •  💾 ${usedMB}MB\n`;
+    menu += `│  🔑 Prefix: *${pref}*   •  🔀 *${mode}*   •  🎭 ${role}\n`;
+    menu += `│  📦 *${totalCmds}* commands available\n`;
+    menu += `╰${'─'.repeat(30)}\n`;
 
-    // Category boxes — each separated clearly
-    const sorted = Object.entries(categories).sort(([a],[b]) =>
-      (CAT_ORDER[a] ?? 50) - (CAT_ORDER[b] ?? 50) || a.localeCompare(b)
-    );
+    // ── Public categories ─────────────────────────────────────────────────────
+    const orderedCats = [
+      ...CAT_ORDER.filter(c => catMap[c]?.length),
+      ...Object.keys(catMap).filter(c => !CAT_ORDER.includes(c) && catMap[c]?.length),
+    ];
 
-    for (const [cat, cmds] of sorted) {
-      if (SKIP_CATS.has(cat)) continue;
-      if (OWNER_CATS.has(cat) && !isOwner) continue;
-      const emoji = CAT_EMOJI[cat] || '📌';
-      const visibleCmds = cmds.filter(c => !c.superOnly || isSuperOwnerUser);
-      if (!visibleCmds.length) continue;
+    for (const cat of orderedCats) {
+      const cmds = catMap[cat];
+      if (!cmds?.length) continue;
 
-      if (SUMMARY_CATS.has(cat)) {
-        // ── Islamic summary box ─────────────────────────────────────────────
-        menu += `\n╭─── ☪️  *ISLAMIC*  (${visibleCmds.length})\n`;
+      const cfg = CAT_CFG[cat] || { e: '📌', n: cat.toUpperCase(), max: 8 };
+
+      // Islamic — summary only
+      if (cat === 'islamic') {
+        menu += `\n╭── ☪️  *ISLAMIC*  (${cmds.length})\n`;
         menu += `│  ▸ *${pref}islamicmenu* — Full Islamic panel\n`;
         menu += `│  _Duas • Zikr • Hadith • Kalimas • Adhkar_\n`;
-        menu += `╰${'─'.repeat(32)}\n`;
-
-        // ── Support / Contact box — right after Islamic ─────────────────────
-        menu += `\n╭─── 📞  *SUPPORT & CONTACT*\n`;
-        menu += `│  ▸ *${pref}support*     — Contact owner / Get help\n`;
-        menu += `│  ▸ *${pref}report <msg>* — Report a bug or issue\n`;
-        menu += `│  ▸ *${pref}contact*     — Owner contact info\n`;
-        menu += `│  🌐 https://aa-mods.vercel.app/\n`;
-        menu += `╰${'─'.repeat(32)}\n`;
-
-        // ── Featured Commands — visible to ALL users ─────────────────────────
-        menu += `\n╭─── ✨  *QUICK COMMANDS*\n`;
-        menu += `│\n`;
-        menu += `│  ⬇️  *Downloads*\n`;
-        menu += `│  ▸ *${pref}play* <name>   — 🎵 YouTube audio\n`;
-        menu += `│  ▸ *${pref}video* <name>  — 🎬 YouTube video\n`;
-        menu += `│  ▸ *${pref}ig* <link>     — 📸 Instagram reel\n`;
-        menu += `│  ▸ *${pref}dl* <link>     — 🔗 TikTok/FB/X/more\n`;
-        menu += `│\n`;
-        menu += `│  🤖  *AI & Search*\n`;
-        menu += `│  ▸ *${pref}ai* <question>    — Ask anything\n`;
-        menu += `│  ▸ *${pref}imagine* <prompt> — AI image gen\n`;
-        menu += `│  ▸ *${pref}shazam*           — Identify a song\n`;
-        menu += `│  ▸ *${pref}ss* <url>         — Website screenshot\n`;
-        menu += `│\n`;
-        menu += `│  🎨  *Media & Fun*\n`;
-        menu += `│  ▸ *${pref}logo* fire|text   — Stylized logo\n`;
-        menu += `│  ▸ *${pref}sticker*          — Image → sticker\n`;
-        menu += `│  ▸ *${pref}attp* <text>      — Animated neon sticker\n`;
-        menu += `│  ▸ *${pref}emojimix* 😂 ❤️  — Emoji Kitchen\n`;
-        menu += `│  ▸ *${pref}hack* <name>      — Hacking effect\n`;
-        menu += `│  ▸ *${pref}love* Ali & Sara  — Love calculator\n`;
-        menu += `│\n`;
-        menu += `│  🔧  *Tools*\n`;
-        menu += `│  ▸ *${pref}weather* Karachi  — Weather report\n`;
-        menu += `│  ▸ *${pref}currency* 100 USD PKR — Live rates\n`;
-        menu += `│  ▸ *${pref}crypto* btc       — Crypto price\n`;
-        menu += `│  ▸ *${pref}getpp*            — Get profile pic\n`;
-        menu += `│\n`;
-        menu += `│  💡 *${pref}menu <category>* — view a category\n`;
-        menu += `╰${'─'.repeat(32)}\n`;
-
-        // ── Owner Settings box — right after support (owners only) ──────────
-        if (isOwner) {
-          menu += `\n╭─── ⚙️  *OWNER SETTINGS*\n`;
-          menu += `│  ▸ *${pref}bs*          — Bot settings panel\n`;
-          menu += `│  ▸ *${pref}mode*        — public / private\n`;
-          menu += `│  ▸ *${pref}autoread*    — Blue ticks on/off\n`;
-          menu += `│  ▸ *${pref}ghost*       — Appear offline (ghost)\n`;
-          menu += `│  ▸ *${pref}autoreact*   — Auto emoji react\n`;
-          menu += `│  ▸ *${pref}anticall*    — Block calls\n`;
-          menu += `│  ▸ *${pref}antispam*    — Spam filter\n`;
-          menu += `│  ▸ *${pref}setprefix*   — Change prefix\n`;
-          menu += `│  ▸ *${pref}afk* reason  — 😴 Go AFK (auto-reply on)\n`;
-          menu += `│  ▸ *${pref}back*        — 👋 Return from AFK\n`;
-          menu += `╰${'─'.repeat(32)}\n`;
-
-          menu += `\n╭─── 👁️  *VIEW-ONCE REVEAL*\n`;
-          menu += `│  ▸ *${pref}antiviewonce on/off*\n`;
-          menu += `│     Auto-reveal ALL view-once → "You"\n`;
-          menu += `│\n`;
-          menu += `│  ▸ *Emoji Trigger* — Reply to any view-once\n`;
-          menu += `│     with 4 same emojis to reveal it:\n`;
-          menu += `│     🔥🔥🔥🔥  •  👀👀👀👀  •  ❤️❤️❤️❤️\n`;
-          menu += `│\n`;
-          menu += `│  ▸ *${pref}avv* — Reply to view-once to reveal\n`;
-          menu += `╰${'─'.repeat(32)}\n`;
-
-          menu += `\n╭─── 🎵  *YOUTUBE DOWNLOADER*  🆕\n`;
-          menu += `│  ▸ *${pref}play <song name>*  — Audio download\n`;
-          menu += `│  ▸ *${pref}video <name/link>* — Video download\n`;
-          menu += `│  ▸ *${pref}mp3 <yt link>*     — Direct mp3\n`;
-          menu += `│  ▸ *${pref}mp4 <yt link>*     — Direct mp4\n`;
-          menu += `│  _Plays directly in WhatsApp!_\n`;
-          menu += `╰${'─'.repeat(32)}\n`;
-
-          menu += `\n╭─── 🔍  *NEW SEARCH COMMANDS*  🆕\n`;
-          menu += `│  ▸ *${pref}lyrics <song>*  — Song lyrics\n`;
-          menu += `│  ▸ *${pref}npm <package>*  — NPM package info\n`;
-          menu += `│  ▸ *${pref}img <query>*    — 5 images search\n`;
-          menu += `│  ▸ *${pref}test2*          — Bot status card\n`;
-          menu += `╰${'─'.repeat(32)}\n`;
-        }
-
-        // ── Super Owner Tools box ────────────────────────────────────────────
-        if (isSuperOwnerUser) {
-          menu += `\n╭─── 👑  *SUPER OWNER TOOLS* 🔐\n`;
-          menu += `│  ▸ *${pref}smenu*       — Dev control panel\n`;
-          menu += `│  ▸ *${pref}maintenance* — Lock/unlock bot\n`;
-          menu += `│  ▸ *${pref}broadcast*   — Message all groups\n`;
-          menu += `│  ▸ *${pref}eval*        — Run JS code\n`;
-          menu += `│  ▸ *${pref}shell*       — Run shell command\n`;
-          menu += `│  ▸ *${pref}restart*     — Reboot bot\n`;
-          menu += `╰${'─'.repeat(32)}\n`;
-        }
+        menu += `╰${'─'.repeat(30)}\n`;
         continue;
       }
 
-      // Skip owner/admin — they are shown in the fixed boxes above (for owners)
-      // Non-owners never see owner category anyway due to OWNER_CATS filter
-      const LIMIT = 15;
-      menu += catBox(emoji, cat.toUpperCase(), visibleCmds.length,
-        visibleCmds.slice(0, LIMIT), pref, isSuperOwnerUser);
-      if (visibleCmds.length > LIMIT) {
-        menu = menu.replace(/╰─+\n$/, '');
-        menu += `│  _+${visibleCmds.length - LIMIT} more → *${pref}menu ${cat}*_\n`;
-        menu += `╰${'─'.repeat(32)}\n`;
-      }
+      menu += renderCat(cfg.e, cfg.n, cmds, pref, cfg.max || 8);
     }
 
-    // Footer hint
-    menu += `\n> 💡 *${pref}menu <category>* for detailed view`;
-    menu += W;
+    // ── Owner Quick-Access (only for owners) ───────────────────────────────
+    if (isOwner) {
+      menu += `\n╭── ⚙️  *OWNER TOOLS*\n`;
+      menu += `│  ▸ *${pref}bs*           — Bot settings panel\n`;
+      menu += `│  ▸ *${pref}mode*         — public / private\n`;
+      menu += `│  ▸ *${pref}setprefix*    — Change command prefix\n`;
+      menu += `│  ▸ *${pref}afk* <reason> — Go AFK\n`;
+      menu += `│  ▸ *${pref}ghost*        — Appear offline\n`;
+      menu += `│  ▸ *${pref}autoread*     — Auto blue ticks\n`;
+      menu += `│  ▸ *${pref}anticall*     — Block calls\n`;
+      menu += `│  ▸ *${pref}antiviewonce on/off* — Reveal view-once\n`;
+      menu += `│  ▸ *${pref}avv*          — Manually reveal view-once\n`;
+      if (isSuperOwnerUser) {
+        menu += `│\n`;
+        menu += `│  👑 *${pref}smenu* — Super Owner control panel\n`;
+      }
+      menu += `╰${'─'.repeat(30)}\n`;
+    }
 
-    const banner = getBanner();
+    // ── Footer ────────────────────────────────────────────────────────────────
+    menu += `\n> 💡 *${pref}menu <category>* — view full category\n`;
+    menu += `> ☪️ *${pref}islamicmenu* — Islamic commands\n`;
+    if (isOwner) menu += `> 📱 *${pref}gbmenu* — GB features panel\n`;
+    menu += FOOTER;
+
+    // Send with banner image if available
+    const banner  = getBanner();
     const payload = banner
       ? { image: banner, caption: menu, mimetype: 'image/jpeg' }
       : { text: menu };
