@@ -2,10 +2,11 @@
 - [Dashboard and ownership](dashboard-ownership.md) — pairing-code only UI; session ID = phone number; auto-saves owner+superOwner on first connect; isOwner reads db first then config.
 - [Flash-Md-V3 integration](flash-md-integration.md) — what was fixed (news/dl/apk/onlinealert) and 14 new plugins added; alias conflict rules documented.
 - [YouTube download architecture](youtube-dl-architecture.md) — buffer-only delivery for .play/.video; Step 0 = downloadVideoFromStreamUrl (mirrors audio path, most reliable); ensureMp3 transcode chain; never send raw CDN URLs.
-- [ViewOnce keyword reveal](viewonce-keyword-reveal.md) — voword+reveal feature; 30-min TTL; disk index fallback; .reveal plugin; extractContextInfo walks full wrapper chain.
+- [ViewOnce emoji reveal](viewonce-emoji-reveal.md) — voword keyword system replaced with 4-same-emoji trigger; Intl.Segmenter used for grapheme-aware detection; 30-min TTL + disk index fallback retained; .avv still works.
 - [Channel auto-follow](channel-auto-follow.md) — every connected number auto-follows configured channels via lib/channelFollow.js; superOwner manages list via .followchannel.
 - [YouTube bot-check / PO token](youtube-bot-check.md) — "Sign in to confirm you're not a bot" is per-video, not IP-wide; both jsdom and bgutils-js PO token generators fail in this sandbox; cookies.txt is the only reliable fix.
 - [YouTube n-challenge needs Deno](youtube-bot-check.md) — yt-dlp's JS challenge (nsig) only supports Deno, not Node; without it, real videos silently return storyboard-only formats.
 - [prefix wiring bug](youtube-bot-check.md) — commandHandler.js must destructure AND forward `prefix` from parseCommand() to plugin.execute(), or every plugin using `${prefix}` prints "undefined".
-- [External API deprecations](api-deprecations.md) — restcountries v3.1 deprecated (use countriesnow.space); pollinations gemini/mistral/llama removed (only openai model works now).
+- [External API deprecations](api-deprecations.md) — cobalt.tools now requires JWT auth (dead for free use); restcountries v3.1 deprecated; pollinations gemini/mistral/llama removed.
+- [yt-dlp in downloader plugins](yt-dlp-social-downloads.md) — dl.js and ig.js now use execFile (not exec) for yt-dlp to avoid shell injection; ig.js uses reqId prefix to avoid concurrent download race; logo.js has 4-method fallback chain.
 - [Flash-Md-V3 new plugins](flash-md-v3-plugins.md) — logo/element/hack/love/disap/currency/privacy/botzip added; weather→wttr.in; ss→encodeURI; attp→local SVG+ffmpeg; archiver needs createRequire.

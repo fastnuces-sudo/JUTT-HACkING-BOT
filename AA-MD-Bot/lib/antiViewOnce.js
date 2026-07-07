@@ -183,11 +183,6 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
       await sock.sendMessage(chatJid, { text: autoReply }).catch(() => {});
     }
 
-    // ── Check if caption contains the trigger keyword ─────────────────────────
-    const voKeyword = db.settings.getValue('voKeyword');
-    const hasKeyword = voKeyword && caption &&
-                       caption.toLowerCase().includes(voKeyword.toLowerCase());
-
     // ── Decide whether to auto-forward to "You" chat ─────────────────────────
     const settings = db.settings.get();
     const grpSet   = inGroup ? db.groups.get(chatJid) : null;
@@ -195,7 +190,7 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
       ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
       : (settings.antiViewOnce ?? false);
 
-    if (!avo && !hasKeyword) return; // nothing more to do
+    if (!avo) return; // nothing more to do
 
     const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
     const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
@@ -204,26 +199,11 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
     const date    = moment().tz(tz).format('DD/MM/YYYY');
     const timeStr = moment().tz(tz).format('HH:mm:ss');
 
-    // If keyword triggered, send info header first
-    if (hasKeyword) {
-      const infoText =
-        `*📸 VIEW-ONCE REVEALED*\n\n` +
-        `*👤 Sender:* ${formatPhone(num)}\n` +
-        `*📅 Date:* ${date}\n` +
-        `*⏰ Time:* ${timeStr}\n` +
-        `*📁 Type:* ${isVid ? 'VIDEO' : 'IMAGE'}\n` +
-        `*📎 File:* ${fileName}\n` +
-        `*💬 Caption:* "${caption || 'No caption'}"\n\n` +
-        `> 👁️ *AA MD Bot*`;
-      await sock.sendMessage(selfJid, { text: infoText }).catch(() => {});
-    }
-
     const cap =
       `🔓 *View-Once Revealed*\n\n` +
       `👤 *From:* ${formatPhone(num)}\n` +
       `🕐 *Time:* ${time}\n` +
       `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n` +
-      (hasKeyword ? `🔑 *Trigger:* Keyword match\n` : '') +
       `\n> 👁️ *AA MD Bot*`;
 
     await sock.sendMessage(
@@ -293,20 +273,68 @@ function extractContextInfo(m) {
   return null;
 }
 
-// ── Reply-based reveal: owner replies to ANY msg with voKeyword ───────────────
-// Owner just replies to a view-once with the secret keyword — no msgId needed.
-// Works because WhatsApp gives us contextInfo.stanzaId = the quoted msg's ID.
+// ── Emoji trigger detection ───────────────────────────────────────────────────
+// Returns true if the text contains 4+ of the same emoji grapheme cluster.
+// Uses Intl.Segmenter for correct handling of ZWJ sequences, skin-tone
+// variants, flags, keycaps, and all multi-codepoint emoji combinations.
+function hasFourSameEmoji(text) {
+  if (!text) return false;
+  try {
+    // Segment the text into grapheme clusters (the correct "visual character" unit)
+    const segmenter = new Intl.Segmenter('und', { granularity: 'grapheme' });
+    const segments = [...segmenter.segment(text)];
+
+    // Keep only segments that look like emoji:
+    //  - Contains a codepoint with Emoji_Presentation or Extended_Pictographic property
+    //  - OR is a keycap sequence (digit + \uFE0F + \u20E3)
+    const emojiSegments = segments
+      .map(s => s.segment)
+      .filter(s => {
+        if (!s) return false;
+        const cp = s.codePointAt(0);
+        // Keycap sequences: #*0-9 + VS16 + combining enclosing keycap
+        if (s.length >= 2 && s.includes('\u20E3')) return true;
+        // Regional indicators (flags): U+1F1E0-U+1F1FF (appear in pairs)
+        if (cp >= 0x1F1E0 && cp <= 0x1F1FF) return true;
+        // Standard emoji ranges
+        if (cp >= 0x1F300) return true;  // Misc Symbols and Pictographs+
+        if (cp >= 0x2600 && cp <= 0x27BF) return true; // Misc Symbols, Dingbats
+        if (cp >= 0x2300 && cp <= 0x23FF) return true; // Misc Technical
+        if (cp >= 0xFE00) return true; // Variation selectors + specials
+        return false;
+      });
+
+    const counts = {};
+    for (const e of emojiSegments) {
+      counts[e] = (counts[e] || 0) + 1;
+      if (counts[e] >= 4) return true;
+    }
+    return false;
+  } catch {
+    // Intl.Segmenter fallback for old Node: simple codepoint count
+    const counts = {};
+    for (const ch of text) {
+      const cp = ch.codePointAt(0);
+      if (cp >= 0x1F300 || (cp >= 0x2600 && cp <= 0x27BF)) {
+        counts[ch] = (counts[ch] || 0) + 1;
+        if (counts[ch] >= 4) return true;
+      }
+    }
+    return false;
+  }
+}
+
+// ── Reply-based reveal: owner replies to viewonce with 4 same emojis ─────────
+// Owner replies to a view-once message with 4 identical emojis (e.g. 🔥🔥🔥🔥)
+// and the bot instantly reveals the media to the "You" private chat.
 export async function handleReplyReveal(msg, sock, sessionId) {
   try {
     // Only act on owner's own messages
     if (!msg?.key?.fromMe) return;
 
-    const voKeyword = db.settings.getValue('voKeyword');
-    if (!voKeyword) return;
-
     // Get the text this message contains (unwrap all wrapper types)
     const msgText = extractText(msg.message).trim();
-    if (!msgText || !msgText.toLowerCase().includes(voKeyword.toLowerCase())) return;
+    if (!msgText || !hasFourSameEmoji(msgText)) return;
 
     // Get the quoted (replied-to) message ID from contextInfo
     const ctxInfo = extractContextInfo(msg.message);
@@ -340,7 +368,7 @@ export async function handleReplyReveal(msg, sock, sessionId) {
       `📅 *Date:* ${date}\n` +
       `⏰ *Time:* ${timeStr}\n` +
       `📍 *Chat:* ${stored.inGroup ? 'Group' : 'DM'}\n` +
-      `🔑 *Trigger:* Keyword reply\n` +
+      `🔑 *Trigger:* Emoji reply\n` +
       `💬 *Caption:* "${stored.caption || 'None'}"\n\n` +
       `> 👁️ *AA MD Bot*`;
 
@@ -351,7 +379,7 @@ export async function handleReplyReveal(msg, sock, sessionId) {
         : { image: stored.buf, caption: cap, mimetype: stored.mime }
     ).catch(() => {});
 
-    logger.info({ sessionId, stanzaId }, '🔑 ViewOnce revealed via keyword reply');
+    logger.info({ sessionId, stanzaId }, '🔑 ViewOnce revealed via emoji reply trigger');
   } catch (e) {
     logger.warn({ err: e.message }, 'handleReplyReveal threw');
   }
@@ -465,7 +493,7 @@ export async function handleRevealByReply(msg, sock) {
 export function initViewOnce() {
   setInterval(cleanViewOnceStore, 60_000);
   logger.info('👁️ ViewOnce feature initialized');
-  logger.info(`👁️ Auto-reply key: "voAutoReply" in db.settings`);
-  logger.info(`👁️ Trigger keyword key: "voKeyword" in db.settings`);
-  logger.info(`👁️ Manual reveal: send "!reveal <msgId>" in your own private chat`);
+  logger.info('👁️ Auto-reveal: .antiviewonce on/off');
+  logger.info('👁️ Emoji reveal: reply to a view-once with 4 same emojis (e.g. 🔥🔥🔥🔥) to reveal');
+  logger.info('👁️ Manual reveal: .avv in reply to a view-once message');
 }

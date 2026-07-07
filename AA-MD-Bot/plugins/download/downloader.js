@@ -1,10 +1,28 @@
 // ============================================
 // AA MD Bot - Universal Multi-Platform Downloader
-// Primary: cobalt.tools (free, no key needed)
+// Primary: yt-dlp (handles TT, IG, FB, TW, SC etc.)
 // Platform fallbacks for each service
 // ============================================
 
 import axios from 'axios';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs-extra';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { YTDLP, YTDLP_FLAGS, getCookiesFlag } from '../../lib/ytdlp.js';
+
+const execFileAsync = promisify(execFile);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TEMP = path.join(__dirname, '../../temp');
+
+// Build yt-dlp base args (binary + flags split, no shell interpolation)
+function ytdlpBaseArgs() {
+  const flags = YTDLP_FLAGS.split(/\s+/).filter(Boolean);
+  const ck = getCookiesFlag();
+  const ckParts = ck ? ck.trim().split(/\s+/) : [];
+  return { flags, ckParts };
+}
 
 // URL detectors
 const TT  = /https?:\/\/(www\.)?(vm\.|vt\.|m\.)?tiktok\.com\/[^\s]+/gi;
@@ -38,23 +56,56 @@ const extract = (txt) => {
 
 const api = axios.create({ timeout: 30000 });
 
-// ── Cobalt.tools — free universal API ─────────────────────────────────────────
-async function cobalt(url, opts = {}) {
-  const { data } = await api.post('https://api.cobalt.tools/', {
-    url,
-    downloadMode: opts.mode || 'auto',
-    filenameStyle: 'pretty',
-    videoQuality: '720',
-    audioFormat: 'mp3',
-    ...opts,
-  }, {
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-    timeout: 25000,
-  });
-  return data;
+// ── yt-dlp download → buffer (uses execFile — no shell injection) ──────────────
+async function ytdlpVideo(url) {
+  await fs.ensureDir(TEMP);
+  const reqId = `dl_vid_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const outFile = path.join(TEMP, `${reqId}.mp4`);
+  const { flags, ckParts } = ytdlpBaseArgs();
+  const FMTS = [
+    'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best',
+    'best',
+  ];
+  for (const fmt of FMTS) {
+    try {
+      await execFileAsync(YTDLP, [
+        ...flags, url, ...ckParts,
+        '-f', fmt,
+        '--merge-output-format', 'mp4',
+        '--no-playlist', '-o', outFile,
+        '--quiet', '--no-warnings',
+      ], { timeout: 120000 });
+      if (await fs.pathExists(outFile)) {
+        const buf = await fs.readFile(outFile);
+        await fs.remove(outFile).catch(() => {});
+        if (buf?.length > 50000) return buf;
+      }
+    } catch {}
+  }
+  await fs.remove(outFile).catch(() => {});
+  return null;
+}
+
+async function ytdlpAudio(url) {
+  await fs.ensureDir(TEMP);
+  const reqId = `dl_aud_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const outFile = path.join(TEMP, `${reqId}.mp3`);
+  const { flags, ckParts } = ytdlpBaseArgs();
+  try {
+    await execFileAsync(YTDLP, [
+      ...flags, url, ...ckParts,
+      '-x', '--audio-format', 'mp3', '--audio-quality', '128K',
+      '--no-playlist', '-o', outFile,
+      '--quiet', '--no-warnings',
+    ], { timeout: 120000 });
+    if (await fs.pathExists(outFile)) {
+      const buf = await fs.readFile(outFile);
+      await fs.remove(outFile).catch(() => {});
+      if (buf?.length > 10000) return buf;
+    }
+  } catch {}
+  await fs.remove(outFile).catch(() => {});
+  return null;
 }
 
 // ── Platform-specific fallbacks ────────────────────────────────────────────────
@@ -76,9 +127,9 @@ async function spotifyDown(url) {
   return { url: data.link, title: data.metadata?.title, artist: data.metadata?.artists };
 }
 
-async function faaApi(path, url) {
-  const { data: d } = await api.get(`https://api-faa.my.id/faa/${path}?url=${encodeURIComponent(url)}`);
-  if (!d.status) throw new Error(d.message || `${path} API error`);
+async function faaApi(path2, url) {
+  const { data: d } = await api.get(`https://api-faa.my.id/faa/${path2}?url=${encodeURIComponent(url)}`);
+  if (!d.status) throw new Error(d.message || `${path2} API error`);
   return d.result;
 }
 
@@ -99,7 +150,7 @@ export default {
       `*🔗 Universal Downloader*\n\n` +
       `*Platforms:* TikTok • Instagram • Facebook • Twitter/X • Pinterest • Threads • SoundCloud • Spotify • YouTube • MediaFire\n\n` +
       `*Usage:* ${prefix}dl <link>\n` +
-      `💡 Or just reply to any message containing a link`
+      `💡 Or reply to any message containing a link`
     );
 
     const detected = extract(raw);
@@ -112,20 +163,9 @@ export default {
 
       // ── TikTok ──────────────────────────────────────────────────────────────
       if (type === 'tt') {
-        let result;
+        // Try tikwm first (fast), fall back to yt-dlp
         try {
-          const c = await cobalt(url);
-          if (c.status === 'stream' || c.status === 'tunnel') {
-            await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '🎵 *TikTok via AA MD Bot*' }, { quoted: msg });
-          } else if (c.status === 'picker') {
-            for (const item of c.picker.slice(0, 4)) {
-              await sock.sendMessage(jid, item.type === 'video'
-                ? { video: { url: item.url }, mimetype: 'video/mp4' }
-                : { image: { url: item.url } }, { quoted: msg });
-            }
-          } else throw new Error('cobalt no stream');
-        } catch {
-          result = await tikwm(url);
+          const result = await tikwm(url);
           if (result.type === 'video') {
             await sock.sendMessage(jid, { video: { url: result.url }, mimetype: 'video/mp4', caption: '🎵 *TikTok via AA MD Bot*' }, { quoted: msg });
           } else {
@@ -133,43 +173,37 @@ export default {
               await sock.sendMessage(jid, { image: { url: img } }, { quoted: msg });
             }
           }
+        } catch {
+          const buf = await ytdlpVideo(url);
+          if (!buf?.length) throw new Error('TikTok download failed — try again or check the link');
+          await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption: '🎵 *TikTok via AA MD Bot*' }, { quoted: msg });
         }
       }
 
       // ── Instagram ───────────────────────────────────────────────────────────
       else if (type === 'ig') {
-        try {
-          const c = await cobalt(url);
-          if (c.status === 'stream' || c.status === 'tunnel') {
-            const isVid = c.url?.includes('.mp4') || c.filename?.endsWith('.mp4');
-            await sock.sendMessage(jid, isVid
-              ? { video: { url: c.url }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
-              : { image: { url: c.url }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
-          } else if (c.status === 'picker') {
-            for (const item of c.picker.slice(0, 5)) {
-              await sock.sendMessage(jid, item.type === 'video'
-                ? { video: { url: item.url }, mimetype: 'video/mp4' }
-                : { image: { url: item.url } }, { quoted: msg });
-            }
-          } else throw new Error('cobalt no result');
-        } catch {
+        const buf = await ytdlpVideo(url);
+        if (buf?.length) {
+          await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
+        } else {
+          // fallback: faa API
           const r = await faaApi('igdl', url);
-          for (const link of (r.url || []).slice(0, 4)) {
+          const urls = r?.url || [];
+          if (!urls.length) throw new Error('No media found in this Instagram post');
+          for (const link of urls.slice(0, 4)) {
             await sock.sendMessage(jid, r.metadata?.isVideo
-              ? { video: { url: link }, mimetype: 'video/mp4' }
-              : { image: { url: link } }, { quoted: msg });
+              ? { video: { url: link }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
+              : { image: { url: link }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
           }
         }
       }
 
       // ── Facebook ────────────────────────────────────────────────────────────
       else if (type === 'fb') {
-        try {
-          const c = await cobalt(url);
-          if (c.status === 'stream' || c.status === 'tunnel') {
-            await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }, { quoted: msg });
-          } else throw new Error('cobalt no stream');
-        } catch {
+        const buf = await ytdlpVideo(url);
+        if (buf?.length) {
+          await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }, { quoted: msg });
+        } else {
           const r = await faaApi('fbdownload', url);
           const dlUrl = r.media?.video_hd || r.media?.video_sd || r.media?.photo_image;
           if (!dlUrl) throw new Error('No media found in this Facebook post');
@@ -181,38 +215,23 @@ export default {
 
       // ── Twitter / X ─────────────────────────────────────────────────────────
       else if (type === 'tw') {
-        const c = await cobalt(url);
-        if (c.status === 'stream' || c.status === 'tunnel') {
-          await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '🐦 *Twitter/X via AA MD Bot*' }, { quoted: msg });
-        } else if (c.status === 'picker') {
-          for (const item of c.picker.slice(0, 4)) {
-            await sock.sendMessage(jid, item.type === 'video'
-              ? { video: { url: item.url }, mimetype: 'video/mp4' }
-              : { image: { url: item.url } }, { quoted: msg });
-          }
-        } else throw new Error('Could not find downloadable media in this tweet');
+        const buf = await ytdlpVideo(url);
+        if (!buf?.length) throw new Error('Could not download this tweet — make sure it contains a video');
+        await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption: '🐦 *Twitter/X via AA MD Bot*' }, { quoted: msg });
       }
 
       // ── Threads ─────────────────────────────────────────────────────────────
       else if (type === 'th') {
-        const c = await cobalt(url);
-        if (c.status === 'stream' || c.status === 'tunnel') {
-          await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '🧵 *Threads via AA MD Bot*' }, { quoted: msg });
-        } else if (c.status === 'picker') {
-          for (const item of c.picker.slice(0, 4)) {
-            await sock.sendMessage(jid, item.type === 'video'
-              ? { video: { url: item.url }, mimetype: 'video/mp4' }
-              : { image: { url: item.url } }, { quoted: msg });
-          }
-        } else throw new Error('No media found in this Threads post');
+        const buf = await ytdlpVideo(url);
+        if (!buf?.length) throw new Error('No downloadable video found in this Threads post');
+        await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption: '🧵 *Threads via AA MD Bot*' }, { quoted: msg });
       }
 
       // ── SoundCloud ──────────────────────────────────────────────────────────
       else if (type === 'sc') {
-        const c = await cobalt(url);
-        if (c.status === 'stream' || c.status === 'tunnel') {
-          await sock.sendMessage(jid, { audio: { url: c.url }, mimetype: 'audio/mpeg', fileName: c.filename || 'soundcloud.mp3' }, { quoted: msg });
-        } else throw new Error('SoundCloud download failed — try a public track link');
+        const buf = await ytdlpAudio(url);
+        if (!buf?.length) throw new Error('SoundCloud download failed — try a public track link');
+        await sock.sendMessage(jid, { audio: buf, mimetype: 'audio/mpeg', fileName: 'soundcloud.mp3' }, { quoted: msg });
       }
 
       // ── Spotify ─────────────────────────────────────────────────────────────
@@ -228,10 +247,9 @@ export default {
 
       // ── YouTube ─────────────────────────────────────────────────────────────
       else if (type === 'yt') {
-        const c = await cobalt(url, { downloadMode: 'audio', audioFormat: 'mp3' });
-        if (c.status === 'stream' || c.status === 'tunnel') {
-          await sock.sendMessage(jid, { audio: { url: c.url }, mimetype: 'audio/mpeg', fileName: c.filename || 'youtube.mp3' }, { quoted: msg });
-        } else throw new Error('YouTube download failed — use .play for music');
+        const buf = await ytdlpAudio(url);
+        if (!buf?.length) throw new Error('YouTube download failed — use .play for music or .video for video');
+        await sock.sendMessage(jid, { audio: buf, mimetype: 'audio/mpeg', fileName: 'youtube.mp3' }, { quoted: msg });
       }
 
       // ── MediaFire ───────────────────────────────────────────────────────────
@@ -260,7 +278,7 @@ export default {
     } catch (e) {
       console.error('[dl]', e.message);
       await react('❌');
-      reply(`❌ *Download failed*\n\n${e.message}\n\n💡 Try the dedicated command:\n• *.tiktok* for TikTok\n• *.ig* for Instagram\n• *.spotify* for Spotify`);
+      reply(`❌ *Download failed*\n\n${e.message}\n\n💡 Try the dedicated command:\n• *.ig* for Instagram\n• *.tiktok* for TikTok\n• *.play* / *.video* for YouTube`);
     }
   },
 };

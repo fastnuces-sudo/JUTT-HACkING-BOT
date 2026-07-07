@@ -1,21 +1,77 @@
 // ============================================
 // AA MD Bot - Instagram Downloader
-// Primary: cobalt.tools → fallback: faa API
+// Primary: yt-dlp → fallback: faa API
 // ============================================
 
 import axios from 'axios';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs-extra';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { YTDLP, YTDLP_FLAGS, getCookiesFlag } from '../../lib/ytdlp.js';
+
+const execAsync = promisify(exec);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TEMP = path.join(__dirname, '../../temp');
 
 const api = axios.create({ timeout: 25000 });
 const IG_RX = /https?:\/\/(www\.)?instagram\.com\/[^\s]+/i;
 
-async function cobaltIG(url) {
-  const { data } = await api.post('https://api.cobalt.tools/', { url, downloadMode: 'auto', filenameStyle: 'pretty' }, {
-    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-    timeout: 20000,
-  });
-  return data;
+// ── yt-dlp: download IG post / reel → buffer ─────────────────────────────────
+async function ytdlpIG(url) {
+  await fs.ensureDir(TEMP);
+  // Use a unique request-scoped prefix so concurrent downloads never mix files
+  const reqId = `ig_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const outTpl = path.join(TEMP, `${reqId}_%(autonumber)03d.%(ext)s`);
+
+  const args = [
+    YTDLP,
+    ...YTDLP_FLAGS.split(' ').filter(Boolean),
+    url,
+    '-f', 'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best',
+    '--merge-output-format', 'mp4',
+    '--no-playlist',
+    '-o', outTpl,
+    '--quiet',
+    '--no-warnings',
+  ];
+  // Attach cookies if available (split the flag properly)
+  const ckFlag = getCookiesFlag();
+  if (ckFlag) {
+    const parts = ckFlag.trim().split(/\s+/);
+    args.push(...parts);
+  }
+
+  try {
+    const { execFile } = await import('child_process');
+    const { promisify } = await import('util');
+    const execFileAsync = promisify(execFile);
+    await execFileAsync(args[0], args.slice(1), { timeout: 120000 });
+  } catch {
+    // yt-dlp may exit non-zero but still produce files — continue to collect
+  }
+
+  // Collect only this request's files using the exact reqId prefix
+  const dir = TEMP;
+  const ownFiles = (await fs.readdir(dir).catch(() => []))
+    .filter(f => f.startsWith(reqId) && (f.endsWith('.mp4') || f.endsWith('.jpg') || f.endsWith('.png') || f.endsWith('.webp')))
+    .map(f => path.join(dir, f));
+
+  const results = [];
+  for (const f of ownFiles) {
+    try {
+      const buf = await fs.readFile(f);
+      if (buf?.length > 10000) {
+        results.push({ buf, isVid: f.endsWith('.mp4') });
+      }
+    } catch {}
+    await fs.remove(f).catch(() => {}); // always clean up own files
+  }
+  return results.length ? results : null;
 }
 
+// ── Fallback: faa API ─────────────────────────────────────────────────────────
 async function faaIG(url) {
   const { data } = await api.get(`https://api-faa.my.id/faa/igdl?url=${encodeURIComponent(url)}`);
   if (!data.status) throw new Error(data.message || 'Instagram API error');
@@ -47,36 +103,33 @@ export default {
     url = match[0].replace(/[.,!?;]$/, '');
 
     try {
-      const c = await cobaltIG(url);
-      if (c.status === 'stream' || c.status === 'tunnel') {
-        const isVid = c.url?.includes('.mp4') || c.filename?.endsWith('.mp4');
-        await sock.sendMessage(jid, isVid
-          ? { video: { url: c.url }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
-          : { image: { url: c.url }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
-        await react('✅');
-      } else if (c.status === 'picker') {
-        for (const item of c.picker.slice(0, 6)) {
-          await sock.sendMessage(jid, item.type === 'video'
-            ? { video: { url: item.url }, mimetype: 'video/mp4' }
-            : { image: { url: item.url } }, { quoted: msg });
+      // Primary: yt-dlp
+      const items = await ytdlpIG(url);
+      if (items?.length) {
+        for (const { buf, isVid } of items.slice(0, 6)) {
+          await sock.sendMessage(jid, isVid
+            ? { video: buf, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
+            : { image: buf, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
         }
         await react('✅');
-      } else throw new Error('cobalt: ' + (c.error?.code || 'no result'));
-    } catch {
-      try {
-        const r = await faaIG(url);
-        const urls = r.url || [];
-        if (!urls.length) throw new Error('No media found');
-        for (const link of urls.slice(0, 6)) {
-          await sock.sendMessage(jid, r.metadata?.isVideo
-            ? { video: { url: link }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
-            : { image: { url: link }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
-        }
-        await react('✅');
-      } catch (e2) {
-        await react('❌');
-        reply(`❌ *Instagram download failed*\n\n${e2.message}\n\n💡 Make sure the post is public.`);
+        return;
       }
+    } catch {}
+
+    // Fallback: faa API
+    try {
+      const r = await faaIG(url);
+      const urls = r?.url || [];
+      if (!urls.length) throw new Error('No media found');
+      for (const link of urls.slice(0, 6)) {
+        await sock.sendMessage(jid, r.metadata?.isVideo
+          ? { video: { url: link }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
+          : { image: { url: link }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
+      }
+      await react('✅');
+    } catch (e2) {
+      await react('❌');
+      reply(`❌ *Instagram download failed*\n\n${e2.message}\n\n💡 Make sure the post is *public* and the link is correct.\n\n> 📸 *AA MD Bot*`);
     }
   },
 };
