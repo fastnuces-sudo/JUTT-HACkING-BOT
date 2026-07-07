@@ -27,7 +27,7 @@ export default {
       `🔗 *WhatsApp:* ${waLink}\n` +
       `🤖 *Bot:* ${config.botName} v${config.version}\n\n` +
       `💬 _Contact for support, custom bots & features_\n\n` +
-      `🌐 https://aa-mods.vercel.app/`;
+      `> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
 
     await reply(text);
   },

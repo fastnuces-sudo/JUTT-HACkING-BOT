@@ -40,7 +40,7 @@ function getCtx() {
   };
 }
 
-const FOOTER = `\n> 🌐 *https://aa-mods.vercel.app/*\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*`;
+const FOOTER = `\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*`;
 
 // ── Category display config ───────────────────────────────────────────────────
 const CAT_CFG = {
@@ -214,18 +214,70 @@ export default {
     menu += `│  📦 *${totalCmds}* commands loaded\n`;
     menu += `╰${'─'.repeat(32)}\n`;
 
-    // All public categories
+    // ── Owner Controls first (at the top) ──────────────────────────────────
+    if (isOwner) {
+      menu += `\n╭── ⚙️  *OWNER CONTROLS*\n`;
+      menu += `│\n`;
+      menu += `│  🔒 *Privacy & Stealth*\n`;
+      menu += `│  ▸ *${pref}ghost on/off*        — Appear offline\n`;
+      menu += `│  ▸ *${pref}alwaysonline on/off* — Always online\n`;
+      menu += `│  ▸ *${pref}privacy*             — Last seen, DP, blue ticks\n`;
+      menu += `│  ▸ *${pref}anticall on/off*     — Block calls\n`;
+      menu += `│  ▸ *${pref}autoreact on/off*    — Auto emoji react\n`;
+      menu += `│\n`;
+      menu += `│  👁️ *View-Once & Delete*\n`;
+      menu += `│  ▸ *${pref}antiviewonce on/off* — Auto-reveal all view-once\n`;
+      menu += `│  ▸ *${pref}voword <keyword>*   — Set keyword reveal trigger\n`;
+      menu += `│  ▸ *${pref}avv*                — Manual reveal (reply to view-once)\n`;
+      menu += `│  ▸ *${pref}antidelete on/off*  — Recover deleted messages\n`;
+      menu += `│\n`;
+      menu += `│  🤖 *Auto Features*\n`;
+      menu += `│  ▸ *${pref}autoread on/off*    — Silent read all msgs\n`;
+      menu += `│  ▸ *${pref}autoreply <msg>*    — Auto reply when busy\n`;
+      menu += `│  ▸ *${pref}afk <reason>*       — Go AFK\n`;
+      menu += `│  ▸ *${pref}onlinealert <num>*  — Alert when contact online\n`;
+      menu += `│\n`;
+      menu += `│  ⚙️ *Bot Settings*\n`;
+      menu += `│  ▸ *${pref}bs*                 — Full settings panel\n`;
+      menu += `│  ▸ *${pref}mode public/private* — Change bot mode\n`;
+      menu += `│  ▸ *${pref}setprefix <char>*   — Change command prefix\n`;
+      menu += `│  ▸ *${pref}antispam on/off*    — Anti-spam filter\n`;
+      if (isSuperOwnerUser) {
+        menu += `│\n`;
+        menu += `│  👑 *${pref}smenu* — Super Owner control panel\n`;
+      }
+      menu += `╰${'─'.repeat(32)}\n`;
+
+      // ── Islamic quick-access (after owner controls) ───────────────────────
+      menu += `\n╭── ☪️  *ISLAMIC PANEL*  (${catMap['islamic']?.length || 61})\n`;
+      menu += `│  ▸ *${pref}islamicmenu* — Full Islamic command panel\n`;
+      menu += `│  _Duas • Zikr • Hadith • Kalimas • Adhkar • Salah_\n`;
+      menu += `╰${'─'.repeat(32)}\n`;
+
+      // ── GB features quick-access ──────────────────────────────────────────
+      menu += `\n╭── 📱  *GB FEATURES*\n`;
+      menu += `│  ▸ *${pref}gbmenu* — Full GB WhatsApp-like features\n`;
+      menu += `│  _Ghost • Privacy • AutoRead • ViewOnce • OnlineAlert_\n`;
+      menu += `╰${'─'.repeat(32)}\n`;
+    }
+
+    // ── Public categories ───────────────────────────────────────────────────
+    // Skip 'islamic' and 'gb' — already shown above for owners; summary below for users
+    const SKIP_FOR_OWNER = isOwner ? new Set(['islamic', 'gb']) : new Set();
+
     const orderedCats = [
       ...CAT_ORDER.filter(c => catMap[c]?.length),
       ...Object.keys(catMap).filter(c => !CAT_ORDER.includes(c) && catMap[c]?.length),
     ];
 
     for (const cat of orderedCats) {
+      if (SKIP_FOR_OWNER.has(cat)) continue;
       const cmds = catMap[cat];
       if (!cmds?.length) continue;
       const cfg = CAT_CFG[cat] || { e: '📌', n: cat.toUpperCase(), max: 8 };
 
       if (cat === 'islamic') {
+        // For non-owners, show islamic summary at the bottom
         menu += `\n╭── ☪️  *ISLAMIC*  (${cmds.length})\n`;
         menu += `│  ▸ *${pref}islamicmenu* — Full Islamic command panel\n`;
         menu += `│  _Duas • Zikr • Hadith • Kalimas • Adhkar • Salah_\n`;
@@ -236,47 +288,14 @@ export default {
       menu += renderCat(cfg.e, cfg.n, cmds, pref, cfg.max || 8, cat);
     }
 
-    // ── Owner Quick-Access (only shown to owners) ───────────────────────────
-    if (isOwner) {
-      menu += `\n╭── ⚙️  *OWNER CONTROLS*\n`;
-      menu += `│\n`;
-      menu += `│  🔒 *Privacy & Stealth*\n`;
-      menu += `│  ▸ *${pref}ghost on/off*       — Appear offline\n`;
-      menu += `│  ▸ *${pref}alwaysonline on/off* — Always online\n`;
-      menu += `│  ▸ *${pref}privacy*            — Last seen, DP, blue ticks\n`;
-      menu += `│  ▸ *${pref}anticall on/off*    — Block calls\n`;
-      menu += `│  ▸ *${pref}autoreact on/off*   — Auto emoji react\n`;
-      menu += `│\n`;
-      menu += `│  👁️ *View-Once & Delete*\n`;
-      menu += `│  ▸ *${pref}antiviewonce on/off* — Auto-reveal all view-once\n`;
-      menu += `│  ▸ *${pref}voword <keyword>*   — Keyword reveal trigger\n`;
-      menu += `│  ▸ *${pref}avv*               — Manual reveal (reply)\n`;
-      menu += `│  ▸ *${pref}antidelete on/off*  — Recover deleted messages\n`;
-      menu += `│\n`;
-      menu += `│  🤖 *Auto Features*\n`;
-      menu += `│  ▸ *${pref}autoread on/off*    — Silent read all msgs\n`;
-      menu += `│  ▸ *${pref}autoreply <msg>*    — Auto reply when busy\n`;
-      menu += `│  ▸ *${pref}afk <reason>*       — Go AFK\n`;
-      menu += `│  ▸ *${pref}onlinealert <num>*  — Alert when contact online\n`;
-      menu += `│\n`;
-      menu += `│  ⚙️ *Bot Settings*\n`;
-      menu += `│  ▸ *${pref}bs*                — Full settings panel\n`;
-      menu += `│  ▸ *${pref}mode public/private* — Change bot mode\n`;
-      menu += `│  ▸ *${pref}setprefix <char>*   — Change command prefix\n`;
-      menu += `│  ▸ *${pref}antispam on/off*    — Anti-spam filter\n`;
-      if (isSuperOwnerUser) {
-        menu += `│\n`;
-        menu += `│  👑 *${pref}smenu* — Super Owner control panel\n`;
-      }
-      menu += `╰${'─'.repeat(32)}\n`;
-    }
-
     // Footer tips
     menu += `\n╭── 💡  *TIPS*\n`;
-    menu += `│  ▸ *${pref}menu download* — see all download cmds\n`;
-    menu += `│  ▸ *${pref}menu search*   — see all AI & search cmds\n`;
-    menu += `│  ▸ *${pref}islamicmenu*   — full Islamic panel\n`;
-    if (isOwner) menu += `│  ▸ *${pref}gbmenu*        — GB WhatsApp features\n`;
+    menu += `│  ▸ *${pref}menu download* — all download commands\n`;
+    menu += `│  ▸ *${pref}menu search*   — all AI & search commands\n`;
+    menu += `│  ▸ *${pref}menu fun*      — all fun & games\n`;
+    if (!isOwner) {
+      menu += `│  ▸ *${pref}islamicmenu* — full Islamic panel\n`;
+    }
     menu += `╰${'─'.repeat(32)}\n`;
     menu += FOOTER;
 

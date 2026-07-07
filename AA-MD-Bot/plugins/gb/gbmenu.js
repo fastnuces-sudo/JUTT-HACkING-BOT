@@ -7,7 +7,7 @@ export default {
 
   async execute({ reply, sock, jid, msg, prefix, db }) {
     const p = prefix || '.';
-    const W = `\n\n> 🌐 https://aa-mods.vercel.app/\n> 🤖 *Powered by AA MD Bot*\n> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
+    const W = `\n\n> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
 
     const menu =
       `╔══════════════════════════════════╗\n` +

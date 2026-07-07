@@ -324,9 +324,11 @@ function hasFourSameEmoji(text) {
   }
 }
 
-// ── Reply-based reveal: owner replies to viewonce with 4 same emojis ─────────
-// Owner replies to a view-once message with 4 identical emojis (e.g. 🔥🔥🔥🔥)
-// and the bot instantly reveals the media to the "You" private chat.
+// ── Reply-based reveal: emoji trigger OR configured voword keyword ────────────
+// Owner replies to a view-once message with EITHER:
+//   (a) 4 identical emojis (e.g. 🔥🔥🔥🔥 or ❤️❤️❤️❤️)
+//   (b) the configured voword keyword (e.g. "asdf" → set via .voword asdf)
+// Both reveal the media to the "You" private chat.
 export async function handleReplyReveal(msg, sock, sessionId) {
   try {
     // Only act on owner's own messages
@@ -334,24 +336,49 @@ export async function handleReplyReveal(msg, sock, sessionId) {
 
     // Get the text this message contains (unwrap all wrapper types)
     const msgText = extractText(msg.message).trim();
-    if (!msgText || !hasFourSameEmoji(msgText)) return;
+    if (!msgText) return;
 
-    // Get the quoted (replied-to) message ID from contextInfo
+    // Check trigger: 4 same emojis OR configured keyword
+    const voKeyword  = db.settings.getValue('voKeyword') || '';
+    const isEmoji    = hasFourSameEmoji(msgText);
+    const isKeyword  = voKeyword && msgText.toLowerCase() === voKeyword.toLowerCase();
+    if (!isEmoji && !isKeyword) return;
+
+    // Get the quoted (replied-to) message ID from contextInfo.
+    // Try multiple paths — Baileys message structure differs across versions.
     const ctxInfo = extractContextInfo(msg.message);
-    const stanzaId = ctxInfo?.stanzaId;
+    // stanzaId may be in stanzaId OR quotedStanzaId depending on Baileys/WA version
+    const stanzaId = ctxInfo?.stanzaId || ctxInfo?.quotedStanzaId;
     if (!stanzaId) return;
 
-    // Look up in store — with one short retry for delayed messages.update delivery
+    // Look up in store — try exact match first, then all store entries as fallback.
+    // The stanzaId from a reply on the primary device sometimes has a different
+    // prefix than what the linked-device session stored (e.g. "3EB0..." vs "BAE5...").
     let stored = viewOnceStore.get(stanzaId);
+
     if (!stored) {
-      // Wait up to 3 s in case the view-once buffer is still being downloaded
-      // via messages.update (WhatsApp's delayed-delivery path)
+      // Wait up to 3 s in case the buffer is still being downloaded via messages.update
       for (let i = 0; i < 6; i++) {
         await new Promise(r => setTimeout(r, 500));
         stored = viewOnceStore.get(stanzaId);
         if (stored) break;
       }
     }
+
+    // Last resort: scan the entire store for the most-recently-added entry that
+    // originated from the same chat (covers stanzaId format mismatches between devices)
+    if (!stored && viewOnceStore.size > 0) {
+      const chatJid = msg.key.remoteJid;
+      let newest = null;
+      for (const [, entry] of viewOnceStore) {
+        if (entry.chatJid === chatJid || !chatJid) {
+          if (!newest || entry.timestamp > newest.timestamp) newest = entry;
+        }
+      }
+      // Only use fallback if recent enough (last 30 min = still valid)
+      if (newest && Date.now() - newest.timestamp < 30 * 60 * 1000) stored = newest;
+    }
+
     if (!stored) return; // not a view-once or expired
 
     const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
@@ -379,7 +406,8 @@ export async function handleReplyReveal(msg, sock, sessionId) {
         : { image: stored.buf, caption: cap, mimetype: stored.mime }
     ).catch(() => {});
 
-    logger.info({ sessionId, stanzaId }, '🔑 ViewOnce revealed via emoji reply trigger');
+    const trigger = isEmoji ? 'emoji-reply' : `keyword(${voKeyword})`;
+    logger.info({ sessionId, stanzaId, trigger }, '🔑 ViewOnce revealed via reply trigger');
   } catch (e) {
     logger.warn({ err: e.message }, 'handleReplyReveal threw');
   }

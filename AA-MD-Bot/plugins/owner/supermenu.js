@@ -74,7 +74,6 @@ export default {
       `▸ *${p}logs*                  — Recent logs\n` +
       `▸ *${p}backup*                — Backup database\n\n` +
 
-      `> 🌐 https://aa-mods.vercel.app/\n` +
       `> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
 
     return reply(text);

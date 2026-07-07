@@ -590,20 +590,46 @@ async function downloadAudio(ytUrl) {
 // Returns: { buffer } | null
 
 async function downloadVideoFromStreamUrl(ytUrl) {
-  const videoUrl = await withTimeout(22000,
-    tryYtdlpStreamUrl(
-      ytUrl,
-      'best[height<=480][ext=mp4]/best[height<=480]/best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best'
-    )
+  // YouTube format 18 = 360p progressive mp4 (H.264+AAC), format 22 = 720p progressive mp4.
+  // Progressive streams are NOT throttled and download as a single file — they are the most
+  // reliable path. DASH formats (bestvideo+bestaudio) require merging and are often throttled.
+  // We try formats 18 and 22 first, then fall back to adaptive selection.
+  const FORMATS = [
+    '18',                                              // 360p progressive mp4 (always works)
+    '22',                                              // 720p progressive mp4 (not always available)
+    'best[height<=480][ext=mp4][protocol^=https]/best[height<=360][ext=mp4][protocol^=https]',
+    'best[height<=480][ext=mp4]/best[height<=480]/best[ext=mp4]/best',
+  ];
+
+  // Try each format until we get a usable stream URL
+  for (const fmt of FORMATS) {
+    // Use 'ios' client — returns real progressive URLs, not DASH manifests
+    const videoUrl = await withTimeout(20000,
+      tryYtdlpStreamUrl(ytUrl, fmt, 'ios')
+    );
+    if (!videoUrl || videoUrl.includes('manifest')) continue;
+
+    const vidBuf = await withTimeout(90000, fetchBuf(videoUrl));
+    if (!isValidVideoBuffer(vidBuf)) continue;
+
+    // Transcode to H.264/AAC so WhatsApp plays it; fall back to raw if ffmpeg fails
+    const playable = await withTimeout(180000, ensurePlayableMp4(vidBuf));
+    return { buffer: playable?.length ? playable : vidBuf };
+  }
+
+  // Fallback: android client (sometimes returns DASH but worth trying)
+  const fallbackUrl = await withTimeout(20000,
+    tryYtdlpStreamUrl(ytUrl, 'best[height<=480][ext=mp4]/best[ext=mp4]/best')
   );
-  if (!videoUrl) return null;
+  if (fallbackUrl && !fallbackUrl.includes('manifest')) {
+    const buf = await withTimeout(90000, fetchBuf(fallbackUrl));
+    if (isValidVideoBuffer(buf)) {
+      const playable = await withTimeout(180000, ensurePlayableMp4(buf));
+      return { buffer: playable?.length ? playable : buf };
+    }
+  }
 
-  const vidBuf = await withTimeout(90000, fetchBuf(videoUrl));
-  if (!isValidVideoBuffer(vidBuf)) return null;
-
-  // Transcode to H.264/AAC so WhatsApp plays it; fall back to raw if ffmpeg fails
-  const playable = await withTimeout(180000, ensurePlayableMp4(vidBuf));
-  return { buffer: playable?.length ? playable : vidBuf };
+  return null;
 }
 
 // ── Video orchestrator ────────────────────────────────────────────────────────

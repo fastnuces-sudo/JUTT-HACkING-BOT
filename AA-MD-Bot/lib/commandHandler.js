@@ -15,7 +15,7 @@ const spamTracker = new Map();
 
 const CHANNEL_URL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
 const CHANNEL_NAME = 'AA MD Bot';
-const WATERMARK = `\n\n🌐 https://aa-mods.vercel.app/\n🤖 *Powered by AA MD Bot*\n👨‍💻 *Developed by Ahsan Ali Wadani*`;
+const WATERMARK = `\n\n> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
 
 // Load banner thumbnail once for channel button
 let _bannerThumb = null;

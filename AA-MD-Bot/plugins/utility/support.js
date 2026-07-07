@@ -5,7 +5,7 @@
 
 import config from '../../config.js';
 
-const LINK = config.channelLink || 'https://aa-mods.vercel.app/';
+const LINK = config.channelLink || 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
 
 function getOwnerJid() {
   const num = (config.ownerNumber?.[0] || '').replace(/\D/g, '');
