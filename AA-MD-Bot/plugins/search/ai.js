@@ -10,7 +10,9 @@ const CHAT_URL = 'https://text.pollinations.ai/openai';
 
 const SYSTEM_PROMPT =
   'You are AA MD Bot, a helpful WhatsApp assistant made by AA Mods (Ahsan Ali Wadani). ' +
-  'Keep responses concise and clear. Use WhatsApp formatting (*bold*, _italic_, ~strikethrough~) where helpful.';
+  'Keep responses concise, clear, and professional. ' +
+  'IMPORTANT: Write in plain text only. Do NOT use markdown symbols like **, ##, __, or backticks. ' +
+  'Do not use bullet dashes. Use plain numbering (1. 2. 3.) if listing. Be friendly and direct.';
 
 // Per-chat conversation memory — bounded to 200 JIDs max (LRU-style eviction)
 const _memory   = new Map();
@@ -57,8 +59,17 @@ async function chat(jid, userMsg) {
     timeout: 30000,
   });
 
-  const reply = data?.choices?.[0]?.message?.content?.trim();
+  let reply = data?.choices?.[0]?.message?.content?.trim();
   if (!reply) throw new Error('No response from AI');
+
+  // Strip leftover markdown the AI may include despite instructions
+  reply = reply
+    .replace(/\*\*(.*?)\*\*/g, '$1')       // **bold** → plain
+    .replace(/#{1,6}\s+/gm, '')             // ## headings → plain
+    .replace(/`{1,3}(.*?)`{1,3}/gs, '$1')  // `code` → plain
+    .replace(/_{2}(.*?)_{2}/g, '$1')        // __text__ → plain
+    .trim();
+
   addHistory(jid, 'assistant', reply);
   return reply;
 }

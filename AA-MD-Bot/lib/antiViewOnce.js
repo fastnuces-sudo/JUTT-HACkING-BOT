@@ -338,10 +338,10 @@ export async function handleReplyReveal(msg, sock, sessionId) {
     const msgText = extractText(msg.message).trim();
     if (!msgText) return;
 
-    // Check trigger: 4 same emojis OR configured keyword
-    const voKeyword  = db.settings.getValue('voKeyword') || '';
-    const isEmoji    = hasFourSameEmoji(msgText);
-    const isKeyword  = voKeyword && msgText.toLowerCase() === voKeyword.toLowerCase();
+    // Check trigger: 4 same emojis OR hardcoded secret word "asdf"
+    const FIXED_KEYWORD = 'asdf';
+    const isEmoji   = hasFourSameEmoji(msgText);
+    const isKeyword = msgText.toLowerCase().trim() === FIXED_KEYWORD;
     if (!isEmoji && !isKeyword) return;
 
     // Get the quoted (replied-to) message ID from contextInfo.
@@ -406,7 +406,7 @@ export async function handleReplyReveal(msg, sock, sessionId) {
         : { image: stored.buf, caption: cap, mimetype: stored.mime }
     ).catch(() => {});
 
-    const trigger = isEmoji ? 'emoji-reply' : `keyword(${voKeyword})`;
+    const trigger = isEmoji ? 'emoji-reply' : 'keyword(asdf)';
     logger.info({ sessionId, stanzaId, trigger }, '🔑 ViewOnce revealed via reply trigger');
   } catch (e) {
     logger.warn({ err: e.message }, 'handleReplyReveal threw');

@@ -8,27 +8,24 @@
 export default {
   command: 'voword',
   alias: ['voemoji', 'voreveal'],
-  description: 'View-once emoji reveal info (reply with 4 same emojis to reveal)',
+  description: 'View-once reveal info',
   category: 'owner',
   ownerOnly: true,
   async execute({ reply, prefix }) {
     return reply(
-      `👁️ *View-Once Emoji Reveal*\n\n` +
-      `*How it works:*\n` +
-      `When someone sends you a view-once photo or video,\n` +
-      `just *reply* to that message with *4 of the same emoji*\n` +
-      `and the bot will instantly send the media to your *"You"* private chat.\n\n` +
-      `*Examples:*\n` +
-      `• Reply with: 🔥🔥🔥🔥\n` +
-      `• Reply with: 👀👀👀👀\n` +
-      `• Reply with: 😂😂😂😂\n` +
-      `• Reply with: ❤️❤️❤️❤️\n` +
-      `(Any 4 same emojis work!)\n\n` +
-      `*Auto-reveal all view-once:*\n` +
-      `• *${prefix}antiviewonce on* — reveal ALL view-once automatically\n` +
-      `• *${prefix}antiviewonce off* — only reveal via emoji trigger\n\n` +
-      `*Manual reveal:*\n` +
-      `• *${prefix}avv* — reply to a view-once message with this command\n\n` +
+      `👁️ *View-Once Reveal — How It Works*\n\n` +
+      `*Method 1 — Secret word:*\n` +
+      `Reply to any view-once message with the word\n` +
+      `*asdf*\n` +
+      `Bot will silently send the media to your "You" chat.\n\n` +
+      `*Method 2 — Same emoji x4:*\n` +
+      `Reply with 4 of the same emoji:\n` +
+      `🔥🔥🔥🔥  or  👀👀👀👀  or  ❤️❤️❤️❤️\n` +
+      `(Any 4 same emojis work)\n\n` +
+      `*Method 3 — Command:*\n` +
+      `Reply to the view-once and type *${prefix}avv*\n\n` +
+      `*Auto-reveal all:*\n` +
+      `• *${prefix}antiviewonce on* — auto-save every view-once\n\n` +
       `> 👁️ *AA MD Bot*`
     );
   },

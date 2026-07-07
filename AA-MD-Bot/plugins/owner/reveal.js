@@ -59,7 +59,6 @@ export default {
   ownerOnly: true,
 
   async execute({ sock, msg, jid, args, reply, react }) {
-    await react('👁️');
 
     const tz      = config.timezone || 'Asia/Karachi';
     const date    = moment().tz(tz).format('DD/MM/YYYY');

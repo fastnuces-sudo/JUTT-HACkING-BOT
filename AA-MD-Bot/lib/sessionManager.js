@@ -471,18 +471,31 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       try {
         const isDm     = !msg.key.remoteJid?.endsWith('@g.us') && !msg.key.remoteJid?.endsWith('@broadcast');
         const isFromMe = msg.key.fromMe;
-        // Session-specific autoReply — only triggers for THIS connected number
-        // Falls back to global setting so existing users aren't broken
-        const autoReplyMsg = db.sessionSettings.getValue(sessionId, 'autoReply')
-          ?? db.settings.getValue('autoReply');
-        if (isDm && !isFromMe && autoReplyMsg) {
-          const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-          const prefix = db.settings.getValue('prefix') || '.';
-          const isCmd  = text?.startsWith(prefix);
-          if (!isCmd) {
+        const msgText  = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+        const prefix   = db.settings.getValue('prefix') || '.';
+        const isCmd    = msgText?.startsWith(prefix);
+
+        if (isDm && !isFromMe && !isCmd) {
+          // ── Regular auto-reply (static message) ──
+          const autoReplyMsg = db.sessionSettings.getValue(sessionId, 'autoReply')
+            ?? db.settings.getValue('autoReply');
+          if (autoReplyMsg) {
             await sock.sendMessage(msg.key.remoteJid, {
-              text: `🤖 *Auto Reply*\n\n${autoReplyMsg}\n\n> Powered by AA MD Bot`,
+              text: `🤖 Auto Reply\n\n${autoReplyMsg}\n\n> Powered by AA MD Bot`,
             }).catch(() => {});
+          }
+
+          // ── AI auto-reply (only if static autoreply is OFF) ──
+          if (!autoReplyMsg) {
+            const aiOn   = db.sessionSettings.getValue(sessionId, 'aiAutoReply');
+            const aiInst = db.sessionSettings.getValue(sessionId, 'aiInstructions');
+            if (aiOn && aiInst && msgText.trim()) {
+              try {
+                const { aiAutoReply } = await import('../plugins/gb/autoai.js');
+                const aiReply = await aiAutoReply(msgText, aiInst);
+                await sock.sendMessage(msg.key.remoteJid, { text: aiReply }, { quoted: msg }).catch(() => {});
+              } catch {}
+            }
           }
         }
       } catch {}
