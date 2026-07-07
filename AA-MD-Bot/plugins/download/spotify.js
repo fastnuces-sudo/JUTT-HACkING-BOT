@@ -1,39 +1,84 @@
 // ============================================
 // AA MD Bot - Spotify Downloader
-// Uses spotifydown.com (free, no key needed)
+// Primary: spotifydown.com API
+// Fallback: YouTube search via yt-dlp (--get-url)
 // ============================================
 
 import axios from 'axios';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { YTDLP, getCookiesFlag } from '../../lib/ytdlp.js';
 
-const api = axios.create({ timeout: 25000 });
-const SP_RX = /https?:\/\/open\.spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/i;
+const execFileP = promisify(execFile);
+const api       = axios.create({ timeout: 18000 });
+const SP_RX     = /https?:\/\/open\.spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/i;
 
-async function getTrackInfo(trackId) {
-  const { data } = await api.get(`https://api.spotifydown.com/metadata/track/${trackId}`, {
-    headers: { origin: 'https://spotifydown.com', referer: 'https://spotifydown.com' },
-  });
+const SD_HEADERS = {
+  origin:  'https://spotifydown.com',
+  referer: 'https://spotifydown.com/',
+};
+
+// ── Spotify metadata ──────────────────────────────────────────────────────────
+async function getSpotifyMeta(id) {
+  const { data } = await api.get(
+    `https://api.spotifydown.com/metadata/track/${id}`,
+    { headers: SD_HEADERS }
+  );
   return data;
 }
 
-async function downloadTrack(trackId) {
-  const { data } = await api.get(`https://api.spotifydown.com/download/${trackId}`, {
-    headers: { origin: 'https://spotifydown.com', referer: 'https://spotifydown.com' },
-  });
-  if (!data.success) throw new Error(data.error || 'Download failed');
+// ── Direct spotifydown download ───────────────────────────────────────────────
+async function spotifyDown(id) {
+  const { data } = await api.get(
+    `https://api.spotifydown.com/download/${id}`,
+    { headers: SD_HEADERS }
+  );
+  if (!data?.success || !data?.link) throw new Error(data?.error || 'spotifydown failed');
   return data;
 }
 
-async function getPlaylistTracks(playlistId) {
-  const { data } = await api.get(`https://api.spotifydown.com/trackList/playlist/${playlistId}`, {
-    headers: { origin: 'https://spotifydown.com', referer: 'https://spotifydown.com' },
-  });
+// ── Playlist track list ───────────────────────────────────────────────────────
+async function getPlaylistTracks(id) {
+  const { data } = await api.get(
+    `https://api.spotifydown.com/trackList/playlist/${id}`,
+    { headers: SD_HEADERS }
+  );
   return data?.trackList?.slice(0, 5) || [];
+}
+
+// ── Fallback: YouTube search → yt-dlp stream URL ─────────────────────────────
+// Uses --get-url so WhatsApp streams it directly — no temp file, no piping.
+async function ytFallback(title, artist) {
+  const query = `${title} ${artist} audio`.slice(0, 120);
+  const args = [
+    `ytsearch1:${query}`,
+    '-f', 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
+    '--get-url',
+    '--no-playlist',
+    '--no-warnings',
+    '--socket-timeout', '20',
+    ...getCookiesFlag(),
+  ];
+  const { stdout } = await execFileP(YTDLP, args, { timeout: 40000 });
+  const link = stdout.trim().split('\n')[0];
+  if (!link?.startsWith('http')) throw new Error('yt-dlp search returned no URL');
+  return link;
+}
+
+// ── Send audio helper ─────────────────────────────────────────────────────────
+async function sendAudio(sock, jid, msg, url, title, artist) {
+  await sock.sendMessage(jid, {
+    audio: { url },
+    mimetype: 'audio/mp4',
+    fileName: `${title} - ${artist}.m4a`,
+    ptt: false,
+  }, { quoted: msg });
 }
 
 export default {
   command: 'spotify',
   alias: ['spot', 'spotifydl', 'spdl'],
-  description: 'Download Spotify tracks (free, no account needed)',
+  description: 'Download Spotify tracks (free)',
   category: 'download',
 
   async execute({ text, msg, reply, react, sock, jid, prefix }) {
@@ -54,65 +99,75 @@ export default {
     );
 
     await react('⏳');
-
-    const type = match[1]; // 'track', 'album', 'playlist'
+    const type = match[1];
     const id   = match[2];
 
     try {
       if (type === 'track') {
-        // Single track
-        const [meta, dl] = await Promise.all([
-          getTrackInfo(id).catch(() => null),
-          downloadTrack(id),
-        ]);
+        // ── Metadata ──────────────────────────────────────────────────────────
+        let title = 'Unknown', artist = 'Unknown', cover = null;
+        try {
+          const meta = await getSpotifyMeta(id);
+          title  = meta?.title   || title;
+          artist = meta?.artists || meta?.artist || artist;
+          cover  = meta?.cover   || null;
+        } catch {}
 
-        const title  = meta?.title || dl.metadata?.title || 'Unknown';
-        const artist = meta?.artists || dl.metadata?.artists || 'Unknown';
-        const cover  = meta?.cover;
-
+        // Show cover while downloading
         if (cover) {
           await sock.sendMessage(jid, {
             image: { url: cover },
             caption:
               `🎵 *${title}*\n` +
-              `👤 *Artist:* ${artist}\n` +
-              `⬇️ Sending audio…\n\n` +
-              `> 🎵 *AA MD Bot*`,
-          }, { quoted: msg });
+              `👤 *${artist}*\n\n` +
+              `⏳ Downloading…\n\n> 🎵 *AA MD Bot*`,
+          }, { quoted: msg }).catch(() => {});
         }
 
-        await sock.sendMessage(jid, {
-          audio: { url: dl.link },
-          mimetype: 'audio/mpeg',
-          fileName: `${title} - ${artist}.mp3`,
-          ptt: false,
-        }, { quoted: msg });
+        // ── Try spotifydown ───────────────────────────────────────────────────
+        let audioUrl = null;
+        try {
+          const dl = await spotifyDown(id);
+          audioUrl = dl.link;
+          // Update title/artist from spotifydown metadata if we didn't get it before
+          if (dl.metadata?.title  && title  === 'Unknown') title  = dl.metadata.title;
+          if (dl.metadata?.artists && artist === 'Unknown') artist = dl.metadata.artists;
+        } catch {}
 
+        // ── Fallback: YouTube search ──────────────────────────────────────────
+        if (!audioUrl) {
+          audioUrl = await ytFallback(title, artist);
+        }
+
+        await sendAudio(sock, jid, msg, audioUrl, title, artist);
         await react('✅');
+
       } else if (type === 'playlist') {
-        const tracks = await getPlaylistTracks(id);
+        let tracks = [];
+        try { tracks = await getPlaylistTracks(id); } catch {}
         if (!tracks.length) throw new Error('Playlist is empty or private');
 
-        await reply(`🎵 *Playlist — sending ${tracks.length} tracks*\n\n> 🎵 *AA MD Bot*`);
+        await reply(`🎵 *Playlist — sending ${tracks.length} tracks…*\n\n> 🎵 *AA MD Bot*`);
 
         for (const track of tracks) {
+          const t = track.title  || 'Unknown';
+          const a = track.artists || 'Unknown';
           try {
-            const dl = await downloadTrack(track.id);
-            await sock.sendMessage(jid, {
-              audio: { url: dl.link },
-              mimetype: 'audio/mpeg',
-              fileName: `${track.title} - ${track.artists}.mp3`,
-              ptt: false,
-            }, { quoted: msg });
+            let audioUrl = null;
+            try { const dl = await spotifyDown(track.id); audioUrl = dl.link; } catch {}
+            if (!audioUrl) audioUrl = await ytFallback(t, a);
+            await sendAudio(sock, jid, msg, audioUrl, t, a);
           } catch {}
         }
         await react('✅');
+
       } else {
-        reply('❌ Albums are not supported. Use a track or playlist link.');
+        reply(`❌ Albums not supported. Use a *track* or *playlist* link.\n\n> 🎵 *AA MD Bot*`);
       }
+
     } catch (e) {
       await react('❌');
-      reply(`❌ *Spotify download failed*\n\n${e.message}\n\n💡 Only public tracks/playlists are supported.`);
+      reply(`❌ *Spotify failed:* ${e.message}\n\n> 🎵 *AA MD Bot*`);
     }
   },
 };

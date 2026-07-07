@@ -46,6 +46,7 @@ export default {
     await react('⏳');
     url = match[0].replace(/[.,!?;]$/, '');
 
+    // ── tikwm.com (primary — no watermark) ───────────────────────────────────
     try {
       const d = await tikwm(url);
 

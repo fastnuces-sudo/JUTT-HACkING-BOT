@@ -345,19 +345,16 @@ export async function handleReplyReveal(msg, sock, sessionId) {
     if (!isEmoji && !isKeyword) return;
 
     // Get the quoted (replied-to) message ID from contextInfo.
-    // Try multiple paths — Baileys message structure differs across versions.
-    const ctxInfo = extractContextInfo(msg.message);
-    // stanzaId may be in stanzaId OR quotedStanzaId depending on Baileys/WA version
-    const stanzaId = ctxInfo?.stanzaId || ctxInfo?.quotedStanzaId;
-    if (!stanzaId) return;
+    // stanzaId may be absent when owner types keyword WITHOUT using WhatsApp reply feature.
+    // In that case we skip the exact lookup and go straight to the chatJid fallback scan.
+    const ctxInfo  = extractContextInfo(msg.message);
+    const stanzaId = ctxInfo?.stanzaId || ctxInfo?.quotedStanzaId || null;
 
-    // Look up in store — try exact match first, then all store entries as fallback.
-    // The stanzaId from a reply on the primary device sometimes has a different
-    // prefix than what the linked-device session stored (e.g. "3EB0..." vs "BAE5...").
-    let stored = viewOnceStore.get(stanzaId);
+    // ── Exact stanzaId lookup (works when owner used WhatsApp Reply) ──────────
+    let stored = stanzaId ? viewOnceStore.get(stanzaId) : null;
 
-    if (!stored) {
-      // Wait up to 3 s in case the buffer is still being downloaded via messages.update
+    if (!stored && stanzaId) {
+      // Wait up to 3 s in case buffer is still downloading via messages.update
       for (let i = 0; i < 6; i++) {
         await new Promise(r => setTimeout(r, 500));
         stored = viewOnceStore.get(stanzaId);
@@ -365,21 +362,45 @@ export async function handleReplyReveal(msg, sock, sessionId) {
       }
     }
 
-    // Last resort: scan the entire store for the most-recently-added entry that
-    // originated from the same chat (covers stanzaId format mismatches between devices)
-    if (!stored && viewOnceStore.size > 0) {
+    // ── chatJid fallback scan ─────────────────────────────────────────────────
+    // Runs when:
+    //  (a) stanzaId not found in store (ID format mismatch between devices), OR
+    //  (b) no stanzaId at all (owner typed keyword without using WhatsApp Reply)
+    // Finds the most-recently cached view-once in this chat (30-min TTL).
+    if (!stored) {
       const chatJid = msg.key.remoteJid;
-      let newest = null;
-      for (const [, entry] of viewOnceStore) {
-        if (entry.chatJid === chatJid || !chatJid) {
-          if (!newest || entry.timestamp > newest.timestamp) newest = entry;
+
+      // In-memory scan
+      if (viewOnceStore.size > 0) {
+        let newest = null;
+        for (const [, entry] of viewOnceStore) {
+          if (entry.chatJid === chatJid || !chatJid) {
+            if (!newest || entry.timestamp > newest.timestamp) newest = entry;
+          }
         }
+        if (newest && Date.now() - newest.timestamp < 30 * 60 * 1000) stored = newest;
       }
-      // Only use fallback if recent enough (last 30 min = still valid)
-      if (newest && Date.now() - newest.timestamp < 30 * 60 * 1000) stored = newest;
+
+      // Disk index scan (survives bot restarts)
+      if (!stored) {
+        try {
+          const idx = loadIndex();
+          let newestMeta = null, newestTime = 0;
+          for (const [, meta] of Object.entries(idx)) {
+            if ((meta.chatJid === chatJid || !chatJid) && meta.savedPath) {
+              const mtime = meta.time ? new Date(meta.time).getTime() : 0;
+              if (mtime > newestTime) { newestMeta = meta; newestTime = mtime; }
+            }
+          }
+          if (newestMeta?.savedPath && fs.existsSync(newestMeta.savedPath)) {
+            const diskBuf = fs.readFileSync(newestMeta.savedPath);
+            if (diskBuf?.length > 0) stored = { ...newestMeta, buf: diskBuf, timestamp: Date.now() };
+          }
+        } catch {}
+      }
     }
 
-    if (!stored) return; // not a view-once or expired
+    if (!stored) return; // no cached view-once for this chat
 
     const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
     const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;

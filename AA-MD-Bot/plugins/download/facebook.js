@@ -1,31 +1,102 @@
 // ============================================
 // AA MD Bot - Facebook Downloader
-// cobalt.tools → faa API fallback
+// Method 1: Direct HTML scrape (public videos)
+// Method 2: snapsave API
+// Method 3: yt-dlp (last resort)
 // ============================================
 
 import axios from 'axios';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { YTDLP, getCookiesFlag } from '../../lib/ytdlp.js';
 
-const api = axios.create({ timeout: 25000 });
-const FB_RX = /https?:\/\/(www\.|m\.|web\.)?facebook\.com\/[^\s]+/i;
+const execFileP  = promisify(execFile);
+const FB_RX      = /https?:\/\/(www\.|m\.|web\.)?facebook\.com\/[^\s]+|https?:\/\/fb\.watch\/[^\s]+/i;
 
-async function cobaltFB(url) {
-  const { data } = await api.post('https://api.cobalt.tools/', { url, downloadMode: 'auto', filenameStyle: 'pretty' }, {
-    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
+
+// ── Method 1: scrape FB page directly (works for public posts) ────────────────
+async function scrapeFbPage(url) {
+  // Normalize to desktop URL
+  const desktop = url.replace(/m\.facebook\.com/, 'www.facebook.com')
+                     .replace(/web\.facebook\.com/, 'www.facebook.com');
+
+  const { data: html } = await axios.get(desktop, {
+    headers: {
+      'User-Agent': UA,
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Sec-Fetch-Mode': 'navigate',
+    },
     timeout: 20000,
+    maxRedirects: 5,
   });
-  return data;
+
+  // Extract SD / HD video sources from page JSON
+  const unescape = (s) => s
+    .replace(/\\u0026/g, '&')
+    .replace(/\\u0025/g, '%')
+    .replace(/\\\//g, '/')
+    .replace(/\\"/g, '"');
+
+  const patterns = [
+    /"hd_src":"([^"]+)"/,
+    /"sd_src":"([^"]+)"/,
+    /"browser_native_hd_url":"([^"]+)"/,
+    /"browser_native_sd_url":"([^"]+)"/,
+    /\"playable_url_quality_hd\":\"([^"]+)\"/,
+    /\"playable_url\":\"([^"]+)\"/,
+  ];
+
+  for (const rx of patterns) {
+    const m = html.match(rx);
+    if (m?.[1]) {
+      const link = unescape(m[1]);
+      if (link.startsWith('http')) return link;
+    }
+  }
+  throw new Error('No video URL found in page (post may be private or stories)');
 }
 
-async function faaFB(url) {
-  const { data } = await api.get(`https://api-faa.my.id/faa/fbdownload?url=${encodeURIComponent(url)}`);
-  if (!data.status) throw new Error(data.message || 'Facebook API error');
-  return data.result;
+// ── Method 2: snapsave API ────────────────────────────────────────────────────
+async function snapsaveFb(url) {
+  const form = `URLz=${encodeURIComponent(url)}`;
+  const { data } = await axios.post('https://snapsave.app/action.php', form, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Referer': 'https://snapsave.app/',
+      'Origin': 'https://snapsave.app',
+      'User-Agent': UA,
+    },
+    timeout: 20000,
+  });
+  const match = (typeof data === 'string' ? data : JSON.stringify(data))
+    .match(/https:\/\/[^\s"'<>]+\.mp4[^\s"'<>]*/i);
+  if (!match) throw new Error('snapsave: no video URL');
+  return match[0].replace(/&amp;/g, '&');
+}
+
+// ── Method 3: yt-dlp (supports some FB URLs when logged in) ──────────────────
+async function ytdlpFb(url) {
+  const args = [
+    url,
+    '-f', 'best[ext=mp4][height<=480]/best[ext=mp4]/best',
+    '--get-url',
+    '--no-playlist',
+    '--no-warnings',
+    '--socket-timeout', '20',
+    ...getCookiesFlag(),
+  ];
+  const { stdout } = await execFileP(YTDLP, args, { timeout: 40000 });
+  const link = stdout.trim().split('\n')[0];
+  if (!link?.startsWith('http')) throw new Error('yt-dlp: no URL');
+  return link;
 }
 
 export default {
   command: 'fb',
   alias: ['facebook', 'fbdl', 'fbvideo'],
-  description: 'Download Facebook videos and photos',
+  description: 'Download Facebook videos and reels',
   category: 'download',
 
   async execute({ text, msg, reply, react, sock, jid, prefix }) {
@@ -38,36 +109,40 @@ export default {
     if (!match) return reply(
       `📘 *Facebook Downloader*\n\n` +
       `*Usage:* ${prefix}fb <link>\n` +
-      `*Supports:* Videos • Photos\n\n` +
-      `*Example:* ${prefix}fb https://www.facebook.com/watch?v=xxx\n\n` +
+      `*Supports:* Public Videos • Reels\n\n` +
+      `*Example:*\n` +
+      `${prefix}fb https://www.facebook.com/watch?v=xxx\n` +
+      `${prefix}fb https://fb.watch/xxx\n\n` +
       `> 📘 *AA MD Bot*`
     );
 
     await react('⏳');
     url = match[0].replace(/[.,!?;]$/, '');
 
-    try {
-      const c = await cobaltFB(url);
-      if (c.status === 'stream' || c.status === 'tunnel') {
-        await sock.sendMessage(jid, { video: { url: c.url }, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }, { quoted: msg });
-        await react('✅');
-      } else throw new Error('cobalt no stream');
-    } catch {
+    const cap = `📘 *Facebook*\n\n> 🤖 *AA MD Bot*`;
+    const send = (videoUrl) => sock.sendMessage(jid,
+      { video: { url: videoUrl }, mimetype: 'video/mp4', caption: cap },
+      { quoted: msg }
+    );
+
+    // Try all methods in sequence
+    for (const [name, fn] of [
+      ['scrape', () => scrapeFbPage(url).then(send)],
+      ['snapsave', () => snapsaveFb(url).then(send)],
+      ['yt-dlp', () => ytdlpFb(url).then(send)],
+    ]) {
       try {
-        const r = await faaFB(url);
-        const media = r.media || r;
-        const videoUrl = media.video_hd || media.video_sd;
-        const imgUrl   = media.photo_image;
-        if (videoUrl) {
-          await sock.sendMessage(jid, { video: { url: videoUrl }, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }, { quoted: msg });
-        } else if (imgUrl) {
-          await sock.sendMessage(jid, { image: { url: imgUrl }, caption: '📘 *Facebook via AA MD Bot*' }, { quoted: msg });
-        } else throw new Error('No media found in this Facebook post');
-        await react('✅');
-      } catch (e2) {
-        await react('❌');
-        reply(`❌ *Facebook download failed*\n\n${e2.message}\n\n💡 Make sure the post is public and not age-restricted.`);
-      }
+        await fn();
+        return react('✅');
+      } catch {}
     }
+
+    await react('❌');
+    reply(
+      `❌ *Facebook download failed*\n\n` +
+      `Make sure the post is *public*.\n` +
+      `Private posts, stories, and reels with restricted sharing cannot be downloaded.\n\n` +
+      `> 📘 *AA MD Bot*`
+    );
   },
 };
