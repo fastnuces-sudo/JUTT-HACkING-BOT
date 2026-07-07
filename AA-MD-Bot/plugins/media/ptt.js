@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
   command: 'ptt',
-  alias: ['voicenote', 'tovoice', 'vn'],
+  alias: ['voicenote', 'vn', 'pttify'],
   description: 'Convert audio message to a voice note (PTT)',
   category: 'media',
   usage: '.ptt (reply to any audio message)',

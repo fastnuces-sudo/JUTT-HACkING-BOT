@@ -17,7 +17,7 @@ const POPULAR = ['bitcoin','ethereum','binancecoin','solana','ripple','dogecoin'
 
 export default {
   command: 'crypto',
-  alias: ['coin', 'price', 'btc', 'eth', 'cryptoprice'],
+  alias: ['price', 'btc', 'eth', 'cryptoprice', 'coinprice'],
   description: 'Get live cryptocurrency prices',
   category: 'search',
 

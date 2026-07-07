@@ -11,7 +11,7 @@ const tmpDir = path.join(__dirname, '../../temp');
 
 export default {
   command: 'toaudio',
-  alias: ['tovoice', 'tovn', 'mp3'],
+  alias: ['tovn', 'tomp3', 'extractaudio'],
   description: 'Convert video to audio/voice note',
   category: 'media',
   async execute({ reply, sock, jid, msg, args }) {

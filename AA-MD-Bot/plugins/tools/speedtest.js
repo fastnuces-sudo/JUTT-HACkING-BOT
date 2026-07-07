@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export default {
   command: 'speedtest',
-  alias: ['speed', 'netspeed'],
+  alias: ['netspeed', 'stest', 'ispeed'],
   description: 'Test bot internet speed',
   category: 'tools',
   ownerOnly: true,

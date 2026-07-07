@@ -1,7 +1,8 @@
 // ============================================
-// AA MD Bot - Menu
-// Clean, duplicate-free, role-aware menu
-// Owner-control commands hidden from public
+// AA MD Bot - Main Menu
+// Clean, role-aware, duplicate-free
+// SuperOwner commands → .smenu only
+// Owner commands → visible to owner only
 // ============================================
 
 import { plugins } from '../../lib/pluginLoader.js';
@@ -14,12 +15,11 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Banner ────────────────────────────────────────────────────────────────────
-const BANNER_PATHS = [
-  path.join(__dirname, '../../banner.jpeg'),
-  path.join(__dirname, '../../banner.jpg'),
-];
 function getBanner() {
-  for (const p of BANNER_PATHS) {
+  for (const p of [
+    path.join(__dirname, '../../banner.jpeg'),
+    path.join(__dirname, '../../banner.jpg'),
+  ]) {
     try { if (fs.existsSync(p)) return fs.readFileSync(p); } catch {}
   }
   return null;
@@ -40,73 +40,72 @@ function getCtx() {
   };
 }
 
-// ── Config ────────────────────────────────────────────────────────────────────
 const FOOTER = `\n> 🌐 *https://aa-mods.vercel.app/*\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*`;
 
-// Categories to skip entirely in public menu
-const SKIP = new Set(['owner', 'settings', 'ai']);
-// GB commands that are owner-only (personal bot settings)
-const GB_OWNER_CMDS = new Set(['afk','alwaysonline','autoread','autoreply','flood','ghost','onlinealert','typing','autoreact','anticall','antispam']);
-// Tools commands that are owner-only
-const TOOLS_OWNER_CMDS = new Set(['backup','dbstats','logs','reload','speedtest','system','memory']);
-
-// Category display config: emoji, display name, max commands shown
+// ── Category display config ───────────────────────────────────────────────────
 const CAT_CFG = {
-  download:  { e: '⬇️',  n: 'DOWNLOADS',     max: 10 },
-  search:    { e: '🔍',  n: 'SEARCH & AI',    max: 10 },
-  media:     { e: '🎨',  n: 'MEDIA',          max: 10 },
-  fun:       { e: '🎮',  n: 'FUN & GAMES',    max: 12 },
-  economy:   { e: '💰',  n: 'ECONOMY',        max: 8  },
-  level:     { e: '⭐',  n: 'LEVEL & XP',     max: 5  },
-  group:     { e: '👥',  n: 'GROUP',          max: 10 },
-  admin:     { e: '🛡️', n: 'GROUP ADMIN',    max: 10 },
-  tools:     { e: '🔧',  n: 'TOOLS',          max: 8  },
-  utility:   { e: '🛠️', n: 'UTILITY',        max: 10 },
-  gb:        { e: '📱',  n: 'GB FEATURES',    max: 6  },
-  islamic:   { e: '☪️',  n: 'ISLAMIC',        max: 0  }, // summary only
-  general:   { e: '📋',  n: 'GENERAL',        max: 8  },
+  download:  { e: '⬇️',  n: 'DOWNLOADS',      max: 11 },
+  search:    { e: '🔍',  n: 'SEARCH & AI',     max: 12 },
+  media:     { e: '🎨',  n: 'MEDIA TOOLS',     max: 12 },
+  fun:       { e: '🎮',  n: 'FUN & GAMES',     max: 14 },
+  economy:   { e: '💰',  n: 'ECONOMY',         max: 8  },
+  level:     { e: '⭐',  n: 'LEVEL & XP',      max: 5  },
+  group:     { e: '👥',  n: 'GROUP',           max: 10 },
+  admin:     { e: '🛡️', n: 'GROUP ADMIN',     max: 11 },
+  tools:     { e: '🔧',  n: 'TOOLS',           max: 8  },
+  utility:   { e: '🛠️', n: 'UTILITY',         max: 10 },
+  gb:        { e: '📱',  n: 'GB FEATURES',     max: 8  },
+  islamic:   { e: '☪️',  n: 'ISLAMIC',         max: 0  },
 };
 const CAT_ORDER = ['download','search','media','fun','economy','level','group','admin','tools','utility','gb','islamic'];
 
-// ── Greeting ──────────────────────────────────────────────────────────────────
+// Owner-control commands shown only to owners (in Owner Quick-Access section)
+const OWNER_GB_CMDS    = new Set(['afk','alwaysonline','autoread','autoreply','flood','ghost','onlinealert','typing','autoreact','anticall','antispam','schedule']);
+const OWNER_TOOLS_CMDS = new Set(['backup','dbstats','logs','reload','speedtest','system','memory']);
+// SuperOwner-only commands — never in .menu (only in .smenu)
+// Only list commands whose plugin.superOwnerOnly === true; do NOT list normal ownerOnly cmds here.
+const SUPER_CMDS = new Set(['eval','shell','broadcast','maintenance','setnewsletter','followchannel','adddevice','deldevice','devices','addowner','delowner','setowner','banuser','smenu','supermenu','devmenu','adminpanel']);
+
+// Greeting helper
 function greet() {
-  const h = new Date().getUTCHours() + 5; // PKT offset
+  const h = new Date().getUTCHours() + 5;
   if (h < 6 || h >= 20) return '🌙 Assalamualaikum';
   if (h < 12) return '🌅 Assalamualaikum';
-  if (h < 17) return '☀️  Assalamualaikum';
+  if (h < 17) return '☀️ Assalamualaikum';
   return '🌆 Assalamualaikum';
 }
 
-// ── Build the plugin list deduplicated and role-filtered ──────────────────────
-function buildCategoryMap(isOwner, isSuperOwnerUser) {
-  const seen = new Set();     // by command name (main command)
+// ── Build deduplicated, role-filtered plugin map ──────────────────────────────
+function buildCategoryMap(isOwner) {
+  const seen   = new Set();
   const catMap = {};
 
   for (const plugin of plugins.values()) {
     const mainCmd = Array.isArray(plugin.command) ? plugin.command[0] : plugin.command;
-    if (!mainCmd) continue;
-    if (seen.has(mainCmd)) continue;
+    if (!mainCmd || seen.has(mainCmd)) continue;
     seen.add(mainCmd);
 
     const cat = (plugin.category || 'general').toLowerCase();
-    if (SKIP.has(cat)) continue;
 
-    // Skip superOwner-only commands for non-superOwner users
-    if (plugin.superOwnerOnly && !isSuperOwnerUser) continue;
+    // Always skip owner category from public menus
+    if (cat === 'owner') continue;
 
-    // Skip ownerOnly commands in GB and Tools for non-owners — they belong in owner section
+    // Never show superOwner-only commands in .menu
+    if (plugin.superOwnerOnly) continue;
+    if (SUPER_CMDS.has(mainCmd)) continue;
+
+    // Non-owners: skip ownerOnly commands and owner-specific GB/tools commands
     if (!isOwner) {
-      if (plugin.ownerOnly) continue; // don't show any ownerOnly cmd in public menu
-      if (cat === 'gb' && GB_OWNER_CMDS.has(mainCmd)) continue;
-      if (cat === 'tools' && TOOLS_OWNER_CMDS.has(mainCmd)) continue;
+      if (plugin.ownerOnly) continue;
+      if (cat === 'gb'    && OWNER_GB_CMDS.has(mainCmd))    continue;
+      if (cat === 'tools' && OWNER_TOOLS_CMDS.has(mainCmd)) continue;
     }
 
     if (!catMap[cat]) catMap[cat] = [];
     catMap[cat].push({
-      cmd: mainCmd,
-      desc: (plugin.description || '').slice(0, 38),
+      cmd:       mainCmd,
+      desc:      (plugin.description || '').slice(0, 42),
       ownerOnly: !!plugin.ownerOnly,
-      superOnly: !!plugin.superOwnerOnly,
     });
   }
 
@@ -114,7 +113,8 @@ function buildCategoryMap(isOwner, isSuperOwnerUser) {
 }
 
 // ── Render a category box ─────────────────────────────────────────────────────
-function renderCat(emoji, label, cmds, pref, max) {
+// catKey = the actual category key (e.g. 'admin', 'download') for deep-link accuracy
+function renderCat(emoji, label, cmds, pref, max, catKey) {
   const shown = max > 0 ? cmds.slice(0, max) : cmds;
   const more  = cmds.length - shown.length;
 
@@ -124,20 +124,19 @@ function renderCat(emoji, label, cmds, pref, max) {
     box += `│  ▸ *${pref}${cmd}*${d}\n`;
   }
   if (more > 0) {
-    box += `│  _+${more} more — *${pref}menu ${label.toLowerCase().replace(/ .*/,'')}*_\n`;
+    box += `│  _…+${more} more → *${pref}menu ${catKey}*_\n`;
   }
-  box += `╰${'─'.repeat(30)}\n`;
+  box += `╰${'─'.repeat(32)}\n`;
   return box;
 }
 
 // ── Single-category detail view ───────────────────────────────────────────────
-function renderCatDetail(cat, cmds, pref, isSuperOwnerUser) {
+function renderCatDetail(cat, cmds, pref) {
   const cfg = CAT_CFG[cat] || { e: '📌', n: cat.toUpperCase() };
-  let text = `╔════════════════════════════════╗\n`;
+  let text = `╔══════════════════════════════════╗\n`;
   text    += `║  ${cfg.e}  *${cfg.n} COMMANDS*\n`;
-  text    += `╚════════════════════════════════╝\n`;
-  for (const { cmd, desc, superOnly } of cmds) {
-    if (superOnly && !isSuperOwnerUser) continue;
+  text    += `╚══════════════════════════════════╝\n`;
+  for (const { cmd, desc } of cmds) {
     text += `\n▸ *${pref}${cmd}*`;
     if (desc) text += `\n  ╰ _${desc}_`;
   }
@@ -153,27 +152,26 @@ export default {
   usage: '.menu | .menu <category>',
 
   async execute({ sock, jid, msg, isOwner, args, senderJid }) {
-    const settings = db.settings.get();
-    const pushName = msg.pushName || 'User';
-    const pref     = (settings.prefix ?? config.prefix)?.[0] ?? '.';
-    const mode     = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
-    const isSuperOwnerUser = senderJid?.split('@')[0]?.split(':')[0] === config.superOwner;
+    const settings        = db.settings.get();
+    const pushName        = msg.pushName || 'User';
+    const pref            = (settings.prefix ?? config.prefix)?.[0] ?? '.';
+    const mode            = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
+    const isSuperOwnerUser = senderJid?.split('@')[0]?.split(':')[0] === String(config.superOwner);
     const role = isSuperOwnerUser ? '👑 Super Owner' : isOwner ? '🔑 Owner' : '👤 User';
 
-    const upSec = Math.floor(process.uptime());
-    const upH   = Math.floor(upSec / 3600);
-    const upM   = Math.floor((upSec % 3600) / 60);
+    const upSec  = Math.floor(process.uptime());
+    const upH    = Math.floor(upSec / 3600);
+    const upM    = Math.floor((upSec % 3600) / 60);
     const uptime = upH > 0 ? `${upH}h ${upM}m` : `${upM}m ${upSec % 60}s`;
     const usedMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
 
-    const catMap    = buildCategoryMap(isOwner, isSuperOwnerUser);
+    const catMap    = buildCategoryMap(isOwner);
     const totalCmds = Object.values(catMap).reduce((s, a) => s + a.length, 0);
     const ctx       = getCtx();
 
-    // ── Single-category detail view ───────────────────────────────────────────
+    // ── Single-category detail view ─────────────────────────────────────────
     if (args[0]) {
-      const key = args[0].toLowerCase();
-      // Try matching by keyword
+      const key     = args[0].toLowerCase();
       const matched = CAT_ORDER.find(c => c.startsWith(key)) || key;
       const cmds    = catMap[matched];
 
@@ -187,38 +185,36 @@ export default {
         return sock.sendMessage(jid, payload, { quoted: msg });
       }
 
-      const cfg  = CAT_CFG[matched] || { e: '📌', n: matched.toUpperCase() };
-      let detail = renderCatDetail(matched, cmds, pref, isSuperOwnerUser);
-      detail    += FOOTER;
+      let detail = renderCatDetail(matched, cmds, pref) + FOOTER;
       const payload = { text: detail };
       if (ctx) payload.contextInfo = ctx;
       return sock.sendMessage(jid, payload, { quoted: msg });
     }
 
-    // ── Full menu ─────────────────────────────────────────────────────────────
+    // ── Full menu ───────────────────────────────────────────────────────────
     const greeting = isSuperOwnerUser
       ? `👑 *${greet()}, Ahsan Bhai!*\n_Super Owner — Full Access_`
       : isOwner
-        ? `🔑 *${greet()}, Owner!*\n_Bot control active_`
+        ? `🔑 *${greet()}, Owner!*\n_Bot control panel active_`
         : `✨ *${greet()}, ${pushName}!*\n_Welcome to AA MD Bot_`;
 
     let menu = '';
 
-    // ── Header ────────────────────────────────────────────────────────────────
+    // Header
     menu += `╔══════════════════════════════════╗\n`;
     menu += `║  🤖  *A A   M D   B O T*         ║\n`;
     menu += `║  👨‍💻  Ahsan Ali Wadani | AA Mods  ║\n`;
     menu += `╚══════════════════════════════════╝\n\n`;
     menu += `${greeting}\n`;
 
-    // ── Status ────────────────────────────────────────────────────────────────
+    // Status bar
     menu += `\n╭── 📊  *STATUS*\n`;
     menu += `│  🟢 Online  •  ⏱️ ${uptime}  •  💾 ${usedMB}MB\n`;
-    menu += `│  🔑 Prefix: *${pref}*   •  🔀 *${mode}*   •  🎭 ${role}\n`;
-    menu += `│  📦 *${totalCmds}* commands available\n`;
-    menu += `╰${'─'.repeat(30)}\n`;
+    menu += `│  Prefix: *${pref}*   Mode: *${mode}*   Role: ${role}\n`;
+    menu += `│  📦 *${totalCmds}* commands loaded\n`;
+    menu += `╰${'─'.repeat(32)}\n`;
 
-    // ── Public categories ─────────────────────────────────────────────────────
+    // All public categories
     const orderedCats = [
       ...CAT_ORDER.filter(c => catMap[c]?.length),
       ...Object.keys(catMap).filter(c => !CAT_ORDER.includes(c) && catMap[c]?.length),
@@ -227,47 +223,63 @@ export default {
     for (const cat of orderedCats) {
       const cmds = catMap[cat];
       if (!cmds?.length) continue;
-
       const cfg = CAT_CFG[cat] || { e: '📌', n: cat.toUpperCase(), max: 8 };
 
-      // Islamic — summary only
       if (cat === 'islamic') {
         menu += `\n╭── ☪️  *ISLAMIC*  (${cmds.length})\n`;
-        menu += `│  ▸ *${pref}islamicmenu* — Full Islamic panel\n`;
-        menu += `│  _Duas • Zikr • Hadith • Kalimas • Adhkar_\n`;
-        menu += `╰${'─'.repeat(30)}\n`;
+        menu += `│  ▸ *${pref}islamicmenu* — Full Islamic command panel\n`;
+        menu += `│  _Duas • Zikr • Hadith • Kalimas • Adhkar • Salah_\n`;
+        menu += `╰${'─'.repeat(32)}\n`;
         continue;
       }
 
-      menu += renderCat(cfg.e, cfg.n, cmds, pref, cfg.max || 8);
+      menu += renderCat(cfg.e, cfg.n, cmds, pref, cfg.max || 8, cat);
     }
 
-    // ── Owner Quick-Access (only for owners) ───────────────────────────────
+    // ── Owner Quick-Access (only shown to owners) ───────────────────────────
     if (isOwner) {
-      menu += `\n╭── ⚙️  *OWNER TOOLS*\n`;
-      menu += `│  ▸ *${pref}bs*           — Bot settings panel\n`;
-      menu += `│  ▸ *${pref}mode*         — public / private\n`;
-      menu += `│  ▸ *${pref}setprefix*    — Change command prefix\n`;
-      menu += `│  ▸ *${pref}afk* <reason> — Go AFK\n`;
-      menu += `│  ▸ *${pref}ghost*        — Appear offline\n`;
-      menu += `│  ▸ *${pref}autoread*     — Auto blue ticks\n`;
-      menu += `│  ▸ *${pref}anticall*     — Block calls\n`;
-      menu += `│  ▸ *${pref}antiviewonce on/off* — Reveal view-once\n`;
-      menu += `│  ▸ *${pref}avv*          — Manually reveal view-once\n`;
+      menu += `\n╭── ⚙️  *OWNER CONTROLS*\n`;
+      menu += `│\n`;
+      menu += `│  🔒 *Privacy & Stealth*\n`;
+      menu += `│  ▸ *${pref}ghost on/off*       — Appear offline\n`;
+      menu += `│  ▸ *${pref}alwaysonline on/off* — Always online\n`;
+      menu += `│  ▸ *${pref}privacy*            — Last seen, DP, blue ticks\n`;
+      menu += `│  ▸ *${pref}anticall on/off*    — Block calls\n`;
+      menu += `│  ▸ *${pref}autoreact on/off*   — Auto emoji react\n`;
+      menu += `│\n`;
+      menu += `│  👁️ *View-Once & Delete*\n`;
+      menu += `│  ▸ *${pref}antiviewonce on/off* — Auto-reveal all view-once\n`;
+      menu += `│  ▸ *${pref}voword <keyword>*   — Keyword reveal trigger\n`;
+      menu += `│  ▸ *${pref}avv*               — Manual reveal (reply)\n`;
+      menu += `│  ▸ *${pref}antidelete on/off*  — Recover deleted messages\n`;
+      menu += `│\n`;
+      menu += `│  🤖 *Auto Features*\n`;
+      menu += `│  ▸ *${pref}autoread on/off*    — Silent read all msgs\n`;
+      menu += `│  ▸ *${pref}autoreply <msg>*    — Auto reply when busy\n`;
+      menu += `│  ▸ *${pref}afk <reason>*       — Go AFK\n`;
+      menu += `│  ▸ *${pref}onlinealert <num>*  — Alert when contact online\n`;
+      menu += `│\n`;
+      menu += `│  ⚙️ *Bot Settings*\n`;
+      menu += `│  ▸ *${pref}bs*                — Full settings panel\n`;
+      menu += `│  ▸ *${pref}mode public/private* — Change bot mode\n`;
+      menu += `│  ▸ *${pref}setprefix <char>*   — Change command prefix\n`;
+      menu += `│  ▸ *${pref}antispam on/off*    — Anti-spam filter\n`;
       if (isSuperOwnerUser) {
         menu += `│\n`;
         menu += `│  👑 *${pref}smenu* — Super Owner control panel\n`;
       }
-      menu += `╰${'─'.repeat(30)}\n`;
+      menu += `╰${'─'.repeat(32)}\n`;
     }
 
-    // ── Footer ────────────────────────────────────────────────────────────────
-    menu += `\n> 💡 *${pref}menu <category>* — view full category\n`;
-    menu += `> ☪️ *${pref}islamicmenu* — Islamic commands\n`;
-    if (isOwner) menu += `> 📱 *${pref}gbmenu* — GB features panel\n`;
+    // Footer tips
+    menu += `\n╭── 💡  *TIPS*\n`;
+    menu += `│  ▸ *${pref}menu download* — see all download cmds\n`;
+    menu += `│  ▸ *${pref}menu search*   — see all AI & search cmds\n`;
+    menu += `│  ▸ *${pref}islamicmenu*   — full Islamic panel\n`;
+    if (isOwner) menu += `│  ▸ *${pref}gbmenu*        — GB WhatsApp features\n`;
+    menu += `╰${'─'.repeat(32)}\n`;
     menu += FOOTER;
 
-    // Send with banner image if available
     const banner  = getBanner();
     const payload = banner
       ? { image: banner, caption: menu, mimetype: 'image/jpeg' }

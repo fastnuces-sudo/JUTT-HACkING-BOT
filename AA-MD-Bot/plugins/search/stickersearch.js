@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export default {
   command: 'stickersearch',
-  alias: ['getsticker', 'gifsticker'],
+  alias: ['findsticker', 'gifsticker', 'searchsticker'],
   description: 'Search and send a sticker via Tenor',
   category: 'search',
   async execute({ sock, msg, jid, text, react, reply, prefix, config }) {

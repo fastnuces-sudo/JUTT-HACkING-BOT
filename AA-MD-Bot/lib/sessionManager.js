@@ -594,18 +594,39 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   sessions.set(sessionId, sock);
   logger.info({ sessionId }, '🔌 Session initialized');
 
-  // Pairing code mode
+  // Pairing code mode — request code on 'connecting' event (more reliable than setTimeout)
+  // The flag ensures we only request once per session creation, not on reconnects.
   if (usePairingCode && phoneNumber && !state.creds.registered) {
-    setTimeout(async () => {
+    let _pairingRequested = false;
+    let _fallbackTimer    = null;
+
+    const _requestCode = async (source) => {
+      if (_pairingRequested) return;
+      _pairingRequested = true;
+      sock.ev.off('connection.update', _pairingHandler);
+      if (_fallbackTimer) { clearTimeout(_fallbackTimer); _fallbackTimer = null; }
       try {
         const code = await sock.requestPairingCode(phoneNumber);
         botEvents.emit('pairingCode', { sessionId, code, phoneNumber });
-        logger.info({ sessionId, code }, '📲 Pairing code generated');
+        logger.info({ sessionId, code, source }, '📲 Pairing code generated');
       } catch (err) {
         botEvents.emit('pairingCodeError', { sessionId, error: err.message });
-        logger.error({ err: err.message }, 'Pairing code error');
+        logger.error({ err: err.message, source }, 'Pairing code error');
       }
-    }, 3000);
+    };
+
+    const _pairingHandler = async (update) => {
+      if (_pairingRequested) return;
+      if (update.connection === 'connecting') {
+        // Brief delay so socket completes handshake before requestPairingCode
+        await new Promise(r => setTimeout(r, 800));
+        _requestCode('connecting-event');
+      }
+    };
+
+    sock.ev.on('connection.update', _pairingHandler);
+    // Fallback: if 'connecting' was already emitted before we registered, request after 4s
+    _fallbackTimer = setTimeout(() => _requestCode('fallback-timer'), 4000);
   }
 
   return sock;

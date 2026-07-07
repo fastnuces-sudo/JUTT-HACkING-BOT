@@ -7,7 +7,7 @@ const execAsync = promisify(exec);
 
 export default {
   command: 'ydesc',
-  alias: ['ytsearch', 'yts', 'ytinfo'],
+  alias: ['ytdesc', 'ytinfo', 'ytdescription'],
   category: 'download',
   description: 'Search YouTube and show video info',
   usage: '.ydesc Faded Alan Walker',

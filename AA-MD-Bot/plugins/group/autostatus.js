@@ -6,7 +6,7 @@
 
 export default {
   command: 'autostatus',
-  alias: ['stvsave', 'statussave', 'savestatus', 'statusview', 'statusreact'],
+  alias: ['stvsave', 'statusview', 'statusreact', 'autosv'],
   description: 'Auto save & forward status updates to owner DM',
   category: 'owner',
   ownerOnly: true,
