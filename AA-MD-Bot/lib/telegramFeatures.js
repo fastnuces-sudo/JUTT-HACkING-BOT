@@ -60,6 +60,28 @@ function raceFirst(promises) {
   });
 }
 
+// Download a URL as a Buffer; throws if > maxMb or on network error
+async function downloadBuffer(url, maxMb = 49) {
+  const res = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 120000,
+    maxContentLength: maxMb * 1024 * 1024,
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+  });
+  return Buffer.from(res.data);
+}
+
+// Fetch YouTube thumbnail as Buffer (fallback to null)
+async function ytThumbBuf(id) {
+  for (const q of ['maxresdefault', 'hqdefault', 'mqdefault']) {
+    try {
+      const buf = await downloadBuffer(`https://i.ytimg.com/vi/${id}/${q}.jpg`, 5);
+      if (buf.length > 1000) return buf;
+    } catch {}
+  }
+  return null;
+}
+
 function pickUrl(data, ...keys) {
   for (const k of keys) {
     const v = k.split('.').reduce((o, kk) => o?.[kk], data);
@@ -232,16 +254,35 @@ async function aiChat(userId, prompt) {
     } catch (e) { lastErr = e; }
   }
   if (!reply) throw lastErr || new Error('All AI models failed');
-  // Convert WhatsApp-style markdown to Telegram HTML
+
+  // Step 1: extract code blocks, escape HTML in non-code parts, put code back
+  const codeChunks = [];
+  reply = reply.replace(/```([\w]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeChunks.length;
+    codeChunks.push(`<pre><code>${esc(code.trim())}</code></pre>`);
+    return `\x00CODE${idx}\x00`;
+  });
+  // escape inline code too
+  reply = reply.replace(/`([^`\n]+)`/g, (_, code) => {
+    const idx = codeChunks.length;
+    codeChunks.push(`<code>${esc(code)}</code>`);
+    return `\x00CODE${idx}\x00`;
+  });
+  // now safe to escape the rest (no < > & from the model in plain text)
+  reply = esc(reply);
+  // markdown → Telegram HTML on the escaped text
   reply = reply
-    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-    .replace(/\*(.*?)\*/g,     '<b>$1</b>')
-    .replace(/__(.*?)__/g,     '<i>$1</i>')
-    .replace(/_(.*?)_/g,       '<i>$1</i>')
-    .replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre>$1</pre>')
-    .replace(/`([^`]+)`/g,     '<code>$1</code>')
-    .replace(/^#{1,6}\s+(.*)/gm, '<b>$1</b>')
+    .replace(/\*\*(.*?)\*\*/g,  '<b>$1</b>')
+    .replace(/\*(.*?)\*/g,      '<b>$1</b>')
+    .replace(/__(.*?)__/g,      '<i>$1</i>')
+    .replace(/_(.*?)_/g,        '<i>$1</i>')
+    .replace(/^#{1,6}\s+(.*)/gm,'<b>$1</b>')
     .trim();
+  // restore code blocks
+  for (let i = 0; i < codeChunks.length; i++) {
+    reply = reply.replace(`\x00CODE${i}\x00`, codeChunks[i]);
+  }
+
   aiAddHist(userId, 'assistant', reply);
   return reply;
 }
@@ -625,13 +666,24 @@ export function initTelegramFeatures() {
       const audioUrl = await resolveAudio(id);
       if (!audioUrl) throw new Error('All download sources failed');
 
+      await edit(bot, chatId, sent.message_id,
+        `⏬ <b>Downloading audio...</b>\n🎵 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Preparing file...</i>`
+      );
+
+      // Download audio buffer for reliable delivery
+      let audioBuf;
+      try { audioBuf = await downloadBuffer(audioUrl, 49); } catch { audioBuf = null; }
+
+      const audioCap = `🎵 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}` + FOOTER;
+      const thumb    = id ? await ytThumbBuf(id) : null;
+
       await bot.deleteMessage(chatId, sent.message_id).catch(() => {});
       await bot.sendChatAction(chatId, 'upload_voice').catch(() => {});
-      await bot.sendAudio(chatId, audioUrl, {
-        caption: `🎵 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}` + FOOTER,
-        parse_mode: 'HTML', title,
-      }).catch(async () => {
-        await bot.sendDocument(chatId, audioUrl, { caption: `🎵 <b>${esc(title)}</b>\n${FOOTER}`, parse_mode: 'HTML' }).catch(() => {});
+
+      const audioSendOpts = { caption: audioCap, parse_mode: 'HTML', title, ...(thumb ? { thumbnail: thumb } : {}) };
+      const source = audioBuf || audioUrl;
+      await bot.sendAudio(chatId, source, audioSendOpts).catch(async () => {
+        await bot.sendDocument(chatId, audioBuf || audioUrl, { caption: audioCap, parse_mode: 'HTML', ...(thumb ? { thumbnail: thumb } : {}) }).catch(() => {});
       });
     } catch (e) {
       edit(bot, chatId, sent.message_id,
@@ -668,13 +720,30 @@ export function initTelegramFeatures() {
       const videoUrl = await resolveVideo(id);
       if (!videoUrl) throw new Error('All download sources failed');
 
+      await edit(bot, chatId, sent.message_id,
+        `⏬ <b>Downloading video...</b>\n🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Preparing file (this may take a moment)...</i>`
+      );
+
+      // Download video as buffer for reliable delivery (Telegram often can't fetch CDN URLs)
+      let videoBuf;
+      try { videoBuf = await downloadBuffer(videoUrl, 49); } catch { videoBuf = null; }
+
+      const videoCap = `🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}` + FOOTER;
+      const thumb    = id ? await ytThumbBuf(id) : null;
+
       await bot.deleteMessage(chatId, sent.message_id).catch(() => {});
       await bot.sendChatAction(chatId, 'upload_video').catch(() => {});
-      await bot.sendVideo(chatId, videoUrl, {
-        caption: `🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}` + FOOTER,
-        parse_mode: 'HTML', supports_streaming: true,
-      }).catch(async () => {
-        await bot.sendDocument(chatId, videoUrl, { caption: `🎬 <b>${esc(title)}</b>\n${FOOTER}`, parse_mode: 'HTML' }).catch(() => {});
+
+      const videoSendOpts = { caption: videoCap, parse_mode: 'HTML', supports_streaming: true, ...(thumb ? { thumbnail: thumb } : {}) };
+      const vsource = videoBuf || videoUrl;
+      await bot.sendVideo(chatId, vsource, videoSendOpts).catch(async () => {
+        // Fallback: send as document
+        await bot.sendDocument(chatId, videoBuf || videoUrl, {
+          caption: videoCap, parse_mode: 'HTML', ...(thumb ? { thumbnail: thumb } : {}),
+        }).catch(async () => {
+          // Last resort: just send the URL as text
+          if (videoUrl) await bot.sendMessage(chatId, `🎬 <b>${esc(title)}</b>\n\n🔗 <a href="${videoUrl}">Download Link</a>` + FOOTER, HTML).catch(() => {});
+        });
       });
     } catch (e) {
       edit(bot, chatId, sent.message_id,
@@ -808,9 +877,19 @@ export function initTelegramFeatures() {
     try {
       await bot.sendChatAction(chatId, 'typing').catch(() => {});
       const reply = await aiChat(userId, prompt);
-      edit(bot, chatId, sent.message_id,
-        `🤖 <b>AI Reply</b>\n${DIV}\n\n${reply}` + FOOTER
-      );
+      const htmlMsg = `🤖 <b>AI Reply</b>\n${DIV}\n\n${reply}` + FOOTER;
+      // Try HTML mode; if Telegram rejects it (malformed tags), fall back to plain text
+      const ok = await bot.editMessageText(htmlMsg, {
+        chat_id: chatId, message_id: sent.message_id, parse_mode: 'HTML',
+      }).catch(() => null);
+      if (!ok) {
+        // strip all HTML tags for plain-text fallback
+        const plain = htmlMsg
+          .replace(/<[^>]+>/g, '')
+          .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+        await bot.deleteMessage(chatId, sent.message_id).catch(() => {});
+        await bot.sendMessage(chatId, plain).catch(() => {});
+      }
     } catch (e) {
       edit(bot, chatId, sent.message_id,
         `❌ <b>AI Error</b>\n\n<i>${esc(e.message)}</i>\n\n💡 Try rephrasing your question.`
