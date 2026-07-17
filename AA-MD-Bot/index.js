@@ -337,6 +337,7 @@ async function main() {
   try {
     initTelegramAdmin({
       createSession,
+      deleteSession,
       getAllSessions: () => getAllSessions(),
       latestPairingCodes,
       botEvents,

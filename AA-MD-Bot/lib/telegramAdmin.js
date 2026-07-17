@@ -20,12 +20,14 @@ const esc    = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 
 // ── Injected context ─────────────────────────────────────────────────────────
 let _createSession  = null;
+let _deleteSession  = null;
 let _latestCodes    = null;
 let _botEvents      = null;
 let _getAllSessions  = null;
 let _broadcastFn    = null;
 
-const _pairingWaiters = new Map(); // sessionId → Set<chatId>
+// sessionId → Map<chatId, msgId>  (stores the "Waiting..." message to edit in-place)
+const _pairingWaiters = new Map();
 const _pairingChats   = new Map(); // sessionId → chatId (for connection confirm)
 const _awaitingPhone  = new Map(); // chatId → { msgId }
 
@@ -62,6 +64,29 @@ async function editOrSend(bot, chatId, msgId, text, extra = {}) {
   }
 }
 
+// ── Code message helper ───────────────────────────────────────────────────────
+function codeMessage(phone, code) {
+  return {
+    text:
+      `✅ <b>Pairing Code Ready!</b>\n${DIV}\n\n` +
+      `📱 <b>Number:</b> <code>+${esc(phone)}</code>\n\n` +
+      `🔑 <b>Your Code:</b>\n<code>${esc(code)}</code>\n\n` +
+      `<b>How to connect:</b>\n` +
+      `1️⃣ Open WhatsApp → <b>Settings → Linked Devices</b>\n` +
+      `2️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
+      `3️⃣ Enter the 8-digit code above\n\n` +
+      `⏰ <i>Expires in ~60 seconds — enter it quickly!\n` +
+      `You will get a confirmation message here when connected.</i>` + FOOTER,
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: `📋 Copy Code: ${code}`, callback_data: `copy_code_${code}` }],
+        [{ text: '🔄 Request New Code', callback_data: `repair_${phone}` },
+         { text: '« Back',              callback_data: 'home'              }],
+      ],
+    },
+  };
+}
+
 // ── Core pairing logic ────────────────────────────────────────────────────────
 async function doPair(bot, chatId, phone, editMsgId = null) {
   const waiting =
@@ -82,56 +107,27 @@ async function doPair(bot, chatId, phone, editMsgId = null) {
     const sessionId = `tg_${phone}`;
     _pairingChats.set(sessionId, chatId);
 
-    // Return existing fresh code if available
-    const existing = _latestCodes?.get(sessionId);
-    if (existing) {
-      return editOrSend(bot, chatId, sentId,
-        `✅ <b>Pairing Code</b>\n${DIV}\n\n` +
-        `📱 <b>Number:</b> <code>+${esc(phone)}</code>\n\n` +
-        `🔑 <b>Code:</b>\n<code>${esc(existing)}</code>\n\n` +
-        `<b>Steps to connect:</b>\n` +
-        `1️⃣ Open WhatsApp on your phone\n` +
-        `2️⃣ Go to <b>Settings → Linked Devices</b>\n` +
-        `3️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
-        `4️⃣ Enter the 8-digit code above\n\n` +
-        `⏰ <i>Code expires in ~60 seconds. If expired, tap Pair again.</i>` + FOOTER,
-        { reply_markup: KB_BACK }
-      );
+    // Delete any existing stuck/old session for this number so we get a fresh code
+    if (_deleteSession) {
+      try { await _deleteSession(sessionId); } catch {}
     }
+    _latestCodes?.delete(sessionId);
 
-    // Register waiter then create session
-    if (!_pairingWaiters.has(sessionId)) _pairingWaiters.set(sessionId, new Set());
-    _pairingWaiters.get(sessionId).add(chatId);
+    // Register waiter: sessionId → Map<chatId, msgId>
+    if (!_pairingWaiters.has(sessionId)) _pairingWaiters.set(sessionId, new Map());
+    _pairingWaiters.get(sessionId).set(chatId, sentId);
 
-    await _createSession(sessionId, phone);
-    await new Promise(r => setTimeout(r, 4000));
+    // *** FIX: correct arg order — createSession(sessionId, usePairingCode, phoneNumber) ***
+    await _createSession(sessionId, true, phone);
 
-    const code = _latestCodes?.get(sessionId);
-    if (code && _pairingWaiters.has(sessionId)) {
-      _pairingWaiters.get(sessionId).delete(chatId);
-      if (!_pairingWaiters.get(sessionId).size) _pairingWaiters.delete(sessionId);
+    // Show "waiting" status while session connects (code arrives via pairingCode event)
+    await editOrSend(bot, chatId, sentId,
+      `⏳ <b>Waiting for code...</b>\n\n` +
+      `📱 <b>Number:</b> <code>+${esc(phone)}</code>\n\n` +
+      `<i>The code will appear here automatically.\nDo not close this chat.</i>` + FOOTER,
+      { reply_markup: KB_BACK }
+    );
 
-      editOrSend(bot, chatId, sentId,
-        `✅ <b>Pairing Code Ready!</b>\n${DIV}\n\n` +
-        `📱 <b>Number:</b> <code>+${esc(phone)}</code>\n\n` +
-        `🔑 <b>Your Code:</b>\n<code>${esc(code)}</code>\n\n` +
-        `<b>Steps to connect:</b>\n` +
-        `1️⃣ Open WhatsApp on your phone\n` +
-        `2️⃣ Go to <b>Settings → Linked Devices</b>\n` +
-        `3️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
-        `4️⃣ Enter the 8-digit code above\n\n` +
-        `⏰ <i>Expires in ~60 seconds — enter it quickly!</i>\n` +
-        `<i>You will get a confirmation here when connected.</i>` + FOOTER,
-        { reply_markup: KB_BACK }
-      );
-    } else {
-      editOrSend(bot, chatId, sentId,
-        `⏳ <b>Waiting for code...</b>\n\n` +
-        `📱 Number: <code>+${esc(phone)}</code>\n\n` +
-        `<i>The code will appear here automatically (10–30 seconds).\nDo not close this chat.</i>` + FOOTER,
-        { reply_markup: KB_BACK }
-      );
-    }
   } catch (e) {
     const sid = `tg_${phone}`;
     _pairingWaiters.get(sid)?.delete(chatId);
@@ -183,35 +179,34 @@ const BOT_FEATURES_TEXT =
   `<i>Connect your number using this bot, then enjoy all features on WhatsApp and Telegram!</i>`;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-export function initTelegramAdmin({ createSession, getAllSessions, latestPairingCodes, botEvents }) {
+export function initTelegramAdmin({ createSession, deleteSession, getAllSessions, latestPairingCodes, botEvents }) {
   if (!TOKEN) {
     logger.warn('⚡ TELEGRAM_BOT_TOKEN not set — Telegram admin bot disabled');
     return;
   }
 
   _createSession = createSession;
+  _deleteSession = deleteSession;
   _latestCodes   = latestPairingCodes;
   _botEvents     = botEvents;
   _getAllSessions = getAllSessions;
 
   const bot = new TelegramBot(TOKEN, { polling: true });
 
-  // ── Forward pairing codes from bot events ─────────────────────────────────
+  // ── Forward pairing codes from bot events — edit the "Waiting..." msg in-place ──
   botEvents.on('pairingCode', ({ sessionId, code }) => {
-    const waiters = _pairingWaiters.get(sessionId);
+    const phone   = sessionId.replace('tg_', '');
+    const waiters = _pairingWaiters.get(sessionId); // Map<chatId, msgId>
     if (!waiters?.size) return;
-    for (const chatId of waiters) {
-      bot.sendMessage(chatId,
-        `✅ <b>Pairing Code Ready!</b>\n${DIV}\n\n` +
-        `📱 Number: <code>+${esc(sessionId.replace('tg_', ''))}</code>\n\n` +
-        `🔑 Your Code:\n<code>${esc(code)}</code>\n\n` +
-        `<b>Steps to connect:</b>\n` +
-        `1️⃣ Open WhatsApp → Settings → Linked Devices\n` +
-        `2️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
-        `3️⃣ Enter the 8-digit code above\n\n` +
-        `⏰ <i>Expires in ~60 seconds — enter it quickly!</i>` + FOOTER,
-        HTML
-      ).catch(() => {});
+    const cm = codeMessage(phone, code);
+    for (const [chatId, msgId] of waiters) {
+      // Edit the existing "Waiting..." message so the code appears in the same place
+      bot.editMessageText(cm.text, {
+        chat_id: chatId, message_id: msgId, parse_mode: 'HTML', reply_markup: cm.reply_markup,
+      }).catch(() => {
+        // Fallback: send new message if edit fails
+        bot.sendMessage(chatId, cm.text, { parse_mode: 'HTML', reply_markup: cm.reply_markup }).catch(() => {});
+      });
     }
     _pairingWaiters.delete(sessionId);
   });
@@ -378,6 +373,25 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
           { reply_markup: { inline_keyboard: [[{ text: '« Back', callback_data: 'admin_panel' }]] } }
         );
         break;
+
+      default: {
+        // "Copy Code" button — show code in a pop-up alert (tap to dismiss)
+        if (query.data.startsWith('copy_code_')) {
+          const code = query.data.slice('copy_code_'.length);
+          await bot.answerCallbackQuery(query.id, {
+            text: `Your code: ${code}\n\nTap & hold the code in the message above to copy it.`,
+            show_alert: true,
+          }).catch(() => {});
+          return;
+        }
+
+        // "Request New Code" button — restart pairing for same number
+        if (query.data.startsWith('repair_')) {
+          const phone = query.data.slice('repair_'.length);
+          await bot.answerCallbackQuery(query.id).catch(() => {});
+          return doPair(bot, chatId, phone, msgId);
+        }
+      }
     }
   });
 
