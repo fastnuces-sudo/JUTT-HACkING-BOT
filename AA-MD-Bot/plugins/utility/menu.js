@@ -52,7 +52,7 @@ const CAT_CFG = {
   level:     { e: '⭐',  n: 'LEVEL & XP',      max: 5  },
   group:     { e: '👥',  n: 'GROUP',           max: 10 },
   admin:     { e: '🛡️', n: 'GROUP ADMIN',     max: 11 },
-  tools:     { e: '🔧',  n: 'TOOLS',           max: 8  },
+  tools:     { e: '🔧',  n: 'TOOLS',           max: 20 },
   utility:   { e: '🛠️', n: 'UTILITY',         max: 10 },
   gb:        { e: '📱',  n: 'GB FEATURES',     max: 8  },
   islamic:   { e: '☪️',  n: 'ISLAMIC',         max: 0  },
@@ -240,20 +240,11 @@ export default {
       menu += `│  ▸ *${pref}antiviewonce on/off*\n`;
       menu += `│     _Auto-reveal all view-once to (You) chat_\n`;
       menu += `│\n`;
+      menu += `│  ▸ *${pref}vv* — reply to view-once\n`;
+      menu += `│     _Reveal view-once → sent to (You) chat_\n`;
+      menu += `│\n`;
       menu += `│  ▸ *${pref}avv* — reply to view-once\n`;
       menu += `│     _Manual reveal → sent to (You) chat_\n`;
-      menu += `│\n`;
-      menu += `│  ▸ *${pref}good*  /  *${pref}nice*\n`;
-      menu += `│     _Natural reply + silent reveal to (You)_\n`;
-      menu += `│\n`;
-      menu += `│  ▸ *.🔥🔥🔥🔥* (prefix + 4 same emojis)\n`;
-      menu += `│     _Trigger reveal — works in any chat_\n`;
-      menu += `│\n`;
-      menu += `│  ▸ *asdf* (secret word reply)\n`;
-      menu += `│     _Hidden keyword to reveal view-once_\n`;
-      menu += `│\n`;
-      menu += `│  ▸ *${pref}any4sameemojis on/off*\n`;
-      menu += `│     _Toggle the emoji trigger on/off_\n`;
       menu += `│\n`;
       menu += `│  🗑️ *Deleted Messages*\n`;
       menu += `│\n`;

@@ -1,25 +1,23 @@
 ---
-name: ViewOnce Emoji Reveal
-description: How the view-once reveal system works after replacing keyword trigger with emoji detection
+name: ViewOnce Reveal System
+description: How the view-once reveal system works — only .vv and .avv commands; all auto-triggers removed.
 ---
 
-# ViewOnce Emoji Reveal
+# ViewOnce Reveal System
 
 ## Rule
-The voword keyword system has been removed. Owner now reveals view-once media by **replying to the message with 4 or more of the same emoji** (e.g. 🔥🔥🔥🔥).
+Only `.vv` and `.avv` commands reveal view-once media. All auto-triggers (emoji, asdf keyword) have been removed. `antiviewonce on/off` auto-forward still works independently.
 
-**Why:** More intuitive than a keyword, no setup needed, works with any emoji.
+**Why:** User requested removal of emoji trigger and "asdf" keyword — only manual .vv/.avv should work.
 
 **How to apply:**
-- `handleReplyReveal()` in `lib/antiViewOnce.js` checks `msg.key.fromMe` (owner only), then calls `hasFourSameEmoji(msgText)`.
-- `hasFourSameEmoji` uses `Intl.Segmenter` with granularity='grapheme' for correct handling of ZWJ sequences, flags, keycaps, and skin-tone variants.
-- Fallback (old Node): simple codepoint range check.
-- The quoted message's stanzaId is still used to look up the viewOnceStore (unchanged).
-- `antiViewOnce on/off` (auto-reveal all) still works independently.
-- `.voword` plugin now serves as an info/help command explaining the emoji system.
-- `.avv` manual reveal still works.
+- `handleReplyReveal()` in `lib/antiViewOnce.js` now returns immediately (disabled).
+- `.vv` is an alias in `plugins/owner/reveal.js` — reply to a view-once message to reveal it.
+- `.avv` is also in the same file — manual reveal by reply.
+- `handleViewOnceMessage()` still captures and caches all view-once media (unchanged).
+- `antiViewOnce on/off` auto-forward to self-chat still works.
 
 ## What was removed
-- `db.settings.getValue('voKeyword')` — no longer read or written.
-- Caption-based keyword trigger in `handleViewOnceMessage()` — removed.
-- "If keyword triggered, send info header first" block — removed.
+- Emoji trigger (4 same emojis reply) — `hasFourSameEmoji()` still exists but is no longer called.
+- `asdf` keyword trigger — removed from `handleReplyReveal()`.
+- Menu entries for emoji trigger and asdf — removed from `plugins/utility/menu.js`.

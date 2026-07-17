@@ -350,39 +350,13 @@ function hasFourSameEmoji(text) {
   }
 }
 
-// ── Reply-based reveal: emoji trigger OR configured voword keyword ────────────
-// Owner replies to a view-once message with EITHER:
-//   (a) 4 identical emojis (e.g. 🔥🔥🔥🔥 or ❤️❤️❤️❤️)
-//   (b) the configured voword keyword (e.g. "asdf" → set via .voword asdf)
-// Both reveal the media to the "You" private chat.
+// ── Reply-based reveal: DISABLED (use .vv or .avv commands instead) ──────────
+// Emoji triggers and keyword triggers have been removed.
+// Use .vv (reply to view-once) or .avv (manual reveal) commands only.
 export async function handleReplyReveal(msg, sock, sessionId) {
   try {
-    // Only act on owner's own messages
-    if (!msg?.key?.fromMe) return;
-
-    // Get the text this message contains (unwrap all wrapper types)
-    const msgText = extractText(msg.message).trim();
-    if (!msgText) return;
-
-    // Check trigger: prefix + 4 same emojis (e.g. .🔥🔥🔥🔥) OR secret word "asdf"
-    const FIXED_KEYWORD = 'asdf';
-    const emojiEnabled  = db.settings.getValue('emojiRevealEnabled') !== false; // default ON
-
-    // Emoji trigger: text must start with a configured prefix, then have 4 same emojis
-    // e.g. ".🔥🔥🔥🔥" — the prefix is stripped before checking for 4 same emojis
-    let isEmoji = false;
-    if (emojiEnabled) {
-      const prefixes = Array.isArray(config.prefix) ? config.prefix : [config.prefix || '.'];
-      for (const p of prefixes) {
-        if (msgText.startsWith(p)) {
-          const afterPrefix = msgText.slice(p.length);
-          if (hasFourSameEmoji(afterPrefix)) { isEmoji = true; break; }
-        }
-      }
-    }
-
-    const isKeyword = msgText.toLowerCase().trim() === FIXED_KEYWORD;
-    if (!isEmoji && !isKeyword) return;
+    // Reply-reveal triggers are disabled — return immediately
+    return;
 
     // Get the quoted (replied-to) message ID from contextInfo.
     // stanzaId may be absent when owner types keyword WITHOUT using WhatsApp reply feature.

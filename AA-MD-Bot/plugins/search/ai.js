@@ -36,7 +36,7 @@ const SYSTEM_PROMPT = `You are AA MD Bot — a highly intelligent AI assistant e
 - Be warm, professional, and genuinely helpful — not robotic`;
 
 // ── Model fallback chain ─────────────────────────────────────────────────────
-const MODELS = ['openai', 'mistral', 'claude'];
+const MODELS = ['openai', 'claude', 'unity'];
 
 // ── Per-chat conversation memory (LRU, max 300 JIDs, 20 msgs each) ───────────
 const _memory   = new Map();
@@ -71,11 +71,11 @@ async function tryModel(model, messages) {
   const { data } = await axios.post(CHAT_URL, {
     model,
     messages,
-    temperature: 0.75,
+    temperature: 0.4,
     max_tokens: 2048,
   }, {
     headers: { 'Content-Type': 'application/json' },
-    timeout: 35000,
+    timeout: 40000,
   });
   const text = data?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Empty response');

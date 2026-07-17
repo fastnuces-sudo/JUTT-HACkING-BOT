@@ -9,6 +9,7 @@ import axios          from 'axios';
 import { execFile }   from 'child_process';
 import { promisify }  from 'util';
 import { logger }     from './logger.js';
+import playdl         from 'play-dl';
 
 const execFileAsync = promisify(execFile);
 const TOKEN  = process.env.TELEGRAM_FEATURES_BOT_TOKEN;
@@ -76,10 +77,22 @@ async function fetchUrl(url, timeout = 18000) {
 const YTID_RX = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([a-zA-Z0-9_-]{11})/;
 
 async function ytSearchInfo(query) {
-  const { stdout } = await execFileAsync(YTDLP, [
-    `ytsearch1:${query}`, '--dump-json', '--no-download', '--no-playlist', '--quiet',
-  ], { timeout: 22000 });
-  return JSON.parse(stdout.trim().split('\n')[0]);
+  try {
+    // Use play-dl (no yt-dlp required)
+    const results = await playdl.search(query, { source: { youtube: 'video' }, limit: 1 });
+    if (!results?.length) throw new Error('No results');
+    const v = results[0];
+    return { id: v.id, title: v.title, duration: v.durationInSec };
+  } catch (e) {
+    // Fallback: try YouTube search via free API
+    const { data } = await axios.get(
+      `https://yt.lemnoslife.com/noKey/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=1`,
+      { timeout: 15000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    const item = data?.items?.[0];
+    if (!item) throw new Error('No results found for: ' + query);
+    return { id: item.id?.videoId, title: item.snippet?.title, duration: 0 };
+  }
 }
 
 // ── Audio API sources ────────────────────────────────────────────────────────
@@ -180,7 +193,7 @@ BEHAVIOR:
 - Be warm, professional, and genuinely helpful — not robotic
 - If unsure: say so clearly and give your best reasoning`;
 
-const AI_MODELS   = ['openai', 'mistral', 'claude'];
+const AI_MODELS   = ['openai', 'claude', 'unity'];
 const _aiMemory   = new Map(); // userId → messages[]
 const _aiLastUsed = new Map();
 const AI_MAX_USERS = 500;
@@ -212,7 +225,7 @@ async function aiChat(userId, prompt) {
   for (const model of AI_MODELS) {
     try {
       const { data } = await axios.post('https://text.pollinations.ai/openai', {
-        model, messages, temperature: 0.75, max_tokens: 2048,
+        model, messages, temperature: 0.4, max_tokens: 2048,
       }, { headers: { 'Content-Type':'application/json' }, timeout: 40000 });
       const r = data?.choices?.[0]?.message?.content?.trim();
       if (r) { reply = r; break; }
