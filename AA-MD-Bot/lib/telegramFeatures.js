@@ -158,24 +158,128 @@ async function weather(city) {
   };
 }
 
-// ── AI ───────────────────────────────────────────────────────────────────────
-async function aiChat(prompt) {
-  const { data } = await axios.post('https://text.pollinations.ai/openai', {
-    model: 'openai',
-    messages: [
-      { role: 'system', content: 'You are a helpful, smart, friendly AI assistant. Reply concisely and clearly (max 300 words). Plain text only, no markdown.' },
-      { role: 'user',   content: prompt },
-    ],
-    temperature: 0.7, max_tokens: 600,
-  }, { headers: { 'Content-Type':'application/json' }, timeout: 30000 });
-  const reply = data?.choices?.[0]?.message?.content?.trim();
-  if (!reply) throw new Error('Empty AI response');
+// ── AI — per-user memory + multi-model fallback ───────────────────────────────
+const AI_SYSTEM = `You are AA MD Bot — a highly intelligent AI assistant built by AA Mods (Ahsan Ali Wadani).
+
+Your Expertise: Science, Technology, Programming, Mathematics, History, Islam, Culture, Medicine, Law basics, Business, and general knowledge.
+
+FORMATTING (Telegram HTML — always follow):
+- Use <b>bold</b> for headings and key terms
+- Use <i>italics</i> for examples and emphasis
+- Use numbered lists (1. 2. 3.) for steps
+- Use • for bullet points
+- Use <code>code</code> for code snippets
+- Add blank lines between sections for readability
+
+BEHAVIOR:
+- Give COMPLETE, thorough answers — never vague or one-line for complex questions
+- For code: provide full working code + explain each part
+- For math: show every step of the working
+- For Islam: answer accurately from Quran and Sunnah perspective
+- Match the user's language automatically (Urdu, English, Roman Urdu, Arabic, etc.)
+- Be warm, professional, and genuinely helpful — not robotic
+- If unsure: say so clearly and give your best reasoning`;
+
+const AI_MODELS   = ['openai', 'mistral', 'claude'];
+const _aiMemory   = new Map(); // userId → messages[]
+const _aiLastUsed = new Map();
+const AI_MAX_USERS = 500;
+const AI_MAX_MSG   = 20;
+
+function aiEvict() {
+  if (_aiMemory.size <= AI_MAX_USERS) return;
+  let oldest = null, oldestT = Infinity;
+  for (const [id, t] of _aiLastUsed) { if (t < oldestT) { oldest = id; oldestT = t; } }
+  if (oldest) { _aiMemory.delete(oldest); _aiLastUsed.delete(oldest); }
+}
+
+function aiGetHist(uid)  { return _aiMemory.get(uid) || []; }
+function aiClearHist(uid){ _aiMemory.delete(uid); _aiLastUsed.delete(uid); }
+
+function aiAddHist(uid, role, content) {
+  const hist = aiGetHist(uid);
+  hist.push({ role, content });
+  if (hist.length > AI_MAX_MSG) hist.splice(0, hist.length - AI_MAX_MSG);
+  _aiMemory.set(uid, hist);
+  _aiLastUsed.set(uid, Date.now());
+  aiEvict();
+}
+
+async function aiChat(userId, prompt) {
+  aiAddHist(userId, 'user', prompt);
+  const messages = [{ role:'system', content: AI_SYSTEM }, ...aiGetHist(userId)];
+  let reply = null, lastErr = null;
+  for (const model of AI_MODELS) {
+    try {
+      const { data } = await axios.post('https://text.pollinations.ai/openai', {
+        model, messages, temperature: 0.75, max_tokens: 2048,
+      }, { headers: { 'Content-Type':'application/json' }, timeout: 40000 });
+      const r = data?.choices?.[0]?.message?.content?.trim();
+      if (r) { reply = r; break; }
+    } catch (e) { lastErr = e; }
+  }
+  if (!reply) throw lastErr || new Error('All AI models failed');
+  // Convert WhatsApp-style markdown to Telegram HTML
+  reply = reply
+    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    .replace(/\*(.*?)\*/g,     '<b>$1</b>')
+    .replace(/__(.*?)__/g,     '<i>$1</i>')
+    .replace(/_(.*?)_/g,       '<i>$1</i>')
+    .replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre>$1</pre>')
+    .replace(/`([^`]+)`/g,     '<code>$1</code>')
+    .replace(/^#{1,6}\s+(.*)/gm, '<b>$1</b>')
+    .trim();
+  aiAddHist(userId, 'assistant', reply);
   return reply;
 }
 
-// ── AI Image ─────────────────────────────────────────────────────────────────
-function imagineUrl(prompt) {
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random()*999999)}`;
+// ── AI Image — prompt enhancer + multi-model ──────────────────────────────────
+const IMG_MODELS = {
+  default:  { id: 'flux',         label: '✨ Quality',    w: 1024, h: 1024 },
+  realistic:{ id: 'flux-realism', label: '📸 Realistic',  w: 1024, h: 1024 },
+  anime:    { id: 'flux-anime',   label: '🎌 Anime',      w: 1024, h: 1024 },
+  fast:     { id: 'turbo',        label: '⚡ Fast',       w: 1024, h: 1024 },
+};
+
+function parseImgFlags(text) {
+  let m = 'default', w = 1024, h = 1024, clean = text;
+  if (/--real(istic)?/i.test(clean)) { m='realistic'; clean=clean.replace(/--real(istic)?/gi,''); }
+  else if (/--anime/i.test(clean))   { m='anime';     clean=clean.replace(/--anime/gi,''); }
+  else if (/--fast/i.test(clean))    { m='fast';      clean=clean.replace(/--fast/gi,''); }
+  if (/--portrait|--port/i.test(clean)) { w=832; h=1216; clean=clean.replace(/--portrait|--port/gi,''); }
+  else if (/--wide|--landscape/i.test(clean)) { w=1216; h=832; clean=clean.replace(/--wide|--landscape/gi,''); }
+  else {
+    if (/\b(portrait|face|selfie|headshot|person|girl|boy|man|woman|character)\b/i.test(clean)) { w=832; h=1216; }
+    else if (/\b(landscape|panorama|wide|mountain|city|skyline|horizon|banner)\b/i.test(clean)) { w=1216; h=832; }
+  }
+  return { model: m, w, h, prompt: clean.trim() };
+}
+
+async function enhanceImgPrompt(userPrompt, modelKey) {
+  const hints = {
+    default:   'high quality digital art, highly detailed, 8K, cinematic lighting, professional composition',
+    realistic: 'photorealistic, DSLR photography, RAW photo, perfect exposure, bokeh, Canon EOS R5',
+    anime:     'anime art style, Studio Ghibli quality, vibrant colors, detailed linework, manga illustration',
+    fast:      'digital art, colorful, detailed',
+  };
+  try {
+    const { data } = await axios.post('https://text.pollinations.ai/openai', {
+      model: 'openai',
+      messages: [
+        { role:'system', content:`You are an expert AI art prompt engineer. Expand the user's simple description into a vivid, detailed image generation prompt. Add: "${hints[modelKey]||hints.default}". Keep under 120 words. Output ONLY the enhanced prompt — no quotes, no explanation.` },
+        { role:'user',   content:`Enhance: "${userPrompt}"` },
+      ],
+      temperature: 0.8, max_tokens: 200,
+    }, { headers: {'Content-Type':'application/json'}, timeout: 15000 });
+    const r = data?.choices?.[0]?.message?.content?.trim();
+    return (r && r.length > userPrompt.length) ? r : userPrompt;
+  } catch { return userPrompt; }
+}
+
+function buildImgUrl(prompt, model, w, h) {
+  const m = IMG_MODELS[model] || IMG_MODELS.default;
+  const seed = Math.floor(Math.random() * 9999999);
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&model=${m.id}&seed=${seed}&nologo=true`;
 }
 
 // ── Translate ────────────────────────────────────────────────────────────────
@@ -593,46 +697,125 @@ export function initTelegramFeatures() {
   });
 
   // ── /ai ───────────────────────────────────────────────────────────────────────
-  bot.onText(/\/ai(?:\s+(.+))?/, async (msg, match) => {
-    const chatId = msg.chat.id, prompt = (match[1]||'').trim();
-    if (!prompt) return sendText(bot, chatId, `❌ <b>Usage:</b> <code>/ai your question</code>\n<i>Example: /ai What is quantum computing?</i>`);
+  bot.onText(/\/ai(?:\s+([\s\S]+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const prompt = (match[1]||'').trim();
 
-    const w = cooldown(msg.from.id, 5000);
+    if (!prompt) return sendText(bot, chatId,
+      `🤖 <b>AA MD Bot AI — Powered</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/ai your question</code>\n\n` +
+      `<b>Examples:</b>\n` +
+      `• <code>/ai Explain quantum entanglement</code>\n` +
+      `• <code>/ai Python mein fibonacci sequence kaise banayein</code>\n` +
+      `• <code>/ai Namaz ki rakat kitni hain detail mein</code>\n` +
+      `• <code>/ai Write a professional email for a job application</code>\n\n` +
+      `<b>Commands:</b>\n` +
+      `• <code>/ai clear</code> — Reset your chat history\n\n` +
+      `<b>Features:</b>\n` +
+      `• Multi-model AI (GPT-4o → Mistral → Claude fallback)\n` +
+      `• Remembers your last 10 exchanges\n` +
+      `• Answers in your language (Urdu/English/Arabic)\n` +
+      `• Expert-level, thorough responses` +
+      FOOTER
+    );
+
+    if (prompt.toLowerCase() === 'clear') {
+      aiClearHist(userId);
+      return sendText(bot, chatId, `🧹 <b>Chat history cleared.</b>\n\n<i>Fresh start — ask me anything!</i>` + FOOTER);
+    }
+
+    const w = cooldown(userId, 4000);
     if (w) return sendText(bot, chatId, `⏳ Please wait <b>${w}s</b>.`);
 
-    const sent = await bot.sendMessage(chatId, `🤖 <b>Thinking...</b>`, HTML).catch(() => null);
+    const sent = await bot.sendMessage(chatId,
+      `🤖 <b>Thinking...</b>\n<i>${esc(prompt.slice(0, 80))}${prompt.length > 80 ? '…' : ''}</i>`, HTML
+    ).catch(() => null);
     if (!sent) return;
 
     try {
       await bot.sendChatAction(chatId, 'typing').catch(() => {});
-      const reply = await aiChat(prompt);
-      edit(bot, chatId, sent.message_id, `🤖 <b>AI Reply</b>\n${DIV}\n\n${esc(reply)}` + FOOTER);
+      const reply = await aiChat(userId, prompt);
+      edit(bot, chatId, sent.message_id,
+        `🤖 <b>AI Reply</b>\n${DIV}\n\n${reply}` + FOOTER
+      );
     } catch (e) {
-      edit(bot, chatId, sent.message_id, `❌ <b>AI error</b>\n\n<i>${esc(e.message)}</i>\n\n💡 Try rephrasing your question.`);
+      edit(bot, chatId, sent.message_id,
+        `❌ <b>AI Error</b>\n\n<i>${esc(e.message)}</i>\n\n💡 Try rephrasing your question.`
+      );
     }
   });
 
   // ── /imagine ──────────────────────────────────────────────────────────────────
-  bot.onText(/\/imagine(?:\s+(.+))?/, async (msg, match) => {
-    const chatId = msg.chat.id, prompt = (match[1]||'').trim();
-    if (!prompt) return sendText(bot, chatId, `❌ <b>Usage:</b> <code>/imagine a futuristic city at night</code>\n<i>Generates an AI image from your description</i>`);
+  bot.onText(/\/imagine(?:\s+([\s\S]+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const raw    = (match[1]||'').trim();
 
-    const w = cooldown(msg.from.id, 8000);
+    if (!raw) return sendText(bot, chatId,
+      `🎨 <b>AI Image Generator — Powered</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/imagine your description</code>\n\n` +
+      `<b>Examples:</b>\n` +
+      `• <code>/imagine Pakistani village at golden hour</code>\n` +
+      `• <code>/imagine anime girl in cherry blossom forest --anime</code>\n` +
+      `• <code>/imagine futuristic Karachi city at night --wide</code>\n` +
+      `• <code>/imagine lion portrait in savanna --real --portrait</code>\n\n` +
+      `<b>Style Flags (add to your prompt):</b>\n` +
+      `• <code>--real</code> — 📸 Photorealistic (DSLR quality)\n` +
+      `• <code>--anime</code> — 🎌 Anime/manga style\n` +
+      `• <code>--fast</code> — ⚡ Faster generation\n` +
+      `• <code>--portrait</code> — 🖼 Tall/portrait ratio\n` +
+      `• <code>--wide</code> — 🌄 Wide/landscape ratio\n\n` +
+      `✨ <i>AI auto-enhances your prompt for best results</i>` +
+      FOOTER
+    );
+
+    const w = cooldown(msg.from.id, 10000);
     if (w) return sendText(bot, chatId, `⏳ Please wait <b>${w}s</b>.`);
 
-    const sent = await bot.sendMessage(chatId, `🎨 <b>Generating image...</b>\n<i>${esc(prompt)}</i>`, HTML).catch(() => null);
+    const flags = parseImgFlags(raw);
+    const mInfo = IMG_MODELS[flags.model] || IMG_MODELS.default;
+    const ratio  = flags.w === 832 ? '🖼 Portrait' : flags.w === 1216 ? '🌄 Landscape' : '⬛ Square';
+
+    const sent = await bot.sendMessage(chatId,
+      `🎨 <b>Generating image...</b>\n` +
+      `${mInfo.label}  •  ${ratio}\n` +
+      `<i>✨ Enhancing prompt...</i>`,
+      HTML
+    ).catch(() => null);
     if (!sent) return;
 
     try {
       await bot.sendChatAction(chatId, 'upload_photo').catch(() => {});
-      const url = imagineUrl(prompt);
+
+      // Step 1: enhance prompt
+      const enhanced = await enhanceImgPrompt(flags.prompt, flags.model);
+
+      // Step 2: update status
+      edit(bot, chatId, sent.message_id,
+        `🎨 <b>Generating image...</b>\n${mInfo.label}  •  ${ratio}\n<i>⚙️ Rendering...</i>`, HTML
+      );
+
+      // Step 3: fetch image buffer (more reliable than URL send in Telegram)
+      const imgUrl = buildImgUrl(enhanced, flags.model, flags.w, flags.h);
+      const { data: imgBuf } = await axios.get(imgUrl, {
+        responseType: 'arraybuffer',
+        timeout: 90000,
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+      });
+
       await bot.deleteMessage(chatId, sent.message_id).catch(() => {});
-      await bot.sendPhoto(chatId, url, {
-        caption: `🎨 <b>AI Image</b>\n${DIV}\n\n📝 <i>${esc(prompt.slice(0, 200))}</i>` + FOOTER,
+      await bot.sendPhoto(chatId, Buffer.from(imgBuf), {
+        caption:
+          `🎨 <b>AI Generated Image</b>\n${DIV}\n\n` +
+          `📝 <i>${esc(flags.prompt.slice(0, 150))}${flags.prompt.length > 150 ? '…' : ''}</i>\n` +
+          `${mInfo.label}  •  ${ratio}` +
+          FOOTER,
         parse_mode: 'HTML',
       });
     } catch (e) {
-      edit(bot, chatId, sent.message_id, `❌ <b>Image generation failed</b>\n\n<i>${esc(e.message)}</i>\n\n💡 Try a simpler description.`);
+      edit(bot, chatId, sent.message_id,
+        `❌ <b>Image generation failed</b>\n\n<i>${esc(e.message)}</i>\n\n💡 Try a simpler description or add <code>--fast</code>.`
+      );
     }
   });
 
