@@ -1,46 +1,39 @@
 // ============================================
 // AA MD Bot - AI Auto Reply
-// Owner sets a brief context/persona once →
-// bot uses AI to reply naturally as if the owner
-// themselves were typing — not as a bot or assistant.
+// Replies naturally as a person on behalf of the owner.
+// Keeps conversation history per sender (30-min TTL).
+// Stays strictly within the owner's instruction context.
 // ============================================
 
 import axios from 'axios';
 
 const CHAT_URL = 'https://text.pollinations.ai/openai';
 
-// One-shot AI call — instructions are persona context, NOT the reply
-export async function aiAutoReply(userMsg, instructions) {
-  const systemPrompt =
-    `You are playing the role of a real person based on this context:\n\n` +
-    `"""${instructions}"""\n\n` +
-    `Rules:\n` +
-    `- Reply AS THAT PERSON, not as an AI or assistant. Never say you are an AI.\n` +
-    `- Keep replies short, natural, and conversational — like a real WhatsApp message.\n` +
-    `- Match the language the sender is using (Urdu, English, Roman Urdu, etc.).\n` +
-    `- If someone says "hello" just say hello back and be warm. If someone asks a question, answer based on the context provided.\n` +
-    `- Do NOT repeat the context or instructions back. Do NOT explain yourself.\n` +
-    `- Do NOT use markdown, asterisks, hashtags, or formatting. Plain text only.\n` +
-    `- Be polite, human, and brief. Max 2-3 sentences.`;
+// ── Per-sender conversation history ───────────────────────────────────────────
+// key: userJid  →  value: [{ role, content }, ...]
+const chatHistories  = new Map();
+const historyStamps  = new Map();
+const HISTORY_TTL    = 30 * 60 * 1000; // 30 minutes
+const MAX_TURNS      = 8;               // keep last 8 exchanges (16 messages)
 
-  const { data } = await axios.post(CHAT_URL, {
-    model: 'openai',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user',   content: userMsg },
-    ],
-    temperature: 0.75,
-    max_tokens: 200,
-  }, {
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 25000,
-  });
+function getHistory(userJid) {
+  const lastTime = historyStamps.get(userJid) || 0;
+  if (Date.now() - lastTime > HISTORY_TTL) {
+    chatHistories.delete(userJid);
+  }
+  historyStamps.set(userJid, Date.now());
+  if (!chatHistories.has(userJid)) chatHistories.set(userJid, []);
+  return chatHistories.get(userJid);
+}
 
-  const reply = data?.choices?.[0]?.message?.content?.trim();
-  if (!reply) throw new Error('No response');
+function trimHistory(history) {
+  // Keep last MAX_TURNS pairs (user + assistant = 2 messages per turn)
+  const max = MAX_TURNS * 2;
+  if (history.length > max) history.splice(0, history.length - max);
+}
 
-  // Strip any leftover markdown the AI snuck in
-  return reply
+function stripMarkdown(text) {
+  return (text || '')
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*(.*?)\*/g, '$1')
     .replace(/#{1,6}\s+/g, '')
@@ -49,13 +42,64 @@ export async function aiAutoReply(userMsg, instructions) {
     .trim();
 }
 
+// ── Main export — called from sessionManager ──────────────────────────────────
+// userJid: remoteJid of the sender — used to keep per-person history
+export async function aiAutoReply(userMsg, instructions, userJid = 'default') {
+  const history = getHistory(userJid);
+
+  // Build system prompt — acts as a person but can be honest about being AI
+  const systemPrompt =
+    `You are an AI bot that auto-replies to WhatsApp messages on behalf of the owner.\n\n` +
+    `Owner's context (stay strictly within this):\n"""\n${instructions}\n"""\n\n` +
+    `Rules:\n` +
+    `- Reply naturally like a real person typing on WhatsApp — short, warm, conversational.\n` +
+    `- You are AI replying for the owner. If someone directly asks "are you a bot?" or "is this AI?", be honest — say yes, this is an auto-reply bot.\n` +
+    `- Keep ALL replies focused on and within the owner's context above. Do not invent things not mentioned there.\n` +
+    `- If the question is completely outside the context, politely say you don't have that info and the owner will reply later.\n` +
+    `- Match the sender's language exactly — Urdu, English, Roman Urdu, mix — whatever they use.\n` +
+    `- Do NOT use markdown, asterisks, hashtags, or any formatting. Plain conversational text only.\n` +
+    `- Be brief — max 2–3 short sentences. Like a real WhatsApp reply, not an essay.\n` +
+    `- Remember the conversation history and stay consistent with earlier replies.`;
+
+  // Add this message to history
+  history.push({ role: 'user', content: userMsg });
+
+  const { data } = await axios.post(CHAT_URL, {
+    model:       'openai',
+    messages:    [{ role: 'system', content: systemPrompt }, ...history],
+    temperature: 0.5,
+    max_tokens:  250,
+  }, {
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 25000,
+  });
+
+  const raw = data?.choices?.[0]?.message?.content?.trim();
+  if (!raw) throw new Error('No response from AI');
+
+  const clean = stripMarkdown(raw);
+
+  // Save AI reply to history, trim if too long
+  history.push({ role: 'assistant', content: clean });
+  trimHistory(history);
+
+  return clean;
+}
+
+// ── Clear history for a specific user (optional utility) ─────────────────────
+export function clearAutoAiHistory(userJid) {
+  chatHistories.delete(userJid);
+  historyStamps.delete(userJid);
+}
+
+// ── Plugin definition ─────────────────────────────────────────────────────────
 export default {
   command: 'autoai',
   alias: ['aireply', 'aiautoreply'],
-  description: 'Auto-reply to DMs using AI — replies naturally as if you are online',
+  description: 'Auto-reply to DMs using AI — replies naturally as a person',
   category: 'gb',
   ownerOnly: true,
-  usage: '.autoai on | .autoai off | .autoai instructions <context> | .autoai status',
+  usage: '.autoai on | .autoai off | .autoai instructions <context> | .autoai status | .autoai clearchat <num>',
 
   async execute({ args, reply, react, sessionSettings }) {
     const sub = (args[0] || '').toLowerCase();
@@ -73,11 +117,12 @@ export default {
         `▸ .autoai on — Enable\n` +
         `▸ .autoai off — Disable\n` +
         `▸ .autoai instructions <context> — Set persona context\n` +
-        `▸ .autoai status — Check status\n\n` +
+        `▸ .autoai status — Check status\n` +
+        `▸ .autoai clearchat <number> — Reset chat history for a number\n\n` +
         `*How it works:*\n` +
-        `Give a short context about yourself. The AI replies *as you* — naturally, in the sender's language, not as a robot.\n\n` +
+        `Set a brief description of yourself / your situation. The AI replies naturally in the sender's language, stays within your context, and remembers the conversation for 30 minutes.\n\n` +
         `*Example:*\n` +
-        `_.autoai instructions My name is Ahsan. I am a developer from Pakistan. I am currently busy but I will reply later._\n\n` +
+        `_.autoai instructions My name is Ahsan. Developer from Pakistan. Busy right now, will reply later. I speak Urdu and English._\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     }
@@ -88,8 +133,8 @@ export default {
       if (!inst) {
         return reply(
           `⚠️ *Set your context first!*\n\n` +
-          `Give the AI a short description of yourself:\n\n` +
-          `*.autoai instructions* My name is Ahsan. I am busy right now and will reply soon.\n\n` +
+          `Give the AI a short description of yourself so it knows how to reply:\n\n` +
+          `*.autoai instructions* My name is Ahsan. I am busy right now and will reply soon. I speak Urdu and English.\n\n` +
           `> 🤖 *AA MD Bot*`
         );
       }
@@ -97,7 +142,8 @@ export default {
       await react('✅');
       return reply(
         `✅ *AI Auto-Reply ENABLED*\n\n` +
-        `Anyone who DMs you will get a natural reply as if you're typing.\n` +
+        `Anyone who DMs you gets a natural reply based on your context.\n` +
+        `Conversation history is remembered per person for 30 minutes.\n` +
         `Use *.autoai off* to stop.\n\n` +
         `> 🤖 *AA MD Bot*`
       );
@@ -117,7 +163,7 @@ export default {
         return reply(
           `❌ *Provide a short context about yourself.*\n\n` +
           `Example:\n` +
-          `_.autoai instructions I am Ahsan, a developer. I am currently in a meeting and will reply later. I speak Urdu and English._\n\n` +
+          `_.autoai instructions I am Ahsan, a developer from Pakistan. Currently busy, will reply later. I speak both Urdu and English._\n\n` +
           `> 🤖 *AA MD Bot*`
         );
       }
@@ -126,12 +172,24 @@ export default {
       return reply(
         `✅ *Context saved!*\n\n` +
         `"${text.slice(0, 200)}${text.length > 200 ? '…' : ''}"\n\n` +
-        `The AI will now reply as *you* — naturally and in the sender's language.\n` +
+        `The AI will now reply naturally within this context.\n` +
         `Run *.autoai on* to enable.\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     }
 
-    return reply(`❓ Unknown option. Use: *.autoai on/off/instructions/status*\n\n> 🤖 *AA MD Bot*`);
+    // ── CLEAR CHAT HISTORY ─────────────────────────────────────────────────────
+    if (sub === 'clearchat' || sub === 'clear') {
+      const num = args[1]?.replace(/[^0-9]/g, '');
+      if (!num) {
+        return reply(`❌ Provide a number.\nExample: *.autoai clearchat 923001234567*`);
+      }
+      const jid = `${num}@s.whatsapp.net`;
+      clearAutoAiHistory(jid);
+      await react('✅');
+      return reply(`✅ Chat history cleared for *+${num}*.\nNext reply will start fresh.`);
+    }
+
+    return reply(`❓ Unknown option. Use: *.autoai on/off/instructions/status/clearchat*\n\n> 🤖 *AA MD Bot*`);
   },
 };

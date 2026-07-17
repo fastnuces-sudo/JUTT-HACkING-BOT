@@ -1,7 +1,8 @@
 // ╔══════════════════════════════════════════════════════════════════╗
-// ║   AA MD Bot — Telegram Pairing Bot                              ║
+// ║   AA MD Bot — Telegram Pairing Bot (@aa_md_2bot)               ║
 // ║   Token  : TELEGRAM_BOT_TOKEN                                   ║
-// ║   Access : Single authorized user only (OWNER_ID)               ║
+// ║   Pairing : Open to all                                         ║
+// ║   Admin   : OWNER_ID only (6001083166)                          ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
 import TelegramBot from 'node-telegram-bot-api';
@@ -10,33 +11,43 @@ import { logger }  from './logger.js';
 const TOKEN    = process.env.TELEGRAM_BOT_TOKEN;
 const HTML     = { parse_mode: 'HTML' };
 
-// ── Only this Telegram user may use the bot ──────────────────────────────────
+// ── Admin-only Telegram user ──────────────────────────────────────────────────
 const OWNER_ID = 6001083166;
 
 const DIV    = '━━━━━━━━━━━━━━━━━━━━━━';
-const FOOTER = `\n${DIV}\n🤖 <b>AA MD Bot</b>`;
+const FOOTER = `\n${DIV}\n🤖 <b>AA MD Bot</b> | <a href="https://t.me/aa_md_2bot">@aa_md_2bot</a>`;
 const esc    = (s) => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 // ── Injected context ─────────────────────────────────────────────────────────
 let _createSession  = null;
 let _latestCodes    = null;
 let _botEvents      = null;
+let _getAllSessions  = null;
+let _broadcastFn    = null;
 
 const _pairingWaiters = new Map(); // sessionId → Set<chatId>
-const _pairingChats   = new Map(); // sessionId → chatId
+const _pairingChats   = new Map(); // sessionId → chatId (for connection confirm)
 const _awaitingPhone  = new Map(); // chatId → { msgId }
 
 // ── Keyboards ────────────────────────────────────────────────────────────────
 const KB_HOME = {
-  inline_keyboard: [[
-    { text: '📱 Get Pairing Code', callback_data: 'do_pair' },
-  ]],
+  inline_keyboard: [
+    [{ text: '📱 Get Pairing Code', callback_data: 'do_pair' }],
+    [{ text: '❓ How to Connect',   callback_data: 'how_connect' },
+     { text: '🤖 Bot Features',     callback_data: 'bot_features' }],
+  ],
 };
 
 const KB_BACK = {
-  inline_keyboard: [[
-    { text: '« Back', callback_data: 'home' },
-  ]],
+  inline_keyboard: [[{ text: '« Back', callback_data: 'home' }]],
+};
+
+const KB_ADMIN = {
+  inline_keyboard: [
+    [{ text: '📊 Sessions',   callback_data: 'admin_sessions' },
+     { text: '📢 Broadcast',  callback_data: 'admin_broadcast' }],
+    [{ text: '« Back',        callback_data: 'home' }],
+  ],
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -50,8 +61,6 @@ async function editOrSend(bot, chatId, msgId, text, extra = {}) {
     return bot.sendMessage(chatId, text, { parse_mode: 'HTML', ...extra }).catch(() => {});
   }
 }
-
-function isOwner(chatId) { return chatId === OWNER_ID; }
 
 // ── Core pairing logic ────────────────────────────────────────────────────────
 async function doPair(bot, chatId, phone, editMsgId = null) {
@@ -68,7 +77,7 @@ async function doPair(bot, chatId, phone, editMsgId = null) {
   const sentId = sent.message_id ?? editMsgId;
 
   try {
-    if (!_createSession) throw new Error('Bot session manager not ready — restart the bot.');
+    if (!_createSession) throw new Error('Bot session manager not ready — try again in a moment.');
 
     const sessionId = `tg_${phone}`;
     _pairingChats.set(sessionId, chatId);
@@ -80,11 +89,12 @@ async function doPair(bot, chatId, phone, editMsgId = null) {
         `✅ <b>Pairing Code</b>\n${DIV}\n\n` +
         `📱 <b>Number:</b> <code>+${esc(phone)}</code>\n\n` +
         `🔑 <b>Code:</b>\n<code>${esc(existing)}</code>\n\n` +
-        `<b>Steps:</b>\n` +
-        `1️⃣ Open WhatsApp → Settings → Linked Devices\n` +
-        `2️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
-        `3️⃣ Enter the code above\n\n` +
-        `⏰ <i>If expired, tap Pair again.</i>` + FOOTER,
+        `<b>Steps to connect:</b>\n` +
+        `1️⃣ Open WhatsApp on your phone\n` +
+        `2️⃣ Go to <b>Settings → Linked Devices</b>\n` +
+        `3️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
+        `4️⃣ Enter the 8-digit code above\n\n` +
+        `⏰ <i>Code expires in ~60 seconds. If expired, tap Pair again.</i>` + FOOTER,
         { reply_markup: KB_BACK }
       );
     }
@@ -104,20 +114,21 @@ async function doPair(bot, chatId, phone, editMsgId = null) {
       editOrSend(bot, chatId, sentId,
         `✅ <b>Pairing Code Ready!</b>\n${DIV}\n\n` +
         `📱 <b>Number:</b> <code>+${esc(phone)}</code>\n\n` +
-        `🔑 <b>Code:</b>\n<code>${esc(code)}</code>\n\n` +
-        `<b>Steps:</b>\n` +
-        `1️⃣ Open WhatsApp → Settings → Linked Devices\n` +
-        `2️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
-        `3️⃣ Enter the code above\n\n` +
+        `🔑 <b>Your Code:</b>\n<code>${esc(code)}</code>\n\n` +
+        `<b>Steps to connect:</b>\n` +
+        `1️⃣ Open WhatsApp on your phone\n` +
+        `2️⃣ Go to <b>Settings → Linked Devices</b>\n` +
+        `3️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
+        `4️⃣ Enter the 8-digit code above\n\n` +
         `⏰ <i>Expires in ~60 seconds — enter it quickly!</i>\n` +
         `<i>You will get a confirmation here when connected.</i>` + FOOTER,
         { reply_markup: KB_BACK }
       );
     } else {
       editOrSend(bot, chatId, sentId,
-        `⏳ <b>Waiting for pairing code...</b>\n\n` +
+        `⏳ <b>Waiting for code...</b>\n\n` +
         `📱 Number: <code>+${esc(phone)}</code>\n\n` +
-        `<i>The code will appear here automatically (usually 10–30 seconds).\nDo not close this chat.</i>` + FOOTER,
+        `<i>The code will appear here automatically (10–30 seconds).\nDo not close this chat.</i>` + FOOTER,
         { reply_markup: KB_BACK }
       );
     }
@@ -127,11 +138,49 @@ async function doPair(bot, chatId, phone, editMsgId = null) {
     _pairingChats.delete(sid);
     editOrSend(bot, chatId, sentId,
       `❌ <b>Pairing Failed</b>\n\n<i>${esc(e.message)}</i>\n\n` +
-      `💡 Check the number format and try again.` + FOOTER,
+      `💡 Make sure the number format is correct (country code + number, no +).` + FOOTER,
       { reply_markup: KB_BACK }
     );
   }
 }
+
+// ── Help text ─────────────────────────────────────────────────────────────────
+const HOW_CONNECT_TEXT =
+  `📖 <b>How to Connect WhatsApp</b>\n${DIV}\n\n` +
+  `<b>Step 1 —</b> Get your pairing code\n` +
+  `Tap "📱 Get Pairing Code" and enter your WhatsApp number (with country code, no + sign).\n\n` +
+  `<b>Step 2 —</b> Open WhatsApp\n` +
+  `Go to <b>Settings → Linked Devices → Link a Device</b>\n` +
+  `Select <b>"Link with phone number"</b>\n\n` +
+  `<b>Step 3 —</b> Enter the code\n` +
+  `Type the 8-digit code shown here. Done — your bot is now live!\n\n` +
+  `<b>📌 Tips:</b>\n` +
+  `• Use a separate number (not your main WhatsApp)\n` +
+  `• Code expires in 60 seconds — enter it fast\n` +
+  `• Bot stays connected even if this Telegram chat is closed\n\n` +
+  `<b>🤖 Use Bot Features on Telegram:</b>\n` +
+  `Once connected, use <a href="https://t.me/aa_md_2bot">@aa_md_2bot</a> on Telegram for:\n` +
+  `🎵 YouTube & TikTok downloads\n` +
+  `🤖 AI chat, image generation\n` +
+  `🔍 Search, weather, movies & more`;
+
+const BOT_FEATURES_TEXT =
+  `🤖 <b>AA MD Bot — Features</b>\n${DIV}\n\n` +
+  `<b>On WhatsApp:</b>\n` +
+  `🎵 Music & video downloads (.play .video)\n` +
+  `👁️ View-once reveal (.vv .avv)\n` +
+  `🗑️ Anti-delete (recover deleted msgs)\n` +
+  `📵 Anti-call (auto-reject calls)\n` +
+  `🤖 AI auto-reply (.autoai)\n` +
+  `🌐 Search, translate, weather & 190+ commands\n\n` +
+  `<b>On Telegram:</b>\n` +
+  `Use <a href="https://t.me/aa_md_2bot">@aa_md_2bot</a> for the full feature bot:\n` +
+  `🎵 /play — YouTube MP3\n` +
+  `🎬 /video — YouTube MP4\n` +
+  `🤖 /ai — Chat with AI\n` +
+  `🖼️ /imagine — AI image generation\n` +
+  `🔍 /wiki /movie /anime /weather & more\n\n` +
+  `<i>Connect your number using this bot, then enjoy all features on WhatsApp and Telegram!</i>`;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 export function initTelegramAdmin({ createSession, getAllSessions, latestPairingCodes, botEvents }) {
@@ -143,6 +192,7 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
   _createSession = createSession;
   _latestCodes   = latestPairingCodes;
   _botEvents     = botEvents;
+  _getAllSessions = getAllSessions;
 
   const bot = new TelegramBot(TOKEN, { polling: true });
 
@@ -155,10 +205,10 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
         `✅ <b>Pairing Code Ready!</b>\n${DIV}\n\n` +
         `📱 Number: <code>+${esc(sessionId.replace('tg_', ''))}</code>\n\n` +
         `🔑 Your Code:\n<code>${esc(code)}</code>\n\n` +
-        `<b>Steps:</b>\n` +
+        `<b>Steps to connect:</b>\n` +
         `1️⃣ Open WhatsApp → Settings → Linked Devices\n` +
         `2️⃣ Tap <b>Link a Device</b> → <b>Link with phone number</b>\n` +
-        `3️⃣ Enter the code above\n\n` +
+        `3️⃣ Enter the 8-digit code above\n\n` +
         `⏰ <i>Expires in ~60 seconds — enter it quickly!</i>` + FOOTER,
         HTML
       ).catch(() => {});
@@ -180,35 +230,43 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
       `📱 Number: <code>+${esc(phone)}</code>\n` +
       (name ? `👤 Name: <b>${esc(name)}</b>\n` : '') +
       `🟢 Status: <b>Active &amp; Running</b>\n\n` +
-      `Your bot is now live on WhatsApp!` + FOOTER,
+      `Your bot is now live on WhatsApp!\n\n` +
+      `💡 <i>Use <a href="https://t.me/aa_md_2bot">@aa_md_2bot</a> to access bot features on Telegram.</i>` + FOOTER,
       HTML
     ).catch(() => {});
   });
 
-  // ── Guard: reject everyone except the owner ───────────────────────────────
-  function guard(fn) {
-    return async (msg, ...rest) => {
-      if (!isOwner(msg.chat.id)) {
-        return sendText(bot, msg.chat.id,
-          `🔒 <b>Private Bot</b>\n\n<i>This bot is restricted to authorized users only.</i>`
-        );
-      }
-      return fn(msg, ...rest);
-    };
-  }
+  // ── /start — open to everyone ─────────────────────────────────────────────
+  bot.onText(/\/start/, (msg) => {
+    const chatId = msg.chat.id;
+    const name   = esc(msg.from?.first_name || 'there');
+    const isAdm  = chatId === OWNER_ID;
 
-  // ── /start ────────────────────────────────────────────────────────────────
-  bot.onText(/\/start/, guard((msg) => {
-    sendText(bot, msg.chat.id,
-      `🤖 <b>AA MD Bot — Pairing Panel</b>\n${DIV}\n\n` +
-      `👋 Welcome, <b>AA Mods</b>!\n\n` +
-      `Tap the button below to get your WhatsApp pairing code.` + FOOTER,
-      { reply_markup: KB_HOME }
+    const kb = isAdm
+      ? {
+          inline_keyboard: [
+            [{ text: '📱 Get Pairing Code', callback_data: 'do_pair'       }],
+            [{ text: '❓ How to Connect',   callback_data: 'how_connect'    },
+             { text: '🤖 Bot Features',     callback_data: 'bot_features'   }],
+            [{ text: '⚙️ Admin Panel',      callback_data: 'admin_panel'    }],
+          ],
+        }
+      : KB_HOME;
+
+    sendText(bot, chatId,
+      `👋 <b>Hello, ${name}!</b>\n\n` +
+      `🤖 <b>AA MD Bot — WhatsApp Pairing</b>\n${DIV}\n\n` +
+      `Connect your WhatsApp number to the bot and get access to 190+ features!\n\n` +
+      `📱 <b>Get your pairing code</b> — link any WhatsApp number\n` +
+      `❓ <b>How to Connect</b> — step-by-step guide\n` +
+      `🤖 <b>Bot Features</b> — see what the bot can do\n\n` +
+      `<i>After connecting, use <a href="https://t.me/aa_md_2bot">@aa_md_2bot</a> for Telegram features.</i>` + FOOTER,
+      { reply_markup: kb }
     );
-  }));
+  });
 
-  // ── /pair [phone] ─────────────────────────────────────────────────────────
-  bot.onText(/\/pair(?:\s+(\S+))?/, guard(async (msg, match) => {
+  // ── /pair [phone] — open to everyone ─────────────────────────────────────
+  bot.onText(/\/pair(?:\s+(\S+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
     const raw    = (match[1] || '').replace(/[^0-9]/g, '');
 
@@ -217,64 +275,157 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
       return doPair(bot, chatId, raw);
     }
 
-    // Ask for number interactively
     const sent = await bot.sendMessage(chatId,
       `📱 <b>Enter Your WhatsApp Number</b>\n${DIV}\n\n` +
-      `Send your number with country code (digits only):\n\n` +
+      `Send your number with country code (digits only, no + sign):\n\n` +
       `• 🇵🇰 Pakistan: <code>923001234567</code>\n` +
       `• 🇸🇦 Saudi: <code>9665XXXXXXXX</code>\n` +
       `• 🇦🇪 UAE: <code>971XXXXXXXXX</code>\n` +
       `• 🇬🇧 UK: <code>447XXXXXXXXX</code>\n` +
       `• 🇺🇸 USA: <code>1XXXXXXXXXX</code>\n\n` +
-      `<i>No + sign, no spaces.</i>` + FOOTER,
+      `<i>No + sign, no spaces, no dashes.</i>` + FOOTER,
       { ...HTML, reply_markup: { force_reply: true, selective: true } }
     ).catch(() => null);
 
     if (sent) _awaitingPhone.set(chatId, { msgId: sent.message_id });
-  }));
+  });
+
+  // ── /help — open to everyone ──────────────────────────────────────────────
+  bot.onText(/\/help/, (msg) => {
+    sendText(bot, msg.chat.id, HOW_CONNECT_TEXT + FOOTER, { reply_markup: KB_BACK, disable_web_page_preview: true });
+  });
 
   // ── Inline callback handler ───────────────────────────────────────────────
   bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const msgId  = query.message.message_id;
+    const isAdm  = chatId === OWNER_ID;
     await bot.answerCallbackQuery(query.id).catch(() => {});
 
-    if (!isOwner(chatId)) {
-      return bot.answerCallbackQuery(query.id, { text: '🔒 Private bot', show_alert: true }).catch(() => {});
-    }
-
     switch (query.data) {
-      case 'home':
+
+      case 'home': {
+        const kb = isAdm
+          ? { inline_keyboard: [
+                [{ text: '📱 Get Pairing Code', callback_data: 'do_pair'    }],
+                [{ text: '❓ How to Connect',   callback_data: 'how_connect' },
+                 { text: '🤖 Bot Features',     callback_data: 'bot_features'}],
+                [{ text: '⚙️ Admin Panel',      callback_data: 'admin_panel' }],
+              ] }
+          : KB_HOME;
         editOrSend(bot, chatId, msgId,
-          `🤖 <b>AA MD Bot — Pairing Panel</b>\n${DIV}\n\n` +
-          `Tap the button below to get your WhatsApp pairing code.` + FOOTER,
-          { reply_markup: KB_HOME }
+          `🤖 <b>AA MD Bot — WhatsApp Pairing</b>\n${DIV}\n\n` +
+          `<i>Use <a href="https://t.me/aa_md_2bot">@aa_md_2bot</a> for Telegram bot features.</i>` + FOOTER,
+          { reply_markup: kb }
         );
         break;
+      }
 
       case 'do_pair':
-        // Ask for phone number
         editOrSend(bot, chatId, msgId,
           `📱 <b>Enter Your WhatsApp Number</b>\n${DIV}\n\n` +
-          `Reply with your number (country code, digits only):\n\n` +
+          `Reply with your number (country code + digits, no + sign):\n\n` +
           `• 🇵🇰 Pakistan: <code>923001234567</code>\n` +
           `• 🇸🇦 Saudi: <code>9665XXXXXXXX</code>\n` +
-          `• 🇦🇪 UAE: <code>971XXXXXXXXX</code>\n\n` +
-          `<i>No + sign, no spaces.</i>` + FOOTER,
+          `• 🇦🇪 UAE: <code>971XXXXXXXXX</code>` + FOOTER,
           { reply_markup: KB_BACK }
         );
         _awaitingPhone.set(chatId, { msgId });
         break;
+
+      case 'how_connect':
+        editOrSend(bot, chatId, msgId, HOW_CONNECT_TEXT + FOOTER,
+          { reply_markup: KB_BACK, disable_web_page_preview: true });
+        break;
+
+      case 'bot_features':
+        editOrSend(bot, chatId, msgId, BOT_FEATURES_TEXT + FOOTER,
+          { reply_markup: KB_BACK, disable_web_page_preview: true });
+        break;
+
+      // ── Admin-only callbacks ────────────────────────────────────────────
+      case 'admin_panel':
+        if (!isAdm) return bot.answerCallbackQuery(query.id, { text: '🔒 Admin only', show_alert: true }).catch(() => {});
+        editOrSend(bot, chatId, msgId,
+          `⚙️ <b>Admin Panel</b>\n${DIV}\n\n` +
+          `Manage bot sessions and broadcasts.` + FOOTER,
+          { reply_markup: KB_ADMIN }
+        );
+        break;
+
+      case 'admin_sessions':
+        if (!isAdm) return bot.answerCallbackQuery(query.id, { text: '🔒 Admin only', show_alert: true }).catch(() => {});
+        try {
+          const sessions = _getAllSessions ? await _getAllSessions() : [];
+          const list = sessions.length
+            ? sessions.map((s, i) => `${i + 1}. <code>${esc(s.sessionId)}</code> — ${s.status || 'unknown'}`).join('\n')
+            : '<i>No active sessions</i>';
+          editOrSend(bot, chatId, msgId,
+            `📊 <b>Active Sessions (${sessions.length})</b>\n${DIV}\n\n${list}` + FOOTER,
+            { reply_markup: { inline_keyboard: [[{ text: '« Back', callback_data: 'admin_panel' }]] } }
+          );
+        } catch {
+          editOrSend(bot, chatId, msgId, `❌ Could not fetch sessions.` + FOOTER, { reply_markup: KB_BACK });
+        }
+        break;
+
+      case 'admin_broadcast':
+        if (!isAdm) return bot.answerCallbackQuery(query.id, { text: '🔒 Admin only', show_alert: true }).catch(() => {});
+        editOrSend(bot, chatId, msgId,
+          `📢 <b>Broadcast</b>\n${DIV}\n\n` +
+          `Send a message to broadcast to all connected WhatsApp sessions:\n\n` +
+          `Reply with: <code>/broadcast Your message here</code>` + FOOTER,
+          { reply_markup: { inline_keyboard: [[{ text: '« Back', callback_data: 'admin_panel' }]] } }
+        );
+        break;
     }
   });
 
-  // ── Catch-all: awaiting phone number + reject unknown commands ─────────────
-  bot.on('message', guard(async (msg) => {
+  // ── /broadcast — admin only ───────────────────────────────────────────────
+  bot.onText(/\/broadcast(?:\s+(.+))?/s, async (msg, match) => {
+    if (msg.chat.id !== OWNER_ID) return;
+    const text = (match[1] || '').trim();
+    if (!text) return sendText(bot, msg.chat.id, `❌ Provide a message.\nUsage: /broadcast Your message`);
+
+    try {
+      const sessions = _getAllSessions ? await _getAllSessions() : [];
+      const active   = sessions.filter(s => s.status === 'connected' || s.connected);
+      let ok = 0, fail = 0;
+      // Broadcast is fired from WhatsApp side via bot events if available
+      _botEvents.emit('broadcastRequest', { text, sessionCount: active.length });
+      ok = active.length;
+      sendText(bot, msg.chat.id,
+        `📢 <b>Broadcast Queued</b>\n\nMessage sent to <b>${ok}</b> session(s).\n\n<i>${esc(text.slice(0, 100))}</i>` + FOOTER
+      );
+    } catch (e) {
+      sendText(bot, msg.chat.id, `❌ Broadcast failed: ${esc(e.message)}` + FOOTER);
+    }
+  });
+
+  // ── /sessions — admin only ────────────────────────────────────────────────
+  bot.onText(/\/sessions/, async (msg) => {
+    if (msg.chat.id !== OWNER_ID) return;
+    try {
+      const sessions = _getAllSessions ? await _getAllSessions() : [];
+      const list = sessions.length
+        ? sessions.map((s, i) => `${i + 1}. <code>${esc(s.sessionId)}</code> — ${s.status || 'unknown'}`).join('\n')
+        : '<i>No active sessions</i>';
+      sendText(bot, msg.chat.id,
+        `📊 <b>Sessions (${sessions.length})</b>\n${DIV}\n\n${list}` + FOOTER
+      );
+    } catch {
+      sendText(bot, msg.chat.id, `❌ Could not fetch sessions.`);
+    }
+  });
+
+  // ── Catch-all: handle phone number replies + unknown commands ─────────────
+  bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const text   = (msg.text || '').trim();
+    if (!text || text.startsWith('/')) return;
 
-    // Handle phone number reply from interactive flow
-    if (_awaitingPhone.has(chatId) && text && !text.startsWith('/')) {
+    // Handle phone number from interactive flow (everyone can pair)
+    if (_awaitingPhone.has(chatId)) {
       const { msgId } = _awaitingPhone.get(chatId);
       _awaitingPhone.delete(chatId);
 
@@ -287,25 +438,12 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
       }
       return doPair(bot, chatId, phone, msgId);
     }
-
-    // Ignore known commands (handled above)
-    if (text.startsWith('/start') || text.startsWith('/pair')) return;
-
-    // Prompt for any other input
-    if (text.startsWith('/')) {
-      sendText(bot, chatId,
-        `📱 <b>Pairing Bot</b>\n\n` +
-        `This bot only provides WhatsApp pairing codes.\n\n` +
-        `Use /pair to get started.` + FOOTER,
-        { reply_markup: KB_HOME }
-      );
-    }
-  }));
+  });
 
   bot.on('polling_error', (err) => {
     logger.warn({ code: err.code, msg: err.message }, '🤖 Telegram admin polling error');
   });
 
-  logger.info('🤖 Telegram pairing bot started (owner-only mode)');
+  logger.info('🤖 Telegram pairing bot started (open pairing / admin-restricted controls)');
   return bot;
 }

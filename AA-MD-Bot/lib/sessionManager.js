@@ -482,7 +482,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             if (aiOn && aiInst && msgText.trim()) {
               try {
                 const { aiAutoReply } = await import('../plugins/gb/autoai.js');
-                const aiReply = await aiAutoReply(msgText, aiInst);
+                const aiReply = await aiAutoReply(msgText, aiInst, msg.key.remoteJid);
                 await sock.sendMessage(msg.key.remoteJid, { text: aiReply }, { quoted: msg }).catch(() => {});
               } catch {}
             }
