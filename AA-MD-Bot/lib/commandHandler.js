@@ -171,10 +171,21 @@ export async function handleMessage(sock, msg, sessionId) {
       await sock.readMessages([msg.key]).catch(() => {});
     }
 
-    // Auto-react to every incoming message (not own messages)
+    // Auto-react to every incoming message (not own messages, not view-once)
     if (eff('autoReact', false) && !fromMe) {
-      const emoji = eff('autoReactEmoji', config.autoReactEmoji ?? '❤️');
-      sock.sendMessage(jid, { react: { text: emoji, key: msg.key } }).catch(() => {});
+      const msgContent = msg.message || {};
+      const innerContent = msgContent?.ephemeralMessage?.message || msgContent;
+      const isViewOnce = !!(
+        innerContent?.viewOnceMessage ||
+        innerContent?.viewOnceMessageV2 ||
+        innerContent?.viewOnceMessageV2Extension ||
+        innerContent?.imageMessage?.viewOnce ||
+        innerContent?.videoMessage?.viewOnce
+      );
+      if (!isViewOnce) {
+        const emoji = eff('autoReactEmoji', config.autoReactEmoji ?? '❤️');
+        sock.sendMessage(jid, { react: { text: emoji, key: msg.key } }).catch(() => {});
+      }
     }
 
     const text = await getMessageText(msg);

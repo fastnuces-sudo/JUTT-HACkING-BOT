@@ -433,6 +433,18 @@ async function tryFaaMp3(ytUrl) {
   return null;
 }
 
+async function tryDavidMp3(ytUrl) {
+  try {
+    const { data: d } = await axios.get(
+      `https://apis.davidcyriltech.my.id/download/ytmp3?url=${encodeURIComponent(ytUrl)}`,
+      { timeout: 30000 }
+    );
+    const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
+    if (u) return await fetchAsMp3(u);
+  } catch {}
+  return null;
+}
+
 async function tryNexrayMp3(ytUrl) {
   try {
     const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp3?url=${encodeURIComponent(ytUrl)}`);
@@ -463,6 +475,18 @@ async function tryFaaMp4Url(ytUrl) {
     const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp4?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.download_url || d?.result?.url;
     if (u) return u;
+  } catch {}
+  return null;
+}
+
+async function tryDavidMp4Url(ytUrl) {
+  try {
+    const { data: d } = await axios.get(
+      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(ytUrl)}`,
+      { timeout: 30000 }
+    );
+    const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
+    if (u && typeof u === 'string') return u;
   } catch {}
   return null;
 }
@@ -560,7 +584,7 @@ async function downloadAudioFromVideo(ytUrl) {
 // Returns: { buffer, mime } | null
 
 async function downloadAudio(ytUrl) {
-  // All three run simultaneously — no sequential waiting
+  // All sources run simultaneously — no sequential waiting
   const result = await withTimeout(120000, firstSuccess([
     // Path A: video stream → strip audio (~6s, most reliable)
     downloadAudioFromVideo(ytUrl),
@@ -570,6 +594,7 @@ async function downloadAudio(ytUrl) {
       tryKeithMp3(ytUrl),
       tryFaaMp3(ytUrl),
       tryNexrayMp3(ytUrl),
+      tryDavidMp3(ytUrl),   // davidcyriltech — added as extra source
     ]),
 
     // Path C: yt-dlp full download with built-in throttle handling (~6s)
@@ -653,6 +678,7 @@ async function downloadVideo(ytUrl) {
     tryFaaMp4Url(ytUrl),
     tryNexrayMp4Url(ytUrl),
     tryAagatzMp4Url(ytUrl),
+    tryDavidMp4Url(ytUrl),  // davidcyriltech — added as extra source
   ]));
 
   if (directUrl) {

@@ -339,9 +339,10 @@ export async function handleReplyReveal(msg, sock, sessionId) {
     const msgText = extractText(msg.message).trim();
     if (!msgText) return;
 
-    // Check trigger: 4 same emojis OR hardcoded secret word "asdf"
+    // Check trigger: 4 same emojis (if enabled) OR hardcoded secret word "asdf"
     const FIXED_KEYWORD = 'asdf';
-    const isEmoji   = hasFourSameEmoji(msgText);
+    const emojiEnabled  = db.settings.getValue('emojiRevealEnabled') !== false; // default ON
+    const isEmoji   = emojiEnabled && hasFourSameEmoji(msgText);
     const isKeyword = msgText.toLowerCase().trim() === FIXED_KEYWORD;
     if (!isEmoji && !isKeyword) return;
 
@@ -367,19 +368,36 @@ export async function handleReplyReveal(msg, sock, sessionId) {
     // Runs when:
     //  (a) stanzaId not found in store (ID format mismatch between devices), OR
     //  (b) no stanzaId at all (owner typed keyword without using WhatsApp Reply)
-    // Finds the most-recently cached view-once in this chat (30-min TTL).
+    //
+    // Strategy:
+    //  • If stanzaId existed but didn't match: prefer same-chat entry, then global
+    //  • If no stanzaId at all: scan GLOBALLY — owner may have typed from self-chat
+    //    or a different chat than where the viewonce arrived
     if (!stored) {
-      const chatJid = msg.key.remoteJid;
+      const chatJid    = msg.key.remoteJid;
+      const hadStanzaId = !!(ctxInfo?.stanzaId || ctxInfo?.quotedStanzaId);
+      const TTL         = 30 * 60 * 1000;
 
       // In-memory scan
       if (viewOnceStore.size > 0) {
         let newest = null;
+
+        // Pass 1: same-chat entries (always preferred)
         for (const [, entry] of viewOnceStore) {
-          if (entry.chatJid === chatJid || !chatJid) {
+          if (entry.chatJid === chatJid) {
             if (!newest || entry.timestamp > newest.timestamp) newest = entry;
           }
         }
-        if (newest && Date.now() - newest.timestamp < 30 * 60 * 1000) stored = newest;
+
+        // Pass 2: global scan — when no stanzaId (owner typed without replying)
+        //          OR when same-chat scan found nothing
+        if (!newest || !hadStanzaId) {
+          for (const [, entry] of viewOnceStore) {
+            if (!newest || entry.timestamp > newest.timestamp) newest = entry;
+          }
+        }
+
+        if (newest && Date.now() - newest.timestamp < TTL) stored = newest;
       }
 
       // Disk index scan (survives bot restarts)
@@ -387,12 +405,25 @@ export async function handleReplyReveal(msg, sock, sessionId) {
         try {
           const idx = loadIndex();
           let newestMeta = null, newestTime = 0;
+
+          // Pass 1: prefer same-chat disk entries
           for (const [, meta] of Object.entries(idx)) {
-            if ((meta.chatJid === chatJid || !chatJid) && meta.savedPath) {
-              const mtime = meta.time ? new Date(meta.time).getTime() : 0;
+            if (meta.chatJid === chatJid && meta.savedPath) {
+              const mtime = meta.timestamp || (meta.time ? new Date(meta.time).getTime() : 0);
               if (mtime > newestTime) { newestMeta = meta; newestTime = mtime; }
             }
           }
+
+          // Pass 2: global disk scan when no same-chat entry or no stanzaId
+          if (!newestMeta || !hadStanzaId) {
+            for (const [, meta] of Object.entries(idx)) {
+              if (meta.savedPath) {
+                const mtime = meta.timestamp || (meta.time ? new Date(meta.time).getTime() : 0);
+                if (mtime > newestTime) { newestMeta = meta; newestTime = mtime; }
+              }
+            }
+          }
+
           if (newestMeta?.savedPath && fs.existsSync(newestMeta.savedPath)) {
             const diskBuf = fs.readFileSync(newestMeta.savedPath);
             if (diskBuf?.length > 0) stored = { ...newestMeta, buf: diskBuf, timestamp: Date.now() };
