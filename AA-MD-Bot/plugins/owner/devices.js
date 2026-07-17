@@ -8,6 +8,7 @@ export default {
   description: 'Show all connected WhatsApp sessions',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply }) {
     const allSessions = getAllSessions();
     if (!allSessions.length) return reply('📱 No active sessions found.');

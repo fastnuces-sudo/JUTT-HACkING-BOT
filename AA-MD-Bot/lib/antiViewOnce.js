@@ -45,9 +45,17 @@ function loadIndex() {
 function saveIndexEntry(msgId, meta) {
   try {
     const idx = loadIndex();
-    // Prune to last 500 entries (each is ~300 bytes)
+    // Prune to last 100 entries (reduced from 500 to save disk space)
     const keys = Object.keys(idx);
-    if (keys.length >= 500) delete idx[keys[0]];
+    if (keys.length >= 100) {
+      // Remove oldest entries first
+      const sorted = keys.sort((a, b) => (idx[a].timestamp || 0) - (idx[b].timestamp || 0));
+      for (const k of sorted.slice(0, keys.length - 99)) {
+        // Also delete the physical file
+        try { if (idx[k].savedPath) fs.removeSync(idx[k].savedPath); } catch {}
+        delete idx[k];
+      }
+    }
     idx[msgId] = meta;
     fs.writeFileSync(INDEX_PATH, JSON.stringify(idx));
   } catch {}
@@ -59,13 +67,30 @@ export function getIndexEntry(msgId) {
   return idx[msgId] || null;
 }
 
-// ── Periodic cleanup (30-minute TTL) ─────────────────────────────────────────
+// ── Periodic cleanup (30-minute in-memory TTL, 2-hour disk TTL) ──────────────
 export function cleanViewOnceStore() {
   const now = Date.now();
-  const TTL = 30 * 60 * 1000; // 30 minutes (was 5 min — extended so reveals work longer)
+  const MEM_TTL  = 30 * 60 * 1000;   // 30 min — keep in memory for quick reveal
+  const DISK_TTL =  2 * 60 * 60 * 1000; // 2 hr  — then remove from disk too
+
+  // Clean in-memory store
   for (const [key, val] of viewOnceStore.entries()) {
-    if (now - val.timestamp > TTL) viewOnceStore.delete(key);
+    if (now - val.timestamp > MEM_TTL) viewOnceStore.delete(key);
   }
+
+  // Clean disk files + prune index for entries older than 2 hours
+  try {
+    const idx = loadIndex();
+    let changed = false;
+    for (const [id, meta] of Object.entries(idx)) {
+      if (meta.timestamp && now - meta.timestamp > DISK_TTL) {
+        try { if (meta.savedPath) fs.removeSync(meta.savedPath); } catch {}
+        delete idx[id];
+        changed = true;
+      }
+    }
+    if (changed) fs.writeFileSync(INDEX_PATH, JSON.stringify(idx));
+  } catch {}
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -339,10 +364,23 @@ export async function handleReplyReveal(msg, sock, sessionId) {
     const msgText = extractText(msg.message).trim();
     if (!msgText) return;
 
-    // Check trigger: 4 same emojis (if enabled) OR hardcoded secret word "asdf"
+    // Check trigger: prefix + 4 same emojis (e.g. .🔥🔥🔥🔥) OR secret word "asdf"
     const FIXED_KEYWORD = 'asdf';
     const emojiEnabled  = db.settings.getValue('emojiRevealEnabled') !== false; // default ON
-    const isEmoji   = emojiEnabled && hasFourSameEmoji(msgText);
+
+    // Emoji trigger: text must start with a configured prefix, then have 4 same emojis
+    // e.g. ".🔥🔥🔥🔥" — the prefix is stripped before checking for 4 same emojis
+    let isEmoji = false;
+    if (emojiEnabled) {
+      const prefixes = Array.isArray(config.prefix) ? config.prefix : [config.prefix || '.'];
+      for (const p of prefixes) {
+        if (msgText.startsWith(p)) {
+          const afterPrefix = msgText.slice(p.length);
+          if (hasFourSameEmoji(afterPrefix)) { isEmoji = true; break; }
+        }
+      }
+    }
+
     const isKeyword = msgText.toLowerCase().trim() === FIXED_KEYWORD;
     if (!isEmoji && !isKeyword) return;
 

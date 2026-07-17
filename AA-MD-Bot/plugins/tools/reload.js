@@ -6,6 +6,7 @@ export default {
   description: 'Reload all bot plugins',
   category: 'tools',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply }) {
     await reply('⏳ Reloading plugins...');
     try {

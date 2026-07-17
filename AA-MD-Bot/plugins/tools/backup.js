@@ -6,6 +6,7 @@ export default {
   description: 'Backup the database',
   category: 'tools',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply }) {
     try {
       const backupDir = db.backup();

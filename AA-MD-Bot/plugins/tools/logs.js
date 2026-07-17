@@ -11,6 +11,7 @@ export default {
   description: 'View recent bot logs',
   category: 'tools',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, args }) {
     const lines = Math.min(parseInt(args[0]) || 20, 50);
     try {

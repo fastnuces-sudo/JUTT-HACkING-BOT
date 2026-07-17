@@ -6,6 +6,7 @@ export default {
   description: 'Test bot internet speed',
   category: 'tools',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply }) {
     await reply('⏳ Running speed test...');
     const testUrl = 'https://speed.cloudflare.com/__down?bytes=1000000';

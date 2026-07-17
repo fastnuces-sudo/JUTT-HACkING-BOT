@@ -4,6 +4,7 @@ export default {
   description: 'Change bot command prefix',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, args, db }) {
     if (!args[0]) {
       const current = db.settings.getValue('prefix') || ['.'];

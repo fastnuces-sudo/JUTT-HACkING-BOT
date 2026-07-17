@@ -6,6 +6,7 @@ export default {
   description: 'Show database statistics',
   category: 'tools',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, args }) {
     if (args[0] === 'reload') {
       db.reload();

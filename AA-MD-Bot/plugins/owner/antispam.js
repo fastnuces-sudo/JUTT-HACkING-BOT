@@ -6,6 +6,7 @@ export default {
   category: 'owner',
   description: 'Block users who spam commands too fast',
   ownerOnly: true,
+  superOwnerOnly: true,
   usage: '.antispam on | .antispam off',
 
   async execute({ reply, args, db: dbArg, config: cfgArg }) {

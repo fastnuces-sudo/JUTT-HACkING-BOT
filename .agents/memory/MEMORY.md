@@ -10,3 +10,6 @@
 - [External API deprecations](api-deprecations.md) — cobalt.tools now requires JWT auth (dead for free use); restcountries v3.1 deprecated; pollinations gemini/mistral/llama removed.
 - [yt-dlp in downloader plugins](yt-dlp-social-downloads.md) — dl.js and ig.js now use execFile (not exec) for yt-dlp to avoid shell injection; ig.js uses reqId prefix to avoid concurrent download race; logo.js has 4-method fallback chain.
 - [Flash-Md-V3 new plugins](flash-md-v3-plugins.md) — logo/element/hack/love/disap/currency/privacy/botzip added; weather→wttr.in; ss→encodeURI; attp→local SVG+ffmpeg; archiver needs createRequire.
+- [Antidelete → self-chat](antidelete-selfchat.md) — group AND DM deleted msgs go to owner's (You) self-chat only; never re-posted to group.
+- [Emoji reveal requires prefix](viewonce-emoji-reveal.md) — trigger is now .🔥🔥🔥🔥 (prefix + 4 same emojis); bare 4-same-emoji no longer triggers.
+- [SuperOwnerOnly scope](per-session-settings.md) — devices/adddevice/deldevice/setprefix/mode/anticall/antispam/autoreact + all tools plugins are superOwnerOnly.

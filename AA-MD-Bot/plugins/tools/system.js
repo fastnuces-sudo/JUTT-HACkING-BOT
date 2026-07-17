@@ -7,6 +7,7 @@ export default {
   description: 'Show system resource usage',
   category: 'tools',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply }) {
     const totalMem = os.totalmem();
     const freeMem = os.freemem();

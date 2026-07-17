@@ -396,38 +396,28 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
               const deleter    = msg.key.participant || msg.key.remoteJid;
               const deleterNum = deleter?.split('@')[0]?.split(':')[0] || '?';
 
-              if (isGroup) {
-                // ── GROUP: resend in the same group chat ──────────────
-                await sock.sendMessage(chatJid, {
-                  text: `🗑️ *Anti-Delete*\n👤 Deleted by: @${deleterNum}\n🕐 Time: ${now}`,
-                  mentions: [deleter],
+              // ── ALL CHATS: send deleted message silently to owner's "You" (self) chat ──
+              const selfNum2 = sock.user?.id?.split('@')[0]?.split(':')[0];
+              const selfJid2 = selfNum2 ? `${selfNum2}@s.whatsapp.net` : null;
+              if (selfJid2) {
+                const senderJidAD  = isGroup ? deleter : chatJid;
+                const savedNameAD  = sock.contacts?.[senderJidAD]?.name
+                                  || sock.contacts?.[senderJidAD]?.notify
+                                  || original.pushName
+                                  || msg.pushName
+                                  || '';
+                const nameDisplayAD = savedNameAD ? `*${savedNameAD}*` : '';
+                const numDisplayAD  = `+${deleterNum}`;
+                const whereAD = isGroup ? `Group` : `DM`;
+
+                await sock.sendMessage(selfJid2, {
+                  text:
+                    `🗑️ *Deleted Message Recovered*\n\n` +
+                    `👤 By: ${nameDisplayAD ? `${nameDisplayAD} ` : ''}${numDisplayAD}\n` +
+                    `📍 Where: ${whereAD}\n` +
+                    `🕐 Time: ${now}`,
                 }).catch(() => {});
-                await sock.sendMessage(chatJid, { forward: original, force: true }).catch(() => {});
-
-              } else {
-                // ── DM: send silently to bot's own "You" (self) chat ──
-                // Get sender name: saved contact name > WhatsApp push name > number
-                const senderJid  = chatJid; // in DM, chatJid IS the sender
-                const savedName  = sock.contacts?.[senderJid]?.name
-                                || sock.contacts?.[senderJid]?.notify
-                                || original.pushName
-                                || msg.pushName
-                                || '';
-                const nameDisplay = savedName ? `*${savedName}*` : '';
-                const numDisplay  = `+${deleterNum}`;
-
-                // Bot's own self-chat JID
-                const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
-                const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
-                if (selfJid) {
-                  await sock.sendMessage(selfJid, {
-                    text:
-                      `🗑️ *Deleted Message Recovered*\n\n` +
-                      `👤 From: ${nameDisplay ? `${nameDisplay} ` : ''}${numDisplay}\n` +
-                      `🕐 Time: ${now}`,
-                  }).catch(() => {});
-                  await sock.sendMessage(selfJid, { forward: original, force: true }).catch(() => {});
-                }
+                await sock.sendMessage(selfJid2, { forward: original, force: true }).catch(() => {});
               }
             }
           }

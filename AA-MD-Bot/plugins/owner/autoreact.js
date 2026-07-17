@@ -8,6 +8,7 @@ export default {
   alias: ['atr', 'reactall', 'autoemoji'],
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   description: 'Toggle auto-react emoji on every incoming message (per connected number)',
   usage: '.autoreact on/off | .autoreact emoji ❤️',
 

@@ -170,18 +170,21 @@ export default {
   ownerOnly: true,
 
   async execute({ command, args, sock, msg, jid, reply }) {
-    // ── .any4sameemojis — toggle the 4-same-emoji viewonce trigger ──────────
+    // ── .any4sameemojis — toggle the prefix+4-same-emoji viewonce trigger ──────────
     if (command === 'any4sameemojis') {
       const sub     = (args[0] || '').toLowerCase();
       const current = db.settings.getValue('emojiRevealEnabled') !== false; // default ON
 
       if (!sub || (sub !== 'on' && sub !== 'off')) {
         return reply(
-          `🔥 *4-Same-Emoji ViewOnce Trigger*\n\n` +
+          `🔥 *Prefix + 4-Same-Emoji ViewOnce Trigger*\n\n` +
           `Status: *${current ? '✅ ON' : '❌ OFF'}*\n\n` +
           `📌 *How it works:*\n` +
-          `Reply to any view-once with 4 identical emojis\n` +
-          `(e.g. 🔥🔥🔥🔥 or 👀👀👀👀 or ❤️❤️❤️❤️)\n` +
+          `Type a dot (.) followed by 4 identical emojis\n` +
+          `while replying to a view-once (or without replying):\n\n` +
+          `• *.🔥🔥🔥🔥*\n` +
+          `• *.👀👀👀👀*\n` +
+          `• *.❤️❤️❤️❤️*\n\n` +
           `→ Bot silently sends it to your "You" chat.\n\n` +
           `📋 *Toggle:*\n` +
           `• *.any4sameemojis on*  — enable\n` +

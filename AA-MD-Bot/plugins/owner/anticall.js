@@ -9,6 +9,7 @@ export default {
   category: 'owner',
   description: 'Block/reject incoming calls (per connected number)',
   ownerOnly: true,
+  superOwnerOnly: true,
   usage: '.anticall on | .anticall off | .anticall msg <your message>',
 
   async execute({ reply, args, text, sessionSettings }) {

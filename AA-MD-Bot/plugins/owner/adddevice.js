@@ -12,6 +12,7 @@ export default {
   description: 'Add a new WhatsApp session via pairing code',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
 
   async execute({ reply, args }) {
     const phoneRaw  = args[0];

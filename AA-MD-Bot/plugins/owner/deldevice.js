@@ -6,6 +6,7 @@ export default {
   description: 'Delete a WhatsApp session',
   category: 'owner',
   ownerOnly: true,
+  superOwnerOnly: true,
   async execute({ reply, args }) {
     const sessionId = args[0];
     if (!sessionId) {
