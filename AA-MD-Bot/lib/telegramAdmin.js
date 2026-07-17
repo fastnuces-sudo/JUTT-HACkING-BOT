@@ -61,7 +61,9 @@ let _createSession   = null;
 let _getAllSessions   = null;
 let _latestCodes     = null;
 let _botEvents       = null;
-const _pairingWaiters = new Map();
+const _pairingWaiters  = new Map();  // sessionId → Set<chatId>  (waiting for code)
+const _pairingChats    = new Map();  // sessionId → chatId       (for connected confirm)
+const _awaitingNumber  = new Map();  // chatId    → { msgId }    (interactive /pair step)
 
 // ── Inline keyboards ─────────────────────────────────────────────────────────
 const KB_MAIN = {
@@ -134,6 +136,27 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
       ).catch(() => {});
     }
     _pairingWaiters.delete(sessionId);
+  });
+
+  // ── Connection confirmed ───────────────────────────────────────────────────
+  botEvents.on('status', ({ sessionId, status, user }) => {
+    if (status !== 'connected') return;
+    const chatId = _pairingChats.get(sessionId);
+    if (!chatId) return;
+    _pairingChats.delete(sessionId);
+
+    const phone = sessionId.replace('tg_', '');
+    const name  = user?.name || user?.notify || user?.verifiedName || '';
+    bot.sendMessage(chatId,
+      `🎉 <b>WhatsApp Connected!</b>\n${DIV}\n\n` +
+      `📱 Number: <code>+${esc(phone)}</code>\n` +
+      (name ? `👤 Name: <b>${esc(name)}</b>\n` : '') +
+      `🟢 Status: <b>Active &amp; Running</b>\n\n` +
+      `Your bot is now connected and ready to use on WhatsApp.\n` +
+      `All commands are live on <code>+${esc(phone)}</code>.` +
+      FOOTER,
+      HTML
+    ).catch(() => {});
   });
 
   // ── Guard middleware ───────────────────────────────────────────────────────
@@ -380,36 +403,28 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
     setTimeout(() => process.exit(0), 1500);
   }));
 
-  // ── /pair <phone> ───────────────────────────────────────────────────────────
-  bot.onText(/\/pair(?:\s+(\S+))?/, guard(async (msg, match) => {
-    const chatId = msg.chat.id;
-    const phone  = (match[1] || '').replace(/[^0-9]/g, '');
-
-    if (!phone || phone.length < 7 || phone.length > 15) {
-      return sendText(bot, chatId,
-        `❌ <b>Invalid Phone Number</b>\n\n` +
-        `<b>Usage:</b> <code>/pair 923001234567</code>\n\n` +
-        `• Include country code, no spaces or +\n` +
-        `• 🇵🇰 Pakistan: <code>923XXXXXXXXX</code>\n` +
-        `• 🇸🇦 Saudi Arabia: <code>9665XXXXXXXX</code>\n` +
-        `• 🇦🇪 UAE: <code>971XXXXXXXXX</code>\n` +
-        `• 🇬🇧 UK: <code>447XXXXXXXXX</code>\n` +
-        `• 🇺🇸 USA: <code>1XXXXXXXXXX</code>`
-      );
-    }
-
-    const sent = await bot.sendMessage(chatId,
-      `⏳ <b>Requesting pairing code...</b>\n\n` +
-      `📱 Phone: <code>+${esc(phone)}</code>\n\n` +
-      `<i>Please wait a moment...</i>`,
-      HTML
-    ).catch(() => null);
+  // ── Core pairing logic (shared by interactive + inline) ────────────────────
+  async function doPair(chatId, phone, promptMsgId = null) {
+    const sent = promptMsgId
+      ? await editOrSend(bot, chatId, promptMsgId,
+          `⏳ <b>Requesting pairing code...</b>\n\n` +
+          `📱 Phone: <code>+${esc(phone)}</code>\n\n` +
+          `<i>Please wait a moment...</i>`,
+          HTML
+        ).catch(() => null)
+      : await bot.sendMessage(chatId,
+          `⏳ <b>Requesting pairing code...</b>\n\n` +
+          `📱 Phone: <code>+${esc(phone)}</code>\n\n` +
+          `<i>Please wait a moment...</i>`,
+          HTML
+        ).catch(() => null);
     if (!sent) return;
 
     try {
       if (!_createSession) throw new Error('Session manager not ready — restart the bot.');
 
       const sessionId = `tg_${phone}`;
+      _pairingChats.set(sessionId, chatId);   // track for connection confirm
 
       // Return existing code if fresh
       const existing = _latestCodes?.get(sessionId);
@@ -447,7 +462,8 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
           `1️⃣ WhatsApp → Settings → Linked Devices\n` +
           `2️⃣ Tap "Link a Device" → "Link with phone number"\n` +
           `3️⃣ Enter the code above\n\n` +
-          `⏰ <i>Expires in ~60 seconds — enter quickly!</i>` +
+          `⏰ <i>Expires in ~60 seconds — enter quickly!</i>\n` +
+          `<i>You will get a confirmation here once connected.</i>` +
           FOOTER
         );
       } else {
@@ -461,6 +477,7 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
     } catch (e) {
       const sid = `tg_${phone}`;
       _pairingWaiters.get(sid)?.delete(chatId);
+      _pairingChats.delete(sid);
       editOrSend(bot, chatId, sent.message_id,
         `❌ <b>Pairing Failed</b>\n\n` +
         `<i>${esc(e.message)}</i>\n\n` +
@@ -468,6 +485,33 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
         FOOTER
       );
     }
+  }
+
+  // ── /pair [phone] ───────────────────────────────────────────────────────────
+  bot.onText(/\/pair(?:\s+(\S+))?/, guard(async (msg, match) => {
+    const chatId = msg.chat.id;
+    const raw    = (match[1] || '').replace(/[^0-9]/g, '');
+
+    // If number provided inline → proceed directly
+    if (raw && raw.length >= 7 && raw.length <= 15) {
+      _awaitingNumber.delete(chatId);
+      return doPair(chatId, raw);
+    }
+
+    // No number → interactive: ask for it
+    const sent = await bot.sendMessage(chatId,
+      `📱 <b>Enter Your WhatsApp Number</b>\n${DIV}\n\n` +
+      `Please send your phone number with country code:\n\n` +
+      `• 🇵🇰 Pakistan: <code>923001234567</code>\n` +
+      `• 🇸🇦 Saudi Arabia: <code>9665XXXXXXXX</code>\n` +
+      `• 🇦🇪 UAE: <code>971XXXXXXXXX</code>\n` +
+      `• 🇬🇧 UK: <code>447XXXXXXXXX</code>\n` +
+      `• 🇺🇸 USA: <code>1XXXXXXXXXX</code>\n\n` +
+      `<i>No + sign, no spaces — just digits.</i>`,
+      { ...HTML, reply_markup: { force_reply: true, selective: true } }
+    ).catch(() => null);
+
+    if (sent) _awaitingNumber.set(chatId, { msgId: sent.message_id });
   }));
 
   // ── Inline keyboard callbacks ───────────────────────────────────────────────
@@ -599,11 +643,33 @@ export function initTelegramAdmin({ createSession, getAllSessions, latestPairing
     }
   });
 
-  // ── Catch-all unknown commands ─────────────────────────────────────────────
+  // ── Catch-all: handle awaiting-number replies + unknown commands ───────────
   const KNOWN = /^\/(start|menu|help|pair|status|sessions|stats|logs|broadcast|restart|ping)/;
-  bot.on('message', guard((msg) => {
-    if (msg.text?.startsWith('/') && !KNOWN.test(msg.text)) {
-      sendText(bot, msg.chat.id,
+  bot.on('message', guard(async (msg) => {
+    const chatId = msg.chat.id;
+    const text   = (msg.text || '').trim();
+
+    // ── Step 2 of interactive /pair: user sent their number ─────────────────
+    if (_awaitingNumber.has(chatId) && text && !text.startsWith('/')) {
+      const { msgId } = _awaitingNumber.get(chatId);
+      _awaitingNumber.delete(chatId);
+
+      const phone = text.replace(/[^0-9]/g, '');
+      if (!phone || phone.length < 7 || phone.length > 15) {
+        return sendText(bot, chatId,
+          `❌ <b>Invalid number.</b>\n\n` +
+          `Please include country code, digits only.\n` +
+          `Example: <code>923001234567</code>\n\n` +
+          `Send /pair to try again.`,
+          HTML
+        );
+      }
+      return doPair(chatId, phone, msgId);
+    }
+
+    // ── Unknown command ──────────────────────────────────────────────────────
+    if (text.startsWith('/') && !KNOWN.test(text)) {
+      sendText(bot, chatId,
         `❓ Unknown command.\n\nType /help to see available commands.`,
         { reply_markup: KB_BACK }
       );
