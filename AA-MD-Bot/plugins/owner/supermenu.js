@@ -41,17 +41,30 @@ export default {
       `▸ *${p}afk* [reason]          — Go AFK (auto-reply)\n` +
       `▸ *${p}back*                  — Return from AFK\n\n` +
 
-      `👑 *OWNER MANAGEMENT*\n` +
-      `▸ *${p}addowner* @num         — Grant owner access\n` +
-      `▸ *${p}delowner* @num         — Revoke owner access\n` +
-      `▸ *${p}setowner* @num         — Set as full owner\n` +
-      `▸ *${p}banuser* ban @num      — Ban a user\n` +
-      `▸ *${p}banuser* unban @num    — Unban a user\n\n` +
+      `🤖 *AI AUTO-REPLY*\n` +
+      `▸ *${p}autoai instructions* <context> — Set persona\n` +
+      `   _e.g. I am Ahsan, busy developer from Pakistan_\n` +
+      `▸ *${p}autoai on/off*         — AI replies as you\n` +
+      `▸ *${p}autoreply* <msg>       — Static busy message\n` +
+      `▸ *${p}autoreply off*         — Disable auto reply\n\n` +
 
       `👁️ *VIEW-ONCE REVEAL*\n` +
       `▸ *${p}antiviewonce* on/off   — Auto-reveal all view-once\n` +
-      `▸ *${p}avv*                   — Reveal (reply to view-once)\n` +
-      `   _💡 Reply with 4 same emojis (🔥🔥🔥🔥) to reveal_\n\n` +
+      `▸ *${p}avv*                   — Manual reveal (reply to view-once)\n` +
+      `▸ *${p}good* / *${p}nice*    — Natural cover + silent reveal\n` +
+      `▸ *${p}any4sameemojis* on/off — Toggle emoji trigger\n` +
+      `   _💡 Type .🔥🔥🔥🔥 (prefix+4 emojis) to reveal_\n` +
+      `   _💡 Or reply with secret word: asdf_\n\n` +
+
+      `🗑️ *DELETED MESSAGES*\n` +
+      `▸ *${p}antidelete* on/off     — Recover deleted msgs\n` +
+      `   _All recovered msgs → your (You) chat (silent)_\n\n` +
+
+      `👑 *OWNER MANAGEMENT*\n` +
+      `▸ *${p}addowner* @num         — Grant owner access\n` +
+      `▸ *${p}delowner* @num         — Revoke owner access\n` +
+      `▸ *${p}banuser* ban @num      — Ban a user\n` +
+      `▸ *${p}banuser* unban @num    — Unban a user\n\n` +
 
       `💻 *DEVELOPER TOOLS*\n` +
       `▸ *${p}eval* [js code]        — Run JavaScript\n` +
@@ -60,19 +73,26 @@ export default {
 
       `📱 *SESSION / DEVICES*\n` +
       `▸ *${p}devices*               — List all sessions\n` +
-      `▸ *${p}adddevice* <number>    — Add new session\n` +
-      `   _Send pairing code via WhatsApp — no console needed_\n` +
+      `▸ *${p}adddevice* <number>    — Add new WhatsApp session\n` +
       `▸ *${p}deldevice* [id]        — Remove a session\n\n` +
 
       `📢 *CHANNEL / NEWSLETTER*\n` +
       `▸ *${p}setnewsletter* <jid> [name] — Set channel link\n` +
       `▸ *${p}followchannel*         — Manage auto-follow channels\n\n` +
 
-      `🔧 *SYSTEM*\n` +
+      `🔧 *SYSTEM & TOOLS*\n` +
       `▸ *${p}system*                — System info\n` +
       `▸ *${p}dbstats*               — Database stats\n` +
       `▸ *${p}logs*                  — Recent logs\n` +
       `▸ *${p}backup*                — Backup database\n\n` +
+
+      `📱 *TELEGRAM INTEGRATION*\n` +
+      `▸ Admin Bot: /start → /pair <phone>\n` +
+      `   _Users get WhatsApp pairing code via Telegram_\n` +
+      `▸ Admin Bot: /status → connected numbers\n` +
+      `▸ Features Bot: /help → /play /video /tiktok /fb\n` +
+      `   /weather /ai /translate /lyrics /wiki /movie\n` +
+      `   /anime /joke /quote /qr /sticker\n\n` +
 
       `> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
 

@@ -63,8 +63,7 @@ const CAT_ORDER = ['download','search','media','fun','economy','level','group','
 const OWNER_GB_CMDS    = new Set(['afk','alwaysonline','autoread','autoreply','flood','ghost','onlinealert','typing','autoreact','anticall','antispam','schedule']);
 const OWNER_TOOLS_CMDS = new Set(['backup','dbstats','logs','reload','speedtest','system','memory']);
 // SuperOwner-only commands — never in .menu (only in .smenu)
-// Only list commands whose plugin.superOwnerOnly === true; do NOT list normal ownerOnly cmds here.
-const SUPER_CMDS = new Set(['eval','shell','broadcast','maintenance','setnewsletter','followchannel','adddevice','deldevice','devices','addowner','delowner','setowner','banuser','smenu','supermenu','devmenu','adminpanel']);
+const SUPER_CMDS = new Set(['eval','shell','broadcast','maintenance','setnewsletter','followchannel','adddevice','deldevice','devices','addowner','delowner','setowner','banuser','smenu','supermenu','devmenu','adminpanel','backup','database','logs','reload','system']);
 
 // Greeting helper
 function greet() {
@@ -236,19 +235,30 @@ export default {
       menu += `│  ▸ *${pref}autoreact on/off*\n`;
       menu += `│     _Auto emoji react to messages_\n`;
       menu += `│\n`;
-      menu += `│  👁️ *View-Once & Delete*\n`;
+      menu += `│  👁️ *View-Once Reveal*\n`;
       menu += `│\n`;
       menu += `│  ▸ *${pref}antiviewonce on/off*\n`;
-      menu += `│     _Auto-reveal all view-once media_\n`;
+      menu += `│     _Auto-reveal all view-once to (You) chat_\n`;
       menu += `│\n`;
-      menu += `│  ▸ *${pref}voword <keyword>*\n`;
-      menu += `│     _Set keyword to reveal view-once_\n`;
+      menu += `│  ▸ *${pref}avv* — reply to view-once\n`;
+      menu += `│     _Manual reveal → sent to (You) chat_\n`;
       menu += `│\n`;
-      menu += `│  ▸ *${pref}avv*\n`;
-      menu += `│     _Manual reveal — reply to view-once_\n`;
+      menu += `│  ▸ *${pref}good*  /  *${pref}nice*\n`;
+      menu += `│     _Natural reply + silent reveal to (You)_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *.🔥🔥🔥🔥* (prefix + 4 same emojis)\n`;
+      menu += `│     _Trigger reveal — works in any chat_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *asdf* (secret word reply)\n`;
+      menu += `│     _Hidden keyword to reveal view-once_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}any4sameemojis on/off*\n`;
+      menu += `│     _Toggle the emoji trigger on/off_\n`;
+      menu += `│\n`;
+      menu += `│  🗑️ *Deleted Messages*\n`;
       menu += `│\n`;
       menu += `│  ▸ *${pref}antidelete on/off*\n`;
-      menu += `│     _Recover deleted messages_\n`;
+      menu += `│     _Recover deleted msgs → (You) chat_\n`;
       menu += `│\n`;
       menu += `│  🤖 *Auto Features*\n`;
       menu += `│\n`;
@@ -280,6 +290,25 @@ export default {
       menu += `│\n`;
       menu += `│  ▸ *${pref}antispam on/off*\n`;
       menu += `│     _Anti-spam message filter_\n`;
+      menu += `│\n`;
+      menu += `│  🤖 *AI Auto-Reply*\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}autoai instructions <context>*\n`;
+      menu += `│     _Give AI context about yourself_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}autoai on/off*\n`;
+      menu += `│     _AI replies as you — natural conversation_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}autoreply <msg>*\n`;
+      menu += `│     _Static auto reply when busy_\n`;
+      menu += `│\n`;
+      menu += `│  📱 *Telegram*\n`;
+      menu += `│\n`;
+      menu += `│  ▸ Admin Bot: /start → /pair <phone>\n`;
+      menu += `│     _Get WhatsApp pairing code on Telegram_\n`;
+      menu += `│\n`;
+      menu += `│  ▸ Features Bot: /help\n`;
+      menu += `│     _YT • TikTok • FB • Weather • AI • more_\n`;
       menu += `│\n`;
       if (isSuperOwnerUser) {
         menu += `│  👑 *${pref}smenu*\n`;
