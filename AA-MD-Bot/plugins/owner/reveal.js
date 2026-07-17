@@ -83,7 +83,6 @@ export default {
         );
       }
       await handleManualReveal(msgId, sock, selfJid);
-      await react('✅');
       return;
     }
 
@@ -127,7 +126,6 @@ export default {
               await sock.sendMessage(selfJid, { image: buf, caption: cap, mimetype: extracted.mime }).catch(() => {});
             }
 
-            await react('✅');
             return;
           }
         } catch (_) {
@@ -151,7 +149,6 @@ export default {
         }
       }
       if (found) {
-        await react('✅');
         return;
       }
     } catch (_) {}
