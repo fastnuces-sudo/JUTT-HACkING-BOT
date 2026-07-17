@@ -9,7 +9,6 @@ export default {
   description: 'Set bot mode for this number: public (everyone) or private (only You)',
   category: 'owner',
   ownerOnly: true,
-  superOwnerOnly: true,
   async execute({ args, reply, sessionSettings }) {
     const mode    = args[0]?.toLowerCase();
     const current = sessionSettings.eff('botMode', 'public');
