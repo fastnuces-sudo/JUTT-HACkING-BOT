@@ -447,6 +447,78 @@ export function initTelegramFeatures() {
 
   const bot = new TelegramBot(TOKEN, { polling: true });
 
+  // ── Inline keyboards ──────────────────────────────────────────────────────────
+  const KB_START = {
+    inline_keyboard: [
+      [{ text: '🎵 Downloads',    callback_data: 'help_dl'     }, { text: '🤖 AI & Images',   callback_data: 'help_ai'   }],
+      [{ text: '🔍 Search & Info',callback_data: 'help_search' }, { text: '🌐 Utilities',      callback_data: 'help_util' }],
+      [{ text: '😄 Fun',          callback_data: 'help_fun'    }, { text: '📋 All Commands',   callback_data: 'help_all'  }],
+    ],
+  };
+  const KB_BACK_START = {
+    inline_keyboard: [[{ text: '« Back to Menu', callback_data: 'start_menu' }]],
+  };
+
+  const HELP_SECTIONS = {
+    help_dl: {
+      title: '🎵 Downloads',
+      text:
+        `┣ /play <i>song name or URL</i> — YouTube MP3\n` +
+        `┣ /video <i>title or URL</i> — YouTube MP4\n` +
+        `┣ /tiktok <i>url</i> — TikTok video\n` +
+        `┣ /ig <i>url</i> — Instagram reel/post\n` +
+        `┗ /fb <i>url</i> — Facebook video`,
+    },
+    help_ai: {
+      title: '🤖 AI & Image Generation',
+      text:
+        `┣ /ai <i>question</i> — Chat with AI (memory, multi-model)\n` +
+        `┃   /ai clear — Reset your chat history\n` +
+        `┗ /imagine <i>description</i> — Generate AI image\n` +
+        `    Flags: <code>--realistic</code>  <code>--anime</code>  <code>--fast</code>\n` +
+        `           <code>--portrait</code>   <code>--wide</code>`,
+    },
+    help_search: {
+      title: '🔍 Search & Info',
+      text:
+        `┣ /wiki <i>query</i> — Wikipedia article\n` +
+        `┣ /movie <i>title</i> — Movie details & rating\n` +
+        `┣ /anime <i>title</i> — Anime info (MAL)\n` +
+        `┣ /lyrics <i>song</i> — Song lyrics\n` +
+        `┣ /news <i>[topic]</i> — Latest news headlines\n` +
+        `┣ /crypto — Live Bitcoin, ETH & more\n` +
+        `┣ /github <i>username</i> — GitHub profile & repos\n` +
+        `┗ /urban <i>word</i> — Urban Dictionary definition`,
+    },
+    help_util: {
+      title: '🌐 Utilities',
+      text:
+        `┣ /weather <i>city</i> — Live weather & forecast\n` +
+        `┣ /translate <i>text</i> — Translate to English\n` +
+        `┃   <i>or: /translate ur: Hello → translate to Urdu</i>\n` +
+        `┣ /short <i>url</i> — Shorten a URL (TinyURL)\n` +
+        `┣ /ss <i>url</i> — Screenshot a website\n` +
+        `┗ /qr <i>text or URL</i> — Generate QR code`,
+    },
+    help_fun: {
+      title: '😄 Fun',
+      text:
+        `┣ /joke — Random programming/misc joke\n` +
+        `┣ /quote — Inspirational quote\n` +
+        `┗ /fact — Random interesting fact`,
+    },
+    help_all: {
+      title: '📋 All Commands',
+      text:
+        `🎵 <b>Downloads:</b> /play /video /tiktok /ig /fb\n` +
+        `🤖 <b>AI:</b> /ai /imagine\n` +
+        `🔍 <b>Search:</b> /wiki /movie /anime /lyrics /news /crypto /github /urban\n` +
+        `🌐 <b>Utils:</b> /weather /translate /short /ss /qr\n` +
+        `😄 <b>Fun:</b> /joke /quote /fact\n` +
+        `⚙️ <b>General:</b> /ping /id /help`,
+    },
+  };
+
   // ── /start ───────────────────────────────────────────────────────────────────
   bot.onText(/\/start/, (msg) => {
     const name = esc(msg.from?.first_name || 'there');
@@ -454,59 +526,46 @@ export function initTelegramFeatures() {
       `👋 <b>Hello, ${name}!</b>\n\n` +
       `🤖 <b>AA MD Bot — Telegram Features</b>\n${DIV}\n\n` +
       `Your WhatsApp bot's powers, right here on Telegram!\n\n` +
-      `🎵 Download YouTube, TikTok, Instagram & more\n` +
-      `🤖 Chat with AI, generate images\n` +
-      `🌐 Search, translate, get news & crypto\n` +
-      `🎬 Movies, anime, lyrics, weather & more\n\n` +
-      `📋 Type /help to see all commands.` +
-      FOOTER
+      `🎵 YouTube, TikTok, Instagram, Facebook downloads\n` +
+      `🤖 AI chat with memory + AI image generation\n` +
+      `🔍 Search, weather, movies, anime, lyrics & more\n` +
+      `🌐 Translate, URL shortener, QR codes & more\n\n` +
+      `<i>Choose a category below or type /help</i>` +
+      FOOTER,
+      { reply_markup: KB_START }
     );
   });
 
   // ── /help ────────────────────────────────────────────────────────────────────
   bot.onText(/\/help/, (msg) => {
     sendText(bot, msg.chat.id,
-      `📋 <b>AA MD Bot — All Commands</b>\n${DIV}\n\n` +
-
-      `🎵 <b>Downloads</b>\n` +
-      `┣ /play <i>song name or URL</i> — YouTube MP3\n` +
-      `┣ /video <i>title or URL</i> — YouTube MP4\n` +
-      `┣ /tiktok <i>url</i> — TikTok video\n` +
-      `┣ /ig <i>url</i> — Instagram reel/post\n` +
-      `┗ /fb <i>url</i> — Facebook video\n\n` +
-
-      `🤖 <b>AI & Generation</b>\n` +
-      `┣ /ai <i>question</i> — Chat with AI\n` +
-      `┗ /imagine <i>description</i> — Generate AI image\n\n` +
-
-      `🔍 <b>Search & Info</b>\n` +
-      `┣ /wiki <i>query</i> — Wikipedia\n` +
-      `┣ /movie <i>title</i> — Movie details\n` +
-      `┣ /anime <i>title</i> — Anime info\n` +
-      `┣ /lyrics <i>song</i> — Song lyrics\n` +
-      `┣ /news <i>[topic]</i> — Latest news\n` +
-      `┣ /crypto — Live crypto prices\n` +
-      `┣ /github <i>username</i> — GitHub profile\n` +
-      `┗ /urban <i>word</i> — Urban Dictionary\n\n` +
-
-      `🌐 <b>Utilities</b>\n` +
-      `┣ /weather <i>city</i> — Live weather\n` +
-      `┣ /translate <i>text</i> — Translate to English\n` +
-      `┃   <i>or: /translate ur: Hello → Urdu</i>\n` +
-      `┣ /short <i>url</i> — Shorten a URL\n` +
-      `┣ /ss <i>url</i> — Screenshot a website\n` +
-      `┗ /qr <i>text or URL</i> — Generate QR code\n\n` +
-
-      `😄 <b>Fun</b>\n` +
-      `┣ /joke — Random joke\n` +
-      `┣ /quote — Inspirational quote\n` +
-      `┗ /fact — Random interesting fact\n\n` +
-
-      `⚙️ <b>General</b>\n` +
-      `┣ /ping — Bot speed check\n` +
-      `┗ /id — Your Telegram info\n` +
-      FOOTER
+      `📋 <b>AA MD Bot — Command Menu</b>\n${DIV}\n\n` +
+      `Choose a category to see its commands:` +
+      FOOTER,
+      { reply_markup: KB_START }
     );
+  });
+
+  // ── Inline callback: help sections ───────────────────────────────────────────
+  bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id;
+    const msgId  = query.message.message_id;
+    await bot.answerCallbackQuery(query.id).catch(() => {});
+
+    if (query.data === 'start_menu') {
+      return edit(bot, chatId, msgId,
+        `📋 <b>AA MD Bot — Command Menu</b>\n${DIV}\n\nChoose a category:` + FOOTER,
+        { reply_markup: KB_START }
+      );
+    }
+
+    const section = HELP_SECTIONS[query.data];
+    if (section) {
+      return edit(bot, chatId, msgId,
+        `${section.title}\n${DIV}\n\n${section.text}` + FOOTER,
+        { reply_markup: KB_BACK_START }
+      );
+    }
   });
 
   // ── /ping ─────────────────────────────────────────────────────────────────────

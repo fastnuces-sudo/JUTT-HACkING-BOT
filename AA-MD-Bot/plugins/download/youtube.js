@@ -789,28 +789,9 @@ export default {
             ? buildVideoCaption(meta, botName)
             : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
 
-          // ── Fast path: try URL-direct first (like silva-md-bot approach) ────
-          // Race all API sources simultaneously for a direct URL — if one works
-          // we send it instantly without downloading the full file (fastest).
-          const directVideoUrl = await withTimeout(25000, firstSuccess([
-            tryGtechMp4Url(ytUrl),
-            tryFaaMp4Url(ytUrl),
-            tryNexrayMp4Url(ytUrl),
-            tryAagatzMp4Url(ytUrl),
-            tryDavidMp4Url(ytUrl),
-          ]));
-
-          if (directVideoUrl) {
-            try {
-              await sock.sendMessage(jid, { video: { url: directVideoUrl }, mimetype: 'video/mp4', caption: vcap }, { quoted: msg });
-              await react('✅');
-              break;
-            } catch {
-              // URL send failed (expired link, codec issue) — fall through to buffer download
-            }
-          }
-
-          // ── Fallback: full buffer download with re-encode ────────────────────
+          // Always download as buffer and transcode to H.264/AAC so WhatsApp
+          // can play it — raw CDN URLs often carry VP9/AV1/webm that WhatsApp
+          // silently refuses to play even though the file arrives correctly.
           const vdata = await downloadVideo(ytUrl);
           if (!vdata?.buffer?.length) {
             await react('❌');
