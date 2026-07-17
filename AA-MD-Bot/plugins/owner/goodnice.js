@@ -140,19 +140,13 @@ export default {
       );
     }
 
-    // ── .good / .nice — natural-looking reveal ──────────────────────────────
+    // ── .good / .nice — silent reveal to self-chat only ────────────────────
     const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
     const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
     if (!selfJid) return;
 
-    const response = command === 'good' ? 'Good 👍' : 'Nice! 👌';
-
-    // First: send the natural-looking reply (sender only sees this)
-    await sock.sendMessage(jid, { text: response }, { quoted: msg }).catch(() => {});
-
-    // Then: silently reveal viewonce to owner's self-chat
     const label = command === 'good' ? '.good' : '.nice';
     await doReveal(sock, msg, selfJid, label);
-    // No error shown — completely silent from sender's perspective
+    // Completely silent — no reply, no react
   },
 };
