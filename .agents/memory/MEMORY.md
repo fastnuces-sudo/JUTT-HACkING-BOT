@@ -11,5 +11,6 @@
 - [yt-dlp in downloader plugins](yt-dlp-social-downloads.md) — dl.js and ig.js now use execFile (not exec) for yt-dlp to avoid shell injection; ig.js uses reqId prefix to avoid concurrent download race; logo.js has 4-method fallback chain.
 - [Flash-Md-V3 new plugins](flash-md-v3-plugins.md) — logo/element/hack/love/disap/currency/privacy/botzip added; weather→wttr.in; ss→encodeURI; attp→local SVG+ffmpeg; archiver needs createRequire.
 - [Antidelete → self-chat](antidelete-selfchat.md) — group AND DM deleted msgs go to owner's (You) self-chat only; never re-posted to group.
+- [Telegram integration](telegram-integration.md) — two bots: TELEGRAM_BOT_TOKEN=admin/pairing, TELEGRAM_FEATURES_BOT_TOKEN=features; both started from index.js after sessions init.
 - [Emoji reveal requires prefix](viewonce-emoji-reveal.md) — trigger is now .🔥🔥🔥🔥 (prefix + 4 same emojis); bare 4-same-emoji no longer triggers.
 - [SuperOwnerOnly scope](per-session-settings.md) — devices/adddevice/deldevice/setprefix/mode/anticall/antispam/autoreact + all tools plugins are superOwnerOnly.

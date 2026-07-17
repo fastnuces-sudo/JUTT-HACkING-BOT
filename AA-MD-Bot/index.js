@@ -22,6 +22,8 @@ import {
 } from './lib/sessionManager.js';
 import config from './config.js';
 import { cleanTemp, formatDuration } from './lib/helper.js';
+import { initTelegramAdmin }    from './lib/telegramAdmin.js';
+import { initTelegramFeatures } from './lib/telegramFeatures.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const startTime = Date.now();
@@ -330,6 +332,23 @@ async function main() {
 
   logger.info('📡 Initializing WhatsApp sessions...');
   await initAllSessions();
+
+  // ── Telegram bots ─────────────────────────────────────────────────────────
+  try {
+    initTelegramAdmin({
+      createSession,
+      getAllSessions: () => getAllSessions(),
+      latestPairingCodes,
+      botEvents,
+    });
+  } catch (e) {
+    logger.warn({ err: e.message }, '📱 Telegram admin bot failed to start');
+  }
+  try {
+    initTelegramFeatures();
+  } catch (e) {
+    logger.warn({ err: e.message }, '🤖 Telegram features bot failed to start');
+  }
 
   setInterval(cleanTemp, 30 * 60 * 1000);
 
