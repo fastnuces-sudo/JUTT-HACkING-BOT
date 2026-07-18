@@ -726,18 +726,23 @@ a{text-decoration:none;color:inherit}
   .media-grid{grid-template-columns:1fr}
   .sets-grid{grid-template-columns:1fr}
   .hero-body{padding:14px 16px 18px}
-  #screen-connect{grid-template-columns:1fr}
-  .cnx-left{padding:32px 24px 28px;align-items:center;text-align:center;border-right:none;border-bottom:1px solid rgba(37,211,102,.08);justify-content:flex-start}
-  .cnx-brand-desc{max-width:none}
-  .cnx-feats{display:none}
-  .cnx-stats{justify-content:center}
-  .cnx-trust{justify-content:center}
-  .cnx-right{padding:28px 18px 40px}
-  .cnx-right-inner{max-width:none}
-  .cnx-card{padding:26px 20px 22px}
-  .cnx-cells-wrap{padding:18px 14px}
-  .cnx-cell{width:38px;height:50px;font-size:23px}
-  .cnx-cells{gap:5px}
+  /* Mobile: single column, hide left brand panel entirely */
+  #screen-connect{grid-template-columns:1fr;min-height:100vh}
+  .cnx-left{display:none}
+  .cnx-right{
+    padding:28px 20px 44px;min-height:100vh;
+    justify-content:flex-start;align-items:stretch;
+  }
+  .cnx-right-inner{max-width:none;width:100%}
+  .cnx-card{padding:26px 18px 22px}
+  .cnx-cells-wrap{padding:16px 12px}
+  .cnx-cell{width:36px;height:48px;font-size:22px}
+  .cnx-cells{gap:4px}
+  .cnx-prog{padding:8px 14px;gap:6px}
+  .cnx-step-l{display:none}   /* hide step labels on very small screens, keep numbers */
+  .btn-main{font-size:15px;padding:14px 20px}
+  .cnx-how-row{font-size:12.5px;gap:10px}
+  .cnx-how-n{width:24px;height:24px;font-size:11px;flex-shrink:0}
 }
 @media(max-width:380px){.isl-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -1375,7 +1380,7 @@ function cpCmd(txt, el) {
 }
 
 /* ── SCREENS ── */
-const SCREEN_DISPLAY={'screen-loading':'flex','screen-connect':'flex','screen-dash':'block'};
+const SCREEN_DISPLAY={'screen-loading':'flex','screen-connect':'grid','screen-dash':'block'};
 function show(id){
   ['screen-loading','screen-connect','screen-dash'].forEach(s=>{
     const el=document.getElementById(s);
