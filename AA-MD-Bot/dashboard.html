@@ -43,117 +43,150 @@ a{text-decoration:none;color:inherit}
 .load-txt{font-size:13px;color:var(--muted);letter-spacing:.04em}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ══ CONNECT SCREEN ══════════════════════════════════════════════════ */
+/* ══ CONNECT SCREEN (redesigned) ══════════════════════════════════════════ */
 #screen-connect{
   position:relative;z-index:1;width:100%;min-height:100vh;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:32px 16px 40px;
+  display:flex;align-items:center;justify-content:center;
+  padding:28px 20px 44px;
+}
+.cnx-wrap{
+  display:grid;grid-template-columns:1fr 1fr;gap:52px;
+  max-width:920px;width:100%;align-items:center;
 }
 
-/* Brand block */
-.cs-brand{display:flex;flex-direction:column;align-items:center;gap:0;margin-bottom:28px;text-align:center}
-.cs-brand-ring{
-  position:relative;width:84px;height:84px;margin-bottom:14px;
+/* ── Left: Brand panel ──────────────────────────────────────────────────── */
+.cnx-left{display:flex;flex-direction:column;gap:0}
+.cnx-logo-ring{
+  position:relative;width:78px;height:78px;margin-bottom:18px;flex-shrink:0;
 }
-.cs-brand-ring::before{
+.cnx-logo-ring::before{
   content:'';position:absolute;inset:-4px;border-radius:50%;
   background:conic-gradient(var(--green),var(--green2),transparent,var(--green));
   animation:ring-spin 4s linear infinite;
 }
 @keyframes ring-spin{to{transform:rotate(360deg)}}
-.cs-brand-logo{
+.cnx-logo-img{
   position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);
-  border-radius:50%;object-fit:cover;border:2px solid var(--card);
-  background:var(--card);z-index:1;
+  border-radius:50%;object-fit:cover;border:2px solid var(--card);background:var(--card);z-index:1;
 }
-.cs-brand-logo-fb{
+.cnx-logo-fb{
   position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);
   border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));
-  display:none;align-items:center;justify-content:center;
-  font-size:32px;border:2px solid var(--card);z-index:1;
+  display:none;align-items:center;justify-content:center;font-size:28px;
+  border:2px solid var(--card);z-index:1;
 }
-.cs-brand-name{
-  font-size:30px;font-weight:900;letter-spacing:-.4px;
+.cnx-brand-name{
+  font-size:36px;font-weight:900;letter-spacing:-.5px;line-height:1;margin-bottom:5px;
   background:linear-gradient(135deg,#2effa0 0%,var(--green) 50%,var(--green2) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
-.cs-brand-sub{font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:.03em}
-
-/* Feature pills */
-.cs-pills{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-top:14px;max-width:400px}
-.cs-pill{
+.cnx-brand-tag{font-size:12px;color:var(--muted);margin-bottom:14px}
+.cnx-brand-desc{
+  font-size:13.5px;color:rgba(200,220,240,.72);line-height:1.7;
+  margin-bottom:26px;max-width:340px;
+}
+/* Feature list */
+.cnx-feats{display:flex;flex-direction:column;gap:12px;margin-bottom:26px}
+.cnx-feat{display:flex;align-items:flex-start;gap:13px}
+.cnx-feat-ico{
+  width:38px;height:38px;border-radius:11px;flex-shrink:0;
+  background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.16);
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  box-shadow:0 2px 10px rgba(37,211,102,.06);
+}
+.cnx-feat-txt b{font-size:13px;font-weight:700;color:var(--text);display:block;margin-bottom:2px}
+.cnx-feat-txt span{font-size:11.5px;color:var(--muted);line-height:1.45;display:block}
+/* Trust row */
+.cnx-trust{display:flex;flex-wrap:wrap;gap:7px}
+.cnx-tb{
+  background:rgba(255,255,255,.03);border:1px solid var(--border2);
+  border-radius:20px;padding:5px 12px;font-size:10.5px;color:var(--muted2);
   display:flex;align-items:center;gap:5px;
-  background:rgba(37,211,102,.07);border:1px solid rgba(37,211,102,.15);
-  border-radius:50px;padding:5px 12px;font-size:11px;font-weight:600;
-  color:rgba(200,255,220,.75);white-space:nowrap;
 }
 
-/* Stats row */
-.cs-stats{
-  display:flex;justify-content:center;gap:0;
-  background:rgba(8,13,24,.6);border:1px solid var(--border2);
-  border-radius:14px;overflow:hidden;margin-bottom:22px;max-width:430px;width:100%;
-}
-.cs-stat{flex:1;padding:12px 8px;text-align:center;border-right:1px solid var(--border2)}
-.cs-stat:last-child{border-right:none}
-.cs-stat-n{font-size:17px;font-weight:900;color:var(--green);display:block}
-.cs-stat-l{font-size:9px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;display:block}
+/* ── Right: Card column ─────────────────────────────────────────────────── */
+.cnx-right{display:flex;flex-direction:column;gap:14px;width:100%}
 
-/* Main card */
-.cs-card{
-  background:linear-gradient(145deg,rgba(13,20,33,.97),rgba(8,13,24,.99));
+/* Progress steps */
+.cnx-prog{display:flex;align-items:center;justify-content:center;padding:0 8px}
+.cnx-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
+.cnx-step-n{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.04);border:2px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:var(--muted2);transition:all .35s;
+}
+.cnx-step-l{font-size:10px;font-weight:600;color:var(--muted2);letter-spacing:.02em;transition:color .35s;white-space:nowrap}
+.cnx-step.active .cnx-step-n{
+  background:rgba(37,211,102,.14);border-color:var(--green);color:var(--green);
+  box-shadow:0 0 0 5px rgba(37,211,102,.1);
+}
+.cnx-step.active .cnx-step-l{color:var(--green)}
+.cnx-step.done .cnx-step-n{
+  background:var(--green);border-color:var(--green);color:#000;font-size:14px;
+}
+.cnx-step.done .cnx-step-l{color:var(--green)}
+.cnx-step-line{
+  flex:1;height:2px;background:var(--border2);border-radius:2px;
+  margin:0 10px;margin-bottom:18px;transition:background .5s;min-width:24px;
+}
+.cnx-step-line.done{background:var(--green)}
+
+/* Card */
+.cnx-card{
+  background:linear-gradient(145deg,rgba(13,20,33,.98),rgba(8,13,24,.99));
   border:1px solid var(--border2);border-radius:24px;
-  padding:32px 28px 28px;width:100%;max-width:430px;
-  box-shadow:0 50px 120px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03),inset 0 1px 0 rgba(255,255,255,.04);
-  backdrop-filter:blur(24px);position:relative;overflow:hidden
+  padding:30px 28px 26px;
+  box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03),inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter:blur(24px);position:relative;overflow:hidden;
 }
-.cs-card::before{
+.cnx-card::before{
   content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent 0%,rgba(37,211,102,.6) 40%,rgba(18,140,126,.6) 70%,transparent 100%);
+  background:linear-gradient(90deg,transparent,rgba(37,211,102,.65) 40%,rgba(18,140,126,.65) 70%,transparent);
 }
-.cs-card::after{
+.cnx-card::after{
   content:'';position:absolute;top:0;left:-40%;width:180%;height:180%;
-  background:radial-gradient(ellipse at 50% -30%,rgba(37,211,102,.06),transparent 60%);
+  background:radial-gradient(ellipse at 50% -30%,rgba(37,211,102,.055),transparent 60%);
   pointer-events:none;
 }
+.cnx-card-title{
+  font-size:18px;font-weight:800;margin-bottom:5px;
+  display:flex;align-items:center;gap:8px;position:relative;z-index:1;
+}
+.cnx-card-sub{font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:20px;position:relative;z-index:1}
 
-.cs-title{font-size:18px;font-weight:800;margin-bottom:5px;display:flex;align-items:center;gap:8px;position:relative;z-index:1}
-.cs-sub{font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:20px;position:relative;z-index:1}
-
+/* Field */
 .field-lbl{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;display:block;position:relative;z-index:1}
 .field-wrap{position:relative;z-index:1}
 .field-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;opacity:.55}
 .field-inp{
   width:100%;background:rgba(5,8,18,.7);border:1.5px solid var(--border2);
   border-radius:13px;padding:13px 14px 13px 44px;
-  font-size:16px;color:var(--text);transition:border-color .2s,box-shadow .2s;
-  letter-spacing:.06em
+  font-size:16px;color:var(--text);transition:border-color .2s,box-shadow .2s;letter-spacing:.06em;
 }
 .field-inp:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(37,211,102,.1),inset 0 1px 0 rgba(37,211,102,.05)}
 .field-inp::placeholder{color:var(--muted2);font-size:14.5px;letter-spacing:0}
 .field-hint{font-size:11px;color:var(--muted2);margin-top:6px;line-height:1.55;position:relative;z-index:1}
-
-/* Step-by-step guide inside form */
-.cs-guide{
-  display:flex;flex-direction:column;gap:0;
-  margin-top:16px;background:rgba(37,211,102,.04);
-  border:1px solid rgba(37,211,102,.12);border-radius:13px;
-  overflow:hidden;position:relative;z-index:1;
+/* How-to guide */
+.cnx-how{
+  display:flex;flex-direction:column;margin-top:16px;
+  background:rgba(37,211,102,.04);border:1px solid rgba(37,211,102,.11);
+  border-radius:13px;overflow:hidden;position:relative;z-index:1;
 }
-.cs-guide-row{
+.cnx-how-row{
   display:flex;align-items:center;gap:11px;
-  padding:10px 14px;border-bottom:1px solid rgba(37,211,102,.07);
+  padding:9px 14px;border-bottom:1px solid rgba(37,211,102,.07);
 }
-.cs-guide-row:last-child{border-bottom:none}
-.cs-guide-n{
-  width:22px;height:22px;border-radius:50%;flex-shrink:0;
-  background:rgba(37,211,102,.13);border:1px solid rgba(37,211,102,.3);
+.cnx-how-row:last-child{border-bottom:none}
+.cnx-how-n{
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  background:rgba(37,211,102,.13);border:1px solid rgba(37,211,102,.28);
   display:flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:900;color:var(--green);
 }
-.cs-guide-t{font-size:12px;color:rgba(200,220,240,.7);line-height:1.5}
-.cs-guide-t strong{color:rgba(200,255,220,.85)}
-
+.cnx-how-row>span:last-child{font-size:11.5px;color:rgba(200,220,240,.7);line-height:1.5}
+.cnx-how-row strong{color:rgba(200,255,220,.85)}
+/* Buttons */
 .btn-main{
   width:100%;
   background:linear-gradient(135deg,#30f077 0%,#25d366 50%,#128c7e 100%);
@@ -169,79 +202,122 @@ a{text-decoration:none;color:inherit}
 }
 .btn-main:hover::before{left:100%}
 .btn-main:hover{transform:translateY(-2px);box-shadow:0 14px 44px rgba(37,211,102,.5)}
-.btn-main:active{transform:translateY(0);box-shadow:0 4px 16px rgba(37,211,102,.3)}
+.btn-main:active{transform:translateY(0)}
 .btn-main:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
-.cs-err{background:rgba(16,6,6,.8);border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:10px 14px;font-size:12.5px;color:#fca5a5;margin-top:14px;display:none;line-height:1.5;position:relative;z-index:1}
+.cs-err{
+  background:rgba(16,6,6,.8);border:1px solid rgba(239,68,68,.35);
+  border-radius:10px;padding:10px 14px;font-size:12.5px;color:#fca5a5;
+  margin-top:14px;display:none;line-height:1.5;position:relative;z-index:1;
+}
 .cs-err.show{display:block}
 
-/* Security badge row */
-.cs-trust{
-  display:flex;align-items:center;justify-content:center;gap:14px;
-  margin-top:16px;flex-wrap:wrap;position:relative;z-index:1;
+/* ── Code step ──────────────────────────────────────────────────────────── */
+.cnx-code-sub{font-size:12px;color:var(--muted);text-align:center;margin-bottom:20px;position:relative;z-index:1}
+.cnx-code-area{
+  display:flex;flex-direction:column;align-items:center;gap:18px;
+  position:relative;z-index:1;margin-bottom:16px;
 }
-.cs-trust-badge{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted2)}
-
-/* ── PAIRING CODE STEP ── */
-.pair-head{text-align:center;margin-bottom:20px;position:relative;z-index:1}
-.pair-head .cs-title{justify-content:center}
-.pair-head .pair-for{font-size:12px;color:var(--muted);margin-top:4px}
-
-.pair-box{
-  background:linear-gradient(145deg,#040811,#070d1a);
-  border:1.5px solid rgba(37,211,102,.22);border-radius:18px;
-  padding:26px 20px;text-align:center;margin-bottom:16px;
-  position:relative;overflow:hidden;z-index:1;
+/* 4+4 digit cells */
+.cnx-cells{
+  display:flex;align-items:center;gap:7px;
+  background:linear-gradient(160deg,#030710,#060c18);
+  border:1.5px solid rgba(37,211,102,.2);border-radius:20px;
+  padding:20px 22px;
+  box-shadow:inset 0 2px 14px rgba(0,0,0,.5),0 0 50px rgba(37,211,102,.05);
 }
-.pair-box::after{
-  content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse at 50% -10%,rgba(37,211,102,.1),transparent 65%);
-  pointer-events:none;
+.cnx-cell{
+  width:42px;height:54px;border-radius:11px;
+  background:rgba(37,211,102,.04);border:1.5px solid rgba(37,211,102,.16);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Courier New',monospace;font-size:26px;font-weight:900;
+  color:var(--muted2);transition:all .3s cubic-bezier(.34,1.56,.64,1);
+  user-select:none;
 }
-.pair-lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px}
-.pair-digits{
-  font-family:'Courier New',monospace;font-size:42px;font-weight:900;
-  letter-spacing:10px;color:var(--green);
-  text-shadow:0 0 30px rgba(37,211,102,.5);
-  min-height:52px;display:flex;align-items:center;justify-content:center;
-  margin-bottom:16px;position:relative;z-index:1;
+.cnx-cell.wait{animation:cell-idle 1.6s ease-in-out infinite}
+.cnx-cell.filled{
+  color:var(--green);background:rgba(37,211,102,.09);
+  border-color:rgba(37,211,102,.38);text-shadow:0 0 16px rgba(37,211,102,.55);
+  animation:cell-pop .35s cubic-bezier(.34,1.56,.64,1);
 }
-.pair-digits.wait{letter-spacing:4px;font-size:28px;opacity:.35;animation:blink-op 1.2s ease infinite}
-@keyframes blink-op{0%,100%{opacity:.35}50%{opacity:.65}}
-.btn-copy{
-  background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.28);
-  border-radius:10px;padding:8px 22px;font-size:13px;font-weight:700;
+@keyframes cell-idle{0%,100%{opacity:.3}50%{opacity:.55}}
+@keyframes cell-pop{0%{transform:scale(.82)}65%{transform:scale(1.1)}100%{transform:scale(1)}}
+.cnx-sep{font-size:24px;font-weight:900;color:rgba(37,211,102,.25);padding:0 2px;align-self:center;line-height:1}
+/* Timer */
+.cnx-timer{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);flex-shrink:0}
+.cnx-timer-svg-box{position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center}
+.cnx-timer-svg{width:38px;height:38px}
+.cnx-t-bg{fill:none;stroke:var(--border2);stroke-width:3.5}
+.cnx-t-fg{
+  fill:none;stroke:var(--green);stroke-width:3.5;stroke-linecap:round;
+  transform:rotate(-90deg);transform-origin:50% 50%;
+  transition:stroke-dasharray 1s linear,stroke .4s;
+}
+.cnx-t-fg.warn{stroke:var(--yellow)}
+.cnx-t-fg.danger{stroke:var(--red)}
+.cnx-timer-n{
+  position:absolute;font-size:11px;font-weight:900;color:var(--green);
+  transition:color .4s;pointer-events:none;
+}
+.cnx-timer-n.warn{color:var(--yellow)}
+.cnx-timer-n.danger{color:var(--red)}
+/* Copy + retry row */
+.cnx-action-row{display:grid;grid-template-columns:1fr auto;gap:8px;position:relative;z-index:1;margin-bottom:14px}
+.cnx-btn-copy{
+  background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.26);
+  border-radius:11px;padding:11px 20px;font-size:13px;font-weight:700;
   color:var(--green);transition:all .2s;
 }
-.btn-copy:hover{background:rgba(37,211,102,.2);transform:translateY(-1px)}
-.btn-copy.ok{background:rgba(37,211,102,.22);color:#fff}
+.cnx-btn-copy:hover{background:rgba(37,211,102,.19);transform:translateY(-1px)}
+.cnx-btn-copy.ok{background:rgba(37,211,102,.22);color:#fff;border-color:var(--green)}
+.cnx-btn-retry{
+  background:rgba(255,255,255,.04);border:1px solid var(--border2);
+  border-radius:11px;padding:11px 14px;font-size:12px;font-weight:600;
+  color:var(--muted);transition:all .2s;white-space:nowrap;
+}
+.cnx-btn-retry:hover{border-color:rgba(37,211,102,.35);color:var(--text)}
+/* Waiting dots */
+.cnx-waiting{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:11.5px;color:var(--muted);margin-bottom:14px;position:relative;z-index:1;
+}
+.cnx-wdot{
+  width:5px;height:5px;border-radius:50%;background:var(--yellow);flex-shrink:0;
+  animation:wd .9s ease-in-out infinite;
+}
+@keyframes wd{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-5px);opacity:1}}
 
-.steps-box{background:rgba(8,13,24,.5);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--muted);margin-bottom:14px;position:relative;z-index:1}
-.step-r{display:flex;align-items:flex-start;gap:10px;padding:4px 0}
-.step-n{width:20px;height:20px;border-radius:50%;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.28);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--green);flex-shrink:0;margin-top:1px}
-.step-r span{line-height:1.6}
-.step-r strong{color:var(--text)}
-.pair-waiting{display:flex;align-items:center;justify-content:center;gap:7px;font-size:12px;color:var(--muted);margin-bottom:14px;position:relative;z-index:1}
-.btn-back{width:100%;background:transparent;border:1px solid var(--border2);border-radius:10px;padding:10px;font-size:12px;color:var(--muted);transition:all .2s;position:relative;z-index:1}
-.btn-back:hover{border-color:var(--green);color:var(--text)}
-
-/* ── DONE STEP ── */
-.done-wrap{text-align:center;padding:18px 0;position:relative;z-index:1}
-.done-ico{font-size:64px;filter:drop-shadow(0 0 24px rgba(37,211,102,.7));margin-bottom:14px;animation:pop-in .5s cubic-bezier(.34,1.56,.64,1);display:block}
+/* ── Done step ──────────────────────────────────────────────────────────── */
+.cnx-done{text-align:center;padding:16px 0;position:relative;z-index:1}
+.cnx-done-ring{width:76px;height:76px;margin:0 auto 18px;animation:pop-in .5s cubic-bezier(.34,1.56,.64,1)}
 @keyframes pop-in{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
-.done-title{font-size:22px;font-weight:900;color:var(--green);margin-bottom:6px}
-.done-sub{font-size:13px;color:var(--muted)}
-.done-bar{width:60%;height:3px;background:rgba(37,211,102,.15);border-radius:99px;margin:14px auto 0;overflow:hidden}
-.done-bar-fill{height:100%;background:linear-gradient(90deg,var(--green2),var(--green));border-radius:99px;animation:bar-fill 1s ease forwards}
+.cnx-checkmark{width:76px;height:76px;display:block}
+.cnx-check-circle{
+  stroke:var(--green);stroke-width:2;fill:none;
+  stroke-dasharray:0 163;stroke-linecap:round;
+  animation:draw-circle .55s ease forwards;
+}
+@keyframes draw-circle{to{stroke-dasharray:163 0}}
+.cnx-check-path{
+  stroke:var(--green);stroke-width:3.5;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:0 45;
+  animation:draw-check .35s ease .55s forwards;
+}
+@keyframes draw-check{to{stroke-dasharray:45 0}}
+.cnx-done-title{font-size:22px;font-weight:900;color:var(--green);margin-bottom:6px}
+.cnx-done-sub{font-size:13px;color:var(--muted)}
+.cnx-done-bar{width:55%;height:3px;background:rgba(37,211,102,.12);border-radius:99px;margin:16px auto 0;overflow:hidden}
+.cnx-done-fill{height:100%;background:linear-gradient(90deg,var(--green2),var(--green));border-radius:99px;animation:bar-fill 1s ease forwards}
 @keyframes bar-fill{from{width:0}to{width:100%}}
 
-/* ── ATOMS ── */
+/* ── Shared atoms ───────────────────────────────────────────────────────── */
 .spin-sm{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px}
+@keyframes spin{to{transform:rotate(360deg)}}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .dot-g{background:var(--green);box-shadow:0 0 8px var(--green)}
-.dot-y{background:var(--yellow);animation:blink-y 1.4s infinite}
+.dot-y{background:var(--yellow)}
 .dot-r{background:var(--red)}
 .dot-gr{background:#374151}
-@keyframes blink-y{0%,100%{opacity:1}50%{opacity:.2}}
 .pulse-ring{width:9px;height:9px;border-radius:50%;background:var(--green);animation:pulse-r 2s infinite;flex-shrink:0}
 @keyframes pulse-r{0%{box-shadow:0 0 0 0 rgba(37,211,102,.6)}70%{box-shadow:0 0 0 10px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
@@ -553,8 +629,14 @@ a{text-decoration:none;color:inherit}
   .media-grid{grid-template-columns:1fr}
   .sets-grid{grid-template-columns:1fr}
   .hero-body{padding:14px 16px 18px}
-  .cs-card{padding:26px 22px}
-  .pair-digits{font-size:36px;letter-spacing:8px}
+  .cnx-wrap{grid-template-columns:1fr;gap:24px}
+  .cnx-left{align-items:center;text-align:center}
+  .cnx-brand-desc{max-width:none;text-align:center}
+  .cnx-feats{display:none}
+  .cnx-trust{justify-content:center}
+  .cnx-card{padding:26px 20px 22px}
+  .cnx-cells{padding:16px 14px;gap:5px}
+  .cnx-cell{width:38px;height:48px;font-size:22px}
 }
 @media(max-width:380px){.isl-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -576,108 +658,171 @@ a{text-decoration:none;color:inherit}
 
 <!-- ════ CONNECT SCREEN ════ -->
 <div id="screen-connect" style="display:none">
+  <div class="cnx-wrap">
 
-  <!-- ── Brand ── -->
-  <div class="cs-brand">
-    <div class="cs-brand-ring" id="cs-brand-ring">
-      <picture>
-        <source srcset="/logo.webp" type="image/webp">
-        <img src="/logo.jpeg" alt="AA MD Bot Logo" class="cs-brand-logo"
-             width="76" height="76" fetchpriority="high"
-             onerror="this.style.display='none';document.getElementById('cs-logo-fb').style.display='flex'">
-      </picture>
-      <div class="cs-brand-logo-fb" id="cs-logo-fb">🤖</div>
-    </div>
-    <div class="cs-brand-name">AA MD Bot</div>
-    <div class="cs-brand-sub">by Ahsan Ali Wadani · AA Mods</div>
-    <div class="cs-pills">
-      <span class="cs-pill">⚡ 185+ Commands</span>
-      <span class="cs-pill">☪️ Islamic 60+</span>
-      <span class="cs-pill">🤖 AI Chat</span>
-      <span class="cs-pill">👁️ View-Once</span>
-      <span class="cs-pill">🎵 YouTube</span>
-      <span class="cs-pill">🎮 Games</span>
-    </div>
-  </div>
-
-  <!-- ── Stats strip ── -->
-  <div class="cs-stats">
-    <div class="cs-stat"><span class="cs-stat-n">185+</span><span class="cs-stat-l">Commands</span></div>
-    <div class="cs-stat"><span class="cs-stat-n">60+</span><span class="cs-stat-l">Islamic</span></div>
-    <div class="cs-stat"><span class="cs-stat-n">AI</span><span class="cs-stat-l">Powered</span></div>
-    <div class="cs-stat"><span class="cs-stat-n">MD</span><span class="cs-stat-l">Multi-Device</span></div>
-    <div class="cs-stat"><span class="cs-stat-n">Free</span><span class="cs-stat-l">Always</span></div>
-  </div>
-
-  <!-- ── Card ── -->
-  <div class="cs-card">
-
-    <!-- FORM step -->
-    <div id="cs-form">
-      <div class="cs-title">🔑 Connect WhatsApp</div>
-      <div class="cs-sub">Enter your number with country code to get an 8-digit pairing code — no QR scan required.</div>
-
-      <label class="field-lbl" for="cs-phone">WhatsApp Number</label>
-      <div class="field-wrap">
-        <span class="field-ico">📱</span>
-        <input class="field-inp" id="cs-phone" type="tel" placeholder="923001234567"
-               maxlength="15" autocomplete="tel" oninput="this.value=this.value.replace(/\D/g,'')"
-               onkeydown="if(event.key==='Enter')csConnect()">
+    <!-- ── LEFT: Brand panel ── -->
+    <div class="cnx-left">
+      <div class="cnx-logo-ring">
+        <picture>
+          <source srcset="/logo.webp" type="image/webp">
+          <img src="/logo.jpeg" alt="AA MD Bot" class="cnx-logo-img" width="70" height="70" fetchpriority="high"
+               onerror="this.style.display='none';document.getElementById('cnx-logo-fb').style.display='flex'">
+        </picture>
+        <div class="cnx-logo-fb" id="cnx-logo-fb">🤖</div>
       </div>
-      <p class="field-hint">Include country code, no + or spaces. Example: <strong style="color:var(--text)">923001234567</strong></p>
+      <div class="cnx-brand-name">AA MD Bot</div>
+      <div class="cnx-brand-tag">by Ahsan Ali Wadani · AA Mods</div>
+      <p class="cnx-brand-desc">The most powerful WhatsApp bot — 185+ commands, AI chat, 60+ Islamic tools, music downloads &amp; much more.</p>
 
-      <div class="cs-guide">
-        <div class="cs-guide-row"><span class="cs-guide-n">1</span><span class="cs-guide-t">Open <strong>WhatsApp</strong> on your phone</span></div>
-        <div class="cs-guide-row"><span class="cs-guide-n">2</span><span class="cs-guide-t">Tap <strong>⋮ Menu → Linked Devices → Link a Device</strong></span></div>
-        <div class="cs-guide-row"><span class="cs-guide-n">3</span><span class="cs-guide-t">Tap <strong>"Link with phone number instead"</strong></span></div>
-        <div class="cs-guide-row"><span class="cs-guide-n">4</span><span class="cs-guide-t">Enter the 8-digit code shown here</span></div>
+      <div class="cnx-feats">
+        <div class="cnx-feat">
+          <div class="cnx-feat-ico">🤖</div>
+          <div class="cnx-feat-txt"><b>AI Chat &amp; Auto-Reply</b><span>Smart AI that chats like a real person</span></div>
+        </div>
+        <div class="cnx-feat">
+          <div class="cnx-feat-ico">🎵</div>
+          <div class="cnx-feat-txt"><b>Music &amp; Video Downloads</b><span>YouTube, TikTok, Instagram &amp; more</span></div>
+        </div>
+        <div class="cnx-feat">
+          <div class="cnx-feat-ico">☪️</div>
+          <div class="cnx-feat-txt"><b>60+ Islamic Commands</b><span>Quran, Hadith, Prayer times &amp; Duas</span></div>
+        </div>
+        <div class="cnx-feat">
+          <div class="cnx-feat-ico">👁️</div>
+          <div class="cnx-feat-txt"><b>View-Once Reveal</b><span>Auto-save hidden photos, videos &amp; voice</span></div>
+        </div>
+        <div class="cnx-feat">
+          <div class="cnx-feat-ico">⚙️</div>
+          <div class="cnx-feat-txt"><b>185+ Commands</b><span>Games, stickers, tools, search &amp; more</span></div>
+        </div>
       </div>
 
-      <div class="cs-err" id="cs-err"></div>
-      <button class="btn-main" id="cs-btn" onclick="csConnect()">🔗 Get Pairing Code</button>
-
-      <div class="cs-trust">
-        <span class="cs-trust-badge">🔒 End-to-End Encrypted</span>
-        <span class="cs-trust-badge">🛡️ No password needed</span>
-        <span class="cs-trust-badge">📵 No QR scan</span>
+      <div class="cnx-trust">
+        <span class="cnx-tb">🔒 E2E Encrypted</span>
+        <span class="cnx-tb">📵 No QR needed</span>
+        <span class="cnx-tb">⚡ Instant connect</span>
+        <span class="cnx-tb">🆓 Always free</span>
       </div>
     </div>
 
-    <!-- CODE step -->
-    <div id="cs-code" style="display:none">
-      <div class="pair-head">
-        <div class="cs-title" style="justify-content:center">📲 Your Pairing Code</div>
-        <div class="pair-for" id="pair-for-num">Enter this code in WhatsApp on your phone</div>
+    <!-- ── RIGHT: Card ── -->
+    <div class="cnx-right">
+
+      <!-- Progress steps -->
+      <div class="cnx-prog" id="cnx-prog">
+        <div class="cnx-step active" id="prog-step-1">
+          <div class="cnx-step-n" id="prog-n-1">1</div>
+          <div class="cnx-step-l">Enter number</div>
+        </div>
+        <div class="cnx-step-line" id="prog-line-1"></div>
+        <div class="cnx-step" id="prog-step-2">
+          <div class="cnx-step-n" id="prog-n-2">2</div>
+          <div class="cnx-step-l">Get code</div>
+        </div>
+        <div class="cnx-step-line" id="prog-line-2"></div>
+        <div class="cnx-step" id="prog-step-3">
+          <div class="cnx-step-n" id="prog-n-3">3</div>
+          <div class="cnx-step-l">Connected</div>
+        </div>
       </div>
 
-      <div class="pair-box">
-        <div class="pair-lbl">8-digit pairing code</div>
-        <div class="pair-digits wait" id="pair-num">⌛</div>
-        <button class="btn-copy" id="pair-copy-btn" onclick="pairCopy()">📋 Copy Code</button>
-      </div>
+      <!-- Card -->
+      <div class="cnx-card">
 
-      <div class="steps-box">
-        <div class="step-r"><span class="step-n">1</span><span>Open <strong>WhatsApp</strong> on your phone</span></div>
-        <div class="step-r"><span class="step-n">2</span><span>Tap <strong>⋮ Menu → Linked Devices → Link a Device</strong></span></div>
-        <div class="step-r"><span class="step-n">3</span><span>Tap <strong>"Link with phone number instead"</strong></span></div>
-        <div class="step-r"><span class="step-n">4</span><span>Type the 8-digit code shown above exactly</span></div>
-      </div>
+        <!-- STEP 1: Form -->
+        <div id="cs-form">
+          <div class="cnx-card-title">🔑 Connect WhatsApp</div>
+          <div class="cnx-card-sub">Enter your number with country code to get an 8-digit pairing code — no QR scan needed.</div>
 
-      <div class="pair-waiting"><span class="dot dot-y" style="animation:blink-op 1s ease infinite"></span> Waiting for you to enter the code…</div>
-      <button class="btn-back" onclick="csReset()">← Try a different number</button>
-    </div>
+          <label class="field-lbl" for="cs-phone">WhatsApp Number</label>
+          <div class="field-wrap">
+            <span class="field-ico">📱</span>
+            <input class="field-inp" id="cs-phone" type="tel" placeholder="923001234567"
+                   maxlength="15" autocomplete="tel" oninput="this.value=this.value.replace(/\D/g,'')"
+                   onkeydown="if(event.key==='Enter')csConnect()">
+          </div>
+          <p class="field-hint">Country code + number, no + or spaces · <strong style="color:var(--text)">923001234567</strong></p>
 
-    <!-- DONE step -->
-    <div id="cs-done" style="display:none">
-      <div class="done-wrap">
-        <span class="done-ico">✅</span>
-        <div class="done-title">Connected!</div>
-        <div class="done-sub">Loading your dashboard…</div>
-        <div class="done-bar"><div class="done-bar-fill"></div></div>
-      </div>
-    </div>
+          <div class="cnx-how">
+            <div class="cnx-how-row"><span class="cnx-how-n">1</span><span>Open <strong>WhatsApp</strong> on your phone</span></div>
+            <div class="cnx-how-row"><span class="cnx-how-n">2</span><span>Tap <strong>⋮ Menu → Linked Devices → Link a Device</strong></span></div>
+            <div class="cnx-how-row"><span class="cnx-how-n">3</span><span>Choose <strong>"Link with phone number instead"</strong></span></div>
+            <div class="cnx-how-row"><span class="cnx-how-n">4</span><span>Type the 8-digit code shown on this screen</span></div>
+          </div>
 
-  </div><!-- /cs-card -->
+          <div class="cs-err" id="cs-err"></div>
+          <button class="btn-main" id="cs-btn" onclick="csConnect()">🔗 Get Pairing Code</button>
+        </div>
+
+        <!-- STEP 2: Code -->
+        <div id="cs-code" style="display:none">
+          <div class="cnx-card-title" style="justify-content:center">📲 Your Pairing Code</div>
+          <div class="cnx-code-sub" id="pair-for-num">Enter this code in WhatsApp on your phone</div>
+
+          <div class="cnx-code-area">
+            <!-- 4 + 4 cells -->
+            <div class="cnx-cells">
+              <div class="cnx-cell wait" id="cnx-cell-0">·</div>
+              <div class="cnx-cell wait" id="cnx-cell-1">·</div>
+              <div class="cnx-cell wait" id="cnx-cell-2">·</div>
+              <div class="cnx-cell wait" id="cnx-cell-3">·</div>
+              <div class="cnx-sep">—</div>
+              <div class="cnx-cell wait" id="cnx-cell-4">·</div>
+              <div class="cnx-cell wait" id="cnx-cell-5">·</div>
+              <div class="cnx-cell wait" id="cnx-cell-6">·</div>
+              <div class="cnx-cell wait" id="cnx-cell-7">·</div>
+            </div>
+            <!-- Countdown timer (shown after code arrives) -->
+            <div class="cnx-timer" id="cnx-timer" style="display:none">
+              <div class="cnx-timer-svg-box">
+                <svg class="cnx-timer-svg" viewBox="0 0 38 38">
+                  <circle class="cnx-t-bg" cx="19" cy="19" r="16"/>
+                  <circle class="cnx-t-fg" id="cnx-t-fg" cx="19" cy="19" r="16"
+                          stroke-dasharray="100.5 100.5"/>
+                </svg>
+                <span class="cnx-timer-n" id="cnx-timer-n">90</span>
+              </div>
+              <span id="cnx-timer-label">sec remaining</span>
+            </div>
+          </div>
+
+          <div class="cnx-action-row">
+            <button class="cnx-btn-copy" id="pair-copy-btn" onclick="pairCopy()">📋 Copy Code</button>
+            <button class="cnx-btn-retry" onclick="csReset()">🔄 New Code</button>
+          </div>
+
+          <div class="cnx-waiting">
+            <span class="cnx-wdot"></span>
+            <span class="cnx-wdot" style="animation-delay:.22s"></span>
+            <span class="cnx-wdot" style="animation-delay:.44s"></span>
+            <span>Waiting for you to enter the code in WhatsApp…</span>
+          </div>
+
+          <div class="cnx-how" style="font-size:11.5px">
+            <div class="cnx-how-row"><span class="cnx-how-n">1</span><span>Open <strong>WhatsApp</strong> → Settings → Linked Devices</span></div>
+            <div class="cnx-how-row"><span class="cnx-how-n">2</span><span>Tap <strong>Link a Device → Link with phone number</strong></span></div>
+            <div class="cnx-how-row"><span class="cnx-how-n">3</span><span>Type the 8-digit code shown above exactly</span></div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Done -->
+        <div id="cs-done" style="display:none">
+          <div class="cnx-done">
+            <div class="cnx-done-ring">
+              <svg class="cnx-checkmark" viewBox="0 0 52 52">
+                <circle class="cnx-check-circle" cx="26" cy="26" r="25"/>
+                <path class="cnx-check-path" d="M14 27l8 8 16-16"/>
+              </svg>
+            </div>
+            <div class="cnx-done-title">Connected!</div>
+            <div class="cnx-done-sub">Loading your dashboard…</div>
+            <div class="cnx-done-bar"><div class="cnx-done-fill"></div></div>
+          </div>
+        </div>
+
+      </div><!-- /cnx-card -->
+    </div><!-- /cnx-right -->
+  </div><!-- /cnx-wrap -->
 </div><!-- /screen-connect -->
 
 <!-- ════ DASHBOARD ════ -->
@@ -1200,31 +1345,105 @@ function doSearch(v){
 }
 
 /* ── CONNECT FLOW ── */
-let _phone='', _sessId='', _codePoll=null, _statusPoll=null;
+let _phone='', _sessId='', _codePoll=null, _statusPoll=null, _timerInt=null, _pairCode='';
+
+/* Progress bar: step 1 = form, 2 = code, 3 = done */
+function setProgress(n){
+  for(let i=1;i<=3;i++){
+    const s=document.getElementById('prog-step-'+i);
+    const nb=document.getElementById('prog-n-'+i);
+    if(!s) continue;
+    if(i<n){s.className='cnx-step done';if(nb)nb.textContent='✓';}
+    else if(i===n){s.className='cnx-step active';if(nb)nb.textContent=String(i);}
+    else{s.className='cnx-step';if(nb)nb.textContent=String(i);}
+    if(i<3){const ln=document.getElementById('prog-line-'+i);if(ln)ln.className='cnx-step-line'+(i<n?' done':'');}
+  }
+}
+
+/* Fill 8 digit-cells one by one with a small cascade delay */
+function setCodeCells(code){
+  const raw=code.replace(/-/g,'').slice(0,8);
+  raw.split('').forEach((ch,i)=>{
+    setTimeout(()=>{
+      const el=document.getElementById('cnx-cell-'+i);
+      if(!el) return;
+      el.textContent=ch;
+      el.classList.remove('wait');
+      el.classList.add('filled');
+    }, i*60);
+  });
+}
+
+/* Reset all cells to waiting state */
+function resetCells(){
+  for(let i=0;i<8;i++){
+    const el=document.getElementById('cnx-cell-'+i);
+    if(el){el.textContent='·';el.className='cnx-cell wait';}
+  }
+}
+
+/* Countdown timer ring — CIRC ≈ 100.5 for r=16 */
+const CIRC=100.5;
+function startTimer(sec){
+  clearInterval(_timerInt);
+  const wrap=document.getElementById('cnx-timer');
+  const fg=document.getElementById('cnx-t-fg');
+  const num=document.getElementById('cnx-timer-n');
+  const lbl=document.getElementById('cnx-timer-label');
+  if(!wrap||!fg||!num) return;
+  wrap.style.display='flex';
+  let left=sec;
+  const update=()=>{
+    const pct=left/sec;
+    fg.setAttribute('stroke-dasharray',`${pct*CIRC} ${CIRC}`);
+    num.textContent=left;
+    fg.className='cnx-t-fg'+(left<=10?' danger':left<=20?' warn':'');
+    num.className='cnx-timer-n'+(left<=10?' danger':left<=20?' warn':'');
+    if(lbl) lbl.textContent=left<=0?'Code expired — request new':'sec remaining';
+    if(left<=0){clearInterval(_timerInt);return;}
+    left--;
+  };
+  update();
+  _timerInt=setInterval(update,1000);
+}
+function stopTimer(){
+  clearInterval(_timerInt);
+  const w=document.getElementById('cnx-timer');
+  if(w) w.style.display='none';
+}
 
 function csStep(s){
   ['cs-form','cs-code','cs-done'].forEach(id=>{
-    document.getElementById(id).style.display=id===s?'':id==='cs-form'&&s==='cs-form'?'':'none';
     document.getElementById(id).style.display=id===s?'block':'none';
   });
+  if(s==='cs-form') setProgress(1);
+  else if(s==='cs-code') setProgress(2);
+  else if(s==='cs-done') setProgress(3);
 }
-function csErr(m){const e=document.getElementById('cs-err');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),6000);}
+function csErr(m){const e=document.getElementById('cs-err');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),7000);}
 function csReset(){
-  clearInterval(_codePoll);clearInterval(_statusPoll);
-  _sessId='';_phone='';
+  clearInterval(_codePoll);clearInterval(_statusPoll);stopTimer();
+  _sessId='';_phone='';_pairCode='';
   csStep('cs-form');
+  resetCells();
   const b=document.getElementById('cs-btn');
-  if(b){b.disabled=false;b.textContent='Get Pairing Code →';}
-  const p=document.getElementById('pair-num');
-  if(p){p.textContent='⌛';p.className='pair-digits wait';}
+  if(b){b.disabled=false;b.innerHTML='🔗 Get Pairing Code';}
 }
 function pairCopy(){
-  const raw=(document.getElementById('pair-num')?.textContent||'').replace(/-/g,'');
-  if(!raw||raw==='⌛') return;
+  const raw=_pairCode.replace(/-/g,'');
+  if(!raw) return;
   navigator.clipboard.writeText(raw).catch(()=>{});
   const b=document.getElementById('pair-copy-btn');
+  if(!b) return;
   b.textContent='✅ Copied!';b.classList.add('ok');
-  setTimeout(()=>{b.textContent='📋 Copy Code';b.classList.remove('ok');},2000);
+  setTimeout(()=>{b.textContent='📋 Copy Code';b.classList.remove('ok');},2200);
+}
+function applyCode(code){
+  if(!code) return;
+  _pairCode=code;
+  setCodeCells(code);
+  clearInterval(_codePoll);
+  startTimer(90);
 }
 function startCodePoll(){
   clearInterval(_codePoll);
@@ -1233,11 +1452,7 @@ function startCodePoll(){
     try{
       const r=await fetch('/api/pairing-code?session='+encodeURIComponent(_sessId));
       const d=await r.json();
-      if(d.code){
-        const el=document.getElementById('pair-num');
-        if(el){const raw=d.code.replace(/-/g,'');el.textContent=raw.length===8?raw.slice(0,4)+'-'+raw.slice(4):d.code;el.className='pair-digits';}
-        clearInterval(_codePoll);
-      }
+      if(d.code) applyCode(d.code);
     }catch{}
   },900);
 }
@@ -1248,7 +1463,7 @@ function startStatusPoll(){
       const r=await fetch('/api/stats');
       const d=await r.json();
       const s=(d.sessions||[]).find(s=>s.id===_sessId&&s.status==='connected');
-      if(s){clearInterval(_statusPoll);clearInterval(_codePoll);csStep('cs-done');setTimeout(showDash,1100);}
+      if(s){clearInterval(_statusPoll);clearInterval(_codePoll);stopTimer();csStep('cs-done');setTimeout(showDash,1100);}
     }catch{}
   },1800);
 }
@@ -1257,18 +1472,19 @@ async function csConnect(){
   const phone=document.getElementById('cs-phone').value.replace(/\D/g,'');
   if(phone.length<7||phone.length>15){csErr('Enter a valid number with country code — e.g. 923001234567');return;}
   btn.disabled=true;btn.innerHTML='<span class="spin-sm"></span>Requesting…';
-  _phone=phone;_sessId=phone;
+  _phone=phone;_sessId=phone;_pairCode='';
   try{
     const r=await fetch('/api/session/create',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({sessionId:phone,method:'pairing',phoneNumber:phone})
     });
     const d=await r.json();
-    if(!d.ok){csErr('❌ '+(d.error||'Server error'));btn.disabled=false;btn.textContent='Get Pairing Code →';return;}
-    btn.disabled=false;btn.textContent='Get Pairing Code →';
+    if(!d.ok){csErr('❌ '+(d.error||'Server error'));btn.disabled=false;btn.innerHTML='🔗 Get Pairing Code';return;}
+    btn.disabled=false;btn.innerHTML='🔗 Get Pairing Code';
     csStep('cs-code');
+    resetCells();
     startCodePoll();startStatusPoll();
-  }catch(e){csErr('❌ '+e.message);btn.disabled=false;btn.textContent='Get Pairing Code →';}
+  }catch(e){csErr('❌ '+e.message);btn.disabled=false;btn.innerHTML='🔗 Get Pairing Code';}
 }
 
 /* ── SSE ── */
@@ -1278,16 +1494,13 @@ function connectSSE(){
   sse=new EventSource('/api/events');
   sse.addEventListener('pairingCode',e=>{
     const {sessionId,code}=JSON.parse(e.data);
-    if(!_sessId||_sessId===sessionId){
-      const el=document.getElementById('pair-num');
-      if(el&&code){const raw=code.replace(/-/g,'');el.textContent=raw.length===8?raw.slice(0,4)+'-'+raw.slice(4):code;el.className='pair-digits';clearInterval(_codePoll);}
-    }
+    if((!_sessId||_sessId===sessionId)&&code) applyCode(code);
   });
   sse.addEventListener('status',e=>{
     const d=JSON.parse(e.data);
     if(d.status==='connected'){
       if(document.getElementById('screen-connect').style.display!=='none'&&(!_sessId||_sessId===d.sessionId)){
-        clearInterval(_statusPoll);clearInterval(_codePoll);csStep('cs-done');setTimeout(showDash,1000);
+        clearInterval(_statusPoll);clearInterval(_codePoll);stopTimer();csStep('cs-done');setTimeout(showDash,1000);
       }
       loadStats();
     }
