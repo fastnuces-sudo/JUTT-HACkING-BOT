@@ -790,8 +790,8 @@ a{text-decoration:none;color:inherit}
 
   /* ── 9. SEARCH ────────────────────────────── */
   .search-wrap{margin-bottom:18px}
-  .search-inp{font-size:13px;padding:12px 40px 12px 40px;border-radius:11px}
-  .search-inp::placeholder{font-size:12px}
+  .search-inp{font-size:16px;padding:12px 40px 12px 40px;border-radius:11px}
+  .search-inp::placeholder{font-size:13px}
 
   /* ── 10. COMMAND QUICK GRID ───────────────── */
   .cmd-card{padding:10px 12px;border-radius:10px}
@@ -904,19 +904,56 @@ a{text-decoration:none;color:inherit}
   .cnx-trust{justify-content:center;flex-wrap:wrap;gap:5px}
   .cnx-tb{font-size:10px;padding:4px 8px}
 
-  /* Right panel / pairing card */
-  .cnx-right{padding:18px 14px 44px;justify-content:flex-start;align-items:stretch}
+  /* ── Right panel / pairing card ── */
+  .cnx-right{padding:16px 12px 40px;justify-content:flex-start;align-items:stretch}
   .cnx-right-inner{max-width:none;width:100%}
-  .cnx-card{padding:20px 14px 18px}
-  .cnx-cells-wrap{padding:12px 8px}
-  .cnx-cell{width:34px;height:46px;font-size:21px;border-radius:10px}
-  .cnx-cells{gap:4px}
-  .cnx-prog{padding:8px 10px;gap:5px}
-  .cnx-step-l{font-size:10px}
-  .btn-main{font-size:15px;padding:13px 16px}
-  .cnx-btn-copy{font-size:13px;padding:13px 16px}
-  .cnx-how-row{font-size:12px;gap:9px}
-  .cnx-how-n{width:22px;height:22px;font-size:10px;flex-shrink:0}
+
+  /* Stepper: hide text labels on mobile, show numbers only */
+  .cnx-prog{padding:6px 8px;gap:3px;border-radius:40px}
+  .cnx-step{padding:7px 5px;gap:0;flex:1}
+  .cnx-step-l{display:none}             /* ← KEY FIX: hides "Enter number" etc */
+  .cnx-step-n{width:20px;height:20px;font-size:10px}
+  .cnx-step-line{width:12px}
+
+  /* Card */
+  .cnx-card{padding:20px 12px 18px;border-radius:18px}
+  .cnx-card-title{font-size:17px;gap:7px;margin-bottom:5px}
+  .cnx-card-sub{font-size:11.5px;margin-bottom:16px;line-height:1.6}
+
+  /* Number input — 16px prevents iOS auto-zoom */
+  .field-inp{font-size:16px;padding:13px 12px 13px 52px;border-radius:12px;letter-spacing:.06em}
+  .field-hint{font-size:10.5px}
+
+  /* Pairing code cells
+     Calculation for 360px phone:
+     right-panel 12px×2=24, card 12px×2=24, cells-wrap 10px×2=20
+     Available: 360-24-24-20 = 292px
+     8 cells×30 + 4 gaps×3 + sep~14px = 240+12+14 = 266px ✓ fits */
+  .cnx-cells-wrap{padding:14px 10px;border-radius:16px}
+  .cnx-cells{gap:3px}
+  .cnx-cell{width:30px;height:44px;font-size:18px;border-radius:9px}
+  .cnx-sep{font-size:14px;padding:0 1px}
+
+  /* Timer */
+  .cnx-timer{font-size:11px;gap:7px}
+
+  /* Buttons */
+  .btn-main{font-size:14px;padding:13px 14px;margin-top:16px;border-radius:12px}
+  .cnx-btn-copy{font-size:12.5px;padding:12px 14px;border-radius:12px}
+  .cnx-btn-retry{font-size:11px;padding:9px 12px;border-radius:10px}
+
+  /* How-to steps */
+  .cnx-how{margin-top:12px;border-radius:11px}
+  .cnx-how-row{padding:8px 11px;gap:8px}
+  .cnx-how-row>span:last-child{font-size:11px;line-height:1.45}
+  .cnx-how-n{width:19px;height:19px;font-size:9px;flex-shrink:0}
+
+  /* Done screen */
+  .cnx-done{padding:14px 0}
+  .cnx-done-ring{width:70px;height:70px;margin-bottom:16px}
+  .cnx-checkmark{width:70px;height:70px}
+  .cnx-done-title{font-size:22px}
+  .cnx-done-sub{font-size:12.5px}
 }
 
 /* ══════════════════════════════════════════════
@@ -936,21 +973,31 @@ a{text-decoration:none;color:inherit}
   .sc{padding:10px 9px}
   .sc-val{font-size:15px!important}
 
-  /* session card single-col-ish */
+  /* session card */
   .sess-card{gap:8px;padding:11px 10px}
   .sess-av{width:36px;height:36px;font-size:16px}
-  .sess-right{display:none} /* hide LIVE pill on very small screens — redundant */
+  .sess-right{display:none}
 
-  /* pairing cells smallest */
-  .cnx-cell{width:30px;height:42px;font-size:18px;border-radius:8px}
-  .cnx-cells{gap:3px}
+  /* pairing cells — 320px phone:
+     right 12px×2=24, card 10px×2=20, wrap 6px×2=12
+     Available: 320-24-20-12 = 264px
+     8×25 + 4×2 + 12 = 200+8+12 = 220px ✓ */
+  .cnx-card{padding:16px 10px 14px}
+  .cnx-cells-wrap{padding:10px 6px;border-radius:13px}
+  .cnx-cell{width:25px;height:36px;font-size:14px;border-radius:7px}
+  .cnx-cells{gap:2px}
+  .cnx-sep{font-size:12px;padding:0 1px}
+  .cnx-card-title{font-size:15px}
+  .cnx-card-sub{font-size:11px;margin-bottom:14px}
+  .field-inp{font-size:16px;padding:12px 11px 12px 48px}
+  .btn-main{font-size:13px;padding:12px 12px}
 
   /* welcome */
   .welcome{padding:10px 11px}
   .welcome-em{display:none}
 
-  /* search */
-  .search-inp{font-size:12px}
+  /* search — keep 16px to avoid iOS auto-zoom */
+  .search-inp{font-size:16px}
 
   /* cmd-card */
   .cmd-card code{font-size:11.5px}
