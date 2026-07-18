@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 import chalk from 'chalk';
 import QRCode from 'qrcode';
 import { logger } from './lib/logger.js';
-import { db } from './lib/database.js';
+import { db, initDatabase } from './lib/database.js';
 import { loadAllPlugins, getCategories, plugins } from './lib/pluginLoader.js';
 import { handleMessage } from './lib/commandHandler.js';
 import {
@@ -31,22 +31,6 @@ const dashboardPath = path.join(__dirname, 'dashboard.html');
 
 process.on('uncaughtException', err => logger.error({ err: err.message }, '💥 Uncaught Exception'));
 process.on('unhandledRejection', err => logger.error({ err: String(err) }, '💥 Unhandled Rejection'));
-
-// Restore newsletter JID — db first (set via .setnewsletter), then config fallback
-try {
-  const savedJid  = db.settings.getValue('newsletterJid') || config.newsletterJid;
-  const savedName = db.settings.getValue('newsletterName') || config.newsletterName || 'AA MD Bot';
-  if (savedJid) {
-    global._AA_NEWSLETTER_JID  = savedJid;
-    global._AA_NEWSLETTER_NAME = savedName;
-    // Keep db in sync with config default if it was missing
-    if (!db.settings.getValue('newsletterJid')) {
-      db.settings.setValue('newsletterJid', savedJid);
-      db.settings.setValue('newsletterName', savedName);
-    }
-    logger.info({ jid: savedJid }, '📢 Newsletter JID restored from db');
-  }
-} catch {}
 
 // SSE clients
 const sseClients = new Set();
@@ -321,6 +305,24 @@ async function main() {
   for (const d of ['logs', 'temp', 'media', 'session', 'database']) {
     fs.ensureDirSync(path.join(__dirname, d));
   }
+
+  // Load database from Firebase before anything reads from db
+  await initDatabase();
+
+  // Restore newsletter JID — db first (set via .setnewsletter), then config fallback
+  try {
+    const savedJid  = db.settings.getValue('newsletterJid') || config.newsletterJid;
+    const savedName = db.settings.getValue('newsletterName') || config.newsletterName || 'AA MD Bot';
+    if (savedJid) {
+      global._AA_NEWSLETTER_JID  = savedJid;
+      global._AA_NEWSLETTER_NAME = savedName;
+      if (!db.settings.getValue('newsletterJid')) {
+        db.settings.setValue('newsletterJid', savedJid);
+        db.settings.setValue('newsletterName', savedName);
+      }
+      logger.info({ jid: savedJid }, '📢 Newsletter JID restored from db');
+    }
+  } catch {}
 
   await startServer();
 
