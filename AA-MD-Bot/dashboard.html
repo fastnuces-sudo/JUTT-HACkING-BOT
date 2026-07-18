@@ -164,7 +164,7 @@
         }
       }
 
-      /* ══ CONNECT SCREEN — PROFESSIONAL ════════════════════════════════════════ */
+      /* ══ CONNECT SCREEN ════════════════════════════════════════ */
       #screen-connect {
         position: relative;
         z-index: 1;
@@ -174,7 +174,7 @@
         grid-template-columns: 1fr 1fr;
       }
 
-      /* ── LEFT PANEL ─────────────────────────────────────────────────────────── */
+      /* ── LEFT PANEL ─────────────────────────────────────────── */
       .cnx-left {
         position: relative;
         display: flex;
@@ -444,7 +444,7 @@
         color: var(--muted2);
       }
 
-      /* ── RIGHT PANEL ────────────────────────────────────────────────────────── */
+      /* ── RIGHT PANEL ────────────────────────────────────────── */
       .cnx-right {
         display: flex;
         align-items: center;
@@ -2449,7 +2449,6 @@
           padding: 4px 9px;
         }
 
-        /* Right panel: full width, card centered */
         .cnx-right {
           width: 100%;
           padding: 20px 14px 40px;
@@ -2519,7 +2518,6 @@
           font-size: 10.5px;
         }
 
-        /* OTP Cells */
         .cnx-cells-wrap {
           padding: 16px 12px;
           border-radius: 16px;
@@ -2609,7 +2607,7 @@
       }
 
       /* ══════════════════════════════════════════════
-   MOBILE — 640px tak: Thoda compact
+   MOBILE — 640px tak
    ══════════════════════════════════════════════ */
       @media (max-width: 640px) {
         .stats {
@@ -2949,7 +2947,6 @@
           gap: 8px;
         }
 
-        /* Connect tighter */
         .cnx-card {
           padding: 20px 14px 18px;
         }
@@ -3094,9 +3091,7 @@
 
     <!-- ════ CONNECT SCREEN ════ -->
     <div id="screen-connect" style="display: none">
-      <!-- ══ LEFT PANEL: BRANDING (Mobile: upar) ══ -->
       <div class="cnx-left">
-        <!-- Logo -->
         <div class="cnx-logo-stack">
           <div class="cnx-logo-outer"></div>
           <div class="cnx-logo-mid"></div>
@@ -3115,7 +3110,6 @@
           <div class="cnx-logo-fb" id="cnx-logo-fb">🤖</div>
         </div>
 
-        <!-- Brand -->
         <div class="cnx-brand-name">AA MD Bot</div>
         <div class="cnx-brand-pills">
           <span class="cnx-brand-ver">⚡ v3.0 Pro</span>
@@ -3126,7 +3120,6 @@
           60+ Islamic tools, media downloads &amp; so much more.
         </p>
 
-        <!-- Stats -->
         <div class="cnx-stats">
           <div class="cnx-stat">
             <span class="cnx-stat-n">185+</span
@@ -3146,7 +3139,6 @@
           </div>
         </div>
 
-        <!-- Features -->
         <div class="cnx-feats">
           <div class="cnx-feat">
             <div class="cnx-feat-ico">🤖</div>
@@ -3185,7 +3177,6 @@
           </div>
         </div>
 
-        <!-- Trust -->
         <div class="cnx-trust">
           <span class="cnx-tb">🔒 E2E Encrypted</span>
           <span class="cnx-tb">📵 No QR scan</span>
@@ -3193,12 +3184,9 @@
           <span class="cnx-tb">🆓 Always free</span>
         </div>
       </div>
-      <!-- /cnx-left -->
 
-      <!-- ══ RIGHT PANEL: CONNECTION CARD (Mobile: neeche) ══ -->
       <div class="cnx-right">
         <div class="cnx-right-inner">
-          <!-- Progress pill stepper -->
           <div class="cnx-prog" id="cnx-prog">
             <div class="cnx-step active" id="prog-step-1">
               <div class="cnx-step-n" id="prog-n-1">1</div>
@@ -3216,9 +3204,7 @@
             </div>
           </div>
 
-          <!-- Card -->
           <div class="cnx-card">
-            <!-- ── STEP 1: Form ── -->
             <div id="cs-form">
               <div class="cnx-card-title">
                 <svg
@@ -3262,7 +3248,6 @@
                 >
               </p>
 
-              <!-- How-to guide -->
               <div class="cnx-how">
                 <div class="cnx-how-row">
                   <span class="cnx-how-n">1</span>
@@ -3314,7 +3299,6 @@
               </button>
             </div>
 
-            <!-- ── STEP 2: Code ── -->
             <div id="cs-code" style="display: none">
               <div
                 class="cnx-card-title"
@@ -3421,7 +3405,6 @@
               </div>
             </div>
 
-            <!-- ── STEP 3: Done ── -->
             <div id="cs-done" style="display: none">
               <div class="cnx-done">
                 <div class="cnx-done-ring">
@@ -3440,17 +3423,12 @@
               </div>
             </div>
           </div>
-          <!-- /cnx-card -->
         </div>
-        <!-- /cnx-right-inner -->
       </div>
-      <!-- /cnx-right -->
     </div>
-    <!-- /screen-connect -->
 
     <!-- ════ DASHBOARD ════ -->
     <div id="screen-dash" style="display: none">
-      <!-- Hero -->
       <div class="hero">
         <picture>
           <source srcset="/banner.webp" type="image/webp" />
@@ -3497,7 +3475,6 @@
         </div>
       </div>
 
-      <!-- Channel bar -->
       <div class="ch-bar">
         <span class="ch-bar-txt">📢 Get updates, tips &amp; new features:</span>
         <a
@@ -3510,7 +3487,6 @@
       </div>
 
       <div class="dash-body">
-        <!-- Welcome -->
         <div class="welcome">
           <span class="welcome-em">🤖</span>
           <div style="flex: 1">
@@ -3523,7 +3499,6 @@
           <div class="welcome-live"><span class="pulse-ring"></span> LIVE</div>
         </div>
 
-        <!-- Stats -->
         <div class="stats">
           <div class="sc sc-g">
             <div class="sc-icon">✅</div>
@@ -3595,7 +3570,6 @@
           </div>
         </div>
 
-        <!-- New features -->
         <div class="new-bar">
           <div class="new-lbl">🆕 New</div>
           <div class="new-chips" id="new-chips">
@@ -3621,7 +3595,6 @@
           </div>
         </div>
 
-        <!-- Search -->
         <div class="search-wrap">
           <span class="search-ico">🔍</span>
           <input
@@ -3633,7 +3606,6 @@
           <span class="search-ct" id="search-ct"></span>
         </div>
 
-        <!-- Search results -->
         <div id="sr">
           <div class="sr-grid" id="sr-grid"></div>
           <div class="sr-no" id="sr-no">
@@ -3641,7 +3613,6 @@
           </div>
         </div>
 
-        <!-- Quick Start -->
         <div class="sec" id="quick-sec">
           <div class="sec-head" onclick="togSec('quick-b')">
             ⚡ Quick Start <span class="sec-arr" id="arr-quick-b">▼</span>
@@ -3654,7 +3625,6 @@
           </div>
         </div>
 
-        <!-- Islamic -->
         <div class="sec">
           <div class="sec-head" onclick="togSec('isl-b')">
             ☪️ Islamic Commands <span class="sec-arr" id="arr-isl-b">▼</span>
@@ -3694,7 +3664,6 @@
           </div>
         </div>
 
-        <!-- Media -->
         <div class="sec">
           <div class="sec-head" onclick="togSec('media-b')">
             🎬 Media Commands <span class="sec-arr" id="arr-media-b">▼</span>
@@ -3756,7 +3725,6 @@
           </div>
         </div>
 
-        <!-- All categories -->
         <div class="sec" id="cats-sec">
           <div class="sec-head" onclick="togSec('cats-b')">
             📦 All Categories <span class="sec-arr" id="arr-cats-b">▼</span>
@@ -3766,7 +3734,6 @@
           </div>
         </div>
 
-        <!-- Bot Mode -->
         <div class="sec">
           <div class="sec-head" onclick="togSec('mode-b')">
             🔀 Bot Mode <span class="sec-arr" id="arr-mode-b">▼</span>
@@ -3797,7 +3764,6 @@
           </div>
         </div>
 
-        <!-- Settings -->
         <div class="sec">
           <div class="sec-head" onclick="togSec('sets-b')">
             ⚙️ Bot Settings <span class="sec-arr" id="arr-sets-b">▼</span>
@@ -3814,7 +3780,6 @@
           </div>
         </div>
 
-        <!-- Channel CTA -->
         <div class="sec">
           <div class="cta">
             <div class="cta-ico">📢</div>
@@ -3836,7 +3801,6 @@
           </div>
         </div>
 
-        <!-- About -->
         <div class="about">
           <picture>
             <source srcset="/logo.webp" type="image/webp" />
@@ -3881,7 +3845,6 @@
     <div id="toast"></div>
 
     <script>
-      /* ── DATA ── */
       const QUICK = [
         { cmd: ".menu", desc: "All commands list" },
         { cmd: ".ai hello", desc: "Chat with AI (GPT)" },
@@ -4324,56 +4287,37 @@
         },
       ];
 
-      /* ── RENDER STATIC ── */
       function renderAll() {
         document.getElementById("quick-grid").innerHTML = QUICK.map(
           (c) =>
-            `<div class="cmd-card" onclick="cpCmd('${q(c.cmd)}',this)">
-      <code>${c.cmd}</code><span>${c.desc}</span>
-    </div>`,
+            `<div class="cmd-card" onclick="cpCmd('${q(c.cmd)}',this)"><code>${c.cmd}</code><span>${c.desc}</span></div>`,
         ).join("");
-
         document.getElementById("isl-grid").innerHTML = ISL_SECS.map(
           (s) =>
-            `<div class="isl-sec">
-      <div class="isl-sec-t">${s.t}</div>
-      ${s.c.map(([c, d]) => `<div class="isl-cmd" onclick="cpCmd('.${c}')"><span>.${c}</span><span class="isl-d">— ${d}</span></div>`).join("")}
-    </div>`,
+            `<div class="isl-sec"><div class="isl-sec-t">${s.t}</div>${s.c.map(([c, d]) => `<div class="isl-cmd" onclick="cpCmd('.${c}')"><span>.${c}</span><span class="isl-d">— ${d}</span></div>`).join("")}</div>`,
         ).join("");
-
         document.getElementById("cat-grid").innerHTML = CATS.map(
           (cat) =>
-            `<div class="cat-card" style="border-left-color:${cat.clr}">
-      <div class="cat-head"><span>${cat.ico}</span>${cat.lbl}<span class="cat-ct">${cat.cmds.length}</span></div>
-      <div class="cat-chips">${cat.cmds.map((c) => `<span class="cat-chip" onclick="cpCmd('.${c}')">.${c}</span>`).join("")}</div>
-    </div>`,
+            `<div class="cat-card" style="border-left-color:${cat.clr}"><div class="cat-head"><span>${cat.ico}</span>${cat.lbl}<span class="cat-ct">${cat.cmds.length}</span></div><div class="cat-chips">${cat.cmds.map((c) => `<span class="cat-chip" onclick="cpCmd('.${c}')">.${c}</span>`).join("")}</div></div>`,
         ).join("");
-
         document.getElementById("sets-grid").innerHTML = SETS.map(
           (s) =>
-            `<div class="set-item" onclick="cpCmd('${q(s.eg)}')">
-      <div class="set-cmd">${s.cmd}</div>
-      <div class="set-desc">${s.desc}</div>
-      <div class="set-eg">e.g. ${s.eg}</div>
-    </div>`,
+            `<div class="set-item" onclick="cpCmd('${q(s.eg)}')"><div class="set-cmd">${s.cmd}</div><div class="set-desc">${s.desc}</div><div class="set-eg">e.g. ${s.eg}</div></div>`,
         ).join("");
       }
-
       function q(s) {
         return s.replace(/'/g, "\\'");
       }
 
-      /* ── SECTIONS ── */
       function togSec(id) {
-        const b = document.getElementById(id);
-        const a = document.getElementById("arr-" + id);
+        const b = document.getElementById(id),
+          a = document.getElementById("arr-" + id);
         if (!b) return;
         const off = b.classList.contains("off");
         b.classList.toggle("off", !off);
         if (a) a.style.transform = off ? "rotate(0deg)" : "rotate(-90deg)";
       }
 
-      /* ── COPY ── */
       let cpT;
       function cpCmd(txt, el) {
         navigator.clipboard.writeText(txt).catch(() => {});
@@ -4391,19 +4335,22 @@
         toast("✅ Copied: " + txt.split(" ")[0]);
       }
 
-      /* ── SCREENS ── */
-      const SCREEN_DISPLAY = {
-        "screen-loading": "flex",
-        "screen-connect": "grid",
-        "screen-dash": "block",
-      };
+      /* ══ FIXED show() — screen-connect mobile flex handle ══ */
       function show(id) {
+        const isMobile = window.innerWidth <= 768;
         ["screen-loading", "screen-connect", "screen-dash"].forEach((s) => {
           const el = document.getElementById(s);
-          if (s === "screen-connect" && window.innerWidth <= 768) {
-            el.style.display = id === s ? "flex" : "none";
+          if (!el) return;
+          if (s === id) {
+            if (s === "screen-connect" && isMobile) {
+              el.style.display = "flex";
+            } else if (s === "screen-loading") {
+              el.style.display = "flex";
+            } else {
+              el.style.display = "block";
+            }
           } else {
-            el.style.display = s === id ? SCREEN_DISPLAY[s] || "block" : "none";
+            el.style.display = "none";
           }
         });
       }
@@ -4416,71 +4363,47 @@
         show("screen-connect");
       }
 
-      /* ── SESSIONS ── */
       let _lastStats = {};
       function renderSessions(sessions, stats) {
         if (stats) _lastStats = stats;
         const conn = sessions.filter((s) => s.status === "connected");
         const el = document.getElementById("sess-list");
         if (!el) return;
-
         const htxt = document.getElementById("hero-status-txt");
         if (htxt)
           htxt.textContent = conn.length
             ? `${conn.length} Session${conn.length > 1 ? "s" : ""} Active`
             : "No sessions connected";
-
         if (!conn.length) {
-          el.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:14px 4px">No connected sessions — click "Connect Another Account" below.</div>`;
+          el.innerHTML =
+            '<div style="font-size:13px;color:var(--muted);padding:14px 4px">No connected sessions — click "Connect Another Account" below.</div>';
           return;
         }
-
-        const uptime = _lastStats.uptime || "--";
-        const plugins = _lastStats.plugins || "172";
-        const version = _lastStats.version || "3.0";
-
+        const uptime = _lastStats.uptime || "--",
+          plugins = _lastStats.plugins || "172",
+          version = _lastStats.version || "3.0";
         el.innerHTML = conn
           .map((s, i) => {
             const name =
               s.name || `Bot Account${conn.length > 1 ? " #" + (i + 1) : ""}`;
-            return `<div class="sess-card">
-      <div class="sess-av-wrap">
-        <div class="sess-av">🤖</div>
-        <div class="sess-online-dot"></div>
-      </div>
-      <div class="sess-info">
-        <div class="sess-name">${esc(name)}</div>
-        <div class="sess-tag"><span class="dot dot-g"></span> Connected &amp; Active · WhatsApp MD</div>
-        <div class="sess-meta">
-          <span class="sess-badge">v${esc(version)}</span>
-          <span class="sess-badge bb">${plugins}+ Plugins</span>
-          <span class="sess-badge by">↑ ${esc(uptime)}</span>
-        </div>
-      </div>
-      <div class="sess-right">
-        <div class="sess-live-pill"><span class="pulse-ring"></span> LIVE</div>
-        <div class="sess-type">Multi-Device</div>
-      </div>
-    </div>`;
+            return `<div class="sess-card"><div class="sess-av-wrap"><div class="sess-av">🤖</div><div class="sess-online-dot"></div></div><div class="sess-info"><div class="sess-name">${esc(name)}</div><div class="sess-tag"><span class="dot dot-g"></span> Connected &amp; Active · WhatsApp MD</div><div class="sess-meta"><span class="sess-badge">v${esc(version)}</span><span class="sess-badge bb">${plugins}+ Plugins</span><span class="sess-badge by">↑ ${esc(uptime)}</span></div></div><div class="sess-right"><div class="sess-live-pill"><span class="pulse-ring"></span> LIVE</div><div class="sess-type">Multi-Device</div></div></div>`;
           })
           .join("");
       }
-
       function esc(s) {
         const d = document.createElement("div");
         d.textContent = String(s);
         return d.innerHTML;
       }
 
-      /* ── STATS ── */
       async function loadStats() {
         try {
           const r = await fetch("/api/stats");
           const d = await r.json();
-          const up = document.getElementById("s-uptime");
-          const cm = document.getElementById("s-cmds");
-          const rm = document.getElementById("s-ram");
-          const rb = document.getElementById("ram-bar");
+          const up = document.getElementById("s-uptime"),
+            cm = document.getElementById("s-cmds"),
+            rm = document.getElementById("s-ram"),
+            rb = document.getElementById("ram-bar");
           if (up) up.textContent = d.uptime || "--";
           if (cm) cm.textContent = (d.plugins || 172) + "+";
           if (rm && d.ram) {
@@ -4498,17 +4421,15 @@
         } catch {}
       }
 
-      /* ── SEARCH ── */
       function doSearch(v) {
-        const q2 = v.trim().toLowerCase();
-        const srEl = document.getElementById("sr");
-        const srGrid = document.getElementById("sr-grid");
-        const srNo = document.getElementById("sr-no");
-        const srQ = document.getElementById("sr-q");
-        const ct = document.getElementById("search-ct");
-        const qsec = document.getElementById("quick-sec");
-        const csec = document.getElementById("cats-sec");
-
+        const q2 = v.trim().toLowerCase(),
+          srEl = document.getElementById("sr"),
+          srGrid = document.getElementById("sr-grid"),
+          srNo = document.getElementById("sr-no"),
+          srQ = document.getElementById("sr-q"),
+          ct = document.getElementById("search-ct"),
+          qsec = document.getElementById("quick-sec"),
+          csec = document.getElementById("cats-sec");
         if (!q2) {
           srEl.style.display = "none";
           if (qsec) qsec.style.display = "";
@@ -4519,7 +4440,6 @@
         srEl.style.display = "";
         if (qsec) qsec.style.display = "none";
         if (csec) csec.style.display = "none";
-
         const qm = QUICK.filter(
           (c) =>
             c.cmd.toLowerCase().includes(q2) ||
@@ -4535,7 +4455,6 @@
         })).filter((c) => c.cmds.length);
         const total = qm.length + cm.reduce((s, c) => s + c.cmds.length, 0);
         if (ct) ct.textContent = total ? total + " found" : "";
-
         if (!total) {
           srGrid.innerHTML = "";
           srNo.style.display = "";
@@ -4545,35 +4464,26 @@
         srNo.style.display = "none";
         let h = "";
         if (qm.length)
-          h += `<div class="cat-card" style="border-left-color:#25d366">
-    <div class="cat-head"><span>⚡</span>Quick Commands<span class="cat-ct">${qm.length}</span></div>
-    <div class="cat-chips">${qm.map((c) => `<span class="cat-chip" onclick="cpCmd('${q(c.cmd)}')" title="${c.desc}">${c.cmd.split(" ")[0]}</span>`).join("")}</div>
-  </div>`;
+          h += `<div class="cat-card" style="border-left-color:#25d366"><div class="cat-head"><span>⚡</span>Quick Commands<span class="cat-ct">${qm.length}</span></div><div class="cat-chips">${qm.map((c) => `<span class="cat-chip" onclick="cpCmd('${q(c.cmd)}')" title="${c.desc}">${c.cmd.split(" ")[0]}</span>`).join("")}</div></div>`;
         h += cm
           .map(
-            (
-              cat,
-            ) => `<div class="cat-card" style="border-left-color:${cat.clr}">
-    <div class="cat-head"><span>${cat.ico}</span>${cat.lbl}<span class="cat-ct">${cat.cmds.length}</span></div>
-    <div class="cat-chips">${cat.cmds.map((c) => `<span class="cat-chip" onclick="cpCmd('.${c}')">.${c}</span>`).join("")}</div>
-  </div>`,
+            (cat) =>
+              `<div class="cat-card" style="border-left-color:${cat.clr}"><div class="cat-head"><span>${cat.ico}</span>${cat.lbl}<span class="cat-ct">${cat.cmds.length}</span></div><div class="cat-chips">${cat.cmds.map((c) => `<span class="cat-chip" onclick="cpCmd('.${c}')">.${c}</span>`).join("")}</div></div>`,
           )
           .join("");
         srGrid.innerHTML = h;
       }
 
-      /* ── CONNECT FLOW ── */
       let _phone = "",
         _sessId = "",
         _codePoll = null,
         _statusPoll = null,
         _timerInt = null,
         _pairCode = "";
-
       function setProgress(n) {
         for (let i = 1; i <= 3; i++) {
-          const s = document.getElementById("prog-step-" + i);
-          const nb = document.getElementById("prog-n-" + i);
+          const s = document.getElementById("prog-step-" + i),
+            nb = document.getElementById("prog-n-" + i);
           if (!s) continue;
           if (i < n) {
             s.className = "cnx-step done";
@@ -4591,7 +4501,6 @@
           }
         }
       }
-
       function setCodeCells(code) {
         const raw = code.replace(/-/g, "").slice(0, 8);
         raw.split("").forEach((ch, i) => {
@@ -4604,7 +4513,6 @@
           }, i * 60);
         });
       }
-
       function resetCells() {
         for (let i = 0; i < 8; i++) {
           const el = document.getElementById("cnx-cell-" + i);
@@ -4614,14 +4522,13 @@
           }
         }
       }
-
       const CIRC = 100.5;
       function startTimer(sec) {
         clearInterval(_timerInt);
-        const wrap = document.getElementById("cnx-timer");
-        const fg = document.getElementById("cnx-t-fg");
-        const num = document.getElementById("cnx-timer-n");
-        const lbl = document.getElementById("cnx-timer-label");
+        const wrap = document.getElementById("cnx-timer"),
+          fg = document.getElementById("cnx-t-fg"),
+          num = document.getElementById("cnx-timer-n"),
+          lbl = document.getElementById("cnx-timer-label");
         if (!wrap || !fg || !num) return;
         wrap.style.display = "flex";
         let left = sec;
@@ -4651,7 +4558,6 @@
         const w = document.getElementById("cnx-timer");
         if (w) w.style.display = "none";
       }
-
       function csStep(s) {
         ["cs-form", "cs-code", "cs-done"].forEach((id) => {
           document.getElementById(id).style.display =
@@ -4778,7 +4684,6 @@
         }
       }
 
-      /* ── SSE ── */
       let sse = null,
         sseRetry = 1000;
       function connectSSE() {
@@ -4822,7 +4727,6 @@
         };
       }
 
-      /* ── TOAST ── */
       let _tt;
       function toast(msg, dur = 2500) {
         const el = document.getElementById("toast");
@@ -4833,7 +4737,6 @@
         _tt = setTimeout(() => el.classList.remove("on"), dur);
       }
 
-      /* ── BOOT ── */
       renderAll();
       (async () => {
         try {
