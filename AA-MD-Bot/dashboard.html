@@ -2349,9 +2349,9 @@
    MOBILE — 768px tak: VERTICAL STACK
    ══════════════════════════════════════════════ */
       @media (max-width: 768px) {
-        #screen-connect {
-          display: flex !important;
-          flex-direction: column !important;
+        #screen-connect.sc-visible {
+          display: flex;
+          flex-direction: column;
           overflow-x: hidden;
           width: 100%;
         }
@@ -4335,7 +4335,7 @@
         toast("✅ Copied: " + txt.split(" ")[0]);
       }
 
-      /* ══ FIXED show() — screen-connect mobile flex handle ══ */
+      /* ══ show() — class-based to avoid !important override ══ */
       function show(id) {
         const isMobile = window.innerWidth <= 768;
         ["screen-loading", "screen-connect", "screen-dash"].forEach((s) => {
@@ -4343,13 +4343,15 @@
           if (!el) return;
           if (s === id) {
             if (s === "screen-connect" && isMobile) {
-              el.style.display = "flex";
+              el.style.display = "";          // clear inline so CSS class wins
+              el.classList.add("sc-visible");
             } else if (s === "screen-loading") {
               el.style.display = "flex";
             } else {
               el.style.display = "block";
             }
           } else {
+            el.classList.remove("sc-visible");
             el.style.display = "none";
           }
         });
