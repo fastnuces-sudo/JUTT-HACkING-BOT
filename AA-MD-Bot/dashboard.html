@@ -43,271 +43,368 @@ a{text-decoration:none;color:inherit}
 .load-txt{font-size:13px;color:var(--muted);letter-spacing:.04em}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ══ CONNECT SCREEN (redesigned) ══════════════════════════════════════════ */
+/* ══ CONNECT SCREEN — PROFESSIONAL ════════════════════════════════════════ */
 #screen-connect{
   position:relative;z-index:1;width:100%;min-height:100vh;
-  display:flex;align-items:center;justify-content:center;
-  padding:28px 20px 44px;
-}
-.cnx-wrap{
-  display:grid;grid-template-columns:1fr 1fr;gap:52px;
-  max-width:920px;width:100%;align-items:center;
+  display:grid;grid-template-columns:1fr 1fr;
 }
 
-/* ── Left: Brand panel ──────────────────────────────────────────────────── */
-.cnx-left{display:flex;flex-direction:column;gap:0}
-.cnx-logo-ring{
-  position:relative;width:78px;height:78px;margin-bottom:18px;flex-shrink:0;
+/* ── LEFT PANEL ─────────────────────────────────────────────────────────── */
+.cnx-left{
+  position:relative;display:flex;flex-direction:column;justify-content:center;
+  padding:28px 52px;overflow:hidden;
+  background:linear-gradient(160deg,rgba(2,6,14,.99) 0%,rgba(4,10,20,.97) 100%);
+  border-right:1px solid rgba(37,211,102,.08);
 }
-.cnx-logo-ring::before{
-  content:'';position:absolute;inset:-4px;border-radius:50%;
-  background:conic-gradient(var(--green),var(--green2),transparent,var(--green));
-  animation:ring-spin 4s linear infinite;
+/* mesh grid overlay */
+.cnx-left::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(37,211,102,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,211,102,.035) 1px,transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 70% at 35% 45%,black 30%,transparent 75%);
+  mask-image:radial-gradient(ellipse 80% 70% at 35% 45%,black 30%,transparent 75%);
+}
+/* green glow orb behind logo */
+.cnx-left::after{
+  content:'';position:absolute;top:5%;left:5%;width:55%;height:55%;
+  background:radial-gradient(ellipse,rgba(37,211,102,.1) 0%,transparent 65%);
+  pointer-events:none;
+}
+
+/* Logo */
+.cnx-logo-stack{position:relative;width:88px;height:88px;margin-bottom:16px;flex-shrink:0}
+.cnx-logo-outer{
+  position:absolute;inset:-12px;border-radius:50%;
+  border:1px solid rgba(37,211,102,.18);
+  animation:logo-pulse 3.5s ease-in-out infinite;
+}
+@keyframes logo-pulse{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.05);opacity:.7}}
+.cnx-logo-mid{
+  position:absolute;inset:-4px;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 0%,var(--green2) 20%,var(--green) 40%,transparent 55%,var(--green2) 75%,var(--green) 90%,transparent 100%);
+  animation:ring-spin 6s linear infinite;
 }
 @keyframes ring-spin{to{transform:rotate(360deg)}}
 .cnx-logo-img{
-  position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);
-  border-radius:50%;object-fit:cover;border:2px solid var(--card);background:var(--card);z-index:1;
+  position:absolute;inset:3px;width:calc(100% - 6px);height:calc(100% - 6px);
+  border-radius:50%;object-fit:cover;border:3px solid rgba(6,9,17,.95);
+  background:var(--card);z-index:2;
+  box-shadow:0 0 40px rgba(37,211,102,.2),0 0 80px rgba(37,211,102,.08);
 }
 .cnx-logo-fb{
-  position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);
+  position:absolute;inset:3px;width:calc(100% - 6px);height:calc(100% - 6px);
   border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));
-  display:none;align-items:center;justify-content:center;font-size:28px;
-  border:2px solid var(--card);z-index:1;
+  display:none;align-items:center;justify-content:center;font-size:38px;
+  border:3px solid rgba(6,9,17,.95);z-index:2;
 }
+
+/* Brand text */
 .cnx-brand-name{
-  font-size:36px;font-weight:900;letter-spacing:-.5px;line-height:1;margin-bottom:5px;
-  background:linear-gradient(135deg,#2effa0 0%,var(--green) 50%,var(--green2) 100%);
+  font-size:40px;font-weight:900;letter-spacing:-1.2px;line-height:1;margin-bottom:7px;
+  background:linear-gradient(130deg,#fff 0%,#a8f5cc 35%,var(--green) 75%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
-.cnx-brand-tag{font-size:12px;color:var(--muted);margin-bottom:14px}
+.cnx-brand-pills{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.cnx-brand-ver{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.22);
+  border-radius:20px;padding:4px 12px;font-size:10.5px;font-weight:800;
+  color:var(--green);letter-spacing:.07em;text-transform:uppercase;
+}
+.cnx-brand-by{font-size:12px;color:var(--muted);margin-bottom:12px}
 .cnx-brand-desc{
-  font-size:13.5px;color:rgba(200,220,240,.72);line-height:1.7;
-  margin-bottom:26px;max-width:340px;
+  font-size:13px;color:rgba(195,215,240,.6);line-height:1.7;
+  margin-bottom:18px;max-width:360px;
 }
-/* Feature list */
-.cnx-feats{display:flex;flex-direction:column;gap:12px;margin-bottom:26px}
-.cnx-feat{display:flex;align-items:flex-start;gap:13px}
+
+/* Stat row — compact inline */
+.cnx-stats{display:flex;gap:6px;margin-bottom:18px}
+.cnx-stat{
+  flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  border-radius:12px;padding:9px 6px;text-align:center;
+}
+.cnx-stat-n{display:block;font-size:17px;font-weight:900;color:var(--green);line-height:1}
+.cnx-stat-l{display:block;font-size:8px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+
+/* Feature cards */
+.cnx-feats{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.cnx-feat{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 12px;border-radius:12px;
+  background:rgba(255,255,255,.022);border:1px solid rgba(255,255,255,.05);
+  transition:background .2s,border-color .25s;cursor:default;
+}
+.cnx-feat:hover{background:rgba(37,211,102,.05);border-color:rgba(37,211,102,.14)}
 .cnx-feat-ico{
-  width:38px;height:38px;border-radius:11px;flex-shrink:0;
-  background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.16);
-  display:flex;align-items:center;justify-content:center;font-size:17px;
-  box-shadow:0 2px 10px rgba(37,211,102,.06);
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  background:rgba(37,211,102,.09);border:1px solid rgba(37,211,102,.18);
+  display:flex;align-items:center;justify-content:center;font-size:14px;
 }
-.cnx-feat-txt b{font-size:13px;font-weight:700;color:var(--text);display:block;margin-bottom:2px}
-.cnx-feat-txt span{font-size:11.5px;color:var(--muted);line-height:1.45;display:block}
-/* Trust row */
-.cnx-trust{display:flex;flex-wrap:wrap;gap:7px}
+.cnx-feat-txt b{font-size:12px;font-weight:700;color:rgba(220,235,255,.9);display:block}
+.cnx-feat-txt span{font-size:10.5px;color:var(--muted);line-height:1.35;display:block}
+
+/* Trust badges */
+.cnx-trust{display:flex;flex-wrap:wrap;gap:6px}
 .cnx-tb{
-  background:rgba(255,255,255,.03);border:1px solid var(--border2);
-  border-radius:20px;padding:5px 12px;font-size:10.5px;color:var(--muted2);
   display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055);
+  border-radius:20px;padding:5px 12px;font-size:10.5px;color:var(--muted2);
 }
 
-/* ── Right: Card column ─────────────────────────────────────────────────── */
-.cnx-right{display:flex;flex-direction:column;gap:14px;width:100%}
-
-/* Progress steps */
-.cnx-prog{display:flex;align-items:center;justify-content:center;padding:0 8px}
-.cnx-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
-.cnx-step-n{
-  width:32px;height:32px;border-radius:50%;
-  background:rgba(255,255,255,.04);border:2px solid var(--border2);
+/* ── RIGHT PANEL ────────────────────────────────────────────────────────── */
+.cnx-right{
   display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:800;color:var(--muted2);transition:all .35s;
+  padding:48px 44px;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,rgba(5,8,18,.99),rgba(7,11,21,.99));
 }
-.cnx-step-l{font-size:10px;font-weight:600;color:var(--muted2);letter-spacing:.02em;transition:color .35s;white-space:nowrap}
-.cnx-step.active .cnx-step-n{
-  background:rgba(37,211,102,.14);border-color:var(--green);color:var(--green);
-  box-shadow:0 0 0 5px rgba(37,211,102,.1);
+/* subtle purple top-right accent */
+.cnx-right::before{
+  content:'';position:absolute;top:-15%;right:-10%;width:55%;height:55%;
+  background:radial-gradient(ellipse,rgba(90,50,180,.07) 0%,transparent 65%);
+  pointer-events:none;
 }
+.cnx-right-inner{width:100%;max-width:410px;display:flex;flex-direction:column;gap:16px}
+
+/* Progress stepper — pill container */
+.cnx-prog{
+  display:flex;align-items:center;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  border-radius:50px;padding:5px;
+}
+.cnx-step{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:8px 12px;border-radius:40px;transition:all .35s;
+}
+.cnx-step-n{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;
+  background:rgba(255,255,255,.07);color:var(--muted2);
+  transition:all .35s;
+}
+.cnx-step-l{font-size:10.5px;font-weight:600;color:var(--muted2);transition:color .35s;white-space:nowrap}
+.cnx-step.active{background:rgba(37,211,102,.13)}
+.cnx-step.active .cnx-step-n{background:var(--green);color:#000;box-shadow:0 0 10px rgba(37,211,102,.5)}
 .cnx-step.active .cnx-step-l{color:var(--green)}
-.cnx-step.done .cnx-step-n{
-  background:var(--green);border-color:var(--green);color:#000;font-size:14px;
-}
-.cnx-step.done .cnx-step-l{color:var(--green)}
-.cnx-step-line{
-  flex:1;height:2px;background:var(--border2);border-radius:2px;
-  margin:0 10px;margin-bottom:18px;transition:background .5s;min-width:24px;
-}
-.cnx-step-line.done{background:var(--green)}
+.cnx-step.done .cnx-step-n{background:rgba(37,211,102,.2);color:var(--green)}
+.cnx-step.done .cnx-step-l{color:rgba(37,211,102,.55)}
+.cnx-step-line{width:18px;height:2px;background:rgba(255,255,255,.07);border-radius:2px;flex-shrink:0;transition:background .45s}
+.cnx-step-line.done{background:rgba(37,211,102,.4)}
 
 /* Card */
 .cnx-card{
-  background:linear-gradient(145deg,rgba(13,20,33,.98),rgba(8,13,24,.99));
-  border:1px solid var(--border2);border-radius:24px;
-  padding:30px 28px 26px;
-  box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.03),inset 0 1px 0 rgba(255,255,255,.04);
-  backdrop-filter:blur(24px);position:relative;overflow:hidden;
+  background:linear-gradient(155deg,rgba(10,16,30,.99),rgba(6,10,20,.99));
+  border:1px solid rgba(255,255,255,.07);border-radius:26px;
+  padding:34px 32px 30px;width:100%;position:relative;overflow:hidden;
+  box-shadow:
+    0 0 0 1px rgba(37,211,102,.05),
+    0 40px 100px rgba(0,0,0,.85),
+    0 10px 40px rgba(0,0,0,.6),
+    inset 0 1px 0 rgba(255,255,255,.06);
 }
 .cnx-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,rgba(37,211,102,.65) 40%,rgba(18,140,126,.65) 70%,transparent);
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,rgba(37,211,102,.75) 30%,rgba(100,230,180,.55) 65%,transparent 100%);
 }
 .cnx-card::after{
-  content:'';position:absolute;top:0;left:-40%;width:180%;height:180%;
-  background:radial-gradient(ellipse at 50% -30%,rgba(37,211,102,.055),transparent 60%);
+  content:'';position:absolute;top:-40px;left:50%;transform:translateX(-50%);
+  width:220px;height:220px;
+  background:radial-gradient(ellipse,rgba(37,211,102,.07) 0%,transparent 70%);
   pointer-events:none;
 }
 .cnx-card-title{
-  font-size:18px;font-weight:800;margin-bottom:5px;
-  display:flex;align-items:center;gap:8px;position:relative;z-index:1;
+  font-size:21px;font-weight:800;margin-bottom:6px;
+  display:flex;align-items:center;gap:9px;position:relative;z-index:1;
 }
-.cnx-card-sub{font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:20px;position:relative;z-index:1}
+.cnx-card-sub{font-size:12.5px;color:var(--muted);line-height:1.68;margin-bottom:22px;position:relative;z-index:1}
 
 /* Field */
-.field-lbl{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;display:block;position:relative;z-index:1}
-.field-wrap{position:relative;z-index:1}
-.field-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;opacity:.55}
-.field-inp{
-  width:100%;background:rgba(5,8,18,.7);border:1.5px solid var(--border2);
-  border-radius:13px;padding:13px 14px 13px 44px;
-  font-size:16px;color:var(--text);transition:border-color .2s,box-shadow .2s;letter-spacing:.06em;
+.field-lbl{
+  font-size:9.5px;font-weight:800;color:var(--muted2);
+  text-transform:uppercase;letter-spacing:.13em;margin-bottom:8px;
+  display:block;position:relative;z-index:1;
 }
-.field-inp:focus{border-color:var(--green);box-shadow:0 0 0 4px rgba(37,211,102,.1),inset 0 1px 0 rgba(37,211,102,.05)}
-.field-inp::placeholder{color:var(--muted2);font-size:14.5px;letter-spacing:0}
-.field-hint{font-size:11px;color:var(--muted2);margin-top:6px;line-height:1.55;position:relative;z-index:1}
-/* How-to guide */
+.field-wrap{position:relative;z-index:1}
+.field-prefix{
+  position:absolute;left:0;top:0;bottom:0;width:48px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;color:var(--muted);pointer-events:none;
+  border-right:1px solid rgba(255,255,255,.07);
+}
+.field-inp{
+  width:100%;background:rgba(3,6,14,.85);
+  border:1.5px solid rgba(255,255,255,.09);border-radius:14px;
+  padding:14px 14px 14px 58px;
+  font-size:17px;color:var(--text);letter-spacing:.1em;font-weight:600;
+  transition:border-color .22s,box-shadow .22s,background .22s;
+}
+.field-inp:focus{
+  border-color:rgba(37,211,102,.55);background:rgba(3,8,18,.95);
+  box-shadow:0 0 0 4px rgba(37,211,102,.1),inset 0 1px 0 rgba(37,211,102,.05);
+}
+.field-inp::placeholder{color:var(--muted2);font-size:14px;letter-spacing:0;font-weight:400}
+.field-hint{font-size:11px;color:var(--muted2);margin-top:7px;line-height:1.55;position:relative;z-index:1}
+
+/* How-to steps */
 .cnx-how{
   display:flex;flex-direction:column;margin-top:16px;
-  background:rgba(37,211,102,.04);border:1px solid rgba(37,211,102,.11);
-  border-radius:13px;overflow:hidden;position:relative;z-index:1;
+  background:rgba(37,211,102,.03);border:1px solid rgba(37,211,102,.09);
+  border-radius:14px;overflow:hidden;position:relative;z-index:1;
 }
 .cnx-how-row{
   display:flex;align-items:center;gap:11px;
-  padding:9px 14px;border-bottom:1px solid rgba(37,211,102,.07);
+  padding:10px 15px;border-bottom:1px solid rgba(37,211,102,.06);
 }
 .cnx-how-row:last-child{border-bottom:none}
 .cnx-how-n{
   width:20px;height:20px;border-radius:50%;flex-shrink:0;
-  background:rgba(37,211,102,.13);border:1px solid rgba(37,211,102,.28);
+  background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.25);
   display:flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:900;color:var(--green);
 }
-.cnx-how-row>span:last-child{font-size:11.5px;color:rgba(200,220,240,.7);line-height:1.5}
-.cnx-how-row strong{color:rgba(200,255,220,.85)}
-/* Buttons */
+.cnx-how-row>span:last-child{font-size:11.5px;color:rgba(195,215,240,.65);line-height:1.5}
+.cnx-how-row strong{color:rgba(200,255,220,.82)}
+
+/* Primary CTA */
 .btn-main{
-  width:100%;
-  background:linear-gradient(135deg,#30f077 0%,#25d366 50%,#128c7e 100%);
-  border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;color:#fff;
-  margin-top:18px;transition:opacity .2s,transform .15s,box-shadow .25s;
-  box-shadow:0 8px 32px rgba(37,211,102,.4),0 2px 8px rgba(37,211,102,.2);
-  letter-spacing:.04em;position:relative;z-index:1;overflow:hidden;
+  width:100%;position:relative;z-index:1;overflow:hidden;
+  background:linear-gradient(135deg,#32ef7a 0%,#25d366 42%,#118c6e 100%);
+  border:none;border-radius:15px;padding:17px;
+  font-size:15px;font-weight:800;color:#fff;letter-spacing:.05em;
+  margin-top:20px;
+  transition:transform .15s,box-shadow .25s;
+  box-shadow:0 8px 32px rgba(37,211,102,.45),0 3px 10px rgba(37,211,102,.25),inset 0 1px 0 rgba(255,255,255,.18);
+  text-shadow:0 1px 3px rgba(0,0,0,.22);
 }
 .btn-main::before{
   content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
-  transition:left .4s;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
+  transition:left .55s;
 }
 .btn-main:hover::before{left:100%}
-.btn-main:hover{transform:translateY(-2px);box-shadow:0 14px 44px rgba(37,211,102,.5)}
-.btn-main:active{transform:translateY(0)}
+.btn-main:hover{transform:translateY(-2px);box-shadow:0 16px 48px rgba(37,211,102,.55),0 4px 14px rgba(37,211,102,.3)}
+.btn-main:active{transform:translateY(0);box-shadow:0 4px 16px rgba(37,211,102,.3)}
 .btn-main:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Error */
 .cs-err{
-  background:rgba(16,6,6,.8);border:1px solid rgba(239,68,68,.35);
-  border-radius:10px;padding:10px 14px;font-size:12.5px;color:#fca5a5;
-  margin-top:14px;display:none;line-height:1.5;position:relative;z-index:1;
+  background:rgba(28,5,5,.95);border:1px solid rgba(239,68,68,.3);
+  border-radius:13px;padding:12px 15px;font-size:12.5px;color:#fca5a5;
+  margin-top:14px;display:none;line-height:1.6;position:relative;z-index:1;
 }
-.cs-err.show{display:block}
+.cs-err.show{display:block;animation:shake .4s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 
 /* ── Code step ──────────────────────────────────────────────────────────── */
-.cnx-code-sub{font-size:12px;color:var(--muted);text-align:center;margin-bottom:20px;position:relative;z-index:1}
+.cnx-code-label{
+  font-size:9.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;
+  letter-spacing:.13em;text-align:center;margin-bottom:14px;position:relative;z-index:1;
+}
 .cnx-code-area{
-  display:flex;flex-direction:column;align-items:center;gap:18px;
-  position:relative;z-index:1;margin-bottom:16px;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  position:relative;z-index:1;margin-bottom:18px;
 }
-/* 4+4 digit cells */
-.cnx-cells{
-  display:flex;align-items:center;gap:7px;
-  background:linear-gradient(160deg,#030710,#060c18);
-  border:1.5px solid rgba(37,211,102,.2);border-radius:20px;
-  padding:20px 22px;
-  box-shadow:inset 0 2px 14px rgba(0,0,0,.5),0 0 50px rgba(37,211,102,.05);
+/* OTP cell container */
+.cnx-cells-wrap{
+  position:relative;
+  background:rgba(2,5,13,.95);border:1.5px solid rgba(37,211,102,.17);
+  border-radius:22px;padding:22px 26px;
+  box-shadow:inset 0 4px 24px rgba(0,0,0,.65),0 0 70px rgba(37,211,102,.055);
 }
+.cnx-cells-wrap::before{
+  content:'';position:absolute;top:0;left:20%;right:20%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(37,211,102,.5),transparent);
+}
+.cnx-cells{display:flex;align-items:center;gap:6px}
 .cnx-cell{
-  width:42px;height:54px;border-radius:11px;
-  background:rgba(37,211,102,.04);border:1.5px solid rgba(37,211,102,.16);
+  width:46px;height:60px;border-radius:13px;
+  background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.07);
   display:flex;align-items:center;justify-content:center;
-  font-family:'Courier New',monospace;font-size:26px;font-weight:900;
-  color:var(--muted2);transition:all .3s cubic-bezier(.34,1.56,.64,1);
-  user-select:none;
+  font-family:'Courier New',monospace;font-size:28px;font-weight:900;
+  color:rgba(255,255,255,.14);
+  transition:all .32s cubic-bezier(.34,1.56,.64,1);user-select:none;
 }
-.cnx-cell.wait{animation:cell-idle 1.6s ease-in-out infinite}
+.cnx-cell.wait{animation:cell-idle 2s ease-in-out infinite}
 .cnx-cell.filled{
-  color:var(--green);background:rgba(37,211,102,.09);
-  border-color:rgba(37,211,102,.38);text-shadow:0 0 16px rgba(37,211,102,.55);
-  animation:cell-pop .35s cubic-bezier(.34,1.56,.64,1);
+  color:#fff;background:rgba(37,211,102,.11);
+  border-color:rgba(37,211,102,.45);
+  box-shadow:0 0 22px rgba(37,211,102,.22),inset 0 1px 0 rgba(37,211,102,.12);
+  text-shadow:0 0 22px rgba(37,211,102,.65);
+  animation:cell-pop .38s cubic-bezier(.34,1.56,.64,1);
 }
-@keyframes cell-idle{0%,100%{opacity:.3}50%{opacity:.55}}
-@keyframes cell-pop{0%{transform:scale(.82)}65%{transform:scale(1.1)}100%{transform:scale(1)}}
-.cnx-sep{font-size:24px;font-weight:900;color:rgba(37,211,102,.25);padding:0 2px;align-self:center;line-height:1}
+@keyframes cell-idle{0%,100%{opacity:.22}50%{opacity:.5}}
+@keyframes cell-pop{0%{transform:scale(.76) rotateY(18deg);opacity:.5}65%{transform:scale(1.1) rotateY(-4deg)}100%{transform:scale(1) rotateY(0);opacity:1}}
+.cnx-sep{font-size:22px;font-weight:900;color:rgba(37,211,102,.2);padding:0 4px;align-self:center;user-select:none}
+
 /* Timer */
-.cnx-timer{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);flex-shrink:0}
-.cnx-timer-svg-box{position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center}
-.cnx-timer-svg{width:38px;height:38px}
-.cnx-t-bg{fill:none;stroke:var(--border2);stroke-width:3.5}
-.cnx-t-fg{
-  fill:none;stroke:var(--green);stroke-width:3.5;stroke-linecap:round;
-  transform:rotate(-90deg);transform-origin:50% 50%;
-  transition:stroke-dasharray 1s linear,stroke .4s;
-}
+.cnx-timer{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.cnx-timer-svg-box{position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cnx-timer-svg{width:36px;height:36px}
+.cnx-t-bg{fill:none;stroke:rgba(255,255,255,.06);stroke-width:3}
+.cnx-t-fg{fill:none;stroke:var(--green);stroke-width:3;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dasharray 1s linear,stroke .4s}
 .cnx-t-fg.warn{stroke:var(--yellow)}
 .cnx-t-fg.danger{stroke:var(--red)}
-.cnx-timer-n{
-  position:absolute;font-size:11px;font-weight:900;color:var(--green);
-  transition:color .4s;pointer-events:none;
-}
+.cnx-timer-n{position:absolute;font-size:10px;font-weight:900;color:var(--green);transition:color .4s}
 .cnx-timer-n.warn{color:var(--yellow)}
 .cnx-timer-n.danger{color:var(--red)}
-/* Copy + retry row */
-.cnx-action-row{display:grid;grid-template-columns:1fr auto;gap:8px;position:relative;z-index:1;margin-bottom:14px}
+
+/* Copy — full-width green */
 .cnx-btn-copy{
-  background:rgba(37,211,102,.1);border:1px solid rgba(37,211,102,.26);
-  border-radius:11px;padding:11px 20px;font-size:13px;font-weight:700;
-  color:var(--green);transition:all .2s;
+  width:100%;background:rgba(37,211,102,.09);
+  border:1.5px solid rgba(37,211,102,.28);border-radius:14px;
+  padding:14px 20px;font-size:14px;font-weight:800;color:var(--green);
+  transition:all .22s;position:relative;z-index:1;letter-spacing:.04em;
+  box-shadow:0 0 0 0 rgba(37,211,102,.2);
 }
-.cnx-btn-copy:hover{background:rgba(37,211,102,.19);transform:translateY(-1px)}
-.cnx-btn-copy.ok{background:rgba(37,211,102,.22);color:#fff;border-color:var(--green)}
+.cnx-btn-copy:hover{background:rgba(37,211,102,.17);border-color:rgba(37,211,102,.5);box-shadow:0 0 24px rgba(37,211,102,.14);transform:translateY(-1px)}
+.cnx-btn-copy.ok{background:rgba(37,211,102,.2);color:#fff;border-color:rgba(37,211,102,.6);box-shadow:0 0 30px rgba(37,211,102,.22)}
+.cnx-btn-copy:active{transform:translateY(0)}
+
+/* Action row */
+.cnx-action-row{display:flex;flex-direction:column;gap:8px;position:relative;z-index:1;margin-bottom:14px}
 .cnx-btn-retry{
-  background:rgba(255,255,255,.04);border:1px solid var(--border2);
-  border-radius:11px;padding:11px 14px;font-size:12px;font-weight:600;
-  color:var(--muted);transition:all .2s;white-space:nowrap;
+  background:transparent;border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;padding:10px 14px;font-size:12px;font-weight:600;
+  color:var(--muted);transition:all .2s;
 }
-.cnx-btn-retry:hover{border-color:rgba(37,211,102,.35);color:var(--text)}
-/* Waiting dots */
+.cnx-btn-retry:hover{border-color:rgba(37,211,102,.28);color:rgba(37,211,102,.8)}
+
+/* Waiting pulse */
 .cnx-waiting{
   display:flex;align-items:center;justify-content:center;gap:7px;
-  font-size:11.5px;color:var(--muted);margin-bottom:14px;position:relative;z-index:1;
+  font-size:12px;color:var(--muted);margin-bottom:14px;position:relative;z-index:1;
 }
-.cnx-wdot{
-  width:5px;height:5px;border-radius:50%;background:var(--yellow);flex-shrink:0;
-  animation:wd .9s ease-in-out infinite;
-}
-@keyframes wd{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-5px);opacity:1}}
+.cnx-wdot{width:5px;height:5px;border-radius:50%;background:var(--yellow);flex-shrink:0;animation:wd .9s ease-in-out infinite}
+@keyframes wd{0%,80%,100%{transform:translateY(0);opacity:.35}40%{transform:translateY(-6px);opacity:1}}
 
 /* ── Done step ──────────────────────────────────────────────────────────── */
-.cnx-done{text-align:center;padding:16px 0;position:relative;z-index:1}
-.cnx-done-ring{width:76px;height:76px;margin:0 auto 18px;animation:pop-in .5s cubic-bezier(.34,1.56,.64,1)}
+.cnx-done{text-align:center;padding:20px 0;position:relative;z-index:1}
+.cnx-done-ring{
+  width:88px;height:88px;margin:0 auto 22px;
+  animation:pop-in .55s cubic-bezier(.34,1.56,.64,1);
+  filter:drop-shadow(0 0 24px rgba(37,211,102,.55));
+}
 @keyframes pop-in{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
-.cnx-checkmark{width:76px;height:76px;display:block}
+.cnx-checkmark{width:88px;height:88px;display:block}
 .cnx-check-circle{
   stroke:var(--green);stroke-width:2;fill:none;
-  stroke-dasharray:0 163;stroke-linecap:round;
-  animation:draw-circle .55s ease forwards;
+  stroke-dasharray:0 165;
+  animation:draw-circle .6s ease forwards;
 }
-@keyframes draw-circle{to{stroke-dasharray:163 0}}
+@keyframes draw-circle{to{stroke-dasharray:165 0}}
 .cnx-check-path{
   stroke:var(--green);stroke-width:3.5;fill:none;
   stroke-linecap:round;stroke-linejoin:round;
   stroke-dasharray:0 45;
-  animation:draw-check .35s ease .55s forwards;
+  animation:draw-check .35s ease .6s forwards;
 }
 @keyframes draw-check{to{stroke-dasharray:45 0}}
-.cnx-done-title{font-size:22px;font-weight:900;color:var(--green);margin-bottom:6px}
-.cnx-done-sub{font-size:13px;color:var(--muted)}
-.cnx-done-bar{width:55%;height:3px;background:rgba(37,211,102,.12);border-radius:99px;margin:16px auto 0;overflow:hidden}
-.cnx-done-fill{height:100%;background:linear-gradient(90deg,var(--green2),var(--green));border-radius:99px;animation:bar-fill 1s ease forwards}
+.cnx-done-title{font-size:27px;font-weight:900;color:var(--green);margin-bottom:9px}
+.cnx-done-sub{font-size:13.5px;color:var(--muted);line-height:1.65}
+.cnx-done-bar{width:48%;height:3px;background:rgba(37,211,102,.1);border-radius:99px;margin:22px auto 0;overflow:hidden}
+.cnx-done-fill{height:100%;background:linear-gradient(90deg,var(--green2),var(--green));border-radius:99px;animation:bar-fill 1.2s ease forwards}
 @keyframes bar-fill{from{width:0}to{width:100%}}
 
 /* ── Shared atoms ───────────────────────────────────────────────────────── */
@@ -629,14 +726,18 @@ a{text-decoration:none;color:inherit}
   .media-grid{grid-template-columns:1fr}
   .sets-grid{grid-template-columns:1fr}
   .hero-body{padding:14px 16px 18px}
-  .cnx-wrap{grid-template-columns:1fr;gap:24px}
-  .cnx-left{align-items:center;text-align:center}
-  .cnx-brand-desc{max-width:none;text-align:center}
+  #screen-connect{grid-template-columns:1fr}
+  .cnx-left{padding:32px 24px 28px;align-items:center;text-align:center;border-right:none;border-bottom:1px solid rgba(37,211,102,.08);justify-content:flex-start}
+  .cnx-brand-desc{max-width:none}
   .cnx-feats{display:none}
+  .cnx-stats{justify-content:center}
   .cnx-trust{justify-content:center}
+  .cnx-right{padding:28px 18px 40px}
+  .cnx-right-inner{max-width:none}
   .cnx-card{padding:26px 20px 22px}
-  .cnx-cells{padding:16px 14px;gap:5px}
-  .cnx-cell{width:38px;height:48px;font-size:22px}
+  .cnx-cells-wrap{padding:18px 14px}
+  .cnx-cell{width:38px;height:50px;font-size:23px}
+  .cnx-cells{gap:5px}
 }
 @media(max-width:380px){.isl-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -658,57 +759,77 @@ a{text-decoration:none;color:inherit}
 
 <!-- ════ CONNECT SCREEN ════ -->
 <div id="screen-connect" style="display:none">
-  <div class="cnx-wrap">
 
-    <!-- ── LEFT: Brand panel ── -->
-    <div class="cnx-left">
-      <div class="cnx-logo-ring">
-        <picture>
-          <source srcset="/logo.webp" type="image/webp">
-          <img src="/logo.jpeg" alt="AA MD Bot" class="cnx-logo-img" width="70" height="70" fetchpriority="high"
-               onerror="this.style.display='none';document.getElementById('cnx-logo-fb').style.display='flex'">
-        </picture>
-        <div class="cnx-logo-fb" id="cnx-logo-fb">🤖</div>
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="cnx-left">
+
+    <!-- Logo -->
+    <div class="cnx-logo-stack">
+      <div class="cnx-logo-outer"></div>
+      <div class="cnx-logo-mid"></div>
+      <picture>
+        <source srcset="/logo.webp" type="image/webp">
+        <img src="/logo.jpeg" alt="AA MD Bot" class="cnx-logo-img" width="94" height="94" fetchpriority="high"
+             onerror="this.style.display='none';document.getElementById('cnx-logo-fb').style.display='flex'">
+      </picture>
+      <div class="cnx-logo-fb" id="cnx-logo-fb">🤖</div>
+    </div>
+
+    <!-- Brand -->
+    <div class="cnx-brand-name">AA MD Bot</div>
+    <div class="cnx-brand-pills">
+      <span class="cnx-brand-ver">⚡ v3.0 Pro</span>
+    </div>
+    <div class="cnx-brand-by">by Ahsan Ali Wadani · AA Mods</div>
+    <p class="cnx-brand-desc">The most powerful WhatsApp automation bot — 185+ commands, AI chat, 60+ Islamic tools, media downloads &amp; so much more.</p>
+
+    <!-- Stats -->
+    <div class="cnx-stats">
+      <div class="cnx-stat"><span class="cnx-stat-n">185+</span><span class="cnx-stat-l">Commands</span></div>
+      <div class="cnx-stat"><span class="cnx-stat-n">60+</span><span class="cnx-stat-l">Islamic</span></div>
+      <div class="cnx-stat"><span class="cnx-stat-n">AI</span><span class="cnx-stat-l">Powered</span></div>
+      <div class="cnx-stat"><span class="cnx-stat-n">Free</span><span class="cnx-stat-l">Always</span></div>
+    </div>
+
+    <!-- Features -->
+    <div class="cnx-feats">
+      <div class="cnx-feat">
+        <div class="cnx-feat-ico">🤖</div>
+        <div class="cnx-feat-txt"><b>AI Chat &amp; Auto-Reply</b><span>Smart AI conversations that feel human</span></div>
       </div>
-      <div class="cnx-brand-name">AA MD Bot</div>
-      <div class="cnx-brand-tag">by Ahsan Ali Wadani · AA Mods</div>
-      <p class="cnx-brand-desc">The most powerful WhatsApp bot — 185+ commands, AI chat, 60+ Islamic tools, music downloads &amp; much more.</p>
-
-      <div class="cnx-feats">
-        <div class="cnx-feat">
-          <div class="cnx-feat-ico">🤖</div>
-          <div class="cnx-feat-txt"><b>AI Chat &amp; Auto-Reply</b><span>Smart AI that chats like a real person</span></div>
-        </div>
-        <div class="cnx-feat">
-          <div class="cnx-feat-ico">🎵</div>
-          <div class="cnx-feat-txt"><b>Music &amp; Video Downloads</b><span>YouTube, TikTok, Instagram &amp; more</span></div>
-        </div>
-        <div class="cnx-feat">
-          <div class="cnx-feat-ico">☪️</div>
-          <div class="cnx-feat-txt"><b>60+ Islamic Commands</b><span>Quran, Hadith, Prayer times &amp; Duas</span></div>
-        </div>
-        <div class="cnx-feat">
-          <div class="cnx-feat-ico">👁️</div>
-          <div class="cnx-feat-txt"><b>View-Once Reveal</b><span>Auto-save hidden photos, videos &amp; voice</span></div>
-        </div>
-        <div class="cnx-feat">
-          <div class="cnx-feat-ico">⚙️</div>
-          <div class="cnx-feat-txt"><b>185+ Commands</b><span>Games, stickers, tools, search &amp; more</span></div>
-        </div>
+      <div class="cnx-feat">
+        <div class="cnx-feat-ico">🎵</div>
+        <div class="cnx-feat-txt"><b>Music &amp; Video Downloads</b><span>YouTube, TikTok, Instagram &amp; more</span></div>
       </div>
-
-      <div class="cnx-trust">
-        <span class="cnx-tb">🔒 E2E Encrypted</span>
-        <span class="cnx-tb">📵 No QR needed</span>
-        <span class="cnx-tb">⚡ Instant connect</span>
-        <span class="cnx-tb">🆓 Always free</span>
+      <div class="cnx-feat">
+        <div class="cnx-feat-ico">☪️</div>
+        <div class="cnx-feat-txt"><b>60+ Islamic Commands</b><span>Quran, Hadith, Prayer times &amp; Duas</span></div>
+      </div>
+      <div class="cnx-feat">
+        <div class="cnx-feat-ico">👁️</div>
+        <div class="cnx-feat-txt"><b>View-Once Reveal</b><span>Auto-save hidden media &amp; voice notes</span></div>
+      </div>
+      <div class="cnx-feat">
+        <div class="cnx-feat-ico">🛡️</div>
+        <div class="cnx-feat-txt"><b>Group Management</b><span>Anti-spam, anti-call, auto-reactions</span></div>
       </div>
     </div>
 
-    <!-- ── RIGHT: Card ── -->
-    <div class="cnx-right">
+    <!-- Trust -->
+    <div class="cnx-trust">
+      <span class="cnx-tb">🔒 E2E Encrypted</span>
+      <span class="cnx-tb">📵 No QR scan</span>
+      <span class="cnx-tb">⚡ Instant</span>
+      <span class="cnx-tb">🆓 Always free</span>
+    </div>
 
-      <!-- Progress steps -->
+  </div><!-- /cnx-left -->
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="cnx-right">
+    <div class="cnx-right-inner">
+
+      <!-- Progress pill stepper -->
       <div class="cnx-prog" id="cnx-prog">
         <div class="cnx-step active" id="prog-step-1">
           <div class="cnx-step-n" id="prog-n-1">1</div>
@@ -729,68 +850,96 @@ a{text-decoration:none;color:inherit}
       <!-- Card -->
       <div class="cnx-card">
 
-        <!-- STEP 1: Form -->
+        <!-- ── STEP 1: Form ── -->
         <div id="cs-form">
-          <div class="cnx-card-title">🔑 Connect WhatsApp</div>
-          <div class="cnx-card-sub">Enter your number with country code to get an 8-digit pairing code — no QR scan needed.</div>
+          <div class="cnx-card-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Connect WhatsApp
+          </div>
+          <div class="cnx-card-sub">Enter your WhatsApp number with country code. We'll generate a secure 8-digit pairing code — no QR scan needed.</div>
 
           <label class="field-lbl" for="cs-phone">WhatsApp Number</label>
           <div class="field-wrap">
-            <span class="field-ico">📱</span>
+            <div class="field-prefix">📱</div>
             <input class="field-inp" id="cs-phone" type="tel" placeholder="923001234567"
                    maxlength="15" autocomplete="tel" oninput="this.value=this.value.replace(/\D/g,'')"
                    onkeydown="if(event.key==='Enter')csConnect()">
           </div>
-          <p class="field-hint">Country code + number, no + or spaces · <strong style="color:var(--text)">923001234567</strong></p>
+          <p class="field-hint">Include country code, no + or spaces &nbsp;·&nbsp; Example: <strong style="color:rgba(200,235,220,.85)">923001234567</strong></p>
 
+          <!-- How-to guide -->
           <div class="cnx-how">
-            <div class="cnx-how-row"><span class="cnx-how-n">1</span><span>Open <strong>WhatsApp</strong> on your phone</span></div>
-            <div class="cnx-how-row"><span class="cnx-how-n">2</span><span>Tap <strong>⋮ Menu → Linked Devices → Link a Device</strong></span></div>
-            <div class="cnx-how-row"><span class="cnx-how-n">3</span><span>Choose <strong>"Link with phone number instead"</strong></span></div>
-            <div class="cnx-how-row"><span class="cnx-how-n">4</span><span>Type the 8-digit code shown on this screen</span></div>
+            <div class="cnx-how-row">
+              <span class="cnx-how-n">1</span>
+              <span>Open <strong>WhatsApp</strong> on your phone</span>
+            </div>
+            <div class="cnx-how-row">
+              <span class="cnx-how-n">2</span>
+              <span>Tap <strong>⋮ Menu → Linked Devices → Link a Device</strong></span>
+            </div>
+            <div class="cnx-how-row">
+              <span class="cnx-how-n">3</span>
+              <span>Choose <strong>"Link with phone number instead"</strong></span>
+            </div>
+            <div class="cnx-how-row">
+              <span class="cnx-how-n">4</span>
+              <span>Enter the 8-digit code shown on this screen</span>
+            </div>
           </div>
 
           <div class="cs-err" id="cs-err"></div>
-          <button class="btn-main" id="cs-btn" onclick="csConnect()">🔗 Get Pairing Code</button>
+          <button class="btn-main" id="cs-btn" onclick="csConnect()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:7px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            Get Pairing Code
+          </button>
         </div>
 
-        <!-- STEP 2: Code -->
+        <!-- ── STEP 2: Code ── -->
         <div id="cs-code" style="display:none">
-          <div class="cnx-card-title" style="justify-content:center">📲 Your Pairing Code</div>
-          <div class="cnx-code-sub" id="pair-for-num">Enter this code in WhatsApp on your phone</div>
+          <div class="cnx-card-title" style="justify-content:center;margin-bottom:4px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            Your Pairing Code
+          </div>
+          <div class="cnx-code-label" id="pair-for-num">Enter this code in WhatsApp on your phone</div>
 
           <div class="cnx-code-area">
-            <!-- 4 + 4 cells -->
-            <div class="cnx-cells">
-              <div class="cnx-cell wait" id="cnx-cell-0">·</div>
-              <div class="cnx-cell wait" id="cnx-cell-1">·</div>
-              <div class="cnx-cell wait" id="cnx-cell-2">·</div>
-              <div class="cnx-cell wait" id="cnx-cell-3">·</div>
-              <div class="cnx-sep">—</div>
-              <div class="cnx-cell wait" id="cnx-cell-4">·</div>
-              <div class="cnx-cell wait" id="cnx-cell-5">·</div>
-              <div class="cnx-cell wait" id="cnx-cell-6">·</div>
-              <div class="cnx-cell wait" id="cnx-cell-7">·</div>
+            <!-- OTP cells: 4 + 4 -->
+            <div class="cnx-cells-wrap">
+              <div class="cnx-cells">
+                <div class="cnx-cell wait" id="cnx-cell-0">·</div>
+                <div class="cnx-cell wait" id="cnx-cell-1">·</div>
+                <div class="cnx-cell wait" id="cnx-cell-2">·</div>
+                <div class="cnx-cell wait" id="cnx-cell-3">·</div>
+                <div class="cnx-sep">—</div>
+                <div class="cnx-cell wait" id="cnx-cell-4">·</div>
+                <div class="cnx-cell wait" id="cnx-cell-5">·</div>
+                <div class="cnx-cell wait" id="cnx-cell-6">·</div>
+                <div class="cnx-cell wait" id="cnx-cell-7">·</div>
+              </div>
             </div>
-            <!-- Countdown timer (shown after code arrives) -->
+
+            <!-- Countdown timer -->
             <div class="cnx-timer" id="cnx-timer" style="display:none">
               <div class="cnx-timer-svg-box">
                 <svg class="cnx-timer-svg" viewBox="0 0 38 38">
                   <circle class="cnx-t-bg" cx="19" cy="19" r="16"/>
-                  <circle class="cnx-t-fg" id="cnx-t-fg" cx="19" cy="19" r="16"
-                          stroke-dasharray="100.5 100.5"/>
+                  <circle class="cnx-t-fg" id="cnx-t-fg" cx="19" cy="19" r="16" stroke-dasharray="100.5 100.5"/>
                 </svg>
                 <span class="cnx-timer-n" id="cnx-timer-n">90</span>
               </div>
-              <span id="cnx-timer-label">sec remaining</span>
+              <span id="cnx-timer-label">sec remaining — code expires soon</span>
             </div>
           </div>
 
+          <!-- Action buttons -->
           <div class="cnx-action-row">
-            <button class="cnx-btn-copy" id="pair-copy-btn" onclick="pairCopy()">📋 Copy Code</button>
+            <button class="cnx-btn-copy" id="pair-copy-btn" onclick="pairCopy()">
+              📋 &nbsp;Copy Code to Clipboard
+            </button>
             <button class="cnx-btn-retry" onclick="csReset()">🔄 New Code</button>
           </div>
 
+          <!-- Waiting indicator -->
           <div class="cnx-waiting">
             <span class="cnx-wdot"></span>
             <span class="cnx-wdot" style="animation-delay:.22s"></span>
@@ -798,14 +947,15 @@ a{text-decoration:none;color:inherit}
             <span>Waiting for you to enter the code in WhatsApp…</span>
           </div>
 
-          <div class="cnx-how" style="font-size:11.5px">
+          <!-- Mini guide -->
+          <div class="cnx-how">
             <div class="cnx-how-row"><span class="cnx-how-n">1</span><span>Open <strong>WhatsApp</strong> → Settings → Linked Devices</span></div>
             <div class="cnx-how-row"><span class="cnx-how-n">2</span><span>Tap <strong>Link a Device → Link with phone number</strong></span></div>
-            <div class="cnx-how-row"><span class="cnx-how-n">3</span><span>Type the 8-digit code shown above exactly</span></div>
+            <div class="cnx-how-row"><span class="cnx-how-n">3</span><span>Type the 8-digit code above <strong>exactly</strong></span></div>
           </div>
         </div>
 
-        <!-- STEP 3: Done -->
+        <!-- ── STEP 3: Done ── -->
         <div id="cs-done" style="display:none">
           <div class="cnx-done">
             <div class="cnx-done-ring">
@@ -814,15 +964,16 @@ a{text-decoration:none;color:inherit}
                 <path class="cnx-check-path" d="M14 27l8 8 16-16"/>
               </svg>
             </div>
-            <div class="cnx-done-title">Connected!</div>
-            <div class="cnx-done-sub">Loading your dashboard…</div>
+            <div class="cnx-done-title">Connected! 🎉</div>
+            <div class="cnx-done-sub">WhatsApp linked successfully.<br>Loading your dashboard…</div>
             <div class="cnx-done-bar"><div class="cnx-done-fill"></div></div>
           </div>
         </div>
 
       </div><!-- /cnx-card -->
-    </div><!-- /cnx-right -->
-  </div><!-- /cnx-wrap -->
+    </div><!-- /cnx-right-inner -->
+  </div><!-- /cnx-right -->
+
 </div><!-- /screen-connect -->
 
 <!-- ════ DASHBOARD ════ -->
