@@ -4697,16 +4697,17 @@
         sse = new EventSource("/api/events");
         sse.addEventListener("pairingCode", (e) => {
           const { sessionId, code } = JSON.parse(e.data);
-          if ((!_sessId || _sessId === sessionId) && code) applyCode(code);
+          // Only apply code for the session we're actively pairing
+          if (_sessId && _sessId === sessionId && code) applyCode(code);
         });
         sse.addEventListener("status", (e) => {
           const d = JSON.parse(e.data);
           if (d.status === "connected") {
-            if (
-              document.getElementById("screen-connect").style.display !==
-                "none" &&
-              (!_sessId || _sessId === d.sessionId)
-            ) {
+            const connectVisible =
+              document.getElementById("screen-connect").style.display !== "none" ||
+              document.getElementById("screen-connect").classList.contains("sc-visible");
+            // Only redirect if we're on connect screen AND this is the session we paired
+            if (connectVisible && _sessId && _sessId === d.sessionId) {
               clearInterval(_statusPoll);
               clearInterval(_codePoll);
               stopTimer();
