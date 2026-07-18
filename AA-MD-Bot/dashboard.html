@@ -19,8 +19,8 @@
   --glow:rgba(37,211,102,.18);
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 button{cursor:pointer;font-family:inherit;outline:none}
 input{font-family:inherit;outline:none}
 a{text-decoration:none;color:inherit}
@@ -716,82 +716,251 @@ a{text-decoration:none;color:inherit}
 #cats-sec{}.sr-no{text-align:center;color:var(--muted);font-size:13px;padding:24px;display:none}
 
 /* responsive */
+/* ══════════════════════════════════════════════
+   MOBILE RESPONSIVE — ≤ 640 px
+   ══════════════════════════════════════════════ */
 @media(max-width:640px){
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .hero-banner,.hero-banner-fb{height:160px}
-  .dash-body{padding:16px 14px 50px}
-  .cat-grid{grid-template-columns:1fr}
-  .mode-grid{grid-template-columns:1fr}
-  .isl-grid{grid-template-columns:1fr 1fr}
-  .media-grid{grid-template-columns:1fr}
-  .sets-grid{grid-template-columns:1fr}
-  .hero-body{padding:14px 16px 18px}
-  /* Mobile: single column stacked — brand header then card */
+
+  /* ── 1. GRIDS ─────────────────────────────── */
+  .stats       {grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:18px}
+  .cmd-grid    {grid-template-columns:1fr;gap:7px}
+  .cat-grid    {grid-template-columns:1fr}
+  .sr-grid     {grid-template-columns:1fr}
+  .isl-grid    {grid-template-columns:1fr;gap:8px}
+  .media-grid  {grid-template-columns:1fr}
+  .sets-grid   {grid-template-columns:1fr}
+  .mode-grid   {grid-template-columns:1fr;gap:9px}
+
+  /* ── 2. HERO ──────────────────────────────── */
+  .hero-banner,.hero-banner-fb{height:140px}
+  .hero-body{
+    padding:10px 13px 14px;gap:6px;
+    flex-direction:row;align-items:flex-end;flex-wrap:nowrap
+  }
+  .hero-left{gap:10px;flex:1;min-width:0}
+  .hero-logo,.hero-logo-fb{width:40px;height:40px;font-size:18px}
+  .hero-title{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hero-by{font-size:10px}
+  .hero-live{margin-top:3px;font-size:11px}
+  .hero-btns{flex-shrink:0}
+  .btn-hero-add{font-size:11px;padding:7px 11px;border-radius:8px}
+
+  /* ── 3. CHANNEL BAR ───────────────────────── */
+  .ch-bar{padding:8px 13px;gap:8px}
+  .ch-bar-txt{font-size:11.5px;text-align:center}
+  .btn-ch{font-size:12px;padding:7px 14px}
+
+  /* ── 4. BODY / LAYOUT ─────────────────────── */
+  .dash-body{padding:13px 12px 60px}
+  .sec{margin-bottom:20px}
+  .sec-head{font-size:11px;margin-bottom:10px;letter-spacing:.06em}
+
+  /* ── 5. WELCOME CARD ──────────────────────── */
+  .welcome{padding:12px 13px;gap:10px;flex-wrap:nowrap}
+  .welcome-em{font-size:22px;flex-shrink:0}
+  .welcome-title{font-size:13px}
+  .welcome-sub{font-size:11px;margin-top:2px}
+  .welcome-live{flex-shrink:0;font-size:11px;gap:5px}
+
+  /* ── 6. STAT CARDS ────────────────────────── */
+  .sc{padding:13px 12px;border-radius:13px}
+  .sc-icon{font-size:16px}
+  .sc-val{font-size:17px!important}
+  .sc-lbl{font-size:10px}
+
+  /* ── 7. SESSION CARD ──────────────────────── */
+  .sess-card{gap:10px;padding:12px 12px}
+  .sess-av-wrap{flex-shrink:0}
+  .sess-av{width:40px;height:40px;font-size:18px}
+  .sess-online-dot{width:10px;height:10px}
+  .sess-name{font-size:13px}
+  .sess-tag{font-size:10px}
+  .sess-meta{gap:4px}
+  .sess-badge{font-size:9px;padding:2px 6px}
+  .sess-right{gap:4px}
+  .sess-live-pill{font-size:10px;padding:4px 9px;gap:5px}
+  .sess-type{font-size:9px}
+  .btn-add-s{font-size:11px;padding:9px 14px}
+
+  /* ── 8. NEW FEATURES BAR ──────────────────── */
+  .new-bar{padding:10px 12px;gap:7px;border-radius:12px}
+  .new-lbl{font-size:11px}
+  .new-chips{gap:5px}
+  .chip{font-size:10.5px;padding:3px 9px}
+
+  /* ── 9. SEARCH ────────────────────────────── */
+  .search-wrap{margin-bottom:18px}
+  .search-inp{font-size:13px;padding:12px 40px 12px 40px;border-radius:11px}
+  .search-inp::placeholder{font-size:12px}
+
+  /* ── 10. COMMAND QUICK GRID ───────────────── */
+  .cmd-card{padding:10px 12px;border-radius:10px}
+  .cmd-card code{font-size:12px}
+  .cmd-card span{font-size:10.5px}
+
+  /* ── 11. ISLAMIC ──────────────────────────── */
+  .isl-wrap{padding:14px 12px;border-radius:14px}
+  .isl-top{gap:9px;margin-bottom:12px}
+  .isl-sec{padding:11px 10px}
+  .isl-sec-t{font-size:9px;margin-bottom:6px}
+  .isl-cmd{
+    font-size:10px;
+    white-space:normal;word-break:break-all;
+    flex-wrap:wrap;gap:3px;padding:2px 0
+  }
+  .isl-d{font-size:9px;display:block;width:100%;font-family:sans-serif}
+
+  /* ── 12. MEDIA CARDS ──────────────────────── */
+  .mf-body{padding:12px 13px}
+  .mf-title{font-size:12px}
+  .mf-desc{font-size:10.5px}
+  .mf-foot{padding:8px 13px;font-size:10px}
+
+  /* ── 13. MODE CARDS ───────────────────────── */
+  .mode-card{padding:14px 13px}
+  .mode-ico{font-size:24px;margin-bottom:7px}
+  .mode-t{font-size:13px}
+  .mode-desc{font-size:11px;line-height:1.6}
+  .mode-cmd{font-size:11px;padding:3px 9px}
+
+  /* ── 14. CATEGORIES ───────────────────────── */
+  .cat-card{padding:12px}
+  .cat-head{font-size:10px;margin-bottom:9px}
+  .cat-chip{font-size:10px;padding:2px 7px}
+
+  /* ── 15. SETTINGS ─────────────────────────── */
+  .sets-wrap{padding:13px 12px}
+  .set-item{padding:10px 11px}
+  .set-cmd{font-size:11px}
+  .set-desc{font-size:10.5px}
+  .set-eg{font-size:9.5px}
+
+  /* ── 16. CTA SECTION ──────────────────────── */
+  .cta{padding:20px 15px}
+  .cta-ico{font-size:32px;margin-bottom:9px}
+  .cta-title{font-size:16px}
+  .cta-sub{font-size:12px;margin-bottom:16px}
+  .btn-cta{padding:12px 22px;font-size:14px;border-radius:11px}
+
+  /* ── 17. ABOUT ────────────────────────────── */
+  .about{padding:14px 13px;gap:12px}
+  .about-logo,.about-logo-fb{width:46px;height:46px;font-size:20px}
+  .about-name{font-size:15px}
+  .about-by{font-size:11px}
+
+  /* ── 18. SEARCH RESULTS ───────────────────── */
+  #sr{margin-bottom:18px}
+  .sr-grid{gap:8px}
+
+  /* ══ CONNECT SCREEN (mobile-stacked) ═════════ */
   #screen-connect{grid-template-columns:1fr;min-height:100vh}
 
-  /* Compact brand strip on mobile */
+  /* Brand strip */
   .cnx-left{
-    display:flex;padding:22px 20px 20px;
+    display:flex;padding:20px 18px 18px;
     flex-direction:column;align-items:center;text-align:center;
     justify-content:flex-start;overflow:visible;
     border-right:none;border-bottom:1px solid rgba(37,211,102,.10);
     min-height:unset;
   }
-  .cnx-left::before,.cnx-left::after{display:none} /* hide heavy bg decorations on mobile */
+  .cnx-left::before,.cnx-left::after{display:none}
 
-  /* Mobile logo: smaller + inline with brand name */
-  .cnx-logo-stack{width:64px;height:64px;margin-bottom:10px}
+  /* Logo */
+  .cnx-logo-stack{width:60px;height:60px;margin-bottom:10px}
   .cnx-logo-outer{inset:-8px}
   .cnx-logo-mid{inset:-4px}
-  .cnx-logo-img{width:64px;height:64px;border-radius:50%}
+  .cnx-logo-img{width:60px;height:60px;border-radius:50%}
 
-  .cnx-brand-name{font-size:28px;margin-bottom:5px}
+  /* Brand text */
+  .cnx-brand-name{font-size:26px;margin-bottom:5px}
   .cnx-brand-pills{margin-bottom:4px}
-  .cnx-brand-by{margin-bottom:6px;font-size:11.5px}
-  .cnx-brand-desc{font-size:12.5px;margin-bottom:12px;max-width:none;line-height:1.6}
+  .cnx-brand-by{margin-bottom:6px;font-size:11px}
+  .cnx-brand-desc{font-size:12px;margin-bottom:12px;max-width:none;line-height:1.6}
 
-  /* Stats row: compact 2×2 on mobile */
-  .cnx-stats{flex-wrap:wrap;gap:6px;margin-bottom:14px;justify-content:center}
+  /* Stats 2×2 */
+  .cnx-stats{flex-wrap:wrap;gap:6px;margin-bottom:12px;justify-content:center}
   .cnx-stat{flex:0 0 calc(50% - 6px);border-radius:10px;padding:8px 6px}
-  .cnx-stat-n{font-size:15px}
+  .cnx-stat-n{font-size:14px}
 
-  /* Feature cards: horizontal scroll strip */
+  /* Features horizontal scroll */
   .cnx-feats{
-    display:flex;flex-direction:row;flex-wrap:nowrap;
-    gap:8px;margin-bottom:14px;
+    flex-direction:row;flex-wrap:nowrap;
+    gap:8px;margin-bottom:12px;
     overflow-x:auto;-webkit-overflow-scrolling:touch;
     padding-bottom:4px;width:100%;
-    /* hide scrollbar visually */
     scrollbar-width:none;
   }
   .cnx-feats::-webkit-scrollbar{display:none}
   .cnx-feat{
-    min-width:160px;flex-shrink:0;
+    min-width:155px;flex-shrink:0;
     flex-direction:column;align-items:flex-start;
-    padding:10px 12px;gap:6px;
+    padding:9px 11px;gap:5px;
   }
-  .cnx-feat-ico{width:28px;height:28px;font-size:13px}
-  .cnx-feat-txt b{font-size:11.5px}
+  .cnx-feat-ico{width:26px;height:26px;font-size:12px}
+  .cnx-feat-txt b{font-size:11px}
   .cnx-feat-txt span{font-size:10px}
 
-  /* Trust: center-wrap */
+  /* Trust badges */
   .cnx-trust{justify-content:center;flex-wrap:wrap;gap:5px}
-  .cnx-tb{font-size:10.5px;padding:4px 9px}
+  .cnx-tb{font-size:10px;padding:4px 8px}
 
-  /* Right panel / card */
-  .cnx-right{padding:20px 16px 44px;justify-content:flex-start;align-items:stretch}
+  /* Right panel / pairing card */
+  .cnx-right{padding:18px 14px 44px;justify-content:flex-start;align-items:stretch}
   .cnx-right-inner{max-width:none;width:100%}
-  .cnx-card{padding:22px 16px 20px}
-  .cnx-cells-wrap{padding:14px 10px}
-  .cnx-cell{width:34px;height:46px;font-size:21px}
+  .cnx-card{padding:20px 14px 18px}
+  .cnx-cells-wrap{padding:12px 8px}
+  .cnx-cell{width:34px;height:46px;font-size:21px;border-radius:10px}
   .cnx-cells{gap:4px}
-  .cnx-prog{padding:8px 12px;gap:5px}
+  .cnx-prog{padding:8px 10px;gap:5px}
   .cnx-step-l{font-size:10px}
-  .btn-main{font-size:15px;padding:13px 18px}
+  .btn-main{font-size:15px;padding:13px 16px}
+  .cnx-btn-copy{font-size:13px;padding:13px 16px}
   .cnx-how-row{font-size:12px;gap:9px}
-  .cnx-how-n{width:22px;height:22px;font-size:10.5px;flex-shrink:0}
+  .cnx-how-n{width:22px;height:22px;font-size:10px;flex-shrink:0}
 }
-@media(max-width:380px){.isl-grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+
+/* ══════════════════════════════════════════════
+   EXTRA SMALL — ≤ 400 px  (very small phones)
+   ══════════════════════════════════════════════ */
+@media(max-width:400px){
+  .dash-body{padding:11px 10px 60px}
+  .stats{grid-template-columns:repeat(2,1fr);gap:7px}
+  .isl-grid{grid-template-columns:1fr}
+
+  /* hero tighter */
+  .hero-banner,.hero-banner-fb{height:120px}
+  .hero-logo,.hero-logo-fb{width:34px;height:34px;font-size:15px}
+  .hero-title{font-size:13px}
+
+  /* stat cards smaller */
+  .sc{padding:10px 9px}
+  .sc-val{font-size:15px!important}
+
+  /* session card single-col-ish */
+  .sess-card{gap:8px;padding:11px 10px}
+  .sess-av{width:36px;height:36px;font-size:16px}
+  .sess-right{display:none} /* hide LIVE pill on very small screens — redundant */
+
+  /* pairing cells smallest */
+  .cnx-cell{width:30px;height:42px;font-size:18px;border-radius:8px}
+  .cnx-cells{gap:3px}
+
+  /* welcome */
+  .welcome{padding:10px 11px}
+  .welcome-em{display:none}
+
+  /* search */
+  .search-inp{font-size:12px}
+
+  /* cmd-card */
+  .cmd-card code{font-size:11.5px}
+
+  /* category chips wrap tightly */
+  .cat-chip{font-size:9.5px;padding:2px 6px}
+
+  /* cta */
+  .btn-cta{width:100%;justify-content:center;font-size:13px;padding:12px}
+}
 </style>
 </head>
 <body>
