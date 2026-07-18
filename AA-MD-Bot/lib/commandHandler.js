@@ -300,6 +300,19 @@ export async function handleMessage(sock, msg, sessionId) {
       },
     };
 
+    // Session-scoped db proxy — plugins use db.groups.get(jid) as before,
+    // but internally the key is sessionId|groupJid so each bot number has
+    // completely independent group settings (antilink, welcome, warn, etc.)
+    const scopedDb = {
+      ...db,
+      groups: {
+        get:    (groupId)       => db.groups.get(sessionId, groupId),
+        set:    (groupId, data) => db.groups.set(sessionId, groupId, data),
+        delete: (groupId)       => db.groups.delete(sessionId, groupId),
+        all:    ()              => db.groups.all(sessionId),
+      },
+    };
+
     await plugin.execute({
       sock, msg, jid, senderJid, fromMe, isGroupMsg,
       command, args, text: argText, prefix, sessionId,
@@ -308,7 +321,7 @@ export async function handleMessage(sock, msg, sessionId) {
       react: (e) => react(sock, msg, e),
       send: (t, opts) => sendMsg(sock, jid, t, opts),
       sendMedia: (content) => sendMedia(sock, jid, msg, content),
-      db, config,
+      db: scopedDb, config,
       sessionSettings,
       quoted,
       ownJid,

@@ -290,6 +290,11 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         db.sessions.delete(sessionId);
         await fs.remove(sessionPath).catch(() => {});
 
+        // Clean up all per-session data (settings + group settings)
+        db.sessionSettings.delete(sessionId);
+        db.groups.deleteBySession(sessionId);
+        logger.info({ sessionId }, '🗑️ Session settings & group data removed on logout');
+
         // Clean up user data tied to the bot's own number for this session
         if (loggedOutJid) {
           const ownNum = loggedOutJid.replace(/:.*@/, '@');
@@ -379,7 +384,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
           const isGroup   = chatJid?.endsWith('@g.us');
           const settings  = db.settings.get();
           const adEnabled = isGroup
-            ? (db.groups.get(chatJid)?.antidelete ?? settings.antidelete ?? false)
+            ? (db.groups.get(sessionId, chatJid)?.antidelete ?? settings.antidelete ?? false)
             : (settings.antidelete ?? false);
 
           if (adEnabled) {
@@ -583,9 +588,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
   sock.ev.on('group-participants.update', async ({ id, participants, action }) => {
     // ── Anti Fake Numbers ─────────────────────────────────────
-    await checkAntiFake({ id, participants, action }, sock).catch(() => {});
+    await checkAntiFake({ id, participants, action }, sock, sessionId).catch(() => {});
 
-    const g = db.groups.get(id);
+    const g = db.groups.get(sessionId, id);
     if (action === 'add' && g.welcome) {
       for (const jid of participants) {
         const msg = (g.welcomeMsg || 'Welcome @user!').replace('@user', `@${jid.split('@')[0]}`);
@@ -641,9 +646,12 @@ export async function deleteSession(sessionId) {
   sessionQRs.delete(sessionId);
   sessionStatus.delete(sessionId);
   db.sessions.delete(sessionId);
+  // Clean up all per-session data so no stale data accumulates
+  db.sessionSettings.delete(sessionId);
+  db.groups.deleteBySession(sessionId);
   await fs.remove(path.join(sessionDir, sessionId)).catch(() => {});
   botEvents.emit('status', { sessionId, status: 'deleted' });
-  logger.info({ sessionId }, 'Session deleted');
+  logger.info({ sessionId }, '🗑️ Session deleted & all related data cleaned up');
 }
 
 export function getSession(id = 'default') { return sessions.get(id); }

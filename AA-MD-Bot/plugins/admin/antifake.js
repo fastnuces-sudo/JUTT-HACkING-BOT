@@ -29,11 +29,11 @@ function hasValidCode(num) {
 }
 
 // Called passively from sessionManager on group participant add
-export async function checkAntiFake(update, sock) {
+export async function checkAntiFake(update, sock, sessionId) {
   const { id: chatJid, participants, action } = update;
   if (action !== 'add') return;
 
-  const grp = db.groups.get(chatJid) || {};
+  const grp = db.groups.get(sessionId, chatJid) || {};
   if (!grp.antifake) return;
 
   const fakes = participants.filter(p => {

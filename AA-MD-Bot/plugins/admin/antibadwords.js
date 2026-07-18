@@ -10,13 +10,6 @@ const DEFAULT_BAD_WORDS = [
   'faggot','retard','whore','slut','motherfucker','bullshit','cock','rape',
 ];
 
-// Per-group custom word lists (in-memory; persist via db.groups)
-function getGroupWords(groupJid) {
-  const grp = db.groups.get(groupJid) || {};
-  const custom = grp.badWords || [];
-  return new Set([...DEFAULT_BAD_WORDS, ...custom]);
-}
-
 function containsBadWord(text, badWords) {
   const lower = text.toLowerCase().replace(/[^a-z0-9 ]/g, ' ');
   for (const word of badWords) {
@@ -31,7 +24,7 @@ export async function checkBadWords(msg, sock, sessionId) {
   if (msg.key.fromMe) return;
 
   const chatJid = msg.key.remoteJid;
-  const grp = db.groups.get(chatJid) || {};
+  const grp = db.groups.get(sessionId, chatJid) || {};
   if (!grp.antibadwords) return;
 
   const text = (
@@ -43,7 +36,8 @@ export async function checkBadWords(msg, sock, sessionId) {
 
   if (!text) return;
 
-  const badWords = getGroupWords(chatJid);
+  const custom = grp.badWordsList || grp.badWords || [];
+  const badWords = new Set([...DEFAULT_BAD_WORDS, ...custom]);
   const found = containsBadWord(text, badWords);
   if (!found) return;
 

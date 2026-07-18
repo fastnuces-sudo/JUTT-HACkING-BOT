@@ -152,24 +152,60 @@ export const db = {
   },
 
   groups: {
-    get: (id) => {
-      if (!cache.groups[id]) {
-        cache.groups[id] = {
-          id, name: '', antilink: false, antibot: false, welcome: false,
-          welcomeMsg: 'Welcome @user!', goodbye: false, goodbyeMsg: 'Goodbye @user!',
-          muted: false, warnings: {}, createdAt: Date.now(),
+    // ── sessionId + groupId composite key: "sessionId|groupJid" ──
+    // Each bot number manages its OWN per-group settings independently.
+    _key: (sessionId, groupId) => `${sessionId}|${groupId}`,
+
+    get: (sessionId, groupId) => {
+      const key = `${sessionId}|${groupId}`;
+      if (!cache.groups[key]) {
+        cache.groups[key] = {
+          id: groupId, sessionId, name: '',
+          antilink: false, antibot: false,
+          welcome: false, welcomeMsg: 'Welcome @user!',
+          goodbye: false, goodbyeMsg: 'Goodbye @user!',
+          muted: false, antifake: false, antibadwords: false,
+          antidelete: false, antiviewonce: false,
+          badwordsList: [], warnings: {},
+          createdAt: Date.now(),
         };
         scheduleSave('groups');
       }
-      return cache.groups[id];
+      return cache.groups[key];
     },
-    set: (id, data) => {
-      cache.groups[id] = { ...cache.groups[id], ...data };
+
+    set: (sessionId, groupId, data) => {
+      const key = `${sessionId}|${groupId}`;
+      cache.groups[key] = { ...(cache.groups[key] || {}), ...data };
       scheduleSave('groups');
-      return cache.groups[id];
+      return cache.groups[key];
     },
-    all: () => cache.groups,
-    delete: (id) => { delete cache.groups[id]; scheduleSave('groups'); },
+
+    // Returns groups for one session (keyed by groupId) — or all raw if no sessionId
+    all: (sessionId) => {
+      if (!sessionId) return cache.groups;
+      const prefix = `${sessionId}|`;
+      const out = {};
+      for (const k of Object.keys(cache.groups)) {
+        if (k.startsWith(prefix)) out[k.slice(prefix.length)] = cache.groups[k];
+      }
+      return out;
+    },
+
+    delete: (sessionId, groupId) => {
+      delete cache.groups[`${sessionId}|${groupId}`];
+      scheduleSave('groups');
+    },
+
+    // Delete ALL group settings for a disconnected/deleted session
+    deleteBySession: (sessionId) => {
+      const prefix = `${sessionId}|`;
+      let changed = false;
+      for (const k of Object.keys(cache.groups)) {
+        if (k.startsWith(prefix)) { delete cache.groups[k]; changed = true; }
+      }
+      if (changed) scheduleSave('groups');
+    },
   },
 
   settings: {

@@ -211,7 +211,7 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
 
     // ── Decide whether to auto-forward to "You" chat ─────────────────────────
     const settings = db.settings.get();
-    const grpSet   = inGroup ? db.groups.get(chatJid) : null;
+    const grpSet   = inGroup ? db.groups.get(sessionId, chatJid) : null;
     const avo      = inGroup
       ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
       : (settings.antiViewOnce ?? false);

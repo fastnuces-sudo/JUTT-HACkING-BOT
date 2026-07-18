@@ -1,5 +1,5 @@
 - [Firebase Realtime Database](firebase-database.md) — migrated from local JSON files; REST API + in-memory cache + debounced writes; key encoding for JIDs; initDatabase() must run first in main().
-- [Per-session settings architecture](per-session-settings.md) — each connected WhatsApp number has independent settings via db.sessionSettings; session overrides global, both fall back gracefully.
+- [Per-session settings architecture](per-session-settings.md) — each connected WhatsApp number has independent settings via db.sessionSettings; group settings are per sessionId|groupJid composite key; proxy in commandHandler injects sessionId automatically so plugins need no changes.
 - [Dashboard and ownership](dashboard-ownership.md) — pairing-code only UI; session ID = phone number; auto-saves owner+superOwner on first connect; isOwner reads db first then config.
 - [Flash-Md-V3 integration](flash-md-integration.md) — what was fixed (news/dl/apk/onlinealert) and 14 new plugins added; alias conflict rules documented.
 - [YouTube download architecture](youtube-dl-architecture.md) — buffer-only delivery for .play/.video; Step 0 = downloadVideoFromStreamUrl (mirrors audio path, most reliable); ensureMp3 transcode chain; never send raw CDN URLs.
