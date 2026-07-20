@@ -202,6 +202,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         id: sessionId, jid: sock.user?.id, name: sock.user?.name,
         connected: true, connectedAt: Date.now(),
         firstConnectDone: true,
+        server: process.env.SERVER_ID || process.env.RAILWAY_SERVICE_NAME || process.env.RAILWAY_REPLICA_ID || 'server-1',
       });
 
       // Persist bot's own JID in settings so plugins can reliably read it
@@ -261,19 +262,25 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
       const isLoggedOut = reason === DisconnectReason.loggedOut || reason === 401;
 
+      // Capture phone/jid BEFORE deleting from sessions map
+      const closingSock = sessions.get(sessionId);
+      const loggedOutJid = closingSock?.user?.id || sessionInfo.get(sessionId)?.jid || '';
+      const loggedOutPhone = closingSock?.user?.id?.split('@')[0]?.split(':')[0]
+        || sessionInfo.get(sessionId)?.phone || '';
+
       sessionQRs.delete(sessionId);
       sessions.delete(sessionId);
 
       logger.warn({ sessionId, reason, wasRegistered }, 'Connection closed');
 
       if (isLoggedOut) {
-        // Permanently logged out — clean session files + all user data for this session
+        // Permanently logged out — clean ALL data for this session from Firebase
         reconnectAttempts.delete(sessionId);
+        sessionInfo.delete(sessionId);
         sessionStatus.set(sessionId, 'logged_out');
         botEvents.emit('status', { sessionId, status: 'logged_out' });
 
         // Remove session record + auth data from Firebase
-        const loggedOutJid = sessions.get(sessionId)?.user?.id || '';
         db.sessions.delete(sessionId);
         await deleteFirebaseAuthState(sessionId).catch(() => {});
 
@@ -289,10 +296,17 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
           logger.info({ sessionId, ownNum }, '🗑️ User data removed on logout');
         }
 
-        // Reset firstConnectDone so next scan triggers welcome again
-        // (already deleted from db.sessions above — no extra step needed)
+        // Remove phone from global owners list
+        if (loggedOutPhone) {
+          const owners = db.settings.getValue('owners') || [];
+          const filtered = owners.filter(o => o !== loggedOutPhone);
+          if (filtered.length !== owners.length) {
+            db.settings.setValue('owners', filtered);
+            logger.info({ sessionId, loggedOutPhone }, '🗑️ Phone removed from owners list on logout');
+          }
+        }
 
-        logger.info({ sessionId }, '🔴 Session logged out & data removed');
+        logger.info({ sessionId }, '🔴 Session logged out & all data removed');
 
       } else if (wasRegistered) {
         // 440 = connectionReplaced — another instance/device took over the session
@@ -629,16 +643,37 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
 export async function deleteSession(sessionId) {
   const sock = sessions.get(sessionId);
+  // Capture phone BEFORE deleting
+  const phone = sock?.user?.id?.split('@')[0]?.split(':')[0]
+    || sessionInfo.get(sessionId)?.phone || '';
+  const ownJid = sock?.user?.id || '';
+
   if (sock) { try { await sock.logout(); } catch {} sessions.delete(sessionId); }
   sessionQRs.delete(sessionId);
   sessionStatus.delete(sessionId);
+  sessionInfo.delete(sessionId);
+
+  // Remove all DB data for this session
   db.sessions.delete(sessionId);
-  // Clean up all per-session data so no stale data accumulates
   db.sessionSettings.delete(sessionId);
   db.groups.deleteBySession(sessionId);
   await deleteFirebaseAuthState(sessionId).catch(() => {});
+
+  // Remove user data
+  if (ownJid) {
+    const ownNum = ownJid.replace(/:.*@/, '@');
+    db.users.delete(ownNum);
+  }
+
+  // Remove phone from global owners list
+  if (phone) {
+    const owners = db.settings.getValue('owners') || [];
+    const filtered = owners.filter(o => o !== phone);
+    if (filtered.length !== owners.length) db.settings.setValue('owners', filtered);
+  }
+
   botEvents.emit('status', { sessionId, status: 'deleted' });
-  logger.info({ sessionId }, '🗑️ Session deleted & all related data cleaned up');
+  logger.info({ sessionId }, '🗑️ Session deleted & all data removed');
 }
 
 export function getSession(id = 'default') { return sessions.get(id); }
