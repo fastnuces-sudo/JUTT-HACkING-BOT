@@ -67,7 +67,7 @@ function printBanner() {
 async function startServer() {
   const port = parseInt(process.env.PORT || '5000', 10);
 
-  const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS || '10', 10);
+  const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS || '20', 10);
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost`);
