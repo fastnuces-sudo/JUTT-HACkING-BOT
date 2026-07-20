@@ -67,11 +67,23 @@ function printBanner() {
 async function startServer() {
   const port = parseInt(process.env.PORT || '5000', 10);
 
+  const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS || '50', 10);
+
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost`);
 
-    // CORS
+    // ── Full CORS — required for Vercel / external frontends ──
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
 
     // ── Bare /api → health (for deployment healthcheck) ────
     if (url.pathname === '/api' || url.pathname === '/api/') {
@@ -190,6 +202,21 @@ async function startServer() {
       return;
     }
 
+    // ── Status — for external frontends (Vercel etc) ──────
+    if (p === '/status') {
+      const connected = getAllSessions().filter(s => s.status === 'connected').length;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: 'online',
+        bot: config.botName,
+        version: config.version,
+        sessions: connected,
+        maxSessions: MAX_SESSIONS,
+        uptime: formatDuration(Date.now() - startTime),
+      }));
+      return;
+    }
+
     // ── Latest pairing code per session (for polling) ─────
     if (p === '/pairing-code') {
       const sid = url.searchParams.get('session') || 'default';
@@ -211,6 +238,14 @@ async function startServer() {
           if (method === 'pairing' && !phoneNumber) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: false, error: 'Phone number required' }));
+            return;
+          }
+
+          // ── Session limit check ──────────────────────────
+          const connectedCount = getAllSessions().filter(s => s.status === 'connected').length;
+          if (!sessions.has(cleanId) && connectedCount >= MAX_SESSIONS) {
+            res.writeHead(429, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: `Server full (${connectedCount}/${MAX_SESSIONS} sessions). Try another server.` }));
             return;
           }
 
