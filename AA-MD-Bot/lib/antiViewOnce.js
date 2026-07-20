@@ -7,18 +7,14 @@
 // view-once caption contains the configured keyword.
 // ============================================
 
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import moment from 'moment-timezone';
 import { logger } from './logger.js';
 import { db } from './database.js';
 import config from '../config.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 // ── Storage ───────────────────────────────────────────────────────────────────
-// Map keyed by message ID — stores buffer + metadata for manual reveal
+// All view-once media is kept in memory only — zero disk writes.
+// Map keyed by message ID — stores buffer + metadata for manual/keyword reveal
 export const viewOnceStore = new Map();
 const _MAX_STORE = 200;
 
@@ -27,70 +23,13 @@ const _MAX_STORE = 200;
 const _processed = new Set();
 const _PROCESSED_MAX = 200;
 
-// Media directory for saved files
-const MEDIA_DIR = path.join(__dirname, '../media/viewonce');
-fs.ensureDirSync(MEDIA_DIR);
-
-// ── Persistent disk index — survives the 30-min in-memory TTL ────────────────
-// Maps msgId → { savedPath, mime, isVid, num, time, inGroup, caption, senderName }
-const INDEX_PATH = path.join(MEDIA_DIR, 'index.json');
-
-function loadIndex() {
-  try {
-    if (fs.existsSync(INDEX_PATH)) return JSON.parse(fs.readFileSync(INDEX_PATH, 'utf8'));
-  } catch {}
-  return {};
-}
-
-function saveIndexEntry(msgId, meta) {
-  try {
-    const idx = loadIndex();
-    // Prune to last 100 entries (reduced from 500 to save disk space)
-    const keys = Object.keys(idx);
-    if (keys.length >= 100) {
-      // Remove oldest entries first
-      const sorted = keys.sort((a, b) => (idx[a].timestamp || 0) - (idx[b].timestamp || 0));
-      for (const k of sorted.slice(0, keys.length - 99)) {
-        // Also delete the physical file
-        try { if (idx[k].savedPath) fs.removeSync(idx[k].savedPath); } catch {}
-        delete idx[k];
-      }
-    }
-    idx[msgId] = meta;
-    fs.writeFileSync(INDEX_PATH, JSON.stringify(idx));
-  } catch {}
-}
-
-// Load entry from disk when no longer in memory (TTL expired)
-export function getIndexEntry(msgId) {
-  const idx = loadIndex();
-  return idx[msgId] || null;
-}
-
-// ── Periodic cleanup (30-minute in-memory TTL, 2-hour disk TTL) ──────────────
+// ── Periodic cleanup (60-minute in-memory TTL) ────────────────────────────────
 export function cleanViewOnceStore() {
   const now = Date.now();
-  const MEM_TTL  = 30 * 60 * 1000;   // 30 min — keep in memory for quick reveal
-  const DISK_TTL =  2 * 60 * 60 * 1000; // 2 hr  — then remove from disk too
-
-  // Clean in-memory store
+  const MEM_TTL = 60 * 60 * 1000; // 60 min — extended since no disk fallback
   for (const [key, val] of viewOnceStore.entries()) {
     if (now - val.timestamp > MEM_TTL) viewOnceStore.delete(key);
   }
-
-  // Clean disk files + prune index for entries older than 2 hours
-  try {
-    const idx = loadIndex();
-    let changed = false;
-    for (const [id, meta] of Object.entries(idx)) {
-      if (meta.timestamp && now - meta.timestamp > DISK_TTL) {
-        try { if (meta.savedPath) fs.removeSync(meta.savedPath); } catch {}
-        delete idx[id];
-        changed = true;
-      }
-    }
-    if (changed) fs.writeFileSync(INDEX_PATH, JSON.stringify(idx));
-  } catch {}
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -178,30 +117,19 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
     _processed.add(msgId);
     if (_processed.size > _PROCESSED_MAX) _processed.delete(_processed.values().next().value);
 
-    // Save to disk
-    const ext      = isVid ? 'mp4' : 'jpg';
-    const fileName = `viewonce_${isVid ? 'video' : 'image'}_${Date.now()}.${ext}`;
-    const savedPath = path.join(MEDIA_DIR, fileName);
-    try { fs.writeFileSync(savedPath, buf); } catch {}
-
-    // Store for reveal (in-memory + persistent disk index)
+    // Store in memory only — no disk writes
     const senderName = sock.contacts?.[senderJid]?.name
                || sock.contacts?.[senderJid]?.notify
                || formatPhone(num);
     const entry = {
       buf, mime, isVid, num, time, inGroup,
       caption, chatJid, senderJid, senderName,
-      savedPath,
       timestamp: Date.now(),
     };
     viewOnceStore.set(msgId, entry);
     if (viewOnceStore.size > _MAX_STORE) viewOnceStore.delete(viewOnceStore.keys().next().value);
 
-    // Persist to disk index so reveal works even after the 30-min in-memory TTL
-    // chatJid and timestamp (numeric ms) are required by the disk-fallback scan in handleReplyReveal
-    saveIndexEntry(msgId, { savedPath, mime, isVid, num, time, inGroup, caption, senderName, chatJid, timestamp: Date.now() });
-
-    logger.info({ sessionId, msgId, savedPath, bytes: buf.length }, '✅ ViewOnce cached');
+    logger.info({ sessionId, msgId, bytes: buf.length }, '✅ ViewOnce cached (memory only)');
 
     // ── Auto-reply to sender ──────────────────────────────────────────────────
     const autoReply = db.settings.getValue('voAutoReply');
@@ -412,36 +340,6 @@ export async function handleReplyReveal(msg, sock, sessionId) {
         if (newest && Date.now() - newest.timestamp < TTL) stored = newest;
       }
 
-      // Disk index scan (survives bot restarts)
-      if (!stored) {
-        try {
-          const idx = loadIndex();
-          let newestMeta = null, newestTime = 0;
-
-          // Pass 1: prefer same-chat disk entries
-          for (const [, meta] of Object.entries(idx)) {
-            if (meta.chatJid === chatJid && meta.savedPath) {
-              const mtime = meta.timestamp || (meta.time ? new Date(meta.time).getTime() : 0);
-              if (mtime > newestTime) { newestMeta = meta; newestTime = mtime; }
-            }
-          }
-
-          // Pass 2: global disk scan when no same-chat entry or no stanzaId
-          if (!newestMeta || !hadStanzaId) {
-            for (const [, meta] of Object.entries(idx)) {
-              if (meta.savedPath) {
-                const mtime = meta.timestamp || (meta.time ? new Date(meta.time).getTime() : 0);
-                if (mtime > newestTime) { newestMeta = meta; newestTime = mtime; }
-              }
-            }
-          }
-
-          if (newestMeta?.savedPath && fs.existsSync(newestMeta.savedPath)) {
-            const diskBuf = fs.readFileSync(newestMeta.savedPath);
-            if (diskBuf?.length > 0) stored = { ...newestMeta, buf: diskBuf, timestamp: Date.now() };
-          }
-        } catch {}
-      }
     }
 
     if (!stored) return; // no cached view-once for this chat
@@ -486,21 +384,8 @@ export async function handleManualReveal(msgId, sock, replyJid) {
 
   const id = msgId?.trim();
 
-  // Check in-memory store first (fast path)
-  let stored = viewOnceStore.get(id);
-
-  // If not in memory, try recovering from disk index (survives 30-min TTL)
-  if (!stored) {
-    const meta = getIndexEntry(id);
-    if (meta?.savedPath) {
-      try {
-        const diskBuf = await fs.readFile(meta.savedPath);
-        if (diskBuf?.length > 0) {
-          stored = { ...meta, buf: diskBuf, timestamp: Date.now() };
-        }
-      } catch {}
-    }
-  }
+  // Check in-memory store (only source — no disk fallback)
+  const stored = viewOnceStore.get(id);
 
   if (!stored) {
     await sock.sendMessage(replyJid, {
@@ -543,20 +428,8 @@ export async function handleRevealByReply(msg, sock) {
   const stanzaId = ctxInfo?.stanzaId;
   if (!stanzaId) return false;
 
-  // Check in-memory store
-  let stored = viewOnceStore.get(stanzaId);
-
-  // Fall back to disk if not in memory
-  if (!stored) {
-    const meta = getIndexEntry(stanzaId);
-    if (meta?.savedPath) {
-      try {
-        const diskBuf = await fs.readFile(meta.savedPath);
-        if (diskBuf?.length > 0) stored = { ...meta, buf: diskBuf, timestamp: Date.now() };
-      } catch {}
-    }
-  }
-
+  // Check in-memory store (only source — no disk fallback)
+  const stored = viewOnceStore.get(stanzaId);
   if (!stored) return false;
 
   const tz      = config.timezone || 'Asia/Karachi';

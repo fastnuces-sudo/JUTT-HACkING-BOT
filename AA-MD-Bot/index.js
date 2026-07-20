@@ -302,9 +302,8 @@ async function main() {
   logger.info('🚀 Starting AA MD Bot...');
 
   // Ensure directories
-  for (const d of ['logs', 'temp', 'media', 'session', 'database']) {
-    fs.ensureDirSync(path.join(__dirname, d));
-  }
+  // Only temp/ is needed — everything else now lives in Firebase
+  fs.ensureDirSync(path.join(__dirname, 'temp'));
 
   // Load database from Firebase before anything reads from db
   await initDatabase();

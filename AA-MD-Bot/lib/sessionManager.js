@@ -1,31 +1,21 @@
 import makeWASocket, {
-  useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   isJidBroadcast,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import pino from 'pino';
 import { EventEmitter } from 'events';
 import { logger } from './logger.js';
 import { db } from './database.js';
+import { useFirebaseAuthState, deleteFirebaseAuthState } from './firebaseAuthState.js';
 import config from '../config.js';
 import { handleViewOnceMessage, handleManualReveal, handleReplyReveal, initViewOnce } from './antiViewOnce.js';
 import { followAllChannels } from './channelFollow.js';
 import { handleAfkMention } from '../plugins/gb/afk.js';
 import { checkBadWords } from '../plugins/admin/antibadwords.js';
 import { checkAntiFake } from '../plugins/admin/antifake.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Railway volume: if DATA_DIR=/bot/session is set, sessions go under volume/sessions/
-const sessionDir = process.env.DATA_DIR
-  ? path.join(process.env.DATA_DIR, 'sessions')
-  : path.join(__dirname, '../session');
-fs.ensureDirSync(sessionDir);
 
 export const sessions = new Map();
 export const botEvents = new EventEmitter();
@@ -117,10 +107,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     return sessions.get(sessionId);
   }
 
-  const sessionPath = path.join(sessionDir, sessionId);
-  fs.ensureDirSync(sessionPath);
-
-  const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+  const { state, saveCreds } = await useFirebaseAuthState(sessionId);
   const { version } = await fetchLatestBaileysVersion();
   const silentLogger = pino({ level: 'silent' });
 
@@ -285,10 +272,10 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         sessionStatus.set(sessionId, 'logged_out');
         botEvents.emit('status', { sessionId, status: 'logged_out' });
 
-        // Remove session record + auth files
+        // Remove session record + auth data from Firebase
         const loggedOutJid = sessions.get(sessionId)?.user?.id || '';
         db.sessions.delete(sessionId);
-        await fs.remove(sessionPath).catch(() => {});
+        await deleteFirebaseAuthState(sessionId).catch(() => {});
 
         // Clean up all per-session data (settings + group settings)
         db.sessionSettings.delete(sessionId);
@@ -649,7 +636,7 @@ export async function deleteSession(sessionId) {
   // Clean up all per-session data so no stale data accumulates
   db.sessionSettings.delete(sessionId);
   db.groups.deleteBySession(sessionId);
-  await fs.remove(path.join(sessionDir, sessionId)).catch(() => {});
+  await deleteFirebaseAuthState(sessionId).catch(() => {});
   botEvents.emit('status', { sessionId, status: 'deleted' });
   logger.info({ sessionId }, '🗑️ Session deleted & all related data cleaned up');
 }
@@ -705,10 +692,9 @@ export function getAllSessions() {
 export async function initAllSessions() {
   initViewOnce();
 
-  const dirs = await fs.readdir(sessionDir).catch(() => []);
-  const ids = dirs.filter(d => {
-    try { return fs.statSync(path.join(sessionDir, d)).isDirectory(); } catch { return false; }
-  });
+  // Discover existing sessions from Firebase db.sessions (no filesystem scan needed)
+  const saved = db.sessions.all();
+  const ids = Object.keys(saved).filter(id => id && typeof id === 'string');
 
   if (ids.length === 0) {
     logger.info('No sessions — creating default...');

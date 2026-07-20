@@ -12,9 +12,8 @@
 
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 import {
-  viewOnceStore, getIndexEntry, handleManualReveal, handleRevealByReply,
+  viewOnceStore, handleManualReveal, handleRevealByReply,
 } from '../../lib/antiViewOnce.js';
-import fs from 'fs-extra';
 import moment from 'moment-timezone';
 import config from '../../config.js';
 
@@ -71,9 +70,8 @@ export default {
     if (args[0]) {
       const msgId = args[0].trim();
       const inMem = viewOnceStore.get(msgId);
-      const onDisk = !inMem ? getIndexEntry(msgId) : null;
 
-      if (!inMem && !onDisk) {
+      if (!inMem) {
         await react('❌');
         return reply(
           `❌ *View-Once not found*\n\n` +

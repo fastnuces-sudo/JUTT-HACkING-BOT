@@ -1,9 +1,4 @@
 import axios from 'axios';
-import path from 'path';
-import fs from 'fs-extra';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const BASE_URL = (process.env.FIREBASE_DB_URL || 'https://aa-md-bot-default-rtdb.firebaseio.com').replace(/\/$/, '');
 const SECRET   = process.env.FIREBASE_DB_SECRET;
@@ -28,8 +23,8 @@ function decodeObj(obj) {
 }
 
 // ── In-memory cache (source of truth for sync reads) ─────────────────────────
-const COLLECTIONS = ['users', 'groups', 'settings', 'sessions', 'sessionSettings'];
-const cache = { users: {}, groups: {}, settings: {}, sessions: {}, sessionSettings: {} };
+const COLLECTIONS = ['users', 'groups', 'settings', 'sessions', 'sessionSettings', 'notes'];
+const cache = { users: {}, groups: {}, settings: {}, sessions: {}, sessionSettings: {}, notes: {} };
 
 // ── Firebase REST helpers ─────────────────────────────────────────────────────
 async function fbGet(fbPath) {
@@ -242,14 +237,25 @@ export const db = {
   // Returns a promise (async reload from Firebase)
   reload: () => reloadDatabase(),
 
-  // Snapshot current cache to a local backup file
-  backup: () => {
-    const dir = path.join(__dirname, '../logs/backups');
-    fs.ensureDirSync(dir);
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    const file = path.join(dir, `backup-${ts}.json`);
-    fs.writeJsonSync(file, cache, { spaces: 2 });
-    return file;
+  // Notes — per-chat note storage in Firebase (no local files)
+  notes: {
+    // Get all notes for a chat JID (returns plain object {noteName: {content,by,at}})
+    get: (jid) => cache.notes[jid] || {},
+    // Save/update one note entry
+    setNote: (jid, name, data) => {
+      if (!cache.notes[jid]) cache.notes[jid] = {};
+      cache.notes[jid][name] = data;
+      scheduleSave('notes');
+    },
+    // Delete one note entry
+    delNote: (jid, name) => {
+      if (!cache.notes[jid]) return;
+      delete cache.notes[jid][name];
+      if (!Object.keys(cache.notes[jid]).length) delete cache.notes[jid];
+      scheduleSave('notes');
+    },
+    // Delete all notes for a chat
+    clear: (jid) => { delete cache.notes[jid]; scheduleSave('notes'); },
   },
 
   flushAll,
