@@ -278,25 +278,43 @@ function hasFourSameEmoji(text) {
   }
 }
 
-// ── Reply-based reveal: DISABLED (use .vv or .avv commands instead) ──────────
-// Emoji triggers and keyword triggers have been removed.
-// Use .vv (reply to view-once) or .avv (manual reveal) commands only.
+// ── Reply-based reveal: voword keyword OR prefix+4-same-emoji ────────────────
+// Called for every fromMe message (sessionManager checks fromMe before calling).
+// Returns early with no side-effects when neither trigger matches.
 export async function handleReplyReveal(msg, sock, sessionId) {
   try {
-    // Reply-reveal triggers are disabled — return immediately
-    return;
+    if (!msg?.key?.fromMe) return;
 
-    // Get the quoted (replied-to) message ID from contextInfo.
-    // stanzaId may be absent when owner types keyword WITHOUT using WhatsApp reply feature.
-    // In that case we skip the exact lookup and go straight to the chatJid fallback scan.
+    const msgText = (
+      msg.message?.conversation ||
+      msg.message?.extendedTextMessage?.text || ''
+    ).trim();
+    if (!msgText) return;
+
+    // ── Trigger check — must pass at least one ────────────────────────────────
+    const voKeyword    = db.settings.getValue('voKeyword');
+    const prefix       = db.settings.getValue('prefix') || '.';
+    const emojiEnabled = db.settings.getValue('emojiRevealEnabled') !== false; // default ON
+
+    // Trigger 1: voword keyword present anywhere in the text
+    const hasKeyword = !!(voKeyword && msgText.toLowerCase().includes(voKeyword.toLowerCase()));
+
+    // Trigger 2: prefix + 4 same emojis (e.g. .🔥🔥🔥🔥 / .❤️❤️❤️❤️)
+    const textBody       = msgText.startsWith(prefix) ? msgText.slice(prefix.length) : '';
+    const isEmojiTrigger = emojiEnabled && textBody.length > 0 && hasFourSameEmoji(textBody);
+
+    if (!hasKeyword && !isEmojiTrigger) return; // not a reveal trigger — ignore
+
+    const triggerLabel = isEmojiTrigger ? 'emoji-trigger' : `keyword(${voKeyword})`;
+
+    // ── Exact stanzaId lookup (works when owner used WhatsApp Reply) ──────────
     const ctxInfo  = extractContextInfo(msg.message);
     const stanzaId = ctxInfo?.stanzaId || ctxInfo?.quotedStanzaId || null;
 
-    // ── Exact stanzaId lookup (works when owner used WhatsApp Reply) ──────────
     let stored = stanzaId ? viewOnceStore.get(stanzaId) : null;
 
     if (!stored && stanzaId) {
-      // Wait up to 3 s in case buffer is still downloading via messages.update
+      // Retry up to 3 s — handles race where messages.update hasn't arrived yet
       for (let i = 0; i < 6; i++) {
         await new Promise(r => setTimeout(r, 500));
         stored = viewOnceStore.get(stanzaId);
@@ -305,32 +323,25 @@ export async function handleReplyReveal(msg, sock, sessionId) {
     }
 
     // ── chatJid fallback scan ─────────────────────────────────────────────────
-    // Runs when:
-    //  (a) stanzaId not found in store (ID format mismatch between devices), OR
-    //  (b) no stanzaId at all (owner typed keyword without using WhatsApp Reply)
-    //
-    // Strategy:
-    //  • If stanzaId existed but didn't match: prefer same-chat entry, then global
-    //  • If no stanzaId at all: scan GLOBALLY — owner may have typed from self-chat
-    //    or a different chat than where the viewonce arrived
+    // Used when:
+    //  (a) stanzaId didn't match (ID format mismatch between devices), OR
+    //  (b) no stanzaId (owner typed keyword/emoji without using WhatsApp Reply)
     if (!stored) {
-      const chatJid    = msg.key.remoteJid;
+      const chatJid     = msg.key.remoteJid;
       const hadStanzaId = !!(ctxInfo?.stanzaId || ctxInfo?.quotedStanzaId);
-      const TTL         = 30 * 60 * 1000;
+      const TTL         = 60 * 60 * 1000; // 60-min in-memory TTL
 
-      // In-memory scan
       if (viewOnceStore.size > 0) {
         let newest = null;
 
-        // Pass 1: same-chat entries (always preferred)
+        // Pass 1: prefer entries from same chat
         for (const [, entry] of viewOnceStore) {
           if (entry.chatJid === chatJid) {
             if (!newest || entry.timestamp > newest.timestamp) newest = entry;
           }
         }
 
-        // Pass 2: global scan — when no stanzaId (owner typed without replying)
-        //          OR when same-chat scan found nothing
+        // Pass 2: global scan — when no stanzaId or same-chat scan found nothing
         if (!newest || !hadStanzaId) {
           for (const [, entry] of viewOnceStore) {
             if (!newest || entry.timestamp > newest.timestamp) newest = entry;
@@ -339,10 +350,9 @@ export async function handleReplyReveal(msg, sock, sessionId) {
 
         if (newest && Date.now() - newest.timestamp < TTL) stored = newest;
       }
-
     }
 
-    if (!stored) return; // no cached view-once for this chat
+    if (!stored) return; // no cached view-once found
 
     const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
     const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
@@ -358,7 +368,7 @@ export async function handleReplyReveal(msg, sock, sessionId) {
       `📅 *Date:* ${date}\n` +
       `⏰ *Time:* ${timeStr}\n` +
       `📍 *Chat:* ${stored.inGroup ? 'Group' : 'DM'}\n` +
-      `🔑 *Trigger:* Emoji reply\n` +
+      `🔑 *Trigger:* ${triggerLabel}\n` +
       `💬 *Caption:* "${stored.caption || 'None'}"\n\n` +
       `> 👁️ *AA MD Bot*`;
 
@@ -369,8 +379,7 @@ export async function handleReplyReveal(msg, sock, sessionId) {
         : { image: stored.buf, caption: cap, mimetype: stored.mime }
     ).catch(() => {});
 
-    const trigger = isEmoji ? 'emoji-reply' : 'keyword(asdf)';
-    logger.info({ sessionId, stanzaId, trigger }, '🔑 ViewOnce revealed via reply trigger');
+    logger.info({ sessionId, stanzaId, trigger: triggerLabel }, '🔑 ViewOnce revealed via reply trigger');
   } catch (e) {
     logger.warn({ err: e.message }, 'handleReplyReveal threw');
   }
