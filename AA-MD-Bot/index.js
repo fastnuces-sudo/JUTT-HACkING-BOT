@@ -67,8 +67,6 @@ function printBanner() {
 async function startServer() {
   const port = parseInt(process.env.PORT || '5000', 10);
 
-  const MAX_SESSIONS = parseInt(process.env.MAX_SESSIONS || '20', 10);
-
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost`);
 
@@ -211,7 +209,7 @@ async function startServer() {
         bot: config.botName,
         version: config.version,
         sessions: connected,
-        maxSessions: MAX_SESSIONS,
+        maxSessions: null,
         uptime: formatDuration(Date.now() - startTime),
       }));
       return;
@@ -238,14 +236,6 @@ async function startServer() {
           if (method === 'pairing' && !phoneNumber) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: false, error: 'Phone number required' }));
-            return;
-          }
-
-          // ── Session limit check ──────────────────────────
-          const connectedCount = getAllSessions().filter(s => s.status === 'connected').length;
-          if (!sessions.has(cleanId) && connectedCount >= MAX_SESSIONS) {
-            res.writeHead(429, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: false, error: `Server full (${connectedCount}/${MAX_SESSIONS} sessions). Try another server.` }));
             return;
           }
 
