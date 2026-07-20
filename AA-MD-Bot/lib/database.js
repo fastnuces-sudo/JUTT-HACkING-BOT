@@ -23,7 +23,8 @@ function decodeObj(obj) {
 }
 
 // ── In-memory cache (source of truth for sync reads) ─────────────────────────
-const COLLECTIONS = ['users', 'groups', 'settings', 'sessions', 'sessionSettings', 'notes'];
+// 'users' intentionally excluded — economy/XP data is in-memory only, never persisted to Firebase
+const COLLECTIONS = ['groups', 'settings', 'sessions', 'sessionSettings', 'notes'];
 const cache = { users: {}, groups: {}, settings: {}, sessions: {}, sessionSettings: {}, notes: {} };
 
 // ── Firebase REST helpers ─────────────────────────────────────────────────────
@@ -97,8 +98,20 @@ export async function flushAll() {
   }));
 }
 
-process.on('SIGTERM', async () => { console.log('[DB] Flushing to Firebase before exit...'); await flushAll(); process.exit(0); });
-process.on('SIGINT',  async () => { console.log('[DB] Flushing to Firebase before exit...'); await flushAll(); process.exit(0); });
+// On exit: flush everything EXCEPT sessions.
+// Sessions are managed by WhatsApp auth state — flushing them on exit causes stale
+// records to be reloaded on the next restart, reconnecting sessions that no longer exist.
+async function flushOnExit() {
+  console.log('[DB] Flushing to Firebase before exit (excluding sessions)...');
+  await Promise.all(
+    COLLECTIONS.filter(n => n !== 'sessions').map(n => {
+      clearTimeout(saveTimers[n]);
+      return flushCollection(n);
+    })
+  );
+}
+process.on('SIGTERM', async () => { await flushOnExit(); process.exit(0); });
+process.on('SIGINT',  async () => { await flushOnExit(); process.exit(0); });
 
 // ── db API (identical surface to old file-based version) ─────────────────────
 export const db = {

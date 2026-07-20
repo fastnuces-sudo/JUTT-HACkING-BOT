@@ -4,6 +4,7 @@
 // ============================================
 
 import config from '../../config.js';
+import { db } from '../../lib/database.js';
 
 export default {
   command: 'owner',
@@ -13,7 +14,7 @@ export default {
   usage: '.owner',
 
   async execute({ reply, sock, jid, msg }) {
-    const ownerNum = (config.superOwner || config.ownerNumber?.[0] || '').replace(/\D/g, '');
+    const ownerNum = (db.settings.getValue('superOwner') || config.superOwner || config.ownerNumber?.[0] || '').replace(/\D/g, '');
     const waLink   = ownerNum ? `https://wa.me/${ownerNum}` : 'Not set';
     const waNum    = ownerNum ? `+${ownerNum}` : 'Not set';
 

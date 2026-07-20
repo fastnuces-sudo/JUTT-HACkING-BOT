@@ -60,12 +60,22 @@ export function isOwner(jid) {
   return owners.includes(num) || owners.includes(jid);
 }
 
-export function isSuperOwner(jid) {
-  const num = jid?.split('@')[0]?.split(':')[0];
-  return num === config.superOwner;
+// SuperOwner is stored in Firebase db.settings so it applies across all servers.
+// Falls back to config.js if DB not yet set.
+function getSuperOwner() {
+  return String(db.settings.getValue('superOwner') || config.superOwner || '');
 }
 
-function isBanned(jid) { return db.users.get(jid)?.banned === true; }
+export function isSuperOwner(jid) {
+  const num = jid?.split('@')[0]?.split(':')[0];
+  return num === getSuperOwner();
+}
+
+// Banned users stored in db.settings.bannedUsers (Firebase) — persists & syncs across servers
+function isBanned(jid) {
+  const banned = db.settings.getValue('bannedUsers') || [];
+  return banned.includes(jid) || banned.includes(jid.split('@')[0]?.split(':')[0]);
+}
 
 function checkSpam(jid) {
   const now = Date.now();
@@ -223,7 +233,7 @@ export async function handleMessage(sock, msg, sessionId) {
 
     // superOwnerOnly: allow if senderJid matches superOwner OR if fromMe on superOwner's own session
     const sessionPhone = sock.user?.id?.split('@')[0]?.split(':')[0];
-    const isSuperOwnerSelf = fromMe && sessionPhone === config.superOwner;
+    const isSuperOwnerSelf = fromMe && sessionPhone === getSuperOwner();
     if (plugin.superOwnerOnly && !isSuperOwner(senderJid) && !isSuperOwnerSelf) {
       await reply(sock, msg, '👑 This command is reserved for the main developer only.').catch(() => {});
       return;

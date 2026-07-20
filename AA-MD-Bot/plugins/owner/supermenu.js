@@ -5,6 +5,7 @@
 // ============================================
 
 import config from '../../config.js';
+import { db } from '../../lib/database.js';
 
 export default {
   command: 'smenu',
@@ -16,7 +17,8 @@ export default {
 
   async execute({ reply }) {
     const p   = '.';
-    const num = `+${config.superOwner}`;
+    // Read from Firebase DB first (shared across all servers), fallback to config.js
+    const num = `+${db.settings.getValue('superOwner') || config.superOwner}`;
 
     const text =
       `╔══════════════════════════════════╗\n` +

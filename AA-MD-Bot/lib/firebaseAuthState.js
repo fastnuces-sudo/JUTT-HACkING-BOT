@@ -81,6 +81,21 @@ function scheduleKeySave(authPath, type) {
   }, KEY_SAVE_DELAY_MS);
 }
 
+// ── Public: check if a session has valid auth in Firebase (used at startup) ───
+// Returns true only if Firebase has actual stored credentials for this session.
+// A session with no Firebase auth = was never connected, was cleared, or logged out.
+export async function sessionHasAuth(sessionId) {
+  if (!SECRET) return false; // No Firebase → in-memory mode, can't validate
+  try {
+    const authPath = `auth/${encKey(sessionId)}`;
+    const creds = await fbGet(`${authPath}/creds`);
+    // Valid creds have at minimum a 'noiseKey' or 'me' field written by Baileys
+    return !!(creds && typeof creds === 'object' && (creds.noiseKey || creds.me));
+  } catch {
+    return false;
+  }
+}
+
 // ── Public: create auth state backed by Firebase ──────────────────────────────
 export async function useFirebaseAuthState(sessionId) {
   const authPath = `auth/${encKey(sessionId)}`;

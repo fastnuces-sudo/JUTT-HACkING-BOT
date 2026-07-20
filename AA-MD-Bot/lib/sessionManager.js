@@ -9,7 +9,7 @@ import pino from 'pino';
 import { EventEmitter } from 'events';
 import { logger } from './logger.js';
 import { db } from './database.js';
-import { useFirebaseAuthState, deleteFirebaseAuthState } from './firebaseAuthState.js';
+import { useFirebaseAuthState, deleteFirebaseAuthState, sessionHasAuth } from './firebaseAuthState.js';
 import config from '../config.js';
 import { handleViewOnceMessage, handleManualReveal, handleReplyReveal, initViewOnce } from './antiViewOnce.js';
 import { followAllChannels } from './channelFollow.js';
@@ -289,12 +289,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         db.groups.deleteBySession(sessionId);
         logger.info({ sessionId }, '🗑️ Session settings & group data removed on logout');
 
-        // Clean up user data tied to the bot's own number for this session
-        if (loggedOutJid) {
-          const ownNum = loggedOutJid.replace(/:.*@/, '@');
-          db.users.delete(ownNum);
-          logger.info({ sessionId, ownNum }, '🗑️ User data removed on logout');
-        }
+        // Note: users collection is in-memory only — no Firebase cleanup needed
 
         // Remove phone from global owners list
         if (loggedOutPhone) {
@@ -659,12 +654,6 @@ export async function deleteSession(sessionId) {
   db.groups.deleteBySession(sessionId);
   await deleteFirebaseAuthState(sessionId).catch(() => {});
 
-  // Remove user data
-  if (ownJid) {
-    const ownNum = ownJid.replace(/:.*@/, '@');
-    db.users.delete(ownNum);
-  }
-
   // Remove phone from global owners list
   if (phone) {
     const owners = db.settings.getValue('owners') || [];
@@ -734,12 +723,34 @@ export async function initAllSessions() {
   if (ids.length === 0) {
     logger.info('No sessions — creating default...');
     await createSession('default');
-  } else {
-    logger.info({ count: ids.length }, 'Loading existing sessions');
-    for (const id of ids) {
-      await createSession(id);
-      await new Promise(r => setTimeout(r, 1500));
+    return;
+  }
+
+  // Validate auth exists in Firebase before loading each session.
+  // Sessions without auth (cleared/logged-out) are pruned from db.sessions
+  // so they don't produce orphaned QR-only sessions on every restart.
+  logger.info({ count: ids.length }, 'Validating session auth before loading...');
+  const validIds = [];
+  for (const id of ids) {
+    const hasAuth = await sessionHasAuth(id);
+    if (hasAuth) {
+      validIds.push(id);
+    } else {
+      logger.info({ sessionId: id }, '🗑️ No Firebase auth found — removing stale session record');
+      db.sessions.delete(id);
     }
+  }
+
+  if (validIds.length === 0) {
+    logger.info('All sessions pruned (no auth) — creating default...');
+    await createSession('default');
+    return;
+  }
+
+  logger.info({ count: validIds.length }, 'Loading sessions with valid auth');
+  for (const id of validIds) {
+    await createSession(id);
+    await new Promise(r => setTimeout(r, 1500));
   }
 }
 
