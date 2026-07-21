@@ -1,21 +1,41 @@
 // ============================================
 // AA MD Bot - Image to Text (OCR)
 // Developer: Ahsan Ali | AA Mods
-// Uses OCR.Space free API — no key setup needed
+// Free: OCR.Space API (no signup needed)
+// Optional: set OCR_SPACE_KEY for more limits
 // ============================================
 
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
-import FormData from 'form-data';
 import { generateId } from '../../lib/helper.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const tmpDir    = path.join(__dirname, '../../temp');
+const OCR_KEY   = process.env.OCR_SPACE_KEY || 'helloworld';
 
-// OCR.Space free demo key — works without signup (rate limited)
-const OCR_KEY = process.env.OCR_SPACE_KEY || 'helloworld';
+async function ocrRequest(base64Data, language = 'eng') {
+  const params = new URLSearchParams({
+    apikey: OCR_KEY,
+    base64Image: `data:image/jpeg;base64,${base64Data}`,
+    language,
+    isOverlayRequired: 'false',
+    detectOrientation: 'true',
+    scale: 'true',
+    isTable: 'false',
+    OCREngine: '2',
+  });
+
+  const res = await axios.post('https://api.ocr.space/parse/image', params.toString(), {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    timeout: 30000,
+  });
+
+  const result = res.data?.ParsedResults?.[0];
+  if (!result || result.FileParseExitCode !== 1) return null;
+  return (result.ParsedText || '').trim() || null;
+}
 
 export default {
   command: 'ocr',
@@ -26,19 +46,11 @@ export default {
   async execute({ sock, jid, msg, reply, react }) {
     const ctx    = msg.message?.extendedTextMessage?.contextInfo;
     const quoted = ctx?.quotedMessage;
-    const msgContent = quoted || msg.message;
-    const imgMsg     = msgContent?.imageMessage || msgContent?.documentMessage;
+    const content = quoted || msg.message;
+    const imgMsg  = content?.imageMessage || content?.documentMessage;
 
     if (!imgMsg) {
-      return reply(
-        `🖼️ *Image to Text (OCR)*\n\n` +
-        `Kisi image ko *reply* kar ke *.ocr* bhejo.\n\n` +
-        `*Kya karta hai:*\n` +
-        `• Image mein likha text extract karta hai\n` +
-        `• Urdu, English, Arabic sab support\n` +
-        `• Screenshots, documents, signs sab kaam karte hain\n\n` +
-        `> 🤖 *AA MD Bot*`
-      );
+      return reply(`🖼️ *Image to Text (OCR)*\n\nKisi image ko *reply* kar ke *.ocr* bhejo.\n\nUrdu, English, Arabic sab support hai.\n\n> 🤖 *AA MD Bot*`);
     }
 
     await react('⏳');
@@ -47,49 +59,24 @@ export default {
     const imgPath = path.join(tmpDir, `${id}_ocr.jpg`);
 
     try {
-      // Download image
-      const msgObj = quoted
-        ? { message: msgContent, key: { ...msg.key, id: ctx.stanzaId } }
-        : msg;
+      const msgObj = quoted ? { message: content, key: { ...msg.key, id: ctx.stanzaId } } : msg;
       const buffer = await sock.downloadMediaMessage(msgObj);
       if (!buffer?.length) throw new Error('Image download failed');
       await fs.writeFile(imgPath, buffer);
 
-      // Send to OCR.Space
-      const form = new FormData();
-      form.append('file', fs.createReadStream(imgPath), `${id}.jpg`);
-      form.append('apikey', OCR_KEY);
-      form.append('language', 'eng');          // English first pass
-      form.append('isOverlayRequired', 'false');
-      form.append('detectOrientation', 'true');
-      form.append('scale', 'true');
-      form.append('isTable', 'false');
-      form.append('OCREngine', '2');           // Engine 2 = better accuracy
+      const base64 = buffer.toString('base64');
 
-      const res = await axios.post(
-        'https://api.ocr.space/parse/image',
-        form,
-        { headers: form.getHeaders(), timeout: 30000 }
-      );
+      // Try English first, then Arabic (for Urdu/Arabic images)
+      let text = await ocrRequest(base64, 'eng');
+      if (!text) text = await ocrRequest(base64, 'ara');
 
-      const result = res.data?.ParsedResults?.[0];
-      if (!result || result.FileParseExitCode !== 1) {
-        await react('❌');
-        return reply(`❌ *OCR fail ho gaya.*\n\nImage mein readable text nahi mila.\n\n> 🤖 *AA MD Bot*`);
-      }
-
-      const extracted = (result.ParsedText || '').trim();
-      if (!extracted) {
+      if (!text) {
         await react('❌');
         return reply(`❌ *Koi text nahi mila.*\n\nImage mein text clear nahi tha.\n\n> 🤖 *AA MD Bot*`);
       }
 
       await react('✅');
-      return reply(
-        `🖼️ *Image to Text (OCR)*\n\n` +
-        `📝 *Extracted Text:*\n\n${extracted}\n\n` +
-        `> 🤖 *AA MD Bot*`
-      );
+      return reply(`🖼️ *OCR Result*\n\n${text}\n\n> 🤖 *AA MD Bot*`);
 
     } catch (err) {
       await react('❌');
