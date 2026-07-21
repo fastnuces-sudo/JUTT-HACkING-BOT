@@ -17,7 +17,7 @@ import { loadAllPlugins, getCategories, plugins } from './lib/pluginLoader.js';
 import { handleMessage } from './lib/commandHandler.js';
 import {
   initAllSessions, setMessageHandler, setConnectionHandler, sessions,
-  getAllSessions, sessions, botEvents, sessionQRs, sessionStatus,
+  getAllSessions, botEvents, sessionQRs, sessionStatus,
   createSession, deleteSession,
 } from './lib/sessionManager.js';
 import config from './config.js';
