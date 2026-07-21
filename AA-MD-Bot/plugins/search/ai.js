@@ -32,7 +32,8 @@ BEHAVIOR:
 - If unsure: say so briefly, give best reasoning`;
 
 // ── Model fallback chain ─────────────────────────────────────────────────────
-const MODELS = ['openai', 'claude', 'unity'];
+// pollinations.ai currently only exposes one model under these aliases
+const MODELS = ['openai', 'openai-fast'];
 
 // ── Per-chat conversation memory (LRU, max 300 JIDs, 20 msgs each) ───────────
 const _memory   = new Map();
@@ -147,10 +148,10 @@ export default {
     try {
       const response = await chat(jid, text);
       await react('✅');
-      reply(`🤖 *AI*\n\n${response}\n\n> 🤖 *AA MD Bot*`);
+      await reply(`🤖 *AI*\n\n${response}\n\n> 🤖 *AA MD Bot*`);
     } catch (e) {
-      await react('❌');
-      reply(`❌ *AI Error*\n\n${e.message}\n\nTry again in a few seconds.\n\n> 🤖 *AA MD Bot*`);
+      await react('❌').catch(() => {});
+      await reply(`❌ *AI Error*\n\n${e.message}\n\nTry again in a few seconds.\n\n> 🤖 *AA MD Bot*`).catch(() => {});
     }
   },
 };

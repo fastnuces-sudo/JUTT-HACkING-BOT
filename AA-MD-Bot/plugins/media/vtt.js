@@ -11,6 +11,7 @@ import { fileURLToPath } from "url";
 import axios from "axios";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { downloadMediaMessage } from "@whiskeysockets/baileys";
 import { generateId } from "../../lib/helper.js";
 
 const execFileAsync = promisify(execFile);
@@ -118,7 +119,7 @@ export default {
         ? { message: content, key: { ...msg.key, id: ctx.stanzaId } }
         : msg;
 
-      const buffer = await sock.downloadMediaMessage(msgObj);
+      const buffer = await downloadMediaMessage(msgObj, "buffer", {});
       if (!buffer?.length) throw new Error("Audio download failed");
 
       // 1st attempt: send raw OGG/Opus (WhatsApp voice note format)
