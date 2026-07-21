@@ -13,6 +13,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cooldowns = new Map();
 const spamTracker = new Map();
 
+// ── groupMetadata cache (60-second TTL) ──────────────────────────────────────
+// Avoids a live WhatsApp network call on every admin-only command.
+const _groupMetaCache = new Map();
+const _GROUP_META_TTL = 60_000; // 60 seconds
+async function getCachedGroupMeta(sock, jid) {
+  const cached = _groupMetaCache.get(jid);
+  if (cached && Date.now() - cached.ts < _GROUP_META_TTL) return cached.data;
+  const meta = await sock.groupMetadata(jid);
+  _groupMetaCache.set(jid, { data: meta, ts: Date.now() });
+  return meta;
+}
+
 const CHANNEL_URL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
 const CHANNEL_NAME = 'AA MD Bot';
 const WATERMARK = `\n\n> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
@@ -177,9 +189,7 @@ export async function handleMessage(sock, msg, sessionId) {
       return;
     }
 
-    if (eff('autoRead', false) && !fromMe) {
-      await sock.readMessages([msg.key]).catch(() => {});
-    }
+    // NOTE: auto-read is handled in sessionManager before commandHandler is called — no duplicate here.
 
     // Auto-react to every incoming message (not own messages, not view-once)
     if (eff('autoReact', false) && !fromMe) {
@@ -204,8 +214,14 @@ export async function handleMessage(sock, msg, sessionId) {
     const parsed = parseCommand(text);
     if (!parsed) {
       if (!fromMe) {
+        // Batch: addXP ensures user exists + updates xp/level in one scheduleSave;
+        // then directly mutate the cache entry for the remaining fields so we
+        // don't trigger a second debounced save timer.
         db.users.addXP(senderJid, config.xpPerMessage);
-        db.users.set(senderJid, { lastSeen: Date.now(), deviceSource: sessionId, name: msg.pushName || '' });
+        const _u = db.users.get(senderJid);
+        _u.lastSeen = Date.now();
+        _u.deviceSource = sessionId;
+        if (msg.pushName) _u.name = msg.pushName;
       }
       return;
     }
@@ -256,7 +272,7 @@ export async function handleMessage(sock, msg, sessionId) {
 
     if (plugin.adminOnly && isGroupMsg) {
       try {
-        const meta = await sock.groupMetadata(jid);
+        const meta = await getCachedGroupMeta(sock, jid);
         const normJid = id => id?.includes(':') ? id.split(':')[0] + '@s.whatsapp.net' : id;
         const admins = meta.participants.filter(p => p.admin).map(p => normJid(p.id));
         if (!admins.includes(normJid(senderJid)) && !owner) {
@@ -341,11 +357,13 @@ export async function handleMessage(sock, msg, sessionId) {
     });
 
     if (!fromMe) {
+      // Batch: addXP triggers one debounced scheduleSave; mutate the cache
+      // entry directly for the rest so we don't fire a second timer.
       db.users.addXP(senderJid, config.xpPerCommand);
-      db.users.set(senderJid, {
-        commandsUsed: (db.users.get(senderJid).commandsUsed || 0) + 1,
-        lastSeen: Date.now(), name: msg.pushName || '',
-      });
+      const _uc = db.users.get(senderJid);
+      _uc.commandsUsed = (_uc.commandsUsed || 0) + 1;
+      _uc.lastSeen = Date.now();
+      if (msg.pushName) _uc.name = msg.pushName;
     }
 
     if (eff('autoTyping', false)) {

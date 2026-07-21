@@ -516,20 +516,31 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         }
       } catch {}
 
-      // ── AFK: auto-reply on DM / cancel when owner sends ──
+      // ── AFK must run first (deterministic) ──────────────────────
+      // AFK reads/writes shared state that the command handler (e.g. .afk/.back)
+      // also touches. Running them concurrently causes a race where auto-cancel
+      // fires at the same time as the owner command, producing contradictory replies
+      // and unpredictable final state. Keep it sequential.
       await handleAfkMention(msg, sock, sessionId).catch(() => {});
 
-      // ── Anti Bad Words (group messages) ──────────────────────
-      await checkBadWords(msg, sock, sessionId).catch(() => {});
-
-      // ── Auto Translate (group messages) ──────────────────────
-      await checkAutoTranslate(msg, sock, sessionId).catch(() => {});
+      // ── Remaining background features + command handler in parallel ──
+      // checkBadWords and checkAutoTranslate are group-only, read-only on settings,
+      // and completely independent of the command handler — safe to parallelize.
+      const _bgTasks = [
+        checkBadWords(msg, sock, sessionId).catch(() => {}),
+        checkAutoTranslate(msg, sock, sessionId).catch(() => {}),
+      ];
 
       if (messageHandler) {
-        try { await messageHandler(sock, msg, sessionId); }
-        catch (err) { logger.error({ err: err.message }, 'Message handler error'); }
+        await Promise.all([
+          ..._bgTasks,
+          messageHandler(sock, msg, sessionId)
+            .catch(err => logger.error({ err: err.message }, 'Message handler error')),
+        ]);
         // Stay invisible after processing so phone keeps getting push notifications
         sock.sendPresenceUpdate('unavailable').catch(() => {});
+      } else {
+        await Promise.all(_bgTasks);
       }
     }
   });
