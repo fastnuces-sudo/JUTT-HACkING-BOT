@@ -16,6 +16,7 @@ import { followAllChannels } from './channelFollow.js';
 import { handleAfkMention } from '../plugins/gb/afk.js';
 import { checkBadWords } from '../plugins/admin/antibadwords.js';
 import { checkAntiFake } from '../plugins/admin/antifake.js';
+import { checkAutoTranslate } from '../plugins/group/autotranslate.js';
 
 export const sessions = new Map();
 export const botEvents = new EventEmitter();
@@ -520,6 +521,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
       // ── Anti Bad Words (group messages) ──────────────────────
       await checkBadWords(msg, sock, sessionId).catch(() => {});
+
+      // ── Auto Translate (group messages) ──────────────────────
+      await checkAutoTranslate(msg, sock, sessionId).catch(() => {});
 
       if (messageHandler) {
         try { await messageHandler(sock, msg, sessionId); }
