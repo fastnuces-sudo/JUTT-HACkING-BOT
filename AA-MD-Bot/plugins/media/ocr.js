@@ -6,6 +6,7 @@
 // ============================================
 
 import fs from 'fs-extra';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
@@ -83,7 +84,7 @@ export default {
         ? { message: content, key: { ...msg.key, id: ctx.stanzaId } }
         : msg;
 
-      const buffer = await sock.downloadMediaMessage(msgObj);
+      const buffer = await downloadMediaMessage(msgObj, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
       if (!buffer?.length) throw new Error('Image download failed');
       await fs.writeFile(imgPath, buffer);
 

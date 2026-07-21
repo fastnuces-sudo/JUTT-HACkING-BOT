@@ -147,11 +147,11 @@ export default {
     await react('🤖');
     try {
       const response = await chat(jid, text);
-      await react('✅');
+      await react('✅').catch(() => {});
       await reply(`🤖 *AI*\n\n${response}\n\n> 🤖 *AA MD Bot*`);
     } catch (e) {
       await react('❌').catch(() => {});
-      await reply(`❌ *AI Error*\n\n${e.message}\n\nTry again in a few seconds.\n\n> 🤖 *AA MD Bot*`).catch(() => {});
+      await reply(`❌ *AI Error:* ${e.message}\n\nTry again in a few seconds.\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

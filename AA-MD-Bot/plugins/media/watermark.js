@@ -1,6 +1,7 @@
 // AA MD Bot - Image Watermark
 // Uses ffmpeg drawtext — no extra dependencies
 import { execFile } from 'child_process';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
@@ -59,7 +60,7 @@ export default {
     try {
       const { content, quoted, ctx } = found;
       const msgObj = quoted ? { message: content, key: { ...msg.key, id: ctx.stanzaId } } : msg;
-      const buffer = await sock.downloadMediaMessage(msgObj);
+      const buffer = await downloadMediaMessage(msgObj, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
       if (!buffer?.length) throw new Error('Image download failed');
       await fs.writeFile(inp, buffer);
 

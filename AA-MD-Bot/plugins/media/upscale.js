@@ -1,6 +1,7 @@
 // AA MD Bot - AI Image Upscaler
 // Free: HuggingFace swin2SR (no key needed)
 import axios from 'axios';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -72,7 +73,7 @@ export default {
         ? { message: content, key: { ...msg.key, id: ctx.stanzaId } }
         : msg;
 
-      const buffer = await sock.downloadMediaMessage(msgObj);
+      const buffer = await downloadMediaMessage(msgObj, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
       if (!buffer?.length) throw new Error('Image download failed');
       await fs.writeFile(imgPath, buffer);
 

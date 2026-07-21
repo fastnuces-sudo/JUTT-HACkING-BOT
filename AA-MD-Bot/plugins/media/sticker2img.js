@@ -1,3 +1,4 @@
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 export default {
   command: 'sticker2img',
   alias: ['s2img', 'toimage', 'stickertoimage'],
@@ -10,10 +11,10 @@ export default {
     if (!hasSticker) return reply('❌ Reply to a *sticker* with .sticker2img');
 
     try {
-      const buffer = await sock.downloadMediaMessage({
+      const buffer = await downloadMediaMessage({
         message: quoted ? { stickerMessage: hasSticker } : msg.message,
         key: msg.key,
-      });
+      }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
 
       if (!buffer) throw new Error('Failed to download sticker');
 

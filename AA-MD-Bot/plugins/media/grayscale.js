@@ -1,4 +1,5 @@
 import { exec } from 'child_process';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
@@ -23,7 +24,7 @@ export default {
     const id = generateId();
 
     try {
-      const buffer = await sock.downloadMediaMessage({ message: quoted ? { imageMessage: hasImage } : msg.message, key: msg.key });
+      const buffer = await downloadMediaMessage({ message: quoted ? { imageMessage: hasImage } : msg.message, key: msg.key }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
       const inputPath = path.join(tmpDir, `${id}_in.jpg`);
       const outputPath = path.join(tmpDir, `${id}_bw.jpg`);
       await fs.writeFile(inputPath, buffer);

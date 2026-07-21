@@ -9,7 +9,7 @@ const config = {
   channelLink: 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617',
   newsletterJid: '120363428609538858@newsletter',
   newsletterName: 'AA MD Bot',
-  prefix: ['.', '!', '#'],
+  prefix: ['.'],
   altPrefixes: [],
   owners: [],
   botMode: 'public',

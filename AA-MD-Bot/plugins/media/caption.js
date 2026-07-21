@@ -1,3 +1,4 @@
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 export default {
   command: 'caption',
   alias: ['addcaption', 'cap'],
@@ -10,7 +11,7 @@ export default {
     if (!text) return reply('❌ Please provide caption text\nExample: .caption Hello World!');
 
     try {
-      const buffer = await sock.downloadMediaMessage({ message: quoted ? { imageMessage: hasImage } : msg.message, key: msg.key });
+      const buffer = await downloadMediaMessage({ message: quoted ? { imageMessage: hasImage } : msg.message, key: msg.key }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
       await sock.sendMessage(jid, { image: buffer, caption: text }, { quoted: msg });
     } catch (err) {
       reply('❌ Caption failed. Please try again in a few seconds.');

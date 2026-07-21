@@ -1,4 +1,5 @@
 import { exec } from 'child_process';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
@@ -32,10 +33,10 @@ export default {
     const tmpOut = path.join(tmpDir, `${id}.ogg`);
 
     try {
-      const buffer = await sock.downloadMediaMessage({
+      const buffer = await downloadMediaMessage({
         message: quoted ? { audioMessage: hasAudio } : msg.message,
         key: msg.key,
-      });
+      }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
       await fs.writeFile(tmpIn, buffer);
 
       await execAsync(

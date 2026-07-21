@@ -1,4 +1,5 @@
 import { exec } from 'child_process';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
@@ -25,10 +26,10 @@ export default {
     const isVoice = args.includes('--voice');
 
     try {
-      const buffer = await sock.downloadMediaMessage({
+      const buffer = await downloadMediaMessage({
         message: quoted ? { videoMessage: hasVideo } : msg.message,
         key: msg.key,
-      });
+      }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
 
       const inputPath = path.join(tmpDir, `${id}.mp4`);
       const outputPath = path.join(tmpDir, `${id}.mp3`);

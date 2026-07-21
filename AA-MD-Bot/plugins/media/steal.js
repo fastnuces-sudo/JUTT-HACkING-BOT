@@ -1,4 +1,5 @@
 import config from '../../config.js';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 
 export default {
   command: 'steal',
@@ -19,10 +20,10 @@ export default {
     }
 
     try {
-      const buffer = await sock.downloadMediaMessage({
+      const buffer = await downloadMediaMessage({
         message: quoted ? { stickerMessage: hasSticker } : msg.message,
         key: msg.key,
-      });
+      }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
 
       await sock.sendMessage(jid, {
         sticker: buffer,

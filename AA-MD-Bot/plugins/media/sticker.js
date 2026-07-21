@@ -1,4 +1,5 @@
 import { exec } from 'child_process';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
@@ -35,12 +36,12 @@ export default {
       let isAnimated = false;
 
       if (hasImage) {
-        buffer = await sock.downloadMediaMessage({ message: quoted ? { imageMessage: hasImage } : msg.message, key: msg.key });
+        buffer = await downloadMediaMessage({ message: quoted ? { imageMessage: hasImage } : msg.message, key: msg.key }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
       } else if (hasVideo) {
-        buffer = await sock.downloadMediaMessage({ message: quoted ? { videoMessage: hasVideo } : msg.message, key: msg.key });
+        buffer = await downloadMediaMessage({ message: quoted ? { videoMessage: hasVideo } : msg.message, key: msg.key }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
         isAnimated = true;
       } else if (hasSticker) {
-        buffer = await sock.downloadMediaMessage({ message: quoted ? { stickerMessage: hasSticker } : msg.message, key: msg.key });
+        buffer = await downloadMediaMessage({ message: quoted ? { stickerMessage: hasSticker } : msg.message, key: msg.key }, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
       }
 
       if (!buffer) throw new Error('Failed to download media');
