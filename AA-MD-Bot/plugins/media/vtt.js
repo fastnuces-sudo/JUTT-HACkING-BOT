@@ -17,7 +17,9 @@ const execFileAsync = promisify(execFile);
 const __dirname     = path.dirname(fileURLToPath(import.meta.url));
 const tmpDir        = path.join(__dirname, '../../temp');
 
+// Ordered by speed/reliability: turbo first, then large-v3, then fallbacks
 const HF_MODELS = [
+  'openai/whisper-large-v3-turbo',
   'openai/whisper-large-v3',
   'openai/whisper-medium',
   'openai/whisper-base',
@@ -30,7 +32,12 @@ async function getFfmpegBin() {
 
 async function toWav(inputPath, outputPath) {
   const ff = await getFfmpegBin();
-  await execFileAsync(ff, ['-y', '-i', inputPath, '-ar', '16000', '-ac', '1', outputPath]);
+  await execFileAsync(ff, [
+    '-y', '-i', inputPath,
+    '-ar', '16000', '-ac', '1',
+    '-acodec', 'pcm_s16le',
+    outputPath,
+  ]);
 }
 
 async function hfWhisper(audioBuffer, mimeType = 'audio/ogg') {
@@ -40,19 +47,26 @@ async function hfWhisper(audioBuffer, mimeType = 'audio/ogg') {
 
   for (const model of HF_MODELS) {
     const url = `https://api-inference.huggingface.co/models/${model}`;
-    // Retry up to 3x if model is loading
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const res = await axios.post(url, audioBuffer, { headers, timeout: 60000 });
+        const res = await axios.post(url, audioBuffer, {
+          headers,
+          timeout: 90000,
+          maxContentLength: 25 * 1024 * 1024,
+        });
         const text = res.data?.text || res.data?.[0]?.generated_text;
         if (text?.trim()) return text.trim();
         break;
       } catch (err) {
-        const est = err.response?.data?.estimated_time;
-        if (err.response?.status === 503 && est && attempt < 2) {
-          await new Promise(r => setTimeout(r, Math.min(est * 1000, 25000)));
+        const status = err.response?.status;
+        const est    = err.response?.data?.estimated_time;
+        // 503 = model loading — wait and retry
+        if (status === 503 && est && attempt < 2) {
+          await new Promise(r => setTimeout(r, Math.min(est * 1000, 30000)));
           continue;
         }
+        // 429 = rate limit — try next model
+        if (status === 429) break;
         break;
       }
     }
@@ -67,13 +81,22 @@ export default {
   category: 'media',
 
   async execute({ sock, jid, msg, reply, react }) {
-    const ctx    = msg.message?.extendedTextMessage?.contextInfo;
-    const quoted = ctx?.quotedMessage;
+    const ctx     = msg.message?.extendedTextMessage?.contextInfo;
+    const quoted  = ctx?.quotedMessage;
     const content = quoted || msg.message;
-    const audioMsg = content?.audioMessage || content?.videoMessage;
+
+    // Support voice note, audio, video, and ptt
+    const audioMsg = content?.audioMessage
+      || content?.videoMessage
+      || content?.ptvMessage;
 
     if (!audioMsg) {
-      return reply(`🎙️ *Voice to Text*\n\nKisi voice/audio message ko *reply* kar ke *.vtt* bhejo.\n\n_Optional: HF_TOKEN secret set karo zyada limits ke liye (huggingface.co — free)_\n\n> 🤖 *AA MD Bot*`);
+      return reply(
+        `🎙️ *Voice to Text*\n\n` +
+        `Kisi voice/audio message ko *reply* kar ke *.vtt* bhejo.\n\n` +
+        `_Tip: HF_TOKEN secret set karo zyada requests ke liye (huggingface.co — free)_\n\n` +
+        `> 🤖 *AA MD Bot*`
+      );
     }
 
     await react('⏳');
@@ -83,14 +106,17 @@ export default {
     const wavPath = path.join(tmpDir, `${id}.wav`);
 
     try {
-      const msgObj = quoted ? { message: content, key: { ...msg.key, id: ctx.stanzaId } } : msg;
+      const msgObj = quoted
+        ? { message: content, key: { ...msg.key, id: ctx.stanzaId } }
+        : msg;
+
       const buffer = await sock.downloadMediaMessage(msgObj);
       if (!buffer?.length) throw new Error('Audio download failed');
 
-      // Try raw OGG first (fastest)
+      // 1st attempt: send raw OGG/Opus (WhatsApp voice note format)
       let text = await hfWhisper(buffer, 'audio/ogg');
 
-      // If failed, convert to WAV and retry
+      // 2nd attempt: convert to 16kHz WAV (cleaner for Whisper)
       if (!text) {
         await fs.writeFile(oggPath, buffer);
         await toWav(oggPath, wavPath);
@@ -100,7 +126,7 @@ export default {
 
       if (!text) {
         await react('❌');
-        return reply(`❌ *Transcription fail hui.*\n\nAudio clear nahi tha ya server busy hai. Dobara try karo.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ *Transcription fail hui.*\n\nAudio clear nahi tha ya server busy hai. Thodi der baad dobara try karo.\n\n> 🤖 *AA MD Bot*`);
       }
 
       await react('✅');

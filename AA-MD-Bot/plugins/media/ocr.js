@@ -15,32 +15,52 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const tmpDir    = path.join(__dirname, '../../temp');
 const OCR_KEY   = process.env.OCR_SPACE_KEY || 'helloworld';
 
-async function ocrRequest(base64Data, language = 'eng') {
+async function ocrRequest(base64Data, language, engine) {
   const params = new URLSearchParams({
-    apikey: OCR_KEY,
-    base64Image: `data:image/jpeg;base64,${base64Data}`,
+    apikey:             OCR_KEY,
+    base64Image:        `data:image/jpeg;base64,${base64Data}`,
     language,
-    isOverlayRequired: 'false',
-    detectOrientation: 'true',
-    scale: 'true',
-    isTable: 'false',
-    OCREngine: '2',
+    isOverlayRequired:  'false',
+    detectOrientation:  'true',
+    scale:              'true',
+    isTable:            'false',
+    OCREngine:          String(engine),
   });
 
   const res = await axios.post('https://api.ocr.space/parse/image', params.toString(), {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    timeout: 30000,
+    timeout: 40000,
   });
 
   const result = res.data?.ParsedResults?.[0];
   if (!result || result.FileParseExitCode !== 1) return null;
-  return (result.ParsedText || '').trim() || null;
+  return (result.ParsedText || '').replace(/\r\n/g, '\n').trim() || null;
+}
+
+// Try multiple language+engine combos for best accuracy
+async function bestOcr(base64Data) {
+  // Strategy: Engine 2 (neural) is better for most text
+  // Fallback to Engine 1 (Tesseract) which supports more languages
+  const attempts = [
+    { lang: 'eng', engine: 2 },
+    { lang: 'ara', engine: 2 },  // covers Urdu/Arabic
+    { lang: 'eng', engine: 1 },
+    { lang: 'ara', engine: 1 },
+  ];
+
+  for (const { lang, engine } of attempts) {
+    try {
+      const text = await ocrRequest(base64Data, lang, engine);
+      if (text && text.length > 2) return text;
+    } catch {}
+  }
+  return null;
 }
 
 export default {
   command: 'ocr',
   alias: ['imagetext', 'readimage', 'img2text', 'textfromimage'],
-  description: 'Image mein likha text extract karo',
+  description: 'Image mein likha text extract karo (Urdu/English/Arabic)',
   category: 'media',
 
   async execute({ sock, jid, msg, reply, react }) {
@@ -50,7 +70,7 @@ export default {
     const imgMsg  = content?.imageMessage || content?.documentMessage;
 
     if (!imgMsg) {
-      return reply(`🖼️ *Image to Text (OCR)*\n\nKisi image ko *reply* kar ke *.ocr* bhejo.\n\nUrdu, English, Arabic sab support hai.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🖼️ *Image to Text (OCR)*\n\nKisi image ko *reply* kar ke *.ocr* bhejo.\n\nUrdu, English, Arabic support hai.\n\n> 🤖 *AA MD Bot*`);
     }
 
     await react('⏳');
@@ -59,20 +79,20 @@ export default {
     const imgPath = path.join(tmpDir, `${id}_ocr.jpg`);
 
     try {
-      const msgObj = quoted ? { message: content, key: { ...msg.key, id: ctx.stanzaId } } : msg;
+      const msgObj = quoted
+        ? { message: content, key: { ...msg.key, id: ctx.stanzaId } }
+        : msg;
+
       const buffer = await sock.downloadMediaMessage(msgObj);
       if (!buffer?.length) throw new Error('Image download failed');
       await fs.writeFile(imgPath, buffer);
 
       const base64 = buffer.toString('base64');
-
-      // Try English first, then Arabic (for Urdu/Arabic images)
-      let text = await ocrRequest(base64, 'eng');
-      if (!text) text = await ocrRequest(base64, 'ara');
+      const text   = await bestOcr(base64);
 
       if (!text) {
         await react('❌');
-        return reply(`❌ *Koi text nahi mila.*\n\nImage mein text clear nahi tha.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ *Koi text nahi mila.*\n\nImage mein text clear nahi tha ya image quality low hai.\n\n> 🤖 *AA MD Bot*`);
       }
 
       await react('✅');
