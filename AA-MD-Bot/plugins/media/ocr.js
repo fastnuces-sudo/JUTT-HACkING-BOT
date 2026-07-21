@@ -60,7 +60,7 @@ async function bestOcr(base64Data) {
 export default {
   command: 'ocr',
   alias: ['imagetext', 'readimage', 'img2text', 'textfromimage'],
-  description: 'Image mein likha text extract karo (Urdu/English/Arabic)',
+  description: 'Extract text from an image (Urdu/English/Arabic)',
   category: 'media',
 
   async execute({ sock, jid, msg, reply, react }) {
@@ -70,7 +70,7 @@ export default {
     const imgMsg  = content?.imageMessage || content?.documentMessage;
 
     if (!imgMsg) {
-      return reply(`🖼️ *Image to Text (OCR)*\n\nKisi image ko *reply* kar ke *.ocr* bhejo.\n\nUrdu, English, Arabic support hai.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🖼️ *Image to Text (OCR)*\n\n*Reply* to any image and send *.ocr*.\n\nSupports Urdu, English, and Arabic.\n\n> 🤖 *AA MD Bot*`);
     }
 
     await react('⏳');
@@ -92,7 +92,7 @@ export default {
 
       if (!text) {
         await react('❌');
-        return reply(`❌ *Koi text nahi mila.*\n\nImage mein text clear nahi tha ya image quality low hai.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ *No text found.*\n\nThe text in the image was unclear or the image quality is too low.\n\n> 🤖 *AA MD Bot*`);
       }
 
       await react('✅');

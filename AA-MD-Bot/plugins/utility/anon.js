@@ -1,14 +1,14 @@
 // ============================================
 // AA MD Bot - Anonymous Message Sender
 // Developer: Ahsan Ali | AA Mods
-// .anon @user message      — anonymously kisi ko msg bhejo
-// .anon +923001234567 msg  — number directly
+// .anon @user message      — send an anonymous message to a user
+// .anon +923001234567 msg  — send to number directly
 // ============================================
 
 export default {
   command: 'anon',
   alias: ['anonymous', 'secretmsg', 'hiddenmsg'],
-  description: 'Anonymously kisi bhi user ko message bhejo (sender hidden)',
+  description: 'Send an anonymous message to any user (sender hidden)',
   category: 'utility',
 
   async execute({ sock, jid, msg, reply, args, text, senderJid }) {
@@ -16,15 +16,15 @@ export default {
     if (!args.length) {
       return reply(
         `🔒 *Anonymous Message*\n\n` +
-        `Kisi ko bhi anonymously message bhejo — sender ka naam nahi pata chalega!\n\n` +
+        `Send a message to anyone anonymously — the recipient will not see your name!\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
         `*Usage:*\n` +
-        `▸ *.anon @user Yeh secret message hai*\n` +
+        `▸ *.anon @user This is a secret message*\n` +
         `▸ *.anon +923001234567 Hello!*\n\n` +
         `*Note:*\n` +
-        `• Message bot ki taraf se jayega\n` +
-        `• Tumhara naam bilkul show nahi hoga\n` +
-        `• Sirf 1 message send hoga (spam allowed nahi)\n\n` +
+        `• The message will be sent from the bot\n` +
+        `• Your identity will not be revealed\n` +
+        `• Only 1 message per use (no spam)\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     }
@@ -53,7 +53,7 @@ export default {
 
     if (!targetJid) {
       return reply(
-        `❌ *Target specify karo.*\n\n` +
+        `❌ *Please specify a target.*\n\n` +
         `▸ *.anon @user Message*\n` +
         `▸ *.anon +923001234567 Message*\n\n` +
         `> 🤖 *AA MD Bot*`
@@ -61,18 +61,18 @@ export default {
     }
 
     if (!messageText) {
-      return reply(`❌ *Message bhi likhna hai.*\n\nExample: *.anon @user Hello yaar!*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Please include a message.*\n\nExample: *.anon @user Hello!*\n\n> 🤖 *AA MD Bot*`);
     }
 
     if (messageText.length > 1000) {
-      return reply(`❌ Message bohot lamba hai. Max 1000 characters.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ Message is too long. Maximum 1000 characters.\n\n> 🤖 *AA MD Bot*`);
     }
 
     // Prevent self-anon
     const senderBase = senderJid.includes(':') ? senderJid.split(':')[0] + '@s.whatsapp.net' : senderJid;
     const targetBase = targetJid.includes(':') ? targetJid.split(':')[0] + '@s.whatsapp.net' : targetJid;
     if (senderBase === targetBase) {
-      return reply(`❌ Khud ko anonymous message nahi bhej sakte.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ You cannot send an anonymous message to yourself.\n\n> 🤖 *AA MD Bot*`);
     }
 
     try {
@@ -87,17 +87,17 @@ export default {
 
       // Confirm to sender (quietly, in same chat)
       return reply(
-        `✅ *Anonymous message bhej diya!*\n\n` +
+        `✅ *Anonymous message sent!*\n\n` +
         `👤 To: @${targetBase.split('@')[0]}\n` +
         `💬 Message: _"${messageText.slice(0, 60)}${messageText.length > 60 ? '...' : ''}"_\n\n` +
-        `Recipient ko tumhara naam nahi pata chalega.\n\n> 🤖 *AA MD Bot*`,
+        `The recipient will not know it was you.\n\n> 🤖 *AA MD Bot*`,
         { mentions: [targetJid] }
       );
     } catch (err) {
       return reply(
-        `❌ *Message send nahi hua.*\n\n` +
-        `Wajah: ${err.message}\n` +
-        `(User ne privacy settings set ki ho sakti hain.)\n\n> 🤖 *AA MD Bot*`
+        `❌ *Message could not be sent.*\n\n` +
+        `Reason: ${err.message}\n` +
+        `(The user may have privacy settings that block messages.)\n\n> 🤖 *AA MD Bot*`
       );
     }
   },

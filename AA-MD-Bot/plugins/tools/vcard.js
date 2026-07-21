@@ -3,12 +3,12 @@
 export default {
   command: 'vcard',
   alias: ['contact', 'vcf', 'makecontact'],
-  description: 'Contact card (vCard .vcf) banao',
+  description: 'Generate a contact card (vCard .vcf)',
   category: 'tools',
 
   async execute({ sock, jid, msg, reply, react, text, prefix }) {
     if (!text) return reply(
-      `📇 *vCard Generator*\n\n*Format:*\n_${prefix}vcard Name | Number | Email | Company | Website_\n\n*Sirf Name aur Number zarori hain:*\n_${prefix}vcard Ahmed Ali | 923001234567_\n\n*Pura format:*\n_${prefix}vcard Ahmed Ali | 923001234567 | ahmed@email.com | AA Mods | aamods.com_\n\n> 🤖 *AA MD Bot*`
+      `📇 *vCard Generator*\n\n*Format:*\n_${prefix}vcard Name | Number | Email | Company | Website_\n\n*Only Name and Number are required:*\n_${prefix}vcard Ahmed Ali | 923001234567_\n\n*Full format:*\n_${prefix}vcard Ahmed Ali | 923001234567 | ahmed@email.com | AA Mods | aamods.com_\n\n> 🤖 *AA MD Bot*`
     );
 
     const parts = text.split('|').map(s => s.trim());
@@ -19,7 +19,7 @@ export default {
     const website = parts[4] || '';
 
     if (!name || !number) return reply(
-      `❌ Name aur Number dono zarori hain.\n*Misaal:* _${prefix}vcard Ahmed Ali | 923001234567_\n\n> 🤖 *AA MD Bot*`
+      `❌ Both Name and Number are required.\n*Example:* _${prefix}vcard Ahmed Ali | 923001234567_\n\n> 🤖 *AA MD Bot*`
     );
 
     await react('⏳');
@@ -56,7 +56,7 @@ export default {
           (email   ? `📧 *Email:* ${email}\n`   : '') +
           (company ? `🏢 *Company:* ${company}\n` : '') +
           (website ? `🌐 *Website:* ${website}\n` : '') +
-          `\n_Save karo → contacts mein add ho jayega_\n\n> 🤖 *AA MD Bot*`,
+          `\n_Save this file → it will be added to your contacts_\n\n> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (err) {

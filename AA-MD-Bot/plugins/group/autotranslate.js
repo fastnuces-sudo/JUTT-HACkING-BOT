@@ -1,8 +1,8 @@
 // ============================================
 // AA MD Bot - Auto Translate (Group Feature)
 // Developer: Ahsan Ali | AA Mods
-// .autotranslate on [lang]   — group mein auto-translate on karo
-// .autotranslate off         — band karo
+// .autotranslate on [lang]   — enable auto-translate in the group
+// .autotranslate off         — disable
 // Passive handler: checkAutoTranslate (imported by sessionManager)
 // ============================================
 
@@ -66,7 +66,7 @@ export async function checkAutoTranslate(msg, sock, sessionId) {
 export default {
   command: 'autotranslate',
   alias: ['autotrans', 'grouptranslate', 'at'],
-  description: 'Group mein sab messages auto-translate karo',
+  description: 'Auto-translate all messages in the group',
   category: 'group',
   groupOnly: true,
   adminOnly: true,
@@ -83,11 +83,11 @@ export default {
         `Status: *${status}*\n` +
         `Target language: *${LANG_NAMES[curLang] || curLang}*\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `▸ *.autotranslate on* — English mein translate\n` +
-        `▸ *.autotranslate on ur* — Urdu mein\n` +
-        `▸ *.autotranslate on ar* — Arabic mein\n` +
-        `▸ *.autotranslate on hi* — Hindi mein\n` +
-        `▸ *.autotranslate off* — band karo\n\n` +
+        `▸ *.autotranslate on* — Translate to English\n` +
+        `▸ *.autotranslate on ur* — Translate to Urdu\n` +
+        `▸ *.autotranslate on ar* — Translate to Arabic\n` +
+        `▸ *.autotranslate on hi* — Translate to Hindi\n` +
+        `▸ *.autotranslate off* — Disable\n\n` +
         `*Available langs:* ${Object.entries(LANG_NAMES).map(([k,v]) => `${k}(${v})`).join(', ')}\n\n` +
         `> 🤖 *AA MD Bot*`
       );
@@ -100,7 +100,7 @@ export default {
       return reply(
         `✅ *Auto Translate ON!*\n\n` +
         `Target: *${LANG_NAMES[lang] || lang}*\n` +
-        `Ab har message automatically translate hoga.\n\n` +
+        `All messages will now be automatically translated.\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     }

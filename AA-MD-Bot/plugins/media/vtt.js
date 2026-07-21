@@ -87,7 +87,7 @@ async function hfWhisper(audioBuffer, mimeType = "audio/ogg") {
 export default {
   command: "vtt",
   alias: ["voicetext", "stt", "transcribe", "v2t"],
-  description: "Voice/audio message ko text mein convert karo",
+  description: "Convert a voice/audio message to text",
   category: "media",
 
   async execute({ sock, jid, msg, reply, react }) {
@@ -102,7 +102,7 @@ export default {
     if (!audioMsg) {
       return reply(
         `🎙️ *Voice to Text*\n\n` +
-          `Kisi voice/audio message ko *reply* kar ke *.vtt* bhejo.\n\n` +
+          `*Reply* to any voice or audio message and send *.vtt*.\n\n` +
           `> 🤖 *AA MD Bot*`,
       );
     }
@@ -135,7 +135,7 @@ export default {
       if (!text) {
         await react("❌");
         return reply(
-          `❌ *Transcription fail hui.*\n\nAudio clear nahi tha ya server busy hai. Thodi der baad dobara try karo.\n\n> 🤖 *AA MD Bot*`,
+          `❌ *Transcription failed.*\n\nThe audio was unclear or the server is busy. Please try again in a moment.\n\n> 🤖 *AA MD Bot*`,
         );
       }
 

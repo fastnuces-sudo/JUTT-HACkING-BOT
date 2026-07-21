@@ -10,7 +10,7 @@ const sessions = new Map();
 
 async function createEmail() {
   const { data } = await api.get(`${BASE}?f=get_email_address`);
-  if (!data?.email_addr) throw new Error('Email create nahi hua');
+  if (!data?.email_addr) throw new Error('Failed to create email address');
   return {
     email:   data.email_addr,
     token:   data.sid_token,
@@ -55,11 +55,11 @@ export default {
         return reply(
           `📧 *Temporary Email Created*\n\n` +
           `📬 *Email:* \`${sess.email}\`\n\n` +
-          `_Ye email 1 ghante tak active rahega_\n\n` +
+          `_This email will be active for 1 hour_\n\n` +
           `*Commands:*\n` +
-          `• *${prefix}tempmail inbox* — inbox check karo\n` +
-          `• *${prefix}tempmail read <id>* — email parho\n` +
-          `• *${prefix}tempmail new* — naya email banao\n\n` +
+          `• *${prefix}tempmail inbox* — check inbox\n` +
+          `• *${prefix}tempmail read <id>* — read an email\n` +
+          `• *${prefix}tempmail new* — create a new email\n\n` +
           `> 🤖 *AA MD Bot*`
         );
       } catch (e) {
@@ -72,7 +72,7 @@ export default {
     if (sub === 'inbox' || sub === 'check') {
       const sess = sessions.get(jid);
       if (!sess) return reply(
-        `❌ Pehle email banao.\n*${prefix}tempmail* — naya email\n\n> 🤖 *AA MD Bot*`
+        `❌ Please create an email first.\n*${prefix}tempmail* — create new email\n\n> 🤖 *AA MD Bot*`
       );
       await react('⏳');
       try {
@@ -80,7 +80,7 @@ export default {
         if (!emails.length) {
           await react('✅');
           return reply(
-            `📭 *Inbox Khaali Hai*\n\n📬 Email: \`${sess.email}\`\n\n_Abhi koi email nahi aya. Dobara try karo._\n\n> 🤖 *AA MD Bot*`
+            `📭 *Inbox is Empty*\n\n📬 Email: \`${sess.email}\`\n\n_No emails yet. Try again in a moment._\n\n> 🤖 *AA MD Bot*`
           );
         }
         const list = emails.slice(0, 10).map((e, i) =>
@@ -105,12 +105,12 @@ export default {
     if (sub.startsWith('read')) {
       const id = sub.split(/\s+/)[1] || text.trim().split(/\s+/)[1];
       const sess = sessions.get(jid);
-      if (!sess) return reply(`❌ Pehle email banao.\n*${prefix}tempmail*\n\n> 🤖 *AA MD Bot*`);
-      if (!id)   return reply(`❌ ID batao.\n*Misaal:* _${prefix}tempmail read 12345_\n\n> 🤖 *AA MD Bot*`);
+      if (!sess) return reply(`❌ Please create an email first.\n*${prefix}tempmail*\n\n> 🤖 *AA MD Bot*`);
+      if (!id)   return reply(`❌ Please provide an ID.\n*Example:* _${prefix}tempmail read 12345_\n\n> 🤖 *AA MD Bot*`);
       await react('⏳');
       try {
         const mail = await fetchEmail(id, sess.token);
-        if (!mail?.mail_id) throw new Error('Email nahi mila');
+        if (!mail?.mail_id) throw new Error('Email not found');
 
         // Strip HTML tags for WhatsApp display
         const body = (mail.mail_body || '')
@@ -151,11 +151,11 @@ export default {
       reply(
         `📧 *Temporary Email*\n\n` +
         `📬 *Email:* \`${sess.email}\`\n\n` +
-        `_Kisi bhi site pe ye email use karo — emails yahan ayenge_\n\n` +
+        `_Use this email on any site — emails will appear here_\n\n` +
         `*Commands:*\n` +
-        `• *${prefix}tempmail inbox* — inbox check karo\n` +
-        `• *${prefix}tempmail read <id>* — email parho\n` +
-        `• *${prefix}tempmail new* — naya email banao\n\n` +
+        `• *${prefix}tempmail inbox* — check inbox\n` +
+        `• *${prefix}tempmail read <id>* — read an email\n` +
+        `• *${prefix}tempmail new* — create a new email\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     } catch (e) {

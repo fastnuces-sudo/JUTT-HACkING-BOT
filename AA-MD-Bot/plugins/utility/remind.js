@@ -1,7 +1,7 @@
 // ============================================
 // AA MD Bot - Personal Reminder
 // Developer: Ahsan Ali | AA Mods
-// .remind 10m Namaz padhni hai
+// .remind 10m Take medication
 // ============================================
 
 const reminderJobs = new Map();   // id → { timer, text, fireAt, jid, senderJid }
@@ -30,9 +30,9 @@ function fmtMs(ms) {
 export default {
   command: 'remind',
   alias: ['reminder', 'remindme', 'yaad'],
-  description: 'Set a personal reminder — bot aapko time pe yaad dilayega',
+  description: 'Set a personal reminder — the bot will notify you at the set time',
   category: 'utility',
-  usage: '.remind <time> <message>   e.g.  .remind 10m Namaz padhni hai',
+  usage: '.remind <time> <message>   e.g.  .remind 10m Take medication',
 
   async execute({ sock, jid, msg, reply, args, senderJid }) {
 
@@ -42,15 +42,15 @@ export default {
     if (sub === 'list') {
       const mine = [...reminderJobs.entries()].filter(([, j]) => j.senderJid === senderJid);
       if (!mine.length) return reply(
-        `🔔 *Koi active reminder nahi.*\n\n` +
-        `Set karo: *.remind 10m Namaz padhni hai*\n\n> 🤖 *AA MD Bot*`
+        `🔔 *No active reminders.*\n\n` +
+        `Set one with: *.remind 10m Take medication*\n\n> 🤖 *AA MD Bot*`
       );
-      let txt = `🔔 *Tumhare Active Reminders (${mine.length})*\n\n`;
+      let txt = `🔔 *Your Active Reminders (${mine.length})*\n\n`;
       for (const [id, j] of mine) {
         const left = Math.max(0, j.fireAt - Date.now());
-        txt += `▸ *#${id}* — *${fmtMs(left)}* baad\n  _"${j.text.slice(0, 50)}"_\n\n`;
+        txt += `▸ *#${id}* — in *${fmtMs(left)}*\n  _"${j.text.slice(0, 50)}"_\n\n`;
       }
-      txt += `Cancel karne ke liye: *.remind cancel <id>*\n\n> 🤖 *AA MD Bot*`;
+      txt += `To cancel: *.remind cancel <id>*\n\n> 🤖 *AA MD Bot*`;
       return reply(txt);
     }
 
@@ -58,25 +58,25 @@ export default {
     if (sub === 'cancel') {
       const id = parseInt(args[1]);
       const job = reminderJobs.get(id);
-      if (!job) return reply(`❌ Reminder #${args[1]} nahi mila.\n\nList ke liye: *.remind list*\n\n> 🤖 *AA MD Bot*`);
-      if (job.senderJid !== senderJid) return reply(`❌ Yeh tumhara reminder nahi hai.\n\n> 🤖 *AA MD Bot*`);
+      if (!job) return reply(`❌ Reminder #${args[1]} not found.\n\nSee your reminders: *.remind list*\n\n> 🤖 *AA MD Bot*`);
+      if (job.senderJid !== senderJid) return reply(`❌ This is not your reminder.\n\n> 🤖 *AA MD Bot*`);
       clearTimeout(job.timer);
       reminderJobs.delete(id);
-      return reply(`✅ *Reminder #${id} cancel ho gaya.*\n_"${job.text.slice(0, 50)}"_\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Reminder #${id} cancelled.*\n_"${job.text.slice(0, 50)}"_\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .remind (no args) — help ──────────────────────────────────────────────
     if (args.length < 2) {
       return reply(
         `🔔 *Personal Reminder*\n\n` +
-        `Bot aapko set kiye gaye time ke baad remind karega!\n\n` +
+        `The bot will remind you after the specified time!\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `▸ *.remind 30s Message*      — 30 seconds\n` +
-        `▸ *.remind 10m Namaz padhni hai*  — 10 minutes\n` +
-        `▸ *.remind 2h Meeting hai*   — 2 hours\n` +
-        `▸ *.remind 1d Kaam karna hai* — 1 din\n\n` +
-        `▸ *.remind list*             — active reminders\n` +
-        `▸ *.remind cancel <id>*      — cancel karo\n\n` +
+        `▸ *.remind 30s Message*        — 30 seconds\n` +
+        `▸ *.remind 10m Take medication* — 10 minutes\n` +
+        `▸ *.remind 2h Meeting at 3pm*  — 2 hours\n` +
+        `▸ *.remind 1d Submit report*   — 1 day\n\n` +
+        `▸ *.remind list*               — view active reminders\n` +
+        `▸ *.remind cancel <id>*        — cancel a reminder\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     }
@@ -85,16 +85,16 @@ export default {
     const delayMs = parseDelay(args[0]);
     if (!delayMs) {
       return reply(
-        `❌ *Galat time format.*\n\n` +
-        `Sahi format: *30s*, *10m*, *2h*, *1d*\n` +
-        `Example: *.remind 10m Namaz padhni hai*\n\n> 🤖 *AA MD Bot*`
+        `❌ *Invalid time format.*\n\n` +
+        `Valid formats: *30s*, *10m*, *2h*, *1d*\n` +
+        `Example: *.remind 10m Take medication*\n\n> 🤖 *AA MD Bot*`
       );
     }
-    if (delayMs < 5000)                return reply(`❌ Minimum time *5 seconds* hai.\n\n> 🤖 *AA MD Bot*`);
-    if (delayMs > 7 * 24 * 3600 * 1000) return reply(`❌ Maximum time *7 din* hai.\n\n> 🤖 *AA MD Bot*`);
+    if (delayMs < 5000)                return reply(`❌ Minimum time is *5 seconds*.\n\n> 🤖 *AA MD Bot*`);
+    if (delayMs > 7 * 24 * 3600 * 1000) return reply(`❌ Maximum time is *7 days*.\n\n> 🤖 *AA MD Bot*`);
 
     const text = args.slice(1).join(' ').trim();
-    if (!text) return reply(`❌ Reminder message bhi likhna hai.\nExample: *.remind 10m Namaz padhni hai*\n\n> 🤖 *AA MD Bot*`);
+    if (!text) return reply(`❌ Please include a reminder message.\nExample: *.remind 10m Take medication*\n\n> 🤖 *AA MD Bot*`);
 
     const jobId  = remindCounter++;
     const fireAt = Date.now() + delayMs;
@@ -117,7 +117,7 @@ export default {
 
     return reply(
       `✅ *Reminder Set! (#${jobId})*\n\n` +
-      `⏱️ Time: *${fmtMs(delayMs)}* baad\n` +
+      `⏱️ In: *${fmtMs(delayMs)}*\n` +
       `📌 Message: _"${text.slice(0, 60)}"_\n\n` +
       `Cancel: *.remind cancel ${jobId}*\n\n> 🤖 *AA MD Bot*`
     );

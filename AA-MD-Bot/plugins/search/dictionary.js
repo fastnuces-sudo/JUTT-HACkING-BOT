@@ -9,7 +9,7 @@ function clean(s) { return (s || '').trim(); }
 export default {
   command: 'dictionary',
   alias: ['dict', 'meaning', 'define2', 'wordmeaning'],
-  description: 'English word ka complete meaning, examples, synonyms',
+  description: 'Full meaning, examples, and synonyms for any English word',
   category: 'search',
 
   async execute({ reply, react, text, prefix }) {
@@ -56,7 +56,7 @@ export default {
       reply(out);
     } catch {
       await react('❌');
-      reply(`❌ *"${word}"* — nahi mila.\n\nSahi English word likho.\n\n> 🤖 *AA MD Bot*`);
+      reply(`❌ *"${word}"* — not found in the dictionary.\n\nPlease check the spelling.\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

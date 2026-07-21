@@ -42,7 +42,7 @@ export default {
   async execute({ sock, jid, msg, reply, react, args, text }) {
     const found = getImageMsg(msg);
     if (!found || !text) return reply(
-      `💧 *Watermark*\n\nKisi image ko reply kar ke:\n*.watermark <text>*\n*.watermark <text> | <position>*\n\n*Positions:* center, top, bottom, topleft, topright, bottomleft, bottomright\n\n*Misaal:*\n_.watermark AA MD Bot | bottomright_\n\n> 🤖 *AA MD Bot*`
+      `💧 *Watermark*\n\nReply to any image with:\n*.watermark <text>*\n*.watermark <text> | <position>*\n\n*Positions:* center, top, bottom, topleft, topright, bottomleft, bottomright\n\n*Example:*\n_.watermark AA MD Bot | bottomright_\n\n> 🤖 *AA MD Bot*`
     );
 
     const parts   = text.split('|').map(s => s.trim());

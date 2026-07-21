@@ -100,7 +100,7 @@ export function startBirthdayScheduler(getSessions) {
 export default {
   command: 'bday',
   alias: ['birthday', 'bdate'],
-  description: 'Birthday save karo — bot exactly midnight pe auto-wish karega',
+  description: 'Save a birthday — the bot will auto-wish at exactly midnight',
   category: 'utility',
 
   async execute({ sock, jid, msg, reply, args, senderJid, isGroupMsg, db: db_ }) {
@@ -110,10 +110,10 @@ export default {
     // ── .bday set <date>  OR  .bday set <number> <date> ─────────────────────
     if (sub === 'set') {
       if (!rest) return reply(
-        `❌ Date batao.\n` +
-        `Misaal:\n` +
-        `*.bday set 15 Aug* — apni birthday\n` +
-        `*.bday set 923001234567 15 Aug* — kisi aur ki birthday\n\n` +
+        `❌ Please provide a date.\n` +
+        `Example:\n` +
+        `*.bday set 15 Aug* — your own birthday\n` +
+        `*.bday set 923001234567 15 Aug* — someone else's birthday\n\n` +
         `> 🤖 *AA MD Bot*`
       );
 
@@ -132,11 +132,11 @@ export default {
         targetName = msg.pushName || senderJid.split('@')[0];
       }
 
-      if (!targetJid) return reply(`❌ Number format galat hai.\nMisaal: *923001234567*\n\n> 🤖 *AA MD Bot*`);
-      if (!dateStr)   return reply(`❌ Date batao.\nMisaal: *15 Aug* ya *15/8*\n\n> 🤖 *AA MD Bot*`);
+      if (!targetJid) return reply(`❌ Invalid number format.\nExample: *923001234567*\n\n> 🤖 *AA MD Bot*`);
+      if (!dateStr)   return reply(`❌ Please provide a date.\nExample: *15 Aug* or *15/8*\n\n> 🤖 *AA MD Bot*`);
 
       const parsed = parseDate(dateStr);
-      if (!parsed) return reply(`❌ Date format galat hai.\nMisaal: *15 Aug* ya *15/8*\n\n> 🤖 *AA MD Bot*`);
+      if (!parsed) return reply(`❌ Invalid date format.\nExample: *15 Aug* or *15/8*\n\n> 🤖 *AA MD Bot*`);
 
       const existing = db_.users.get(targetJid) || {};
       db_.users.set(targetJid, {
@@ -148,29 +148,29 @@ export default {
 
       const hasMsgs  = (existing.bdayMsgs?.length || 0) > 0;
       const isSelf   = targetJid === senderJid;
-      const forLabel = isSelf ? 'Tumhari' : `${targetName} ki`;
+      const forLabel = isSelf ? 'Your' : `${targetName}'s`;
 
       return reply(
-        `🎂 *Birthday Save Ho Gayi!*\n\n` +
-        `👤 *Kis ki:* ${forLabel}\n` +
-        `📅 *Tarikh:* ${parsed.day} ${MN[parsed.month]}\n` +
-        `📍 *Wish jayegi:* ${isGroupMsg ? 'Is group mein' : 'DM mein'}\n\n` +
+        `🎂 *Birthday Saved!*\n\n` +
+        `👤 *For:* ${forLabel}\n` +
+        `📅 *Date:* ${parsed.day} ${MN[parsed.month]}\n` +
+        `📍 *Wish will be sent in:* ${isGroupMsg ? 'This group' : 'DM'}\n\n` +
         (hasMsgs
-          ? `✅ Wish message pehle se set hai!\n`
-          : `⚠️ *Wish message set nahi!*\nBot wish NAHI karega jab tak message add na karo:\n*.bday addmsg Happy Birthday! 🎂*\n`) +
+          ? `✅ Wish message is already set!\n`
+          : `⚠️ *No wish message set!*\nThe bot will NOT wish until you add a message:\n*.bday addmsg Happy Birthday! 🎂*\n`) +
         `\n> 🤖 *AA MD Bot*`
       );
     }
 
     // ── .bday addmsg <text> ──────────────────────────────────────────────────
     if (sub === 'addmsg') {
-      if (!rest) return reply(`❌ Message likho.\nMisaal: *.bday addmsg Happy Birthday! 🎂*\n\n> 🤖 *AA MD Bot*`);
+      if (!rest) return reply(`❌ Please write a message.\nExample: *.bday addmsg Happy Birthday! 🎂*\n\n> 🤖 *AA MD Bot*`);
       const userData = db_.users.get(senderJid) || {};
       const existing = userData.bdayMsgs || [];
-      if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\n*.bday delmsg <number>* se pehle koi delete karo.\n\n> 🤖 *AA MD Bot*`);
+      if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\nDelete one first with *.bday delmsg <number>*.\n\n> 🤖 *AA MD Bot*`);
       const updated = [...existing, rest];
       db_.users.set(senderJid, { bdayMsgs: updated });
-      return reply(`✅ *Message #${updated.length} add ho gaya!*\n\n_"${rest}"_\n\nAb ${updated.length} message(s) set hain. Bot randomly ek bhejega.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Message #${updated.length} added!*\n\n_"${rest}"_\n\nYou now have ${updated.length} message(s) set. The bot will pick one randomly.\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday addmsgfor <number> <text> — add msg for another number ─────────
@@ -179,14 +179,14 @@ export default {
       const msgText = msgParts.join(' ').trim();
       const tJid    = toJid(numToken || '');
       if (!tJid || !msgText) return reply(
-        `❌ Format: *.bday addmsgfor <number> <message>*\nMisaal: *.bday addmsgfor 923001234567 Happy Birthday! 🎂*\n\n> 🤖 *AA MD Bot*`
+        `❌ Format: *.bday addmsgfor <number> <message>*\nExample: *.bday addmsgfor 923001234567 Happy Birthday! 🎂*\n\n> 🤖 *AA MD Bot*`
       );
       const tData    = db_.users.get(tJid) || {};
       const existing = tData.bdayMsgs || [];
-      if (existing.length >= 10) return reply(`❌ Max 10 messages.\n\n> 🤖 *AA MD Bot*`);
+      if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\n\n> 🤖 *AA MD Bot*`);
       const updated = [...existing, msgText];
       db_.users.set(tJid, { bdayMsgs: updated });
-      return reply(`✅ *Message #${updated.length} add ho gaya!*\n👤 Number: ${numToken}\n_"${msgText}"_\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Message #${updated.length} added!*\n👤 Number: ${numToken}\n_"${msgText}"_\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday delmsg <num> ───────────────────────────────────────────────────
@@ -195,26 +195,26 @@ export default {
       const idx      = parseInt(rest) - 1;
       const existing = userData.bdayMsgs || [];
       if (isNaN(idx) || idx < 0 || idx >= existing.length) {
-        return reply(`❌ Sahi number do (1-${existing.length}).\n*.bday msgs* se list dekho.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ Please enter a valid number (1-${existing.length}).\nSee your list with *.bday msgs*.\n\n> 🤖 *AA MD Bot*`);
       }
       existing.splice(idx, 1);
       db_.users.set(senderJid, { bdayMsgs: existing });
-      return reply(`✅ *Message delete ho gaya.*\nAb ${existing.length} message(s) baki hain.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Message deleted.*\nYou now have ${existing.length} message(s) remaining.\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday msgs ───────────────────────────────────────────────────────────
     if (sub === 'msgs') {
       const userData = db_.users.get(senderJid) || {};
       const msgs     = userData.bdayMsgs || [];
-      if (!msgs.length) return reply(`📭 Koi wish message set nahi.\n*.bday addmsg <text>* se add karo.\n\n> 🤖 *AA MD Bot*`);
+      if (!msgs.length) return reply(`📭 No wish messages set.\nAdd one with *.bday addmsg <text>*.\n\n> 🤖 *AA MD Bot*`);
       const list = msgs.map((m,i) => `*${i+1}.* ${m}`).join('\n');
-      return reply(`🎂 *Tumhare Wish Messages (${msgs.length}):*\n\n${list}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🎂 *Your Wish Messages (${msgs.length}):*\n\n${list}\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday del ────────────────────────────────────────────────────────────
     if (sub === 'del') {
       db_.users.set(senderJid, { birthday: null, bdayMsgs: [], bdayGroup: null });
-      return reply(`🗑️ *Birthday delete ho gayi.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🗑️ *Birthday removed.*\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday list ───────────────────────────────────────────────────────────
@@ -227,14 +227,14 @@ export default {
         if (isGroupMsg && u.bdayGroup !== jid) continue;
         entries.push({ name: u.bdayName || '?', day: b.day, month: b.month, hasMsgs: (u.bdayMsgs?.length || 0) > 0 });
       }
-      if (!entries.length) return reply(`📭 Koi birthday save nahi.\n\n> 🤖 *AA MD Bot*`);
+      if (!entries.length) return reply(`📭 No birthdays saved.\n\n> 🤖 *AA MD Bot*`);
       entries.sort((a,b) => a.month - b.month || a.day - b.day);
       const today = new Date();
       const txt = entries.map(e => {
         const isToday = e.day === today.getDate() && e.month === today.getMonth()+1;
         return `${isToday ? '🥳' : '🎂'} *${e.name}* — ${e.day} ${MN[e.month]}${!e.hasMsgs ? ' ⚠️' : ''}${isToday ? ' ← *TODAY!* 🎉' : ''}`;
       }).join('\n');
-      return reply(`🎂 *Birthday List (${entries.length}):*\n\n${txt}\n\n⚠️ = wish message set nahi\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🎂 *Birthday List (${entries.length}):*\n\n${txt}\n\n⚠️ = no wish message set\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday today ──────────────────────────────────────────────────────────
@@ -243,9 +243,9 @@ export default {
       const d = today.getDate(), m = today.getMonth()+1;
       const allU  = db.users.all();
       const bdays = Object.values(allU).filter(u => u?.birthday?.day === d && u?.birthday?.month === m);
-      if (!bdays.length) return reply(`🎂 Aaj kisi ka birthday nahi.\n\n> 🤖 *AA MD Bot*`);
+      if (!bdays.length) return reply(`🎂 No birthdays today.\n\n> 🤖 *AA MD Bot*`);
       const txt = bdays.map(u => `🥳 *${u.bdayName || '?'}*${!u.bdayMsgs?.length ? ' ⚠️ (no msg)' : ''}`).join('\n');
-      return reply(`🎉 *Aaj Birthday Hai:*\n\n${txt}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🎉 *Today's Birthdays:*\n\n${txt}\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday — status + help ────────────────────────────────────────────────
@@ -257,20 +257,20 @@ export default {
     return reply(
       `🎂 *Birthday Tracker*\n\n` +
       (bday
-        ? `📅 *Tumhari birthday:* ${bday.day} ${MN[bday.month]}\n` +
+        ? `📅 *Your birthday:* ${bday.day} ${MN[bday.month]}\n` +
           `💬 *Wish messages:* ${msgCount}\n` +
-          `🤖 *Status:* ${ready ? '✅ Active — midnight pe wish jayegi' : '⚠️ Inactive — wish message add karo'}`
-        : `📅 *Birthday:* save nahi`) +
+          `🤖 *Status:* ${ready ? '✅ Active — will wish at midnight' : '⚠️ Inactive — add a wish message first'}`
+        : `📅 *Birthday:* not saved`) +
       `\n\n━━━━━━━━━━━━━━━━━━━━━\n` +
-      `*.bday set 15 Aug*                    — apni birthday\n` +
-      `*.bday set 923xxxxxxx 15 Aug*         — kisi aur ki birthday\n` +
-      `*.bday addmsg <text>*                 — apne liye wish msg\n` +
-      `*.bday addmsgfor <number> <text>*     — kisi ke liye wish msg\n` +
-      `*.bday msgs*                          — messages dekho\n` +
-      `*.bday delmsg <num>*                  — message delete karo\n` +
-      `*.bday list*                          — sab ki birthdays\n` +
-      `*.bday today*                         — aaj kaun?\n` +
-      `*.bday del*                           — apni birthday hatao\n\n` +
+      `*.bday set 15 Aug*                    — save your birthday\n` +
+      `*.bday set 923xxxxxxx 15 Aug*         — save someone else's birthday\n` +
+      `*.bday addmsg <text>*                 — add a wish message for yourself\n` +
+      `*.bday addmsgfor <number> <text>*     — add a wish message for someone else\n` +
+      `*.bday msgs*                          — view your wish messages\n` +
+      `*.bday delmsg <num>*                  — delete a wish message\n` +
+      `*.bday list*                          — view all saved birthdays\n` +
+      `*.bday today*                         — who has a birthday today?\n` +
+      `*.bday del*                           — remove your birthday\n\n` +
       `> 🤖 *AA MD Bot*`
     );
   },

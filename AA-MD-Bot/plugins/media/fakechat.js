@@ -120,20 +120,20 @@ async function buildChat(contactName, messages) {
 export default {
   command: 'fakechat',
   alias: ['fc', 'fakewa', 'fakemsg'],
-  description: 'Fake WhatsApp chat screenshot banao',
+  description: 'Generate a fake WhatsApp chat screenshot',
   category: 'media',
 
   async execute({ sock, jid, msg, reply, react, text, prefix }) {
     if (!text) return reply(
       `💬 *Fake Chat Generator*\n\n` +
       `*Format:*\n_${prefix}fakechat ContactName | them:message | me:reply | them:msg_\n\n` +
-      `*Misaal:*\n_${prefix}fakechat Ahmed | them:Kya haal? | me:Alhamdulillah! | them:MashaAllah_\n\n` +
+      `*Example:*\n_${prefix}fakechat Ahmed | them:How are you? | me:Alhamdulillah! | them:MashaAllah_\n\n` +
       `> 🤖 *AA MD Bot*`
     );
 
     const parts = text.split('|').map(s => s.trim()).filter(Boolean);
     if (parts.length < 2) return reply(
-      `❌ Kam se kam ek message chahiye.\n*Format:* _${prefix}fakechat Name | them:msg | me:msg_\n\n> 🤖 *AA MD Bot*`
+      `❌ At least one message is required.\n*Format:* _${prefix}fakechat Name | them:msg | me:msg_\n\n> 🤖 *AA MD Bot*`
     );
 
     const contactName = parts[0];
@@ -144,7 +144,7 @@ export default {
       return { who: 'them', text: p };
     }).filter(m => m.text);
 
-    if (!msgs.length) return reply(`❌ Koi message nahi mila.\n\n> 🤖 *AA MD Bot*`);
+    if (!msgs.length) return reply(`❌ No messages found.\n\n> 🤖 *AA MD Bot*`);
 
     await react('⏳');
     fs.ensureDirSync(TEMP);

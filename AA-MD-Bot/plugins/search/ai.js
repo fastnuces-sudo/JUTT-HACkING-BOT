@@ -125,11 +125,11 @@ export default {
       `*Usage:* ${prefix}ai <your question>\n\n` +
       `*Examples:*\n` +
       `• ${prefix}ai Explain quantum entanglement\n` +
-      `• ${prefix}ai Python mein fibonacci sequence kaise banayein\n` +
-      `• ${prefix}ai Namaz ki rakat kitni hain detail mein\n` +
+      `• ${prefix}ai Write a Fibonacci sequence in Python\n` +
+      `• ${prefix}ai How many rakats does each prayer have?\n` +
       `• ${prefix}ai Write a professional email for job application\n\n` +
       `*Commands:*\n` +
-      `• ${prefix}ai clear — Chat history clear karo\n\n` +
+      `• ${prefix}ai clear — Clear chat history\n\n` +
       `*Features:*\n` +
       `• Multi-model AI (GPT-4o, Mistral, Claude)\n` +
       `• Remembers your last 10 exchanges\n` +

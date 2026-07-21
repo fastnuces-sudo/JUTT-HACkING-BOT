@@ -51,7 +51,7 @@ function ensureHttps(url) {
 export default {
   command: 'preview',
   alias: ['linkpreview', 'lp', 'site', 'linkinfo'],
-  description: 'Kisi bhi link ka title, description aur image dikhao',
+  description: 'Show the title, description and image for any link',
   category: 'utility',
   usage: '.preview <url>',
 
@@ -70,10 +70,10 @@ export default {
     if (!url || !url.startsWith('http')) {
       return reply(
         `🔗 *Link Preview*\n\n` +
-        `URL dena zaroori hai.\n\n` +
+        `Please provide a URL.\n\n` +
         `*Usage:*\n` +
         `▸ *.preview https://example.com*\n` +
-        `▸ Kisi link wale message ko reply kar ke *.preview*\n\n` +
+        `▸ Reply to any message containing a link with *.preview*\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     }
@@ -131,7 +131,7 @@ export default {
 
     } catch (err) {
       await react('❌');
-      return reply(`❌ *Preview load nahi hua.*\n\n${err.message}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Preview failed to load.*\n\n${err.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

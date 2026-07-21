@@ -52,13 +52,13 @@ function getImageMsg(msg) {
 export default {
   command: 'upscale',
   alias: ['enhance', 'hd', 'upscaleimg', 'aienhance'],
-  description: 'Image ko AI se 4x upscale/enhance karo',
+  description: 'Upscale / enhance an image 4x using AI',
   category: 'media',
 
   async execute({ sock, jid, msg, reply, react }) {
     const found = getImageMsg(msg);
     if (!found) return reply(
-      `🔍 *AI Image Upscaler*\n\nKisi image ko *reply* kar ke *.upscale* bhejo.\n\nAI image ko 4x HD mein convert karega.\n\n> 🤖 *AA MD Bot*`
+      `🔍 *AI Image Upscaler*\n\n*Reply* to any image and send *.upscale*.\n\nAI will convert it to 4x HD resolution.\n\n> 🤖 *AA MD Bot*`
     );
 
     await react('⏳');
@@ -79,7 +79,7 @@ export default {
       const result = await upscaleImage(buffer);
       if (!result) {
         await react('❌');
-        return reply(`❌ *Upscale fail hua.*\n\nServer busy hai, thodi der baad dobara try karo.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ *Upscale failed.*\n\nThe server is busy. Please try again in a moment.\n\n> 🤖 *AA MD Bot*`);
       }
 
       await sock.sendMessage(jid, {

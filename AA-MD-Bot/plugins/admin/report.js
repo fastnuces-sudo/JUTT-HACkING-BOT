@@ -1,9 +1,9 @@
 // ============================================
 // AA MD Bot - Member Report System
 // Developer: Ahsan Ali | AA Mods
-// .report @user <reason>  — group member kisi ko report kare
-// .reports                — pending reports dekho (admin only)
-// .clearreports           — sab reports clear karo (admin only)
+// .report @user <reason>  — report a member to admins
+// .reports                — view pending reports (admin only)
+// .clearreports           — clear all reports (admin only)
 // ============================================
 
 // In-memory report store per group:  groupJid → [ { reporter, target, reason, time } ]
@@ -26,7 +26,7 @@ export default [
   {
     command: 'report',
     alias: ['reportuser', 'flag'],
-    description: 'Kisi member ko admins ke paas report karo',
+    description: 'Report a member to the group admins',
     category: 'admin',
     groupOnly: true,
     adminOnly: false,
@@ -37,13 +37,13 @@ export default [
       if (!mentions.length) {
         return reply(
           `📢 *Member Report System*\n\n` +
-          `Kisi bhi member ko admin ke paas report karo.\n\n` +
+          `Report any member directly to the group admins.\n\n` +
           `━━━━━━━━━━━━━━━━━━━━━━\n` +
           `*Usage:*\n` +
           `▸ *.report @user <reason>*\n\n` +
-          `*Example:*\n` +
-          `▸ *.report @ali Spam kar raha hai*\n` +
-          `▸ *.report @user Links bhej raha hai*\n\n` +
+          `*Examples:*\n` +
+          `▸ *.report @ali Sending spam*\n` +
+          `▸ *.report @user Sharing links*\n\n` +
           `> 🤖 *AA MD Bot*`
         );
       }
@@ -57,7 +57,7 @@ export default [
 
       // Prevent self-report
       if (target === senderJid) {
-        return reply(`❌ Apne aap ko report nahi kar sakte.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ You cannot report yourself.\n\n> 🤖 *AA MD Bot*`);
       }
 
       // Anti-spam: same reporter can't report same user twice in 5 min
@@ -67,7 +67,7 @@ export default [
         Date.now() - r.time < 5 * 60 * 1000
       );
       if (recentDupe) {
-        return reply(`⚠️ Tum ne @${targetNum} ko abhi 5 minutes pehle report kiya hai. Thodi der baad try karo.\n\n> 🤖 *AA MD Bot*`, { mentions: [target] });
+        return reply(`⚠️ You already reported @${targetNum} 5 minutes ago. Please wait before reporting again.\n\n> 🤖 *AA MD Bot*`, { mentions: [target] });
       }
 
       // Save report
@@ -86,11 +86,11 @@ export default [
 
       // 1. Confirm to reporter
       await reply(
-        `✅ *Report Submit Ho Gaya!*\n\n` +
+        `✅ *Report Submitted!*\n\n` +
         `👤 Reported: @${targetNum}\n` +
         `📝 Reason: _${reason}_\n` +
         `🔢 Total reports against this user: *${totalReports}*\n\n` +
-        `Admins ko notify kar diya gaya hai.\n\n> 🤖 *AA MD Bot*`,
+        `Admins have been notified.\n\n> 🤖 *AA MD Bot*`,
         { mentions: [target] }
       );
 
@@ -111,11 +111,11 @@ export default [
     },
   },
 
-  // ── .reports — admin dekhe pending reports ────────────────────────────────
+  // ── .reports — admin view pending reports ────────────────────────────────
   {
     command: 'reports',
     alias: ['viewreports', 'allreports'],
-    description: 'Sab pending reports dekho (admins only)',
+    description: 'View all pending reports (admins only)',
     category: 'admin',
     groupOnly: true,
     adminOnly: true,
@@ -123,7 +123,7 @@ export default [
     async execute({ jid, reply }) {
       const reports = getReports(jid);
       if (!reports.length) {
-        return reply(`📋 *Koi pending report nahi.*\n\n> 🤖 *AA MD Bot*`);
+        return reply(`📋 *No pending reports.*\n\n> 🤖 *AA MD Bot*`);
       }
 
       // Group by target
@@ -139,7 +139,7 @@ export default [
         for (const r of rList.slice(0, 3)) {
           txt += `   • _${r.reason}_ (${timeAgo(r.time)})\n`;
         }
-        if (rList.length > 3) txt += `   _...aur ${rList.length - 3} aur_\n`;
+        if (rList.length > 3) txt += `   _...and ${rList.length - 3} more_\n`;
         txt += '\n';
       }
 
@@ -148,11 +148,11 @@ export default [
     },
   },
 
-  // ── .clearreports — admin clear kare ─────────────────────────────────────
+  // ── .clearreports — admin clear reports ──────────────────────────────────
   {
     command: 'clearreports',
     alias: ['delreports', 'resetreports'],
-    description: 'Sab reports clear karo (admins only)',
+    description: 'Clear all reports (admins only)',
     category: 'admin',
     groupOnly: true,
     adminOnly: true,
@@ -160,9 +160,9 @@ export default [
     async execute({ jid, reply }) {
       const reports = getReports(jid);
       const count = reports.length;
-      if (!count) return reply(`📋 *Pehle se koi report nahi.*\n\n> 🤖 *AA MD Bot*`);
+      if (!count) return reply(`📋 *No reports to clear.*\n\n> 🤖 *AA MD Bot*`);
       reportStore.set(jid, []);
-      return reply(`✅ *${count} report(s) clear ho gaye.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *${count} report(s) cleared.*\n\n> 🤖 *AA MD Bot*`);
     },
   },
 ];

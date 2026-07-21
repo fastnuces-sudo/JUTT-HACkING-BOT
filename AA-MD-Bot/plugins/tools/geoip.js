@@ -5,7 +5,7 @@ import axios from 'axios';
 export default {
   command: 'geoip',
   alias: ['iplocation', 'ipinfo', 'iplookup', 'ipdekho'],
-  description: 'IP address ki exact location aur map',
+  description: 'Look up the exact location and map for an IP address',
   category: 'tools',
 
   async execute({ reply, react, text, prefix }) {
@@ -16,7 +16,7 @@ export default {
     const ip = text.trim().split(/\s+/)[0];
     // Basic IP validation
     if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip) && !/^[a-fA-F0-9:]+$/.test(ip)) {
-      return reply(`❌ Sahi IP address likho.\n*Misaal:* _8.8.8.8_\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ Please enter a valid IP address.\n*Example:* _8.8.8.8_\n\n> 🤖 *AA MD Bot*`);
     }
 
     await react('⏳');
@@ -27,7 +27,7 @@ export default {
 
       if (data.status !== 'success') {
         await react('❌');
-        return reply(`❌ IP nahi mila: *${ip}*\n\n_Private/reserved IP addresses lookup nahi hoti._\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ Could not find IP: *${ip}*\n\n_Private/reserved IP addresses cannot be looked up._\n\n> 🤖 *AA MD Bot*`);
       }
 
       const mapLink = `https://www.google.com/maps?q=${data.lat},${data.lon}`;

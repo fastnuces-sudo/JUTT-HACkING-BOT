@@ -51,13 +51,13 @@ function getImageMsg(msg) {
 export default {
   command: 'rembg',
   alias: ['removebg', 'nobg', 'bgremove', 'transparent'],
-  description: 'Image ka background remove karo (AI)',
+  description: 'Remove image background using AI',
   category: 'media',
 
   async execute({ sock, jid, msg, reply, react }) {
     const found = getImageMsg(msg);
     if (!found) return reply(
-      `✂️ *Background Remover*\n\nKisi image ko *reply* kar ke *.rembg* bhejo.\n\nAI background hata ke transparent PNG dega.\n\n> 🤖 *AA MD Bot*`
+      `✂️ *Background Remover*\n\n*Reply* to any image and send *.rembg*.\n\nAI will remove the background and return a transparent PNG.\n\n> 🤖 *AA MD Bot*`
     );
 
     await react('⏳');
@@ -78,13 +78,13 @@ export default {
       const result = await removeBackground(buffer);
       if (!result) {
         await react('❌');
-        return reply(`❌ *Background remove fail hua.*\n\nServer busy hai, thodi der baad dobara try karo.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ *Background removal failed.*\n\nThe server is busy. Please try again in a moment.\n\n> 🤖 *AA MD Bot*`);
       }
 
       await sock.sendMessage(jid, {
         image: result,
         mimetype: 'image/png',
-        caption: `✂️ *Background Removed*\n\n_Sticker banane ke liye .sticker use karo_\n\n> 🤖 *AA MD Bot*`,
+        caption: `✂️ *Background Removed*\n\n_Use .sticker to turn this into a sticker_\n\n> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (err) {

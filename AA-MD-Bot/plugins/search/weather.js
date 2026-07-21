@@ -96,7 +96,7 @@ export default {
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(`❌ *"${text}"* nahi mila.\n\nCity ka pura naam likho.\n_Misaal: Dera Ghazi Khan_\n\n> 🤖 *AA MD Bot*`);
+      reply(`❌ *"${text}"* not found.\n\nPlease enter the full city name.\n_Example: Dera Ghazi Khan_\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };
