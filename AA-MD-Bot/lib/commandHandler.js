@@ -257,8 +257,9 @@ export async function handleMessage(sock, msg, sessionId) {
     if (plugin.adminOnly && isGroupMsg) {
       try {
         const meta = await sock.groupMetadata(jid);
-        const admins = meta.participants.filter(p => p.admin).map(p => p.id);
-        if (!admins.includes(senderJid) && !owner) {
+        const normJid = id => id?.includes(':') ? id.split(':')[0] + '@s.whatsapp.net' : id;
+        const admins = meta.participants.filter(p => p.admin).map(p => normJid(p.id));
+        if (!admins.includes(normJid(senderJid)) && !owner) {
           await reply(sock, msg, '👮 Group admins only.').catch(() => {});
           return;
         }
