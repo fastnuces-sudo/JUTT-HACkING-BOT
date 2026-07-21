@@ -33,7 +33,7 @@ BEHAVIOR:
 
 // ── Model fallback chain ─────────────────────────────────────────────────────
 // pollinations.ai currently only exposes one model under these aliases
-const MODELS = ['openai', 'openai-fast'];
+const MODELS = ['openai-fast', 'openai'];
 
 // ── Per-chat conversation memory (LRU, max 300 JIDs, 20 msgs each) ───────────
 const _memory   = new Map();
@@ -69,10 +69,10 @@ async function tryModel(model, messages) {
     model,
     messages,
     temperature: 0.3,
-    max_tokens: 1200,
+    max_tokens: 700,
   }, {
     headers: { 'Content-Type': 'application/json' },
-    timeout: 40000,
+    timeout: 18000,
   });
   const text = data?.choices?.[0]?.message?.content?.trim();
   if (!text) throw new Error('Empty response');
