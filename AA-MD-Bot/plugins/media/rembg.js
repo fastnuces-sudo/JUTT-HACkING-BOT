@@ -1,5 +1,5 @@
 // AA MD Bot - Background Remover
-// Free: HuggingFace briaai/RMBG-1.4 (no key needed, faster with HF_TOKEN)
+// Free: HuggingFace briaai/RMBG-1.4 (no key needed)
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
@@ -11,20 +11,16 @@ const TEMP = path.join(__dirname, '../../temp');
 
 const MODELS = [
   'briaai/RMBG-1.4',
-  'not-lain/webui',
+  'ZhengPeng7/BiRefNet',
 ];
 
 async function removeBackground(imageBuffer) {
-  const token = process.env.HF_TOKEN;
-  const headers = { 'Content-Type': 'image/jpeg' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
   for (const model of MODELS) {
     const url = `https://api-inference.huggingface.co/models/${model}`;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const res = await axios.post(url, imageBuffer, {
-          headers,
+          headers: { 'Content-Type': 'image/jpeg' },
           timeout: 60000,
           responseType: 'arraybuffer',
           maxContentLength: 10 * 1024 * 1024,
@@ -32,7 +28,8 @@ async function removeBackground(imageBuffer) {
         const buf = Buffer.from(res.data);
         if (buf.length > 1000) return buf;
       } catch (err) {
-        const est = err.response?.data ? JSON.parse(Buffer.from(err.response.data).toString())?.estimated_time : null;
+        let est = null;
+        try { est = JSON.parse(Buffer.from(err.response?.data || '{}').toString())?.estimated_time; } catch {}
         if (err.response?.status === 503 && est && attempt < 2) {
           await new Promise(r => setTimeout(r, Math.min(est * 1000, 25000)));
           continue;
@@ -67,7 +64,6 @@ export default {
     fs.ensureDirSync(TEMP);
     const id = generateId();
     const imgPath = path.join(TEMP, `${id}_rembg_in.jpg`);
-    const outPath = path.join(TEMP, `${id}_rembg_out.png`);
 
     try {
       const { content, quoted, ctx } = found;
@@ -82,14 +78,13 @@ export default {
       const result = await removeBackground(buffer);
       if (!result) {
         await react('❌');
-        return reply(`❌ *Background remove fail hua.*\n\nHF server busy hai. Thodi der baad try karo ya HF_TOKEN set karo.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ *Background remove fail hua.*\n\nServer busy hai, thodi der baad dobara try karo.\n\n> 🤖 *AA MD Bot*`);
       }
 
-      await fs.writeFile(outPath, result);
       await sock.sendMessage(jid, {
         image: result,
         mimetype: 'image/png',
-        caption: `✂️ *Background Removed*\n\n_Transparent PNG — sticker banane ke liye .sticker use karo_\n\n> 🤖 *AA MD Bot*`,
+        caption: `✂️ *Background Removed*\n\n_Sticker banane ke liye .sticker use karo_\n\n> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (err) {
@@ -97,7 +92,6 @@ export default {
       reply(`❌ *Error:* ${err.message}\n\n> 🤖 *AA MD Bot*`);
     } finally {
       fs.remove(imgPath).catch(() => {});
-      fs.remove(outPath).catch(() => {});
     }
   },
 };

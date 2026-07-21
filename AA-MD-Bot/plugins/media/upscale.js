@@ -1,5 +1,5 @@
 // AA MD Bot - AI Image Upscaler
-// Free: HuggingFace swin2SR (no key needed, faster with HF_TOKEN)
+// Free: HuggingFace swin2SR (no key needed)
 import axios from 'axios';
 import fs from 'fs-extra';
 import path from 'path';
@@ -9,7 +9,6 @@ import { generateId } from '../../lib/helper.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMP = path.join(__dirname, '../../temp');
 
-// Best free upscaling models on HF (x4 upscale)
 const MODELS = [
   'caidas/swin2SR-classical-sr-x4-64',
   'caidas/swin2SR-realworld-sr-x4-64',
@@ -17,16 +16,12 @@ const MODELS = [
 ];
 
 async function upscaleImage(imageBuffer) {
-  const token = process.env.HF_TOKEN;
-  const headers = { 'Content-Type': 'image/jpeg' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
   for (const model of MODELS) {
     const url = `https://api-inference.huggingface.co/models/${model}`;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const res = await axios.post(url, imageBuffer, {
-          headers,
+          headers: { 'Content-Type': 'image/jpeg' },
           timeout: 90000,
           responseType: 'arraybuffer',
           maxContentLength: 15 * 1024 * 1024,
@@ -63,7 +58,7 @@ export default {
   async execute({ sock, jid, msg, reply, react }) {
     const found = getImageMsg(msg);
     if (!found) return reply(
-      `🔍 *AI Image Upscaler*\n\nKisi image ko *reply* kar ke *.upscale* bhejo.\n\nAI image ko 4x HD mein convert karega.\n\n_Tip: HF_TOKEN set karo faster results ke liye_\n\n> 🤖 *AA MD Bot*`
+      `🔍 *AI Image Upscaler*\n\nKisi image ko *reply* kar ke *.upscale* bhejo.\n\nAI image ko 4x HD mein convert karega.\n\n> 🤖 *AA MD Bot*`
     );
 
     await react('⏳');
@@ -84,13 +79,13 @@ export default {
       const result = await upscaleImage(buffer);
       if (!result) {
         await react('❌');
-        return reply(`❌ *Upscale fail hua.*\n\nHF server busy hai. Thodi der baad try karo.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ *Upscale fail hua.*\n\nServer busy hai, thodi der baad dobara try karo.\n\n> 🤖 *AA MD Bot*`);
       }
 
       await sock.sendMessage(jid, {
         image: result,
         mimetype: 'image/png',
-        caption: `🔍 *AI Upscaled (4x)*\n\n> 🤖 *AA MD Bot*`,
+        caption: `🔍 *AI Upscaled (4x HD)*\n\n> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (err) {
