@@ -60,7 +60,7 @@ const CAT_CFG = {
 const CAT_ORDER = ['download','search','media','fun','economy','level','group','admin','tools','utility','gb','islamic'];
 
 // Owner-control commands shown only to owners (in Owner Quick-Access section)
-const OWNER_GB_CMDS    = new Set(['afk','alwaysonline','autoread','autoreply','flood','ghost','onlinealert','typing','autoreact','anticall','antispam','schedule']);
+const OWNER_GB_CMDS    = new Set(['afk','alwaysonline','autoread','autoreply','flood','ghost','onlinealert','typing','autoreact','anticall','antispam']);
 const OWNER_TOOLS_CMDS = new Set(['backup','dbstats','logs','reload','speedtest','system','memory']);
 // SuperOwner-only commands — never in .menu (only in .smenu)
 const SUPER_CMDS = new Set(['eval','shell','broadcast','maintenance','setnewsletter','followchannel','adddevice','deldevice','devices','addowner','delowner','setowner','banuser','smenu','supermenu','devmenu','adminpanel','backup','database','logs','reload','system']);

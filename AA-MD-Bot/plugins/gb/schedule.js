@@ -20,7 +20,7 @@ function parseDelay(str) {
 
 export default {
   command: 'schedule',
-  alias: ['sched', 'remind', 'later', 'sendlater'],
+  alias: ['sched', 'later', 'sendlater'],
   category: 'gb',
   description: 'Schedule a message to be sent after a delay',
   usage: '.schedule <time> <message>  e.g.  .schedule 5m Hello!',
