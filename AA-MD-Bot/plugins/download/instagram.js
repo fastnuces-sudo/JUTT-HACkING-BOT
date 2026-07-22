@@ -71,11 +71,50 @@ async function ytdlpIG(url) {
   return results.length ? results : null;
 }
 
-// ── Fallback: faa API ─────────────────────────────────────────────────────────
-async function faaIG(url) {
-  const { data } = await api.get(`https://api-faa.my.id/faa/igdl?url=${encodeURIComponent(url)}`);
-  if (!data.status) throw new Error(data.message || 'Instagram API error');
-  return data.result;
+// ── Fallback 1: igram.world API ───────────────────────────────────────────────
+async function igramIG(url) {
+  const { data: d } = await api.post(
+    'https://igram.world/api/convert',
+    new URLSearchParams({ url, lang: 'en' }).toString(),
+    {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin': 'https://igram.world',
+        'Referer': 'https://igram.world/',
+        'User-Agent': 'Mozilla/5.0',
+      },
+      timeout: 20000,
+    }
+  );
+  const items = d?.url || [];
+  if (!items.length) throw new Error('igram: no media found');
+  return items;
+}
+
+// ── Fallback 2: snapsave.app ──────────────────────────────────────────────────
+async function snapsaveIG(url) {
+  const { data: html } = await api.post(
+    'https://snapsave.app/action.php',
+    new URLSearchParams({ url }).toString(),
+    {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin': 'https://snapsave.app',
+        'Referer': 'https://snapsave.app/',
+        'User-Agent': 'Mozilla/5.0',
+      },
+      timeout: 20000,
+    }
+  );
+  // Parse video/image URLs from returned HTML
+  const urls = [];
+  const vidMatches = (html || '').matchAll(/href="(https:\/\/[^"]+\.(mp4|jpg|jpeg|png|webp)[^"]*)"/gi);
+  for (const m of vidMatches) {
+    const u = m[1].replace(/&amp;/g, '&');
+    if (!urls.includes(u)) urls.push(u);
+  }
+  if (!urls.length) throw new Error('snapsave: no media found');
+  return urls;
 }
 
 export default {
@@ -116,20 +155,34 @@ export default {
       }
     } catch {}
 
-    // Fallback: faa API
+    // Fallback 1: igram.world
     try {
-      const r = await faaIG(url);
-      const urls = r?.url || [];
-      if (!urls.length) throw new Error('No media found');
+      const items = await igramIG(url);
+      for (const item of items.slice(0, 6)) {
+        const mediaUrl = item.url || item;
+        const isVid = (item.type === 'video') || String(mediaUrl).includes('.mp4');
+        await sock.sendMessage(jid, isVid
+          ? { video: { url: mediaUrl }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
+          : { image: { url: mediaUrl }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
+      }
+      await react('✅');
+      return;
+    } catch {}
+
+    // Fallback 2: snapsave.app
+    try {
+      const urls = await snapsaveIG(url);
       for (const link of urls.slice(0, 6)) {
-        await sock.sendMessage(jid, r.metadata?.isVideo
+        const isVid = link.includes('.mp4');
+        await sock.sendMessage(jid, isVid
           ? { video: { url: link }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
           : { image: { url: link }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
       }
       await react('✅');
-    } catch (e2) {
+      return;
+    } catch (e3) {
       await react('❌');
-      reply(`❌ *Instagram download failed*\n\n${e2.message}\n\n💡 Make sure the post is *public* and the link is correct.\n\n> 📸 *AA MD Bot*`);
+      reply(`❌ *Instagram download failed*\n\n${e3.message}\n\n💡 Make sure the post is *public* and the link is correct.\n\n> 📸 *AA MD Bot*`);
     }
   },
 };

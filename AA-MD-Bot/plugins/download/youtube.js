@@ -248,6 +248,7 @@ function fmtViews(n) {
 // ── Search (top 5 → best title match) ────────────────────────────────────────
 
 async function searchYT(query) {
+  // Primary: play-dl (no external API, fastest)
   try {
     const playdl = (await import('play-dl')).default;
     const res = await playdl.search(query, { source: { youtube: 'video' }, limit: 5 });
@@ -260,13 +261,23 @@ async function searchYT(query) {
       return { url: r.url, title: r.title || query, thumbnail: r.thumbnails?.[0]?.url || '', duration: `${m}:${s}`, author: r.channel?.name || '', views: fmtViews(r.views) };
     }
   } catch {}
+  // Fallback: davidcyriltech search
   try {
-    const { data: d } = await api.get(`https://api-faa.my.id/faa/youtube?q=${encodeURIComponent(query)}`);
-    if (d.status && d.result?.length) {
-      const scored = d.result.slice(0, 3).map(r => ({ r, score: scoreMatch(r.title, query) }));
-      scored.sort((a, b) => b.score - a.score);
-      const r = scored[0].r;
-      return { url: r.link, title: r.title, thumbnail: r.imageUrl, duration: r.duration, author: r.channel || '', views: '' };
+    const { data: d } = await axios.get(
+      `https://apis.davidcyriltech.my.id/youtube/search?query=${encodeURIComponent(query)}`,
+      { timeout: 15000 }
+    );
+    const results = d?.result || d?.results || d?.data || [];
+    if (Array.isArray(results) && results.length) {
+      const r = results[0];
+      return {
+        url: r.url || r.link || r.videoUrl,
+        title: r.title || query,
+        thumbnail: r.thumbnail || r.image || '',
+        duration: r.duration || '',
+        author: r.channel || r.channelTitle || '',
+        views: '',
+      };
     }
   } catch {}
   return null;
@@ -424,11 +435,23 @@ async function tryKeithMp3(ytUrl) {
   return null;
 }
 
-async function tryFaaMp3(ytUrl) {
+async function tryY2mateMp3(ytUrl) {
+  // y2mate-style API (yt1s.com) — free, no auth, reliable
   try {
-    const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp3?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.result?.mp3;
-    if (u) return await fetchAsMp3(u);
+    const { data: d } = await axios.post(
+      'https://yt1s.com/api/ajaxSearch',
+      new URLSearchParams({ q: ytUrl, vt: 'mp3' }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000 }
+    );
+    const link = d?.result?.links?.mp3?.mp3128?.k;
+    if (link) {
+      const { data: d2 } = await axios.post(
+        'https://yt1s.com/api/ajaxConvert',
+        new URLSearchParams({ vid: d.vid, k: link }).toString(),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 25000 }
+      );
+      if (d2?.dlink) return await fetchAsMp3(d2.dlink);
+    }
   } catch {}
   return null;
 }
@@ -470,11 +493,19 @@ async function tryGtechMp4Url(ytUrl) {
   return null;
 }
 
-async function tryFaaMp4Url(ytUrl) {
+async function tryRapidMp4Url(ytUrl) {
+  // cobalt.tools public API fallback (no auth needed for basic requests)
   try {
-    const { data: d } = await api.get(`https://api-faa.my.id/faa/ytmp4?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.result?.download_url || d?.result?.url;
-    if (u) return u;
+    const { data: d } = await axios.get(
+      `https://co.wuk.sh/api/json`,
+      {
+        params: { url: ytUrl, vQuality: '720', isAudioOnly: false },
+        headers: { Accept: 'application/json' },
+        timeout: 15000,
+      }
+    );
+    const u = d?.url;
+    if (u && typeof u === 'string') return u;
   } catch {}
   return null;
 }
@@ -584,20 +615,22 @@ async function downloadAudioFromVideo(ytUrl) {
 // Returns: { buffer, mime } | null
 
 async function downloadAudio(ytUrl) {
-  // All sources run simultaneously — no sequential waiting
+  // All sources run simultaneously — first to return a valid buffer wins
   const result = await withTimeout(120000, firstSuccess([
-    // Path A: video stream → strip audio (~6s, most reliable)
+    // Path A (fastest): davidcyriltech API — returns CDN URL, fetch buffer
+    tryDavidMp3(ytUrl),
+
+    // Path B: video stream → strip audio (~6s, most reliable on this server)
     downloadAudioFromVideo(ytUrl),
 
-    // Path B: dedicated mp3 API sources (fast when online, often down)
+    // Path C: other third-party API sources
     firstSuccess([
       tryKeithMp3(ytUrl),
-      tryFaaMp3(ytUrl),
+      tryY2mateMp3(ytUrl),
       tryNexrayMp3(ytUrl),
-      tryDavidMp3(ytUrl),   // davidcyriltech — added as extra source
     ]),
 
-    // Path C: yt-dlp full download with built-in throttle handling (~6s)
+    // Path D: yt-dlp full download (handles throttling internally, ~6-10s)
     tryYtdlpAudio(ytUrl).then(raw =>
       raw ? { buffer: raw, mime: 'audio/mpeg' } : null
     ),
@@ -695,7 +728,7 @@ async function downloadVideo(ytUrl) {
   // Step C — Race remaining third-party APIs
   const fallbackUrl = await withTimeout(28000, firstSuccess([
     tryGtechMp4Url(ytUrl),
-    tryFaaMp4Url(ytUrl),
+    tryRapidMp4Url(ytUrl),
     tryNexrayMp4Url(ytUrl),
     tryAagatzMp4Url(ytUrl),
   ]));

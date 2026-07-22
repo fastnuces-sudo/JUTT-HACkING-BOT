@@ -127,10 +127,53 @@ async function spotifyDown(url) {
   return { url: data.link, title: data.metadata?.title, artist: data.metadata?.artists };
 }
 
-async function faaApi(path2, url) {
-  const { data: d } = await api.get(`https://api-faa.my.id/faa/${path2}?url=${encodeURIComponent(url)}`);
-  if (!d.status) throw new Error(d.message || `${path2} API error`);
-  return d.result;
+// ── Working replacement APIs (api-faa.my.id is dead — Cloudflare blocked) ────
+
+async function igramIG(url) {
+  // igram.world public API — no auth, handles posts/reels
+  const { data: d } = await api.post(
+    'https://igram.world/api/convert',
+    new URLSearchParams({ url, lang: 'en' }).toString(),
+    { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Origin': 'https://igram.world', 'Referer': 'https://igram.world/' }, timeout: 20000 }
+  );
+  const items = d?.url || [];
+  if (!items.length) throw new Error('igram: no media');
+  return items;
+}
+
+async function fdownloaderFB(url) {
+  const form = new URLSearchParams({ q: url, lang: 'en' });
+  const { data: d } = await api.post('https://fdownloader.net/api/ajaxSearch', form.toString(), {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Origin': 'https://fdownloader.net',
+      'Referer': 'https://fdownloader.net/',
+      'User-Agent': 'Mozilla/5.0',
+    },
+    timeout: 20000,
+  });
+  const html = d?.data || '';
+  const m = html.match(/href="([^"]+\.mp4[^"]*)"[^>]*>(HD|SD|\d+p)/i);
+  const videoUrl = m?.[1]?.replace(/&amp;/g, '&');
+  if (!videoUrl) throw new Error('fdownloader: no video');
+  return videoUrl;
+}
+
+async function rednitPin(url) {
+  // rednit.com Pinterest API
+  const { data: d } = await api.get(`https://api.rednit.com/media?url=${encodeURIComponent(url)}`, { timeout: 15000 });
+  return d;
+}
+
+async function mediafireDirect(url) {
+  // Scrape MediaFire HTML to extract direct download link
+  const { data: html } = await api.get(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+    timeout: 15000,
+  });
+  const m = html.match(/href="(https:\/\/download\d+\.mediafire\.com[^"]+)"/);
+  if (!m) throw new Error('MediaFire: no direct link found');
+  return { download_url: m[1], filename: url.split('/').pop()?.split('?')[0] || 'file', size: '' };
 }
 
 // ── Main handler ───────────────────────────────────────────────────────────────
@@ -186,14 +229,15 @@ export default {
         if (buf?.length) {
           await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
         } else {
-          // fallback: faa API
-          const r = await faaApi('igdl', url);
-          const urls = r?.url || [];
-          if (!urls.length) throw new Error('No media found in this Instagram post');
-          for (const link of urls.slice(0, 4)) {
-            await sock.sendMessage(jid, r.metadata?.isVideo
-              ? { video: { url: link }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
-              : { image: { url: link }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
+          // fallback: igram.world API
+          const items = await igramIG(url);
+          if (!items.length) throw new Error('No media found in this Instagram post');
+          for (const item of items.slice(0, 4)) {
+            const mediaUrl = item.url || item;
+            const isVid = (item.type === 'video') || String(mediaUrl).includes('.mp4');
+            await sock.sendMessage(jid, isVid
+              ? { video: { url: mediaUrl }, mimetype: 'video/mp4', caption: '📸 *Instagram via AA MD Bot*' }
+              : { image: { url: mediaUrl }, caption: '📸 *Instagram via AA MD Bot*' }, { quoted: msg });
           }
         }
       }
@@ -204,12 +248,10 @@ export default {
         if (buf?.length) {
           await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }, { quoted: msg });
         } else {
-          const r = await faaApi('fbdownload', url);
-          const dlUrl = r.media?.video_hd || r.media?.video_sd || r.media?.photo_image;
-          if (!dlUrl) throw new Error('No media found in this Facebook post');
-          await sock.sendMessage(jid, r.media?.video_hd || r.media?.video_sd
-            ? { video: { url: dlUrl }, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }
-            : { image: { url: dlUrl } }, { quoted: msg });
+          // fallback: fdownloader.net
+          const videoUrl = await fdownloaderFB(url);
+          if (!videoUrl) throw new Error('No video found in this Facebook post');
+          await sock.sendMessage(jid, { video: { url: videoUrl }, mimetype: 'video/mp4', caption: '📘 *Facebook via AA MD Bot*' }, { quoted: msg });
         }
       }
 
@@ -254,24 +296,41 @@ export default {
 
       // ── MediaFire ───────────────────────────────────────────────────────────
       else if (type === 'mf') {
-        const r = await faaApi('mediafire', url);
+        // Try yt-dlp first (supports MediaFire), then HTML scraping
+        let dlUrl = null, filename = 'mediafire-file';
+        try {
+          const buf = await ytdlpVideo(url);
+          if (buf?.length) {
+            await sock.sendMessage(jid, { document: buf, fileName: 'mediafire-file', mimetype: 'application/octet-stream', caption: '📦 *MediaFire via AA MD Bot*' }, { quoted: msg });
+            await react('✅');
+            return;
+          }
+        } catch {}
+        const r = await mediafireDirect(url);
+        dlUrl = r.download_url;
+        filename = r.filename;
         await sock.sendMessage(jid, {
-          document: { url: r.download_url },
-          fileName: r.filename || 'mediafire-file',
+          document: { url: dlUrl },
+          fileName: filename || 'mediafire-file',
           mimetype: 'application/octet-stream',
-          caption: `📦 *MediaFire Download*\n📄 ${r.filename}\n💾 ${r.size || 'Unknown size'}`,
+          caption: `📦 *MediaFire Download*\n📄 ${filename}`,
         }, { quoted: msg });
       }
 
       // ── Pinterest ────────────────────────────────────────────────────────────
       else if (type === 'pin') {
-        const r = await faaApi('pin-down', url);
-        const items = r.medias || [];
-        const vid = items.find(m => m.type === 'video');
-        const img = items.find(m => m.type === 'image');
-        if (vid) await sock.sendMessage(jid, { video: { url: vid.url }, mimetype: 'video/mp4' }, { quoted: msg });
-        else if (img) await sock.sendMessage(jid, { image: { url: img.url } }, { quoted: msg });
-        else throw new Error('No media found in this Pinterest pin');
+        // Try yt-dlp first (supports Pinterest), then rednit API
+        const buf = await ytdlpVideo(url);
+        if (buf?.length) {
+          await sock.sendMessage(jid, { video: buf, mimetype: 'video/mp4', caption: '📌 *Pinterest via AA MD Bot*' }, { quoted: msg });
+        } else {
+          const r = await rednitPin(url);
+          const videoUrl = r?.video_url || r?.url;
+          const imageUrl = r?.image_url || r?.thumbnail;
+          if (videoUrl) await sock.sendMessage(jid, { video: { url: videoUrl }, mimetype: 'video/mp4', caption: '📌 *Pinterest via AA MD Bot*' }, { quoted: msg });
+          else if (imageUrl) await sock.sendMessage(jid, { image: { url: imageUrl }, caption: '📌 *Pinterest via AA MD Bot*' }, { quoted: msg });
+          else throw new Error('No media found in this Pinterest pin');
+        }
       }
 
       await react('✅');

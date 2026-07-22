@@ -120,18 +120,36 @@ function checkCooldown(jid, command) {
 async function getMessageText(msg) {
   const m = msg.message;
   if (!m) return '';
-  // Unwrap disappearing-message (ephemeral) container — content is nested inside
+  // Unwrap disappearing-message (ephemeral) and other wrapper containers
   const inner = m.ephemeralMessage?.message || m;
+  // Unwrap document-with-caption wrapper
+  const docInner = inner.documentWithCaptionMessage?.message || inner;
+  // Unwrap viewOnce containers (reveal commands can be sent as viewOnce)
+  const voInner = inner.viewOnceMessage?.message || inner.viewOnceMessageV2?.message || inner;
+
   return (
-    inner.conversation                                          ||
-    inner.extendedTextMessage?.text                            ||
-    inner.imageMessage?.caption                                ||
-    inner.videoMessage?.caption                                ||
-    inner.documentMessage?.caption                             ||
-    inner.buttonsResponseMessage?.selectedButtonId             ||
-    inner.listResponseMessage?.singleSelectReply?.selectedRowId ||
-    inner.templateButtonReplyMessage?.selectedId               ||
-    inner.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+    inner.conversation                                                        ||
+    inner.extendedTextMessage?.text                                            ||
+    inner.imageMessage?.caption                                                ||
+    inner.videoMessage?.caption                                                ||
+    docInner.documentMessage?.caption                                          ||
+    inner.documentMessage?.caption                                             ||
+    // Ephemeral wrappers with media captions (disappearing messages)
+    inner.ephemeralMessage?.message?.imageMessage?.caption                     ||
+    inner.ephemeralMessage?.message?.videoMessage?.caption                     ||
+    inner.ephemeralMessage?.message?.documentMessage?.caption                  ||
+    // ViewOnce messages can carry commands as captions
+    voInner.imageMessage?.caption                                               ||
+    voInner.videoMessage?.caption                                               ||
+    // Edited messages — extract the edited body
+    inner.editedMessage?.message?.protocolMessage?.editedMessage?.conversation ||
+    inner.editedMessage?.message?.protocolMessage?.editedMessage?.extendedTextMessage?.text ||
+    // Button / list / template responses
+    inner.buttonsResponseMessage?.selectedButtonId                              ||
+    inner.listResponseMessage?.singleSelectReply?.selectedRowId                ||
+    inner.templateButtonReplyMessage?.selectedId                               ||
+    inner.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson    ||
+    inner.interactiveMessage?.body?.text                                       ||
     ''
   );
 }
