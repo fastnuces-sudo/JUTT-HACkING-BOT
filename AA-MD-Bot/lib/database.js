@@ -23,8 +23,8 @@ export async function getDb() {
 // ── Collections persisted to MongoDB ─────────────────────────────────────────
 // Each name maps to a MongoDB collection where every document is { _id: key, ...fields }
 // 'sessions' is excluded from flush (managed separately by WhatsApp auth state).
-const COLLECTIONS = ['groups', 'settings', 'sessionSettings', 'notes', 'birthdays', 'sessions'];
-const cache = { groups: {}, settings: {}, sessionSettings: {}, notes: {}, birthdays: {}, sessions: {} };
+const COLLECTIONS = ['groups', 'settings', 'sessionSettings', 'notes', 'birthdays', 'sessions', 'reminders'];
+const cache = { groups: {}, settings: {}, sessionSettings: {}, notes: {}, birthdays: {}, sessions: {}, reminders: {} };
 
 // ── MongoDB helpers ───────────────────────────────────────────────────────────
 async function mongoLoadCollection(name) {
@@ -258,6 +258,13 @@ export const db = {
     },
     delete: (sessionId) => { delete cache.sessionSettings[sessionId]; scheduleSave('sessionSettings'); },
     all: () => cache.sessionSettings,
+  },
+
+  reminders: {
+    get: (id) => cache.reminders[id] || null,
+    set: (id, data) => { cache.reminders[id] = data; scheduleSave('reminders'); },
+    delete: (id) => { delete cache.reminders[id]; scheduleSave('reminders'); },
+    all: () => cache.reminders,
   },
 
   reload: () => reloadDatabase(),

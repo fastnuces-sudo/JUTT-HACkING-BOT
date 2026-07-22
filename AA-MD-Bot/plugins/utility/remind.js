@@ -1,12 +1,113 @@
 // ============================================
 // AA MD Bot - Personal Reminder
 // Developer: Ahsan Ali | AA Mods
+// ✅ MongoDB persistent — survives restarts
+// ✅ Alarm voice note — rings on phone
 // .remind 10m Take medication
 // ============================================
 
-const reminderJobs = new Map();   // id → { timer, text, fireAt, jid, senderJid }
-let remindCounter = 1;
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { randomBytes } from 'crypto';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { db } from '../../lib/database.js';
 
+const execFileAsync = promisify(execFile);
+
+// ── In-memory map of active timers (rebuilt on restart from MongoDB) ──────────
+// id → { timer, fireAt, jid, senderJid, text, sessionId }
+const activeTimers = new Map();
+
+// ── Generate alarm voice note (OGG/Opus via ffmpeg) ──────────────────────────
+// Three short beeps — sounds like an alarm on the phone
+async function generateAlarm() {
+  const out = path.join(os.tmpdir(), `alarm_${randomBytes(6).toString('hex')}.ogg`);
+  // 3 beeps at 880Hz (0.3s on, 0.15s off) × 3 — total ~1.4s
+  const filter =
+    'sine=frequency=880:duration=0.3[b1];' +
+    'aevalsrc=0:duration=0.15[s1];' +
+    'sine=frequency=880:duration=0.3[b2];' +
+    'aevalsrc=0:duration=0.15[s2];' +
+    'sine=frequency=880:duration=0.3[b3];' +
+    '[b1][s1][b2][s2][b3]concat=n=5:v=0:a=1[out]';
+  await execFileAsync('ffmpeg', [
+    '-y',
+    '-filter_complex', filter,
+    '-map', '[out]',
+    '-c:a', 'libopus',
+    '-b:a', '32k',
+    out,
+  ]);
+  const buf = fs.readFileSync(out);
+  fs.unlink(out, () => {});
+  return buf;
+}
+
+// ── Fire a reminder ───────────────────────────────────────────────────────────
+async function fireReminder(id, job, getSessions) {
+  activeTimers.delete(id);
+  db.reminders.delete(id);
+
+  try {
+    // Get the socket for this session
+    const sessions = getSessions();
+    const sock = sessions instanceof Map ? sessions.get(job.sessionId) : sessions[job.sessionId];
+    if (!sock) return;
+
+    // 1. Send alarm voice note (rings even on silent via WhatsApp)
+    try {
+      const alarmBuf = await generateAlarm();
+      await sock.sendMessage(job.jid, {
+        audio: alarmBuf,
+        mimetype: 'audio/ogg; codecs=opus',
+        ptt: true,
+      });
+    } catch (e) {
+      // Alarm failed — still send text
+      console.error('[Remind] alarm audio failed:', e.message);
+    }
+
+    // 2. Send text reminder with mention
+    await sock.sendMessage(job.jid, {
+      text:
+        `🔔 *REMINDER!* *(#${id})*\n\n` +
+        `@${job.senderJid.split('@')[0]}\n\n` +
+        `📌 *${job.text}*\n\n` +
+        `> ⏰ *AA MD Bot — Reminder*`,
+      mentions: [job.senderJid],
+    });
+  } catch (e) {
+    console.error(`[Remind] fire failed (#${id}):`, e.message);
+  }
+}
+
+// ── Schedule a single reminder (in-memory timer) ──────────────────────────────
+function scheduleTimer(id, job, getSessions) {
+  const delay = Math.max(0, job.fireAt - Date.now());
+  const timer = setTimeout(() => fireReminder(id, job, getSessions), delay);
+  activeTimers.set(id, timer);
+}
+
+// ── Restore reminders from MongoDB on startup ─────────────────────────────────
+export function restoreReminders(getSessions) {
+  const all = db.reminders.all();
+  let restored = 0;
+  for (const [id, job] of Object.entries(all)) {
+    if (!job || job.fireAt <= Date.now()) {
+      // Already overdue — fire immediately (small delay so sessions are ready)
+      db.reminders.delete(id);
+      setTimeout(() => fireReminder(id, job, getSessions), 3000);
+    } else {
+      scheduleTimer(id, job, getSessions);
+      restored++;
+    }
+  }
+  if (restored > 0) console.log(`[Remind] ✅ Restored ${restored} reminder(s) from MongoDB`);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function parseDelay(str) {
   const s = (str || '').trim().toLowerCase();
   const m = s.match(/^(\d+)\s*(s|sec|m|min|h|hr|hour|d|day)s?$/);
@@ -23,103 +124,100 @@ function parseDelay(str) {
 function fmtMs(ms) {
   const s = Math.floor(ms / 1000);
   if (s < 60)   return `${s}s`;
-  if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`;
-  return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
 }
 
+// ── Plugin ────────────────────────────────────────────────────────────────────
 export default {
   command: 'remind',
   alias: ['reminder', 'remindme', 'yaad'],
-  description: 'Set a personal reminder — the bot will notify you at the set time',
+  description: 'Set a reminder — bot will send alarm + message at the set time',
   category: 'utility',
   usage: '.remind <time> <message>   e.g.  .remind 10m Take medication',
 
   async execute({ sock, jid, msg, reply, args, senderJid }) {
-
     const sub = (args[0] || '').toLowerCase();
 
-    // ── .remind list ──────────────────────────────────────────────────────────
+    // ── .remind list ────────────────────────────────────────────────────────
     if (sub === 'list') {
-      const mine = [...reminderJobs.entries()].filter(([, j]) => j.senderJid === senderJid);
+      const all  = db.reminders.all();
+      const mine = Object.entries(all).filter(([, j]) => j?.senderJid === senderJid);
       if (!mine.length) return reply(
-        `🔔 *No active reminders.*\n\n` +
-        `Set one with: *.remind 10m Take medication*\n\n> 🤖 *AA MD Bot*`
+        `🔔 *No active reminders.*\n\nSet one:\n*.remind 10m Take medication*\n\n> 🤖 *AA MD Bot*`
       );
-      let txt = `🔔 *Your Active Reminders (${mine.length})*\n\n`;
+      let txt = `🔔 *Your Reminders (${mine.length})*\n\n`;
       for (const [id, j] of mine) {
         const left = Math.max(0, j.fireAt - Date.now());
         txt += `▸ *#${id}* — in *${fmtMs(left)}*\n  _"${j.text.slice(0, 50)}"_\n\n`;
       }
-      txt += `To cancel: *.remind cancel <id>*\n\n> 🤖 *AA MD Bot*`;
+      txt += `Cancel: *.remind cancel <id>*\n\n> 🤖 *AA MD Bot*`;
       return reply(txt);
     }
 
-    // ── .remind cancel <id> ───────────────────────────────────────────────────
+    // ── .remind cancel <id> ─────────────────────────────────────────────────
     if (sub === 'cancel') {
-      const id = parseInt(args[1]);
-      const job = reminderJobs.get(id);
-      if (!job) return reply(`❌ Reminder #${args[1]} not found.\n\nSee your reminders: *.remind list*\n\n> 🤖 *AA MD Bot*`);
+      const id  = args[1];
+      const job = db.reminders.get(id);
+      if (!job) return reply(`❌ Reminder *#${args[1]}* not found.\n\n*.remind list* — see yours\n\n> 🤖 *AA MD Bot*`);
       if (job.senderJid !== senderJid) return reply(`❌ This is not your reminder.\n\n> 🤖 *AA MD Bot*`);
-      clearTimeout(job.timer);
-      reminderJobs.delete(id);
+      const timer = activeTimers.get(id);
+      if (timer) clearTimeout(timer);
+      activeTimers.delete(id);
+      db.reminders.delete(id);
       return reply(`✅ *Reminder #${id} cancelled.*\n_"${job.text.slice(0, 50)}"_\n\n> 🤖 *AA MD Bot*`);
     }
 
-    // ── .remind (no args) — help ──────────────────────────────────────────────
+    // ── .remind (no args) — help ─────────────────────────────────────────────
     if (args.length < 2) {
       return reply(
         `🔔 *Personal Reminder*\n\n` +
-        `The bot will remind you after the specified time!\n\n` +
+        `Bot will send an *alarm 🔔 + message* at the set time!\n` +
+        `Reminders are saved — survive bot restarts.\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `▸ *.remind 30s Message*        — 30 seconds\n` +
+        `▸ *.remind 30s Message*         — 30 seconds\n` +
         `▸ *.remind 10m Take medication* — 10 minutes\n` +
-        `▸ *.remind 2h Meeting at 3pm*  — 2 hours\n` +
-        `▸ *.remind 1d Submit report*   — 1 day\n\n` +
-        `▸ *.remind list*               — view active reminders\n` +
-        `▸ *.remind cancel <id>*        — cancel a reminder\n\n` +
+        `▸ *.remind 2h Meeting at 3pm*   — 2 hours\n` +
+        `▸ *.remind 1d Submit report*    — 1 day\n\n` +
+        `▸ *.remind list*                — active reminders\n` +
+        `▸ *.remind cancel <id>*         — cancel one\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     }
 
-    // ── Parse delay + message ─────────────────────────────────────────────────
+    // ── Parse delay + message ────────────────────────────────────────────────
     const delayMs = parseDelay(args[0]);
-    if (!delayMs) {
-      return reply(
-        `❌ *Invalid time format.*\n\n` +
-        `Valid formats: *30s*, *10m*, *2h*, *1d*\n` +
-        `Example: *.remind 10m Take medication*\n\n> 🤖 *AA MD Bot*`
-      );
-    }
-    if (delayMs < 5000)                return reply(`❌ Minimum time is *5 seconds*.\n\n> 🤖 *AA MD Bot*`);
+    if (!delayMs) return reply(
+      `❌ *Invalid time format.*\n\nValid: *30s*, *10m*, *2h*, *1d*\nExample: *.remind 10m Take medication*\n\n> 🤖 *AA MD Bot*`
+    );
+    if (delayMs < 5000)                  return reply(`❌ Minimum time is *5 seconds*.\n\n> 🤖 *AA MD Bot*`);
     if (delayMs > 7 * 24 * 3600 * 1000) return reply(`❌ Maximum time is *7 days*.\n\n> 🤖 *AA MD Bot*`);
 
     const text = args.slice(1).join(' ').trim();
     if (!text) return reply(`❌ Please include a reminder message.\nExample: *.remind 10m Take medication*\n\n> 🤖 *AA MD Bot*`);
 
-    const jobId  = remindCounter++;
+    // Generate unique ID
+    const id     = `r${Date.now()}${randomBytes(2).toString('hex')}`;
     const fireAt = Date.now() + delayMs;
 
-    const timer = setTimeout(async () => {
-      reminderJobs.delete(jobId);
-      try {
-        await sock.sendMessage(jid, {
-          text:
-            `🔔 *REMINDER!* *(#${jobId})*\n\n` +
-            `@${senderJid.split('@')[0]}\n\n` +
-            `📌 *${text}*\n\n` +
-            `> ⏰ *AA MD Bot — Reminder System*`,
-          mentions: [senderJid],
-        }, { quoted: msg });
-      } catch {}
-    }, delayMs);
+    const job = {
+      id, text, fireAt, jid, senderJid,
+      sessionId: sock.sessionId || 'default',
+      createdAt: Date.now(),
+    };
 
-    reminderJobs.set(jobId, { timer, text, fireAt, jid, senderJid });
+    // Save to MongoDB (persists across restarts)
+    db.reminders.set(id, job);
+
+    // Use sock directly for this session (already connected)
+    scheduleTimer(id, job, () => new Map([[job.sessionId, sock]]));
 
     return reply(
-      `✅ *Reminder Set! (#${jobId})*\n\n` +
+      `✅ *Reminder Set! (#${id.slice(-6)})*\n\n` +
       `⏱️ In: *${fmtMs(delayMs)}*\n` +
-      `📌 Message: _"${text.slice(0, 60)}"_\n\n` +
-      `Cancel: *.remind cancel ${jobId}*\n\n> 🤖 *AA MD Bot*`
+      `📌 Message: _"${text.slice(0, 60)}"_\n` +
+      `🔔 Bot will send alarm + message\n\n` +
+      `Cancel: *.remind cancel ${id}*\n\n> 🤖 *AA MD Bot*`
     );
   },
 };
