@@ -33,6 +33,7 @@
     "jimp": "^1.6.1",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.45",
+    "mongodb": "^7.5.0",
     "mumaker": "^2.0.0",
     "node-cache": "^5.1.2",
     "node-telegram-bot-api": "^1.2.0",

@@ -48,8 +48,6 @@ const CAT_CFG = {
   search:    { e: '🔍',  n: 'SEARCH & AI',     max: 18 },
   media:     { e: '🎨',  n: 'MEDIA TOOLS',     max: 16 },
   fun:       { e: '🎮',  n: 'FUN & GAMES',     max: 20 },
-  economy:   { e: '💰',  n: 'ECONOMY',         max: 8  },
-  level:     { e: '⭐',  n: 'LEVEL & XP',      max: 5  },
   group:     { e: '👥',  n: 'GROUP',           max: 18 },
   admin:     { e: '🛡️', n: 'GROUP ADMIN',     max: 20 },
   tools:     { e: '🔧',  n: 'TOOLS',           max: 25 },
@@ -57,7 +55,7 @@ const CAT_CFG = {
   gb:        { e: '📱',  n: 'GB FEATURES',     max: 8  },
   islamic:   { e: '☪️',  n: 'ISLAMIC',         max: 0  },
 };
-const CAT_ORDER = ['download','search','media','fun','economy','level','group','admin','tools','utility','gb','islamic'];
+const CAT_ORDER = ['download','search','media','fun','group','admin','tools','utility','gb','islamic'];
 
 // Owner-control commands shown only to owners (in Owner Quick-Access section)
 const OWNER_GB_CMDS    = new Set(['afk','alwaysonline','autoread','autoreply','flood','ghost','onlinealert','typing','autoreact','anticall','antispam']);

@@ -1,85 +1,89 @@
-import axios from 'axios';
+import { MongoClient } from 'mongodb';
 
-const BASE_URL = (process.env.FIREBASE_DB_URL || 'https://aa-md-bot-default-rtdb.firebaseio.com').replace(/\/$/, '');
-const SECRET   = process.env.FIREBASE_DB_SECRET;
+// ── Connection ────────────────────────────────────────────────────────────────
+const MONGO_PASS = process.env.MONGODB_PASSWORD;
+const MONGO_URI  = MONGO_PASS
+  ? `mongodb+srv://a67515346_db_user:${encodeURIComponent(MONGO_PASS)}@aa-md-bot.i1j26yw.mongodb.net/?appName=AA-MD-Bot`
+  : null;
 
-// ── Firebase key encoding ─────────────────────────────────────────────────────
-// Firebase Realtime DB disallows: . # $ [ ]  in key names
-// JIDs contain dots (e.g. @s.whatsapp.net) so we must encode them
-const encKey = k => String(k).replace(/[.#$[\]]/g, c => `~${c.charCodeAt(0).toString(16).toUpperCase()}`);
-const decKey = k => String(k).replace(/~([0-9A-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+let _client = null;
+let _db     = null;
 
-function encodeObj(obj) {
-  if (!obj || typeof obj !== 'object') return obj;
-  const out = {};
-  for (const k of Object.keys(obj)) out[encKey(k)] = obj[k];
-  return out;
-}
-function decodeObj(obj) {
-  if (!obj || typeof obj !== 'object') return obj;
-  const out = {};
-  for (const k of Object.keys(obj)) out[decKey(k)] = obj[k];
-  return out;
+async function getDb() {
+  if (_db) return _db;
+  if (!MONGO_URI) return null;
+  if (!_client) {
+    _client = new MongoClient(MONGO_URI, { serverSelectionTimeoutMS: 10000 });
+    await _client.connect();
+  }
+  _db = _client.db('aa_md_bot');
+  return _db;
 }
 
-// ── In-memory cache (source of truth for sync reads) ─────────────────────────
-// All collections are persisted to Firebase and loaded on startup.
-// 'sessions' is excluded from flushOnExit (managed separately by WhatsApp auth state).
-const COLLECTIONS = ['groups', 'settings', 'sessions', 'sessionSettings', 'notes', 'birthdays'];
-const cache = { groups: {}, settings: {}, sessions: {}, sessionSettings: {}, notes: {}, birthdays: {} };
+// ── Collections persisted to MongoDB ─────────────────────────────────────────
+// Each name maps to a MongoDB collection where every document is { _id: key, ...fields }
+// 'sessions' is excluded from flush (managed separately by WhatsApp auth state).
+const COLLECTIONS = ['groups', 'settings', 'sessionSettings', 'notes', 'birthdays', 'sessions'];
+const cache = { groups: {}, settings: {}, sessionSettings: {}, notes: {}, birthdays: {}, sessions: {} };
 
-// ── Firebase REST helpers ─────────────────────────────────────────────────────
-async function fbGet(fbPath) {
-  if (!SECRET) return {};
+// ── MongoDB helpers ───────────────────────────────────────────────────────────
+async function mongoLoadCollection(name) {
+  const mdb = await getDb();
+  if (!mdb) return {};
   try {
-    const { data } = await axios.get(`${BASE_URL}/${fbPath}.json?auth=${SECRET}`, { timeout: 15000 });
-    return data || {};
+    const docs = await mdb.collection(name).find({}).toArray();
+    const out  = {};
+    for (const doc of docs) {
+      const { _id, ...rest } = doc;
+      // 'settings' is a single flat document stored under _id='__settings__'
+      if (name === 'settings') {
+        return rest;
+      }
+      out[_id] = rest;
+    }
+    return out;
   } catch (e) {
-    console.error(`[DB] Firebase GET /${fbPath} failed:`, e.message);
+    console.error(`[DB] MongoDB load ${name} failed:`, e.message);
     return {};
   }
 }
 
-async function fbPut(fbPath, data, retries = 3) {
-  if (!SECRET) return;
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      await axios.put(`${BASE_URL}/${fbPath}.json?auth=${SECRET}`, data ?? {}, { timeout: 15000 });
-      return; // success
-    } catch (e) {
-      if (attempt === retries) {
-        console.error(`[DB] Firebase PUT /${fbPath} failed after ${retries} attempts:`, e.message);
-      } else {
-        // Exponential back-off: 1s → 2s → 4s
-        await new Promise(r => setTimeout(r, 1000 * attempt));
-      }
+async function mongoSaveCollection(name, data) {
+  const mdb = await getDb();
+  if (!mdb) return;
+  try {
+    const col = mdb.collection(name);
+    if (name === 'settings') {
+      // Single document
+      await col.replaceOne({ _id: '__settings__' }, { _id: '__settings__', ...data }, { upsert: true });
+      return;
     }
+    // Key-value map: bulk upsert each entry, delete removed entries
+    const ops = Object.entries(data).map(([key, val]) => ({
+      replaceOne: { filter: { _id: key }, replacement: { _id: key, ...val }, upsert: true },
+    }));
+    if (ops.length) await col.bulkWrite(ops, { ordered: false });
+    // No deletion of removed keys here — keeps it simple and safe
+  } catch (e) {
+    console.error(`[DB] MongoDB save ${name} failed:`, e.message);
   }
 }
 
 // ── Debounced write-through ───────────────────────────────────────────────────
-const saveTimers = {};
-
-// In-flight lock: prevents two concurrent PUTs for the same collection from
-// racing each other (the slower one could overwrite with stale data).
-// If a flush is already running we mark a pending request; on completion we
-// immediately start another flush so no write is ever silently dropped.
-const _flushInFlight = new Set();
-const _flushPending  = new Set();
+const saveTimers       = {};
+const _flushInFlight   = new Set();
+const _flushPending    = new Set();
 
 async function flushCollection(name) {
   if (_flushInFlight.has(name)) {
-    // A flush is already running — record that we need another pass after it.
     _flushPending.add(name);
     return;
   }
   _flushInFlight.add(name);
   try {
-    const encoded = encodeObj(cache[name]);
-    await fbPut(name, encoded && Object.keys(encoded).length ? encoded : {});
+    await mongoSaveCollection(name, cache[name]);
   } finally {
     _flushInFlight.delete(name);
-    // If a write arrived while we were flushing, flush again immediately.
     if (_flushPending.has(name)) {
       _flushPending.delete(name);
       flushCollection(name).catch(e => console.error('[DB] flush error (retry):', e.message));
@@ -87,12 +91,7 @@ async function flushCollection(name) {
   }
 }
 
-// Debounce delays per collection:
-//   sessionSettings (mode/prefix/anticall…) → 3s  — short so setting changes
-//     survive a crash window without feeling laggy
-//   everything else                          → 10s — prevents Firebase churn on
-//     busy bots with many simultaneous XP/balance updates
-const DEBOUNCE_MS = { sessionSettings: 3_000 };
+const DEBOUNCE_MS      = { sessionSettings: 3_000 };
 const DEFAULT_DEBOUNCE = 10_000;
 
 function scheduleSave(name) {
@@ -103,50 +102,28 @@ function scheduleSave(name) {
   );
 }
 
-// ── Public init: load all data from Firebase ──────────────────────────────────
+// ── Public init: load all data from MongoDB ───────────────────────────────────
 export async function initDatabase() {
-  if (!SECRET) {
-    console.warn('[DB] ⚠️  FIREBASE_DB_SECRET not set — using in-memory only (data lost on restart)');
+  if (!MONGO_URI) {
+    console.warn('[DB] ⚠️  MONGODB_PASSWORD not set — using in-memory only (data lost on restart)');
     return;
   }
   try {
-    // Load entire DB root in one request
-    const data = await fbGet('');
+    await getDb(); // ensure connected
     for (const name of COLLECTIONS) {
-      if (data[name] && typeof data[name] === 'object') {
-        cache[name] = decodeObj(data[name]);
+      const data = await mongoLoadCollection(name);
+      if (data && typeof data === 'object') {
+        cache[name] = data;
       }
     }
     const stats = COLLECTIONS.map(n => `${n}:${Object.keys(cache[n]).length}`).join('  ');
-    console.log(`[DB] ✅ Firebase loaded — ${stats}`);
-
-    // ── One-time migration: copy birthday fields from legacy `users` → `birthdays` ──
-    // Runs on every startup but is idempotent: only migrates JIDs not already in `birthdays`.
-    const BDAY_FIELDS = ['birthday', 'bdayMsgs', 'bdayGroup', 'bdaySessionId', 'bdayName'];
-    const legacyUsers = data.users && typeof data.users === 'object' ? decodeObj(data.users) : {};
-    let migrated = 0;
-    for (const [jid, userData] of Object.entries(legacyUsers)) {
-      if (!userData || typeof userData !== 'object') continue;
-      // Skip if this JID is already in the birthdays collection
-      if (cache.birthdays[jid]) continue;
-      const hasBdayData = BDAY_FIELDS.some(f => userData[f] !== undefined && userData[f] !== null);
-      if (!hasBdayData) continue;
-      cache.birthdays[jid] = {};
-      for (const f of BDAY_FIELDS) {
-        if (userData[f] !== undefined) cache.birthdays[jid][f] = userData[f];
-      }
-      migrated++;
-    }
-    if (migrated > 0) {
-      console.log(`[DB] 🔄 Migrated ${migrated} birthday record(s) from legacy users → birthdays`);
-      scheduleSave('birthdays');
-    }
+    console.log(`[DB] ✅ MongoDB loaded — ${stats}`);
   } catch (e) {
-    console.error('[DB] ❌ Firebase init failed, starting with empty cache:', e.message);
+    console.error('[DB] ❌ MongoDB init failed, starting with empty cache:', e.message);
   }
 }
 
-// Re-fetch from Firebase (used by .dbstats reload)
+// Re-fetch from MongoDB (used by .dbstats reload)
 export async function reloadDatabase() {
   await initDatabase();
 }
@@ -160,10 +137,8 @@ export async function flushAll() {
 }
 
 // On exit: flush everything EXCEPT sessions.
-// Sessions are managed by WhatsApp auth state — flushing them on exit causes stale
-// records to be reloaded on the next restart, reconnecting sessions that no longer exist.
 async function flushOnExit() {
-  console.log('[DB] Flushing to Firebase before exit (excluding sessions)...');
+  console.log('[DB] Flushing to MongoDB before exit (excluding sessions)...');
   await Promise.all(
     COLLECTIONS.filter(n => n !== 'sessions').map(n => {
       clearTimeout(saveTimers[n]);
@@ -175,21 +150,19 @@ process.on('SIGTERM', async () => { await flushOnExit(); process.exit(0); });
 process.on('SIGINT',  async () => { await flushOnExit(); process.exit(0); });
 
 // ── Periodic safety-net flush (every 5 minutes) ───────────────────────────────
-// Guarantees data is written to Firebase at least every 5 min even if a
-// debounced save was missed (e.g. process killed before 10s timer fires).
-if (SECRET) {
+if (MONGO_URI) {
   setInterval(() => {
     for (const name of COLLECTIONS) {
-      if (name === 'sessions') continue; // sessions managed by auth state
+      if (name === 'sessions') continue;
       flushCollection(name).catch(e => console.error('[DB] periodic flush error:', e.message));
     }
   }, 5 * 60 * 1000);
 }
 
-// ── db API (identical surface to old file-based version) ─────────────────────
+// ── db API ────────────────────────────────────────────────────────────────────
 export const db = {
 
-  // birthdays — lightweight per-JID birthday storage (replaces economy/level user records)
+  // birthdays — lightweight per-JID birthday storage
   birthdays: {
     get: (jid) => cache.birthdays[jid] || null,
     set: (jid, data) => {
@@ -202,8 +175,6 @@ export const db = {
   },
 
   groups: {
-    // ── sessionId + groupId composite key: "sessionId|groupJid" ──
-    // Each bot number manages its OWN per-group settings independently.
     _key: (sessionId, groupId) => `${sessionId}|${groupId}`,
 
     get: (sessionId, groupId) => {
@@ -233,7 +204,6 @@ export const db = {
       return cache.groups[key];
     },
 
-    // Returns groups for one session (keyed by groupId) — or all raw if no sessionId
     all: (sessionId) => {
       if (!sessionId) return cache.groups;
       const prefix = `${sessionId}|`;
@@ -249,7 +219,6 @@ export const db = {
       scheduleSave('groups');
     },
 
-    // Delete ALL group settings for a disconnected/deleted session
     deleteBySession: (sessionId) => {
       const prefix = `${sessionId}|`;
       let changed = false;
@@ -291,27 +260,21 @@ export const db = {
     all: () => cache.sessionSettings,
   },
 
-  // Returns a promise (async reload from Firebase)
   reload: () => reloadDatabase(),
 
-  // Notes — per-chat note storage in Firebase (no local files)
   notes: {
-    // Get all notes for a chat JID (returns plain object {noteName: {content,by,at}})
     get: (jid) => cache.notes[jid] || {},
-    // Save/update one note entry
     setNote: (jid, name, data) => {
       if (!cache.notes[jid]) cache.notes[jid] = {};
       cache.notes[jid][name] = data;
       scheduleSave('notes');
     },
-    // Delete one note entry
     delNote: (jid, name) => {
       if (!cache.notes[jid]) return;
       delete cache.notes[jid][name];
       if (!Object.keys(cache.notes[jid]).length) delete cache.notes[jid];
       scheduleSave('notes');
     },
-    // Delete all notes for a chat
     clear: (jid) => { delete cache.notes[jid]; scheduleSave('notes'); },
   },
 
