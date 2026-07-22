@@ -17,6 +17,8 @@ import { handleAfkMention } from '../plugins/gb/afk.js';
 import { checkBadWords } from '../plugins/admin/antibadwords.js';
 import { checkAntiFake } from '../plugins/admin/antifake.js';
 import { checkAutoTranslate } from '../plugins/group/autotranslate.js';
+import { checkAntiGm } from '../plugins/admin/antigm.js';
+import { checkAntiScam } from '../plugins/admin/antiscam.js';
 // Pre-import at module level so hot-path never pays dynamic-import cost
 import { aiAutoReply } from '../plugins/gb/autoai.js';
 let _getAlertRegistry = null;
@@ -581,6 +583,8 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       const _bgTasks = [
         checkBadWords(msg, sock, sessionId).catch(() => {}),
         checkAutoTranslate(msg, sock, sessionId).catch(() => {}),
+        checkAntiGm(msg, sock, sessionId).catch(() => {}),
+        checkAntiScam(msg, sock, sessionId).catch(() => {}),
       ];
 
       if (messageHandler) {

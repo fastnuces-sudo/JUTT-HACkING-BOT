@@ -1,31 +1,56 @@
-// ============================================
 // AA MD Bot - Song Recognition (Shazam-like)
-// Uses AudD.io — recognizes song from audio
-// Reply to a voice note or audio with .shazam
-// ============================================
-
+// Primary: AudD.io (test token — ~3 free recognitions/day per IP)
+// Fallback: Shazam RapidAPI (requires RAPIDAPI_KEY env var)
 import axios from 'axios';
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import FormData from 'form-data';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
-import { generateId } from '../../lib/helper.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const AUDD_API  = 'https://api.audd.io/';
+async function downloadAudio(audioMsg, mediaType) {
+  const stream = await downloadContentFromMessage(audioMsg, mediaType);
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
+}
 
-async function recognizeSong(audioBuf) {
-  const FormData = (await import('form-data')).default;
+// AudD.io — supports base64 audio upload, free without token (limited)
+async function tryAudd(buf) {
   const form = new FormData();
-  form.append('file', audioBuf, { filename: 'audio.mp3', contentType: 'audio/mpeg' });
+  form.append('file', buf, { filename: 'audio.mp3', contentType: 'audio/mpeg' });
   form.append('return', 'apple_music,spotify');
-  form.append('api_token', 'test'); // free test token
-
-  const { data } = await axios.post(AUDD_API, form, {
+  // Use 'test' only as fallback — works ~3 times per IP per day
+  const { data } = await axios.post('https://api.audd.io/', form, {
     headers: form.getHeaders(),
     timeout: 30000,
   });
-  return data;
+  if (data?.status !== 'success' || !data?.result) throw new Error('no match');
+  return data.result;
+}
+
+// Unofficial Shazam API via a public proxy
+async function tryShazamProxy(buf) {
+  const b64 = buf.toString('base64');
+  const { data } = await axios.post(
+    'https://shazam.p.rapidapi.com/songs/detect',
+    b64,
+    {
+      headers: {
+        'content-type': 'text/plain',
+        'X-RapidAPI-Key': process.env.RAPIDAPI_KEY || '',
+        'X-RapidAPI-Host': 'shazam.p.rapidapi.com',
+      },
+      timeout: 20000,
+    }
+  );
+  const track = data?.track;
+  if (!track) throw new Error('no match');
+  return {
+    title: track.title,
+    artist: track.subtitle,
+    album: track.sections?.[0]?.metadata?.find(m => m.title === 'Album')?.text,
+    release_date: track.sections?.[0]?.metadata?.find(m => m.title === 'Released')?.text,
+    spotify: null,
+    apple_music: null,
+  };
 }
 
 export default {
@@ -34,83 +59,75 @@ export default {
   description: 'Identify a song from any audio/voice note — reply to an audio with .shazam',
   category: 'search',
 
-  async execute({ msg, reply, react, sock, jid, prefix }) {
-    // Get quoted audio / audio in current message
-    const quotedMsg  = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    const audioMsg   = quotedMsg?.audioMessage
-                    || quotedMsg?.videoMessage
-                    || msg.message?.audioMessage;
+  async execute({ msg, reply, react, prefix }) {
+    const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const audioMsg  = quotedMsg?.audioMessage
+                   || quotedMsg?.videoMessage
+                   || msg.message?.audioMessage;
+    const mediaType = audioMsg === msg.message?.audioMessage
+      ? 'audio'
+      : quotedMsg?.videoMessage ? 'video' : 'audio';
 
-    if (!audioMsg) return reply(
-      `🎵 *Song Recognition*\n\n` +
-      `Reply to an *audio, voice note, or video* with:\n` +
-      `*.shazam*\n\n` +
-      `The bot will identify the song and give you:\n` +
-      `• Song title & artist\n` +
-      `• Album & release year\n` +
-      `• Spotify & Apple Music links\n\n` +
-      `> 🎵 *AA MD Bot*`
-    );
+    if (!audioMsg) {
+      return reply(
+        `🎵 *Song Recognition*\n\n` +
+        `Reply to a *voice note, audio, or video* with:\n` +
+        `*${prefix}shazam*\n\n` +
+        `The bot will identify the song.\n\n` +
+        `> 🎵 *AA MD Bot*`
+      );
+    }
 
     await react('🎵');
 
-    const tmpDir = path.join(__dirname, '../../temp');
-    fs.ensureDirSync(tmpDir);
-    const tmpFile = path.join(tmpDir, `shazam_${generateId()}.mp3`);
-
+    let buf;
     try {
-      // Download the audio
-      const mediaType = audioMsg === msg.message?.audioMessage ? 'audio' : (quotedMsg?.videoMessage ? 'video' : 'audio');
-      const stream = await downloadContentFromMessage(audioMsg, mediaType);
-      const chunks = [];
-      for await (const chunk of stream) chunks.push(chunk);
-      const buf = Buffer.concat(chunks);
-      fs.writeFileSync(tmpFile, buf);
-
-      const result = await recognizeSong(buf);
-
-      if (result.status !== 'success' || !result.result) {
-        await react('❓');
-        return reply(
-          `❓ *Song not recognized*\n\n` +
-          `Could not identify the song. Try with:\n` +
-          `• A clearer audio clip (5+ seconds)\n` +
-          `• Less background noise\n\n` +
-          `> 🎵 *AA MD Bot*`
-        );
-      }
-
-      const r        = result.result;
-      const title    = r.title    || 'Unknown';
-      const artist   = r.artist   || 'Unknown';
-      const album    = r.album    || 'N/A';
-      const year     = r.release_date?.split('-')[0] || 'N/A';
-      const spotUrl  = r.spotify?.external_urls?.spotify || '';
-      const appleUrl = r.apple_music?.url || '';
-      const cover    = r.apple_music?.artwork?.url?.replace('{w}x{h}', '600x600') || r.spotify?.album?.images?.[0]?.url;
-
-      const info =
-        `🎵 *Song Identified!*\n\n` +
-        `🎤 *Title:* ${title}\n` +
-        `👤 *Artist:* ${artist}\n` +
-        `💿 *Album:* ${album}\n` +
-        `📅 *Year:* ${year}\n` +
-        (spotUrl  ? `\n🟢 *Spotify:* ${spotUrl}` : '') +
-        (appleUrl ? `\n🍎 *Apple Music:* ${appleUrl}` : '') +
-        `\n\n> 🎵 *AA MD Bot*`;
-
-      if (cover) {
-        await sock.sendMessage(jid, { image: { url: cover }, caption: info }, { quoted: msg });
-      } else {
-        reply(info);
-      }
-
-      await react('✅');
-    } catch (e) {
+      buf = await downloadAudio(audioMsg, mediaType);
+    } catch (err) {
       await react('❌');
-      reply(`❌ Shazam failed: ${e.message}`);
-    } finally {
-      fs.remove(tmpFile).catch(() => {});
+      return reply(`❌ Failed to download audio: ${err.message}`);
     }
+
+    let result = null;
+
+    // Try AudD.io
+    try {
+      result = await tryAudd(buf);
+    } catch {}
+
+    // Try Shazam proxy (needs RAPIDAPI_KEY)
+    if (!result && process.env.RAPIDAPI_KEY) {
+      try {
+        result = await tryShazamProxy(buf);
+      } catch {}
+    }
+
+    if (!result) {
+      await react('❌');
+      return reply(
+        `❌ *Could not identify this song.*\n\n` +
+        `Possible reasons:\n` +
+        `• Audio too short (need at least 5s of music)\n` +
+        `• Background noise is too loud\n` +
+        `• Song not in the recognition database\n\n` +
+        `> 🎵 *AA MD Bot*`
+      );
+    }
+
+    const spotify = result.spotify?.external_urls?.spotify;
+    const apple   = result.apple_music?.url;
+
+    let out =
+      `🎵 *Song Identified!*\n\n` +
+      `🎤 *Title:* ${result.title}\n` +
+      `👤 *Artist:* ${result.artist}\n`;
+    if (result.album)        out += `💿 *Album:* ${result.album}\n`;
+    if (result.release_date) out += `📅 *Released:* ${result.release_date}\n`;
+    if (spotify)             out += `\n🟢 *Spotify:* ${spotify}`;
+    if (apple)               out += `\n🍎 *Apple Music:* ${apple}`;
+    out += `\n\n> 🎵 *AA MD Bot*`;
+
+    await react('✅');
+    await reply(out);
   },
 };

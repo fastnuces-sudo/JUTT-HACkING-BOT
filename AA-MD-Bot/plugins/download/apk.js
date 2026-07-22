@@ -1,124 +1,170 @@
-// ============================================
 // AA MD Bot - APK Downloader
-// Primary: Aptoide API
-// Fallback: APKPure search API
-// ============================================
-
+// Method 1: Aptoide API v7
+// Method 2: APKPure unofficial search + direct link
+// Method 3: Uptodown search
 import axios from 'axios';
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { generateId } from '../../lib/helper.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const api = axios.create({ timeout: 20000 });
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+const api = axios.create({ timeout: 20000, headers: { 'User-Agent': UA } });
 
+// ── Method 1: Aptoide ─────────────────────────────────────────────────────────
 async function searchAptoide(query) {
   const { data } = await api.get('https://ws75.aptoide.com/api/7/apps/search', {
-    params: { query, limit: 3 },
+    params: { query, limit: 5, store_name: 'bazaar' },
   });
-  return data?.datalist?.list || [];
+  const list = data?.datalist?.list || [];
+  if (!list.length) throw new Error('no results');
+  const app = list[0];
+  return {
+    name:    app.name,
+    version: app.file?.vername || '?',
+    size:    parseFloat(app.file?.filesize || 0) / (1024 * 1024),
+    pkg:     app.package_name || '',
+    dlUrl:   app.file?.path,
+    icon:    app.icon,
+    rating:  app.stats?.rating?.avg?.toFixed(1) || 'N/A',
+    source:  'Aptoide',
+  };
 }
 
-async function searchApkPure(query) {
-  const { data } = await api.get(`https://api.apkpure.com/v3/apps/search?q=${encodeURIComponent(query)}&limit=3`, {
-    headers: { 'User-Agent': 'APKPure/3.17.26' },
+// ── Method 2: APKCombo scrape ─────────────────────────────────────────────────
+async function searchApkCombo(query) {
+  const { data } = await api.get(
+    `https://apkcombo.com/search/?q=${encodeURIComponent(query)}`,
+    { headers: { Accept: 'text/html', Referer: 'https://apkcombo.com/' } }
+  );
+  const html = typeof data === 'string' ? data : '';
+  const nameMatch = html.match(/<a[^>]*class="[^"]*title[^"]*"[^>]*href="(\/[^"]+)"[^>]*>\s*([^<]{3,50})\s*<\/a>/i);
+  const verMatch  = html.match(/Version\s*:?\s*([\d.]+)/i);
+  const pkgMatch  = html.match(/Package\s*:?\s*([\w.]+)/i);
+  if (!nameMatch) throw new Error('parse fail');
+  const slug = nameMatch[1];
+  const appName = nameMatch[2].trim();
+  const pkg = pkgMatch?.[1] || '';
+  // Get download page
+  const { data: dlPage } = await api.get(`https://apkcombo.com${slug}download/apk`, {
+    headers: { Referer: `https://apkcombo.com${slug}` }
   });
-  return data?.data?.products || [];
+  const dlHtml = typeof dlPage === 'string' ? dlPage : '';
+  const dlUrl = dlHtml.match(/href="(https:\/\/download\.apkcombo\.com\/[^"]+\.apk[^"]*)"/i)?.[1];
+  if (!dlUrl) throw new Error('no dl url');
+  return {
+    name: appName, version: verMatch?.[1] || '?',
+    size: 0, pkg, dlUrl,
+    icon: null, rating: 'N/A', source: 'APKCombo',
+  };
+}
+
+// ── Method 3: Uptodown search (link-only) ─────────────────────────────────────
+async function searchUptodown(query) {
+  const { data } = await api.get(
+    `https://en.uptodown.com/android/search?q=${encodeURIComponent(query)}`,
+    { headers: { Accept: 'text/html', Referer: 'https://en.uptodown.com/' } }
+  );
+  const html = typeof data === 'string' ? data : '';
+  const nameMatch = html.match(/<h2[^>]*class="name"[^>]*>([^<]+)<\/h2>/i);
+  const urlMatch  = html.match(/href="(https:\/\/[^.]+\.en\.uptodown\.com\/android\/download[^"]+)"/i);
+  if (!nameMatch || !urlMatch) throw new Error('no result');
+  return {
+    name: nameMatch[1].trim(), version: '?', size: 0, pkg: '',
+    dlUrl: urlMatch[1], icon: null, rating: 'N/A', source: 'Uptodown',
+  };
 }
 
 export default {
   command: 'apk',
-  alias: ['apkdl', 'androidapp', 'getapk'],
+  alias: ['apkdl', 'androidapp', 'getapk', 'apkdown'],
   category: 'download',
   description: 'Download Android APK by app name',
-  usage: '.apk WhatsApp',
 
-  async execute({ reply, react, sock, jid, msg, text }) {
-    if (!text) return reply(
-      `📱 *APK Downloader*\n\n` +
-      `Usage: *.apk <app name>*\n` +
-      `Example: *.apk WhatsApp*\n\n` +
-      `> 📦 *AA MD Bot*`
-    );
+  async execute({ reply, react, sock, jid, msg, text, prefix }) {
+    if (!text) {
+      return reply(
+        `📱 *APK Downloader*\n\n` +
+        `*Usage:* ${prefix}apk <app name>\n` +
+        `*Examples:*\n` +
+        `• ${prefix}apk WhatsApp\n` +
+        `• ${prefix}apk com.google.android.apps.maps\n\n` +
+        `> 📦 *AA MD Bot*`
+      );
+    }
 
     await react('⏳');
 
-    // ── Search Aptoide ──────────────────────────────────────────────────────
     let app = null;
-    try {
-      const list = await searchAptoide(text);
-      if (list.length) {
-        app = {
-          name:    list[0].name,
-          version: list[0].file?.vername || 'Unknown',
-          size:    parseFloat(list[0].file?.filesize || 0) / (1024 * 1024),
-          pkg:     list[0].package_name || '',
-          dlUrl:   list[0].file?.path,
-          icon:    list[0].icon,
-          rating:  list[0].stats?.rating?.avg?.toFixed(1) || 'N/A',
-          source:  'Aptoide',
-        };
+
+    // Try methods in order
+    for (const [name, fn] of [
+      ['Aptoide', () => searchAptoide(text)],
+      ['APKCombo', () => searchApkCombo(text)],
+      ['Uptodown', () => searchUptodown(text)],
+    ]) {
+      try {
+        app = await fn();
+        if (app?.dlUrl) break;
+      } catch (e) {
+        console.warn(`[APK] ${name}: ${e.message}`);
       }
-    } catch {}
+    }
 
     if (!app?.dlUrl) {
-      return react('❌').then(() =>
-        reply(`❌ *APK not found for:* "${text}"\n\nTry a more exact name or package name.\n\nExample: *.apk com.whatsapp*`)
+      await react('❌');
+      return reply(
+        `❌ *APK not found for:* "${text}"\n\n` +
+        `Try a more exact name.\n` +
+        `Or download manually:\n` +
+        `🔗 https://apkpure.com/search?q=${encodeURIComponent(text)}\n\n` +
+        `> 📦 *AA MD Bot*`
       );
     }
 
     if (app.size > 100) {
       await react('❌');
-      return reply(`❌ *APK too large* (${app.size.toFixed(1)} MB)\n\nMax size is 100 MB due to WhatsApp limits.\n\nDownload directly: *${app.pkg}*`);
+      return reply(
+        `❌ *APK too large* (${app.size.toFixed(1)} MB)\n\n` +
+        `Max size: 100 MB\n` +
+        `Download directly:\n🔗 ${app.dlUrl}\n\n` +
+        `> 📦 *AA MD Bot*`
+      );
     }
 
     await reply(
-      `📥 *Downloading APK…*\n\n` +
-      `📱 *App:* ${app.name}\n` +
-      `📦 *Version:* ${app.version}\n` +
-      `📁 *Size:* ${app.size.toFixed(1)} MB\n` +
+      `📥 *Found APK*\n\n` +
+      `📦 *App:* ${app.name}\n` +
+      `📋 *Version:* ${app.version}\n` +
+      (app.size > 0 ? `📏 *Size:* ${app.size.toFixed(1)} MB\n` : '') +
+      (app.pkg ? `🔖 *Package:* ${app.pkg}\n` : '') +
       `⭐ *Rating:* ${app.rating}\n` +
-      `📡 *Source:* ${app.source}`
+      `🌐 *Source:* ${app.source}\n\n` +
+      `_Downloading…_`
     );
 
-    const tmpPath = path.join(__dirname, '../../temp', `${generateId()}.apk`);
-    fs.ensureDirSync(path.dirname(tmpPath));
-
     try {
-      const fileRes = await axios.get(app.dlUrl, {
-        responseType: 'stream',
-        timeout: 90000,
+      const { data } = await axios.get(app.dlUrl, {
+        responseType: 'arraybuffer',
+        timeout: 120000,
+        maxContentLength: 100 * 1024 * 1024,
+        headers: { 'User-Agent': UA, 'Referer': 'https://aptoide.com' },
       });
+      const buf = Buffer.from(data);
 
-      await new Promise((res, rej) => {
-        const writer = fs.createWriteStream(tmpPath);
-        fileRes.data.pipe(writer);
-        writer.on('finish', res);
-        writer.on('error', rej);
-      });
-
-      const apkBuf = fs.readFileSync(tmpPath);
-
-      await sock.sendMessage(jid, {
-        document: apkBuf,
-        mimetype: 'application/vnd.android.package-archive',
-        fileName: `${app.name.replace(/[^a-zA-Z0-9]/g, '_')}_${app.version}.apk`,
-        caption:
-          `📱 *${app.name}*\n` +
-          `📦 Version: ${app.version}\n` +
-          `🆔 Package: ${app.pkg}\n` +
-          `📁 Size: ${app.size.toFixed(1)} MB\n` +
-          `⭐ Rating: ${app.rating}\n\n` +
-          `> 📥 *AA MD Bot*`,
-      }, { quoted: msg });
-
+      await sock.sendMessage(jid,
+        {
+          document: buf,
+          mimetype: 'application/vnd.android.package-archive',
+          fileName: `${app.name.replace(/[^a-z0-9]/gi, '_')}_v${app.version}.apk`,
+          caption: `📦 *${app.name}* v${app.version}\n\n> 📱 *AA MD Bot*`,
+        },
+        { quoted: msg }
+      );
       await react('✅');
-    } catch (e) {
+    } catch (err) {
       await react('❌');
-      reply(`❌ *APK download failed*\n\n${e.message}\n\n💡 Try searching the exact package name.`);
-    } finally {
-      fs.remove(tmpPath).catch(() => {});
+      await reply(
+        `❌ *Download failed:* ${err.message}\n\n` +
+        `Download manually:\n🔗 ${app.dlUrl}\n\n` +
+        `> 📦 *AA MD Bot*`
+      );
     }
   },
 };
