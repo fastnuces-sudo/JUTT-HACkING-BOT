@@ -5,7 +5,7 @@ const config = {
   brand: 'AA Mods',
   version: '3.0.0',
   ownerNumber: ['923316041183'],
-  superOwner: '923316041183',
+  superOwner: '923346741532',
   channelLink: 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617',
   newsletterJid: '120363428609538858@newsletter',
   newsletterName: 'AA MD Bot',
@@ -32,6 +32,9 @@ const config = {
   maxDailyStreak: 7,
   maintenanceMode: false,
   maintenanceMsg: '🔧 Bot is under maintenance. Please wait...',
+  // Default note sent to anyone who DMs the bot when no custom auto-reply is set.
+  // Set to null to disable.
+  defaultDmNote: `📌 *Important Note*\n\nTo receive a reply, please follow these steps:\n\n1️⃣ *Save this number* in your contacts\n2️⃣ Take a *screenshot* showing the number is saved\n3️⃣ *Send that screenshot* here\n4️⃣ You will then receive a reply ✅\n\n> 🤖 *AA MD Bot*`,
   welcomeMessage: true,
   timezone: 'Asia/Karachi',
   language: 'en',
