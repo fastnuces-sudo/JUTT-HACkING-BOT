@@ -28,12 +28,20 @@ async function fbGet(fbPath) {
   }
 }
 
-async function fbPut(fbPath, data) {
+async function fbPut(fbPath, data, retries = 4) {
   if (!SECRET) return;
-  try {
-    await axios.put(`${BASE_URL}/${fbPath}.json?auth=${SECRET}`, data ?? null, { timeout: 15000 });
-  } catch (e) {
-    console.error('[AuthState] PUT failed:', e.message);
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await axios.put(`${BASE_URL}/${fbPath}.json?auth=${SECRET}`, data ?? null, { timeout: 15000 });
+      return; // success
+    } catch (e) {
+      if (attempt === retries) {
+        console.error(`[AuthState] PUT /${fbPath} failed after ${retries} attempts:`, e.message);
+      } else {
+        // Exponential back-off: 1s → 2s → 4s
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
   }
 }
 

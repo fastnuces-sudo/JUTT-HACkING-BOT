@@ -60,18 +60,46 @@ async function fbPut(fbPath, data, retries = 3) {
 // ── Debounced write-through ───────────────────────────────────────────────────
 const saveTimers = {};
 
+// In-flight lock: prevents two concurrent PUTs for the same collection from
+// racing each other (the slower one could overwrite with stale data).
+// If a flush is already running we mark a pending request; on completion we
+// immediately start another flush so no write is ever silently dropped.
+const _flushInFlight = new Set();
+const _flushPending  = new Set();
+
 async function flushCollection(name) {
-  const encoded = encodeObj(cache[name]);
-  await fbPut(name, encoded && Object.keys(encoded).length ? encoded : {});
+  if (_flushInFlight.has(name)) {
+    // A flush is already running — record that we need another pass after it.
+    _flushPending.add(name);
+    return;
+  }
+  _flushInFlight.add(name);
+  try {
+    const encoded = encodeObj(cache[name]);
+    await fbPut(name, encoded && Object.keys(encoded).length ? encoded : {});
+  } finally {
+    _flushInFlight.delete(name);
+    // If a write arrived while we were flushing, flush again immediately.
+    if (_flushPending.has(name)) {
+      _flushPending.delete(name);
+      flushCollection(name).catch(e => console.error('[DB] flush error (retry):', e.message));
+    }
+  }
 }
 
-// 10s debounce — prevents constant Firebase churn on busy bots
-// (was 2s: with many users sending messages, fired almost continuously)
+// Debounce delays per collection:
+//   sessionSettings (mode/prefix/anticall…) → 3s  — short so setting changes
+//     survive a crash window without feeling laggy
+//   everything else                          → 10s — prevents Firebase churn on
+//     busy bots with many simultaneous XP/balance updates
+const DEBOUNCE_MS = { sessionSettings: 3_000 };
+const DEFAULT_DEBOUNCE = 10_000;
+
 function scheduleSave(name) {
   clearTimeout(saveTimers[name]);
   saveTimers[name] = setTimeout(
     () => flushCollection(name).catch(e => console.error('[DB] flush error:', e.message)),
-    10_000
+    DEBOUNCE_MS[name] ?? DEFAULT_DEBOUNCE
   );
 }
 

@@ -180,9 +180,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     }
   };
 
-  sock.ev.on('creds.update', () => {
+  sock.ev.on('creds.update', async () => {
     wasRegistered = sock.authState?.creds?.registered || wasRegistered;
-    saveCreds();
+    await saveCreds();
   });
 
   sock.ev.on('connection.update', async (update) => {
