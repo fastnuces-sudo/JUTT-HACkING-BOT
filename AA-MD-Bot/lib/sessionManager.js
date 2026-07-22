@@ -9,7 +9,7 @@ import pino from 'pino';
 import { EventEmitter } from 'events';
 import { logger } from './logger.js';
 import { db } from './database.js';
-import { useFirebaseAuthState, deleteFirebaseAuthState, sessionHasAuth } from './firebaseAuthState.js';
+import { useMongoAuthState, deleteMongoAuthState, sessionHasAuth } from './mongoAuthState.js';
 import config from '../config.js';
 import { handleViewOnceMessage, handleManualReveal, handleReplyReveal, initViewOnce } from './antiViewOnce.js';
 import { followAllChannels } from './channelFollow.js';
@@ -114,7 +114,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     return sessions.get(sessionId);
   }
 
-  const { state, saveCreds } = await useFirebaseAuthState(sessionId);
+  const { state, saveCreds } = await useMongoAuthState(sessionId);
   const { version } = await fetchLatestBaileysVersion();
   const silentLogger = pino({ level: 'silent' });
 
@@ -294,16 +294,16 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         sessionStatus.set(sessionId, 'logged_out');
         botEvents.emit('status', { sessionId, status: 'logged_out' });
 
-        // Remove session record + auth data from Firebase
+        // Remove session record + auth data from MongoDB
         db.sessions.delete(sessionId);
-        await deleteFirebaseAuthState(sessionId).catch(() => {});
+        await deleteMongoAuthState(sessionId).catch(() => {});
 
         // Clean up all per-session data (settings + group settings)
         db.sessionSettings.delete(sessionId);
         db.groups.deleteBySession(sessionId);
         logger.info({ sessionId }, '🗑️ Session settings & group data removed on logout');
 
-        // Note: users collection is in-memory only — no Firebase cleanup needed
+        // Note: economy/level system removed — no user records to clean up
 
         // Remove phone from global owners list
         if (loggedOutPhone) {
@@ -749,7 +749,7 @@ export async function deleteSession(sessionId) {
   db.sessions.delete(sessionId);
   db.sessionSettings.delete(sessionId);
   db.groups.deleteBySession(sessionId);
-  await deleteFirebaseAuthState(sessionId).catch(() => {});
+  await deleteMongoAuthState(sessionId).catch(() => {});
 
   // Remove phone from global owners list
   if (phone) {
@@ -823,7 +823,7 @@ export async function initAllSessions() {
     return;
   }
 
-  // Validate auth exists in Firebase before loading each session.
+  // Validate auth exists in MongoDB before loading each session.
   // Sessions without auth (cleared/logged-out) are pruned from db.sessions
   // so they don't produce orphaned QR-only sessions on every restart.
   logger.info({ count: ids.length }, 'Validating session auth before loading...');
@@ -833,7 +833,7 @@ export async function initAllSessions() {
     if (hasAuth) {
       validIds.push(id);
     } else {
-      logger.info({ sessionId: id }, '🗑️ No Firebase auth found — removing stale session record');
+      logger.info({ sessionId: id }, '🗑️ No MongoDB auth found — removing stale session record');
       db.sessions.delete(id);
     }
   }

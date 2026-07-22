@@ -9,7 +9,7 @@ const MONGO_URI  = MONGO_PASS
 let _client = null;
 let _db     = null;
 
-async function getDb() {
+export async function getDb() {
   if (_db) return _db;
   if (!MONGO_URI) return null;
   if (!_client) {
