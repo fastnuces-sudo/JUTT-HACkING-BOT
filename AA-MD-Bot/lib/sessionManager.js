@@ -378,8 +378,12 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
     if (type !== 'notify') return;
-    for (const msg of messages) {
-      if (!msg.message) continue;
+    // Process each message in the batch concurrently — prevents a slow command
+    // (e.g. .play, .video, any download) from blocking subsequent messages.
+    // Promise.allSettled ensures one message error never aborts others.
+    await Promise.allSettled(messages.map(async (msg) => {
+    try {
+      if (!msg.message) return;
 
       // ── Anti-Delete: detect protocolMessage REVOKE ────────────
       const proto = msg.message?.protocolMessage;
@@ -435,7 +439,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             }
           }
         } catch {}
-        continue;
+        return; // stop processing this message (it's a deletion event, not a real message)
       }
 
       // Cache this message for potential anti-delete recovery
@@ -454,10 +458,10 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       // ── Auto-Status handling (status@broadcast) ──────────────
       if (msg.key.remoteJid === 'status@broadcast') {
         await handleStatusMessage(sock, msg, sessionId).catch(() => {});
-        continue;
+        return; // status messages handled, not a command
       }
 
-      if (isJidBroadcast(msg.key.remoteJid)) continue;
+      if (isJidBroadcast(msg.key.remoteJid)) return; // ignore broadcast JIDs
 
       // ── Auto Read: fire-and-forget — never block the command handler ──
       try {
@@ -547,7 +551,11 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       } else {
         await Promise.all(_bgTasks);
       }
+    } catch (err) {
+      // Per-message safety net — log and move on so other messages are never skipped
+      logger.error({ err: err.message, jid: msg?.key?.remoteJid }, '💥 Message processing crashed — skipping this message');
     }
+    })); // end Promise.allSettled map
   });
 
   // ── Presence Update — Online Alert + Ghost Mode ────────────────────────────

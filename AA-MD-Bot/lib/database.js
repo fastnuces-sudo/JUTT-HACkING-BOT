@@ -23,8 +23,9 @@ function decodeObj(obj) {
 }
 
 // ── In-memory cache (source of truth for sync reads) ─────────────────────────
-// 'users' intentionally excluded — economy/XP data is in-memory only, never persisted to Firebase
-const COLLECTIONS = ['groups', 'settings', 'sessions', 'sessionSettings', 'notes'];
+// All collections are persisted to Firebase and loaded on startup.
+// 'sessions' is excluded from flushOnExit (managed separately by WhatsApp auth state).
+const COLLECTIONS = ['users', 'groups', 'settings', 'sessions', 'sessionSettings', 'notes'];
 const cache = { users: {}, groups: {}, settings: {}, sessions: {}, sessionSettings: {}, notes: {} };
 
 // ── Firebase REST helpers ─────────────────────────────────────────────────────
@@ -39,12 +40,20 @@ async function fbGet(fbPath) {
   }
 }
 
-async function fbPut(fbPath, data) {
+async function fbPut(fbPath, data, retries = 3) {
   if (!SECRET) return;
-  try {
-    await axios.put(`${BASE_URL}/${fbPath}.json?auth=${SECRET}`, data ?? {}, { timeout: 15000 });
-  } catch (e) {
-    console.error(`[DB] Firebase PUT /${fbPath} failed:`, e.message);
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await axios.put(`${BASE_URL}/${fbPath}.json?auth=${SECRET}`, data ?? {}, { timeout: 15000 });
+      return; // success
+    } catch (e) {
+      if (attempt === retries) {
+        console.error(`[DB] Firebase PUT /${fbPath} failed after ${retries} attempts:`, e.message);
+      } else {
+        // Exponential back-off: 1s → 2s → 4s
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
   }
 }
 
@@ -114,6 +123,18 @@ async function flushOnExit() {
 }
 process.on('SIGTERM', async () => { await flushOnExit(); process.exit(0); });
 process.on('SIGINT',  async () => { await flushOnExit(); process.exit(0); });
+
+// ── Periodic safety-net flush (every 5 minutes) ───────────────────────────────
+// Guarantees data is written to Firebase at least every 5 min even if a
+// debounced save was missed (e.g. process killed before 10s timer fires).
+if (SECRET) {
+  setInterval(() => {
+    for (const name of COLLECTIONS) {
+      if (name === 'sessions') continue; // sessions managed by auth state
+      flushCollection(name).catch(e => console.error('[DB] periodic flush error:', e.message));
+    }
+  }, 5 * 60 * 1000);
+}
 
 // ── db API (identical surface to old file-based version) ─────────────────────
 export const db = {
