@@ -218,6 +218,145 @@ async function igDl(url) {
   throw new Error('Could not extract URL — post must be public');
 }
 
+// ── Twitter/X ─────────────────────────────────────────────────────────────────
+const TW_RX = /https?:\/\/(www\.)?(twitter\.com|x\.com)\/[^\s/]+\/status\/\d+/i;
+async function twDl(url) {
+  // vxtwitter API — no auth, no yt-dlp needed
+  const api = url.replace(/https?:\/\/(www\.)?(twitter\.com|x\.com)/, 'https://api.vxtwitter.com');
+  const { data } = await axios.get(api, { timeout: 18000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+  const vid = data?.media_extended?.find(m => m.type === 'video' || m.type === 'gif');
+  const img = data?.media_extended?.find(m => m.type === 'image');
+  if (!vid && !img) throw new Error('No media found in this tweet');
+  return {
+    type: vid ? 'video' : 'image',
+    url:  (vid || img).url,
+    text: data.text || '',
+    author: data.user_name || data.user_screen_name || '',
+  };
+}
+
+// ── Pinterest ─────────────────────────────────────────────────────────────────
+const PIN_RX = /https?:\/\/(www\.)?(pinterest\.(com|fr|de|co\.uk|jp|ca|it|es|com\.au|com\.mx|com\.br|pl)|pin\.it)\/[^\s]+/i;
+async function pinDl(url) {
+  // API 1: pindl
+  try {
+    const { data } = await axios.get(
+      `https://api.pindl.com/api/pindl?url=${encodeURIComponent(url)}`,
+      { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    if (data?.data?.video_url) return { type: 'video', url: data.data.video_url };
+    if (data?.data?.image_url) return { type: 'image', url: data.data.image_url };
+  } catch {}
+
+  // API 2: ryzendesu
+  try {
+    const { data } = await axios.get(
+      `https://api.ryzendesu.vip/api/downloader/pinterest?url=${encodeURIComponent(url)}`,
+      { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    const link = data?.data?.url || data?.url;
+    if (link && link.startsWith('http')) return { type: link.includes('.mp4') ? 'video' : 'image', url: link };
+  } catch {}
+
+  // yt-dlp fallback
+  try {
+    const { stdout } = await execFileAsync(YTDLP,
+      ['--get-url', '-f', 'best', '--no-playlist', '--quiet', url], { timeout: 30000 }
+    );
+    const link = stdout.trim().split('\n')[0];
+    if (link?.startsWith('http')) return { type: 'video', url: link };
+  } catch {}
+
+  throw new Error('No downloadable media found — check the pin URL');
+}
+
+// ── Threads ────────────────────────────────────────────────────────────────────
+const TH_RX = /https?:\/\/(www\.)?threads\.(net|com)\/[^\s]+/i;
+async function threadsDl(url) {
+  // savethreads.com API
+  try {
+    const { data } = await axios.post(
+      'https://savethreads.com/api/download',
+      { url },
+      { headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' }, timeout: 20000 }
+    );
+    const items = data?.data || [];
+    const vid = items.find(i => i.type === 'video' || i.url?.includes('.mp4'));
+    const img = items.find(i => i.type === 'image' || /\.(jpg|jpeg|png|webp)/i.test(i.url || ''));
+    if (vid?.url) return { type: 'video', url: vid.url };
+    if (img?.url) return { type: 'image', url: img.url };
+  } catch {}
+
+  // yt-dlp fallback
+  try {
+    const { stdout } = await execFileAsync(YTDLP,
+      ['--get-url', '-f', 'best[height<=720]/best', '--no-playlist', '--quiet', url], { timeout: 30000 }
+    );
+    const link = stdout.trim().split('\n')[0];
+    if (link?.startsWith('http')) return { type: 'video', url: link };
+  } catch (e) {
+    if (e.code === 'ENOENT') throw new Error('yt-dlp not ready — try again in 30 seconds');
+  }
+
+  throw new Error('No media found — post may be private or deleted');
+}
+
+// ── Spotify ────────────────────────────────────────────────────────────────────
+const SP_RX = /https?:\/\/open\.spotify\.com\/(track|playlist)\/([a-zA-Z0-9]+)/i;
+const SD_HDR = { origin: 'https://spotifydown.com', referer: 'https://spotifydown.com/' };
+async function spotifyMeta(id) {
+  const { data } = await axios.get(`https://api.spotifydown.com/metadata/track/${id}`,
+    { headers: SD_HDR, timeout: 12000 });
+  return data;
+}
+async function spotifyDownload(id) {
+  const { data } = await axios.get(`https://api.spotifydown.com/download/${id}`,
+    { headers: SD_HDR, timeout: 25000 });
+  if (!data?.success || !data?.link) throw new Error(data?.error || 'spotifydown failed');
+  return data;
+}
+async function spotifyPlaylistTracks(id) {
+  const { data } = await axios.get(`https://api.spotifydown.com/trackList/playlist/${id}`,
+    { headers: SD_HDR, timeout: 12000 });
+  return data?.trackList?.slice(0, 5) || [];
+}
+
+// ── Reddit ─────────────────────────────────────────────────────────────────────
+const RD_RX = /https?:\/\/(www\.|old\.)?reddit\.com\/(r\/[^/\s]+\/comments\/[^/\s]+)/i;
+async function redditDl(url) {
+  const clean = url.replace(/\/$/, '').split('?')[0];
+  const { data } = await axios.get(`${clean}.json?limit=1`, {
+    timeout: 15000,
+    headers: { 'User-Agent': 'AA-MD-Bot/3.0 (by /u/aabotuser)' },
+  });
+  const post = data?.[0]?.data?.children?.[0]?.data;
+  if (!post) throw new Error('Post not found');
+
+  if (post.is_video && post.media?.reddit_video) {
+    const rv = post.media.reddit_video;
+    return {
+      type: 'video',
+      url: rv.fallback_url || rv.hls_url,
+      title: post.title, subreddit: post.subreddit_name_prefixed, ups: post.ups,
+    };
+  }
+  if (post.url && /\.(jpg|jpeg|png|gif|webp)/i.test(post.url)) {
+    return { type: 'image', url: post.url, title: post.title, subreddit: post.subreddit_name_prefixed, ups: post.ups };
+  }
+  if (post.media_metadata) {
+    const images = Object.values(post.media_metadata)
+      .filter(m => m.status === 'valid')
+      .map(m => (m.s?.u || m.s?.gif || '').replace(/&amp;/g, '&'))
+      .filter(u => u.startsWith('http'))
+      .slice(0, 10);
+    if (images.length) return { type: 'gallery', images, title: post.title, subreddit: post.subreddit_name_prefixed, ups: post.ups };
+  }
+  if (post.url_overridden_by_dest?.startsWith('http')) {
+    return { type: 'link', url: post.url_overridden_by_dest, title: post.title };
+  }
+  throw new Error('No downloadable media — this may be a text post');
+}
+
 // ── Weather ──────────────────────────────────────────────────────────────────
 async function weather(city) {
   const { data } = await axios.get(`https://wttr.in/${encodeURIComponent(city)}?format=j1`, { timeout: 15000, headers: { Accept:'application/json' } });
@@ -668,7 +807,12 @@ export function initTelegramFeatures() {
         `┣ /video <i>title or URL</i> — YouTube MP4\n` +
         `┣ /tiktok <i>url</i> — TikTok video\n` +
         `┣ /ig <i>url</i> — Instagram reel/post\n` +
-        `┗ /fb <i>url</i> — Facebook video`,
+        `┣ /fb <i>url</i> — Facebook video\n` +
+        `┣ /twitter <i>url</i> — Twitter/X video\n` +
+        `┣ /pin <i>url</i> — Pinterest image/video\n` +
+        `┣ /threads <i>url</i> — Threads video/image\n` +
+        `┣ /spotify <i>url</i> — Spotify track (MP3)\n` +
+        `┗ /reddit <i>url</i> — Reddit video/image`,
     },
     help_ai: {
       title: '🤖 AI & Image Generation',
@@ -720,7 +864,7 @@ export function initTelegramFeatures() {
     help_all: {
       title: '📋 All Commands',
       text:
-        `🎵 <b>Downloads:</b> /play /video /tiktok /ig /fb\n` +
+        `🎵 <b>Downloads:</b> /play /video /tiktok /ig /fb /twitter /pin /threads /spotify /reddit\n` +
         `🤖 <b>AI:</b> /ai /imagine\n` +
         `🔍 <b>Search:</b> /wiki /movie /anime /lyrics /news /crypto /github /urban\n` +
         `🌐 <b>Utils:</b> /weather /translate /short /ss /qr\n` +
@@ -1653,8 +1797,213 @@ export function initTelegramFeatures() {
     }
   });
 
+  // ── /twitter ──────────────────────────────────────────────────────────────────
+  bot.onText(/\/(?:twitter|tw|xdl)(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    let url = (match[1] || '').trim();
+    if (!url) return sendText(bot, chatId,
+      `🐦 <b>Twitter/X Downloader</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/twitter https://x.com/user/status/…</code>\n\n` +
+      `Supports video and images from public tweets.` + FOOTER
+    );
+    if (!TW_RX.test(url)) return sendText(bot, chatId, `❌ Please send a valid Twitter/X status link.\n\nExample: <code>/twitter https://x.com/user/status/123</code>`);
+    url = url.match(TW_RX)[0];
+
+    await bot.sendChatAction(chatId, 'upload_video').catch(() => {});
+    try {
+      const r = await twDl(url);
+      const cap =
+        `🐦 <b>Twitter / X</b>\n${DIV}\n\n` +
+        (r.author ? `👤 @${esc(r.author)}\n` : '') +
+        (r.text   ? `💬 ${esc(r.text.slice(0, 300))}\n` : '') +
+        FOOTER;
+
+      if (r.type === 'video') {
+        const buf = await downloadBuffer(r.url, 49);
+        await bot.sendVideo(chatId, buf, { caption: cap, parse_mode: 'HTML', supports_streaming: true });
+      } else {
+        await bot.sendPhoto(chatId, r.url, { caption: cap, parse_mode: 'HTML' });
+      }
+    } catch (e) {
+      sendText(bot, chatId, `❌ <b>Twitter download failed</b>\n\n<i>${esc(e.message)}</i>\n\nMake sure the tweet is public and has video/image.`);
+    }
+  });
+
+  // ── /pin ──────────────────────────────────────────────────────────────────────
+  bot.onText(/\/(?:pin|pinterest)(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    let url = (match[1] || '').trim();
+    if (!url) return sendText(bot, chatId,
+      `📌 <b>Pinterest Downloader</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/pin https://pin.it/…</code>\n\n` +
+      `Supports images and video pins.` + FOOTER
+    );
+    if (!PIN_RX.test(url)) return sendText(bot, chatId, `❌ Please send a valid Pinterest link.`);
+    url = url.match(PIN_RX)[0].replace(/[.,!?;]$/, '');
+
+    await bot.sendChatAction(chatId, 'upload_photo').catch(() => {});
+    try {
+      const r = await pinDl(url);
+      const cap = `📌 <b>Pinterest</b>` + FOOTER;
+      const buf = await downloadBuffer(r.url, 49);
+
+      if (r.type === 'video') {
+        await bot.sendVideo(chatId, buf, { caption: cap, parse_mode: 'HTML', supports_streaming: true });
+      } else {
+        await bot.sendPhoto(chatId, buf, { caption: cap, parse_mode: 'HTML' });
+      }
+    } catch (e) {
+      sendText(bot, chatId, `❌ <b>Pinterest download failed</b>\n\n<i>${esc(e.message)}</i>`);
+    }
+  });
+
+  // ── /threads ──────────────────────────────────────────────────────────────────
+  bot.onText(/\/(?:threads|th)(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    let url = (match[1] || '').trim();
+    if (!url) return sendText(bot, chatId,
+      `🧵 <b>Threads Downloader</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/threads https://threads.net/p/…</code>\n\n` +
+      `Supports video and images from public Threads posts.` + FOOTER
+    );
+    if (!TH_RX.test(url)) return sendText(bot, chatId, `❌ Please send a valid Threads link.`);
+    url = url.match(TH_RX)[0].replace(/[.,!?;]$/, '');
+
+    await bot.sendChatAction(chatId, 'upload_video').catch(() => {});
+    try {
+      const r = await threadsDl(url);
+      const cap = `🧵 <b>Threads</b>` + FOOTER;
+      const buf = await downloadBuffer(r.url, 49);
+
+      if (r.type === 'video') {
+        await bot.sendVideo(chatId, buf, { caption: cap, parse_mode: 'HTML', supports_streaming: true });
+      } else {
+        await bot.sendPhoto(chatId, buf, { caption: cap, parse_mode: 'HTML' });
+      }
+    } catch (e) {
+      sendText(bot, chatId, `❌ <b>Threads download failed</b>\n\n<i>${esc(e.message)}</i>`);
+    }
+  });
+
+  // ── /spotify ──────────────────────────────────────────────────────────────────
+  bot.onText(/\/(?:spotify|spot|spdl)(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    let url = (match[1] || '').trim();
+    if (!url) return sendText(bot, chatId,
+      `🎵 <b>Spotify Downloader</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/spotify https://open.spotify.com/track/…</code>\n\n` +
+      `Supports tracks and playlists (first 5 songs).` + FOOTER
+    );
+    const m = url.match(SP_RX);
+    if (!m) return sendText(bot, chatId, `❌ Please send a valid Spotify track or playlist link.`);
+
+    const sent = await bot.sendMessage(chatId, `🎵 <b>Fetching Spotify track…</b>`, HTML).catch(() => null);
+    if (!sent) return;
+
+    try {
+      const [type, id] = [m[1], m[2]];
+
+      const processTrack = async (trackId, trackTitle = 'Unknown', trackArtist = 'Unknown', cover = null) => {
+        let title = trackTitle, artist = trackArtist;
+        // Fetch metadata
+        try {
+          const meta = await spotifyMeta(trackId);
+          title  = meta?.title   || title;
+          artist = meta?.artists || meta?.artist || artist;
+          cover  = meta?.cover   || cover;
+        } catch {}
+
+        // Send cover preview
+        if (cover) {
+          await bot.sendPhoto(chatId, cover, {
+            caption: `🎵 <b>${esc(title)}</b>\n👤 ${esc(artist)}\n\n⏳ <i>Downloading…</i>` + FOOTER,
+            parse_mode: 'HTML',
+          }).catch(() => {});
+        }
+
+        let link = null;
+        try { const dl = await spotifyDownload(trackId); link = dl.link; } catch {}
+
+        if (!link) throw new Error('Could not download — Spotify region restriction or private track');
+
+        const buf = await downloadBuffer(link, 49);
+        await bot.sendAudio(chatId, buf, {
+          caption: `🎵 <b>${esc(title)}</b>\n👤 ${esc(artist)}` + FOOTER,
+          parse_mode: 'HTML',
+          title,
+          performer: artist,
+        });
+      };
+
+      if (type === 'track') {
+        await edit(bot, chatId, sent.message_id, `🎵 <b>Downloading track…</b>`);
+        await processTrack(id);
+        bot.deleteMessage(chatId, sent.message_id).catch(() => {});
+      } else if (type === 'playlist') {
+        const tracks = await spotifyPlaylistTracks(id);
+        if (!tracks.length) throw new Error('Playlist is empty or private');
+        await edit(bot, chatId, sent.message_id, `🎵 <b>Sending ${tracks.length} tracks from playlist…</b>`);
+        for (const t of tracks) {
+          try { await processTrack(t.id, t.title, t.artists); } catch {}
+        }
+        bot.deleteMessage(chatId, sent.message_id).catch(() => {});
+      } else {
+        edit(bot, chatId, sent.message_id, `❌ Albums not supported — use a track or playlist link.`);
+      }
+    } catch (e) {
+      edit(bot, chatId, sent.message_id, `❌ <b>Spotify failed</b>\n\n<i>${esc(e.message)}</i>`);
+    }
+  });
+
+  // ── /reddit ───────────────────────────────────────────────────────────────────
+  bot.onText(/\/(?:reddit|rdl)(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    let url = (match[1] || '').trim();
+    if (!url) return sendText(bot, chatId,
+      `🟠 <b>Reddit Downloader</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/reddit https://reddit.com/r/…</code>\n\n` +
+      `Supports videos, images, and galleries from public posts.` + FOOTER
+    );
+    if (!RD_RX.test(url)) return sendText(bot, chatId, `❌ Please send a valid Reddit post link.\n\nExample: <code>/reddit https://reddit.com/r/funny/comments/…</code>`);
+    url = url.match(RD_RX)[0];
+
+    await bot.sendChatAction(chatId, 'upload_photo').catch(() => {});
+    try {
+      const r = await redditDl(url);
+      const meta =
+        (r.subreddit ? `📌 ${esc(r.subreddit)}\n` : '') +
+        (r.title     ? `📝 ${esc(r.title.slice(0, 200))}\n` : '') +
+        (r.ups       ? `👍 ${r.ups.toLocaleString()}\n` : '');
+      const cap = `🟠 <b>Reddit</b>\n${DIV}\n\n${meta}` + FOOTER;
+
+      if (r.type === 'video') {
+        await bot.sendChatAction(chatId, 'upload_video').catch(() => {});
+        const buf = await downloadBuffer(r.url, 49);
+        await bot.sendVideo(chatId, buf, { caption: cap, parse_mode: 'HTML', supports_streaming: true });
+      } else if (r.type === 'image') {
+        await bot.sendPhoto(chatId, r.url, { caption: cap, parse_mode: 'HTML' });
+      } else if (r.type === 'gallery') {
+        // Send first image with caption, rest as album
+        const media = r.images.slice(0, 10).map((u, i) => ({
+          type: 'photo', media: u,
+          ...(i === 0 ? { caption: cap, parse_mode: 'HTML' } : {}),
+        }));
+        await bot.sendMediaGroup(chatId, media).catch(async () => {
+          // Fallback: send individually
+          for (const u of r.images.slice(0, 4)) {
+            await bot.sendPhoto(chatId, u).catch(() => {});
+          }
+        });
+      } else {
+        sendText(bot, chatId, `🟠 <b>Reddit Post</b>\n${DIV}\n\n${meta}🔗 <a href="${esc(r.url)}">Open Link</a>` + FOOTER);
+      }
+    } catch (e) {
+      sendText(bot, chatId, `❌ <b>Reddit download failed</b>\n\n<i>${esc(e.message)}</i>`);
+    }
+  });
+
   // ── Catch-all ─────────────────────────────────────────────────────────────────
-  const KNOWN = /^\/(start|help|ping|id|play|video|tiktok|ig|fb|ai|imagine|weather|translate|wiki|movie|anime|lyrics|news|crypto|github|urban|short|ss|joke|quote|fact|qr|meme|calc|currency|time|password)/;
+  const KNOWN = /^\/(start|help|ping|id|play|video|tiktok|ig|fb|ai|imagine|weather|translate|wiki|movie|anime|lyrics|news|crypto|github|urban|short|ss|joke|quote|fact|qr|meme|calc|currency|time|password|twitter|tw|xdl|pin|pinterest|threads|th|spotify|spot|spdl|reddit|rdl)/;
   bot.on('message', (msg) => {
     if (msg.text?.startsWith('/') && !KNOWN.test(msg.text)) {
       sendText(bot, msg.chat.id, `❓ Unknown command.\n\nType /help to see all commands.`);
