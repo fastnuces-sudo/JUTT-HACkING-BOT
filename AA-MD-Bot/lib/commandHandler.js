@@ -120,8 +120,20 @@ function checkCooldown(jid, command) {
 async function getMessageText(msg) {
   const m = msg.message;
   if (!m) return '';
-  return m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption ||
-    m.videoMessage?.caption || m.documentMessage?.caption || '';
+  // Unwrap disappearing-message (ephemeral) container — content is nested inside
+  const inner = m.ephemeralMessage?.message || m;
+  return (
+    inner.conversation                                          ||
+    inner.extendedTextMessage?.text                            ||
+    inner.imageMessage?.caption                                ||
+    inner.videoMessage?.caption                                ||
+    inner.documentMessage?.caption                             ||
+    inner.buttonsResponseMessage?.selectedButtonId             ||
+    inner.listResponseMessage?.singleSelectReply?.selectedRowId ||
+    inner.templateButtonReplyMessage?.selectedId               ||
+    inner.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson ||
+    ''
+  );
 }
 
 async function react(sock, msg, emoji) {
