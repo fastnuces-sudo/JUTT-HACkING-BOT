@@ -154,7 +154,7 @@ export default {
   async execute({ sock, jid, msg, isOwner, args, senderJid }) {
     const settings        = db.settings.get();
     const pushName        = msg.pushName || 'User';
-    const pref            = (settings.prefix ?? config.prefix)?.[0] ?? '.';
+    const pref            = config.prefix?.[0] ?? '.';
     const mode            = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
     const isSuperOwnerUser = senderJid?.split('@')[0]?.split(':')[0] === String(config.superOwner);
     const role = isSuperOwnerUser ? '👑 Super Owner' : isOwner ? '🔑 Owner' : '👤 User';

@@ -657,46 +657,60 @@ async function downloadVideoFromStreamUrl(ytUrl) {
   return null;
 }
 
-// ── Video orchestrator ────────────────────────────────────────────────────────
-// Always downloads and sends as a buffer — CDN URLs expire and may not stream.
+// ── Video orchestrator (silva-md-bot approach) ────────────────────────────────
+// davidcyriltech API is the primary source (same as silva-md-bot ytmp4.js).
+// Progressive stream runs in parallel as the reliable fallback.
+// All results downloaded as buffer + transcoded to H.264/AAC for WhatsApp.
 //
-// Step 0: Progressive stream URL (same proven path as .play audio) — most reliable
-// Step 1: Race for a direct mp4 URL (third-party APIs) — fast when online
-// Step 2: Fetch that URL into a buffer (90s cap)
-// Step 3: yt-dlp full video download (last resort, ~60-180s)
+// Step A: davidcyriltech API (primary — fast when online, same as silva-md-bot)
+// Step B: Progressive stream URL (runs in parallel with A, most reliable)
+// Step C: Race other third-party API URLs
+// Step D: yt-dlp full download (last resort)
 //
 // Returns: { buffer } | null
 
 async function downloadVideo(ytUrl) {
-  // Step 0 — Progressive stream (same URL path that works for .play) — run first
-  const streamResult = await withTimeout(120000, downloadVideoFromStreamUrl(ytUrl));
-  if (streamResult?.buffer?.length) return streamResult;
+  // Step A + B — Run davidcyriltech (primary) AND progressive stream in parallel
+  // Take whichever wins first, just like silva-md-bot races its sources
+  const [davidResult, streamResult] = await Promise.all([
+    withTimeout(28000, tryDavidMp4Url(ytUrl)),
+    withTimeout(100000, downloadVideoFromStreamUrl(ytUrl)),
+  ]);
 
-  // Step 1 — Race third-party API URLs (fast when online, often down)
-  const directUrl = await withTimeout(28000, firstSuccess([
-    tryGtechMp4Url(ytUrl),
-    tryFaaMp4Url(ytUrl),
-    tryNexrayMp4Url(ytUrl),
-    tryAagatzMp4Url(ytUrl),
-    tryDavidMp4Url(ytUrl),  // davidcyriltech — added as extra source
-  ]));
-
-  if (directUrl) {
-    // Step 2 — Download the buffer (90s cap; videos are larger than audio)
-    const buf = await withTimeout(90000, fetchBuf(directUrl));
+  // David API won — fetch buffer and transcode
+  if (davidResult) {
+    const buf = await withTimeout(90000, fetchBuf(davidResult));
     if (isValidVideoBuffer(buf)) {
       const playable = await withTimeout(180000, ensurePlayableMp4(buf));
-      // Return transcoded version, or raw buffer as fallback if transcode failed
       if (playable?.length) return { buffer: playable };
       return { buffer: buf };
     }
   }
 
-  // Step 3 — Full yt-dlp download as last resort
+  // Stream result ready
+  if (streamResult?.buffer?.length) return streamResult;
+
+  // Step C — Race remaining third-party APIs
+  const fallbackUrl = await withTimeout(28000, firstSuccess([
+    tryGtechMp4Url(ytUrl),
+    tryFaaMp4Url(ytUrl),
+    tryNexrayMp4Url(ytUrl),
+    tryAagatzMp4Url(ytUrl),
+  ]));
+
+  if (fallbackUrl) {
+    const buf = await withTimeout(90000, fetchBuf(fallbackUrl));
+    if (isValidVideoBuffer(buf)) {
+      const playable = await withTimeout(180000, ensurePlayableMp4(buf));
+      if (playable?.length) return { buffer: playable };
+      return { buffer: buf };
+    }
+  }
+
+  // Step D — Full yt-dlp download as last resort
   const raw = await withTimeout(180000, tryYtdlpVideo(ytUrl));
   if (!raw?.length || raw.length < 50000) return null;
   const playableRaw = await withTimeout(180000, ensurePlayableMp4(raw));
-  // Return transcoded version, or raw buffer as fallback if transcode failed
   return { buffer: playableRaw?.length ? playableRaw : raw };
 }
 
@@ -764,7 +778,7 @@ export default {
     try {
       switch (command) {
 
-        // ── VIDEO ─────────────────────────────────────────────────────────────
+        // ── VIDEO (silva-md-bot approach) ─────────────────────────────────────
         case 'mp4':
         case 'ytmp4':
         case 'video': {
@@ -773,15 +787,40 @@ export default {
           let meta = null;
 
           if (!ytUrl) {
+            // Search by name → get URL + metadata together
             meta = await searchYT(query);
             if (!meta?.url) return reply(`❌ No video found for: *${query}*`);
             ytUrl = meta.url;
+          } else {
+            // Direct URL — fetch metadata via play-dl.video_info() (same as silva-md-bot)
+            try {
+              const playdl = (await import('play-dl')).default;
+              const info = await playdl.video_info(ytUrl);
+              const d = info.video_details;
+              const durationSec = d.durationInSec || 0;
+
+              // 10-minute limit (same guard as silva-md-bot ytmp4.js)
+              if (durationSec > 600) {
+                await react('❌');
+                return reply(`❌ *Video too long* (max 10 minutes)\n\nUse *${prefix}play* for audio only.`);
+              }
+
+              const m = Math.floor(durationSec / 60);
+              const s = String(durationSec % 60).padStart(2, '0');
+              meta = {
+                title: d.title || query,
+                author: d.channel?.name || '',
+                duration: durationSec ? `${m}:${s}` : '',
+                thumbnail: d.thumbnails?.[0]?.url || '',
+                views: fmtViews(d.views),
+              };
+            } catch {}
           }
 
           if (meta?.thumbnail) {
             await sock.sendMessage(jid, {
               image: { url: meta.thumbnail },
-              caption: `${buildVideoCaption(meta, botName)}\n\n⏳ Fetching video...`,
+              caption: `${buildVideoCaption(meta, botName)}\n\n⏳ _Downloading video..._`,
             }, { quoted: msg });
           }
 
@@ -789,9 +828,7 @@ export default {
             ? buildVideoCaption(meta, botName)
             : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
 
-          // Always download as buffer and transcode to H.264/AAC so WhatsApp
-          // can play it — raw CDN URLs often carry VP9/AV1/webm that WhatsApp
-          // silently refuses to play even though the file arrives correctly.
+          // Always deliver as buffer + H.264/AAC transcode so WhatsApp plays it
           const vdata = await downloadVideo(ytUrl);
           if (!vdata?.buffer?.length) {
             await react('❌');
