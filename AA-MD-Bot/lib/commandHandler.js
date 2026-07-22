@@ -13,15 +13,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cooldowns = new Map();
 const spamTracker = new Map();
 
-// ── groupMetadata cache (60-second TTL) ──────────────────────────────────────
-// Avoids a live WhatsApp network call on every admin-only command.
+// ── groupMetadata cache (stale-while-revalidate, 90s TTL) ────────────────────
+// Returns stale data instantly and refreshes in background — never blocks command.
 const _groupMetaCache = new Map();
-const _GROUP_META_TTL = 60_000; // 60 seconds
+const _GROUP_META_TTL = 90_000;
 async function getCachedGroupMeta(sock, jid) {
   const cached = _groupMetaCache.get(jid);
-  if (cached && Date.now() - cached.ts < _GROUP_META_TTL) return cached.data;
+  const now = Date.now();
+  if (cached) {
+    if (now - cached.ts < _GROUP_META_TTL) return cached.data; // fresh
+    // Stale: return immediately, refresh in background
+    sock.groupMetadata(jid)
+      .then(meta => _groupMetaCache.set(jid, { data: meta, ts: Date.now() }))
+      .catch(() => {});
+    return cached.data;
+  }
+  // No cache yet — must fetch (first time only)
   const meta = await sock.groupMetadata(jid);
-  _groupMetaCache.set(jid, { data: meta, ts: Date.now() });
+  _groupMetaCache.set(jid, { data: meta, ts: now });
   return meta;
 }
 

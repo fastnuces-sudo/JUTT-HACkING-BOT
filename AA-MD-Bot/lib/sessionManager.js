@@ -17,6 +17,12 @@ import { handleAfkMention } from '../plugins/gb/afk.js';
 import { checkBadWords } from '../plugins/admin/antibadwords.js';
 import { checkAntiFake } from '../plugins/admin/antifake.js';
 import { checkAutoTranslate } from '../plugins/group/autotranslate.js';
+// Pre-import at module level so hot-path never pays dynamic-import cost
+import { aiAutoReply } from '../plugins/gb/autoai.js';
+let _getAlertRegistry = null;
+import('../plugins/gb/onlinealert.js')
+  .then(m => { _getAlertRegistry = m.getAlertRegistry; })
+  .catch(() => {});
 
 export const sessions = new Map();
 export const botEvents = new EventEmitter();
@@ -54,11 +60,9 @@ async function handleStatusMessage(sock, msg, sessionId) {
       return fallback;
     };
 
-    // 1) Auto-View: mark the status as read (per-session)
+    // 1) Auto-View: fire-and-forget — never block
     const autoView = eff('autoStatusView', config.autoStatusView ?? true);
-    if (autoView) {
-      await sock.readMessages([msg.key]).catch(() => {});
-    }
+    if (autoView) sock.readMessages([msg.key]).catch(() => {});
 
     // 2) Auto-React: react with a heart emoji (per-session)
     const autoReact    = eff('autoStatusReact', config.autoStatusReact ?? true);
@@ -543,8 +547,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   sock.ev.on('presence.update', async ({ id, presences }) => {
     try {
       // Online Alert: notify owner when watched contact comes online
-      const { getAlertRegistry } = await import('../plugins/gb/onlinealert.js').catch(() => ({ getAlertRegistry: () => new Map() }));
-      const registry = getAlertRegistry();
+      const registry = _getAlertRegistry ? _getAlertRegistry() : new Map();
       const contactNum = id?.split('@')[0]?.split(':')[0];
       if (contactNum && registry.size) {
         for (const [ownerNum, watching] of registry.entries()) {

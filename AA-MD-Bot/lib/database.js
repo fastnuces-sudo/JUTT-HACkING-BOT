@@ -56,11 +56,13 @@ async function flushCollection(name) {
   await fbPut(name, encoded && Object.keys(encoded).length ? encoded : {});
 }
 
+// 10s debounce — prevents constant Firebase churn on busy bots
+// (was 2s: with many users sending messages, fired almost continuously)
 function scheduleSave(name) {
   clearTimeout(saveTimers[name]);
   saveTimers[name] = setTimeout(
     () => flushCollection(name).catch(e => console.error('[DB] flush error:', e.message)),
-    2000
+    10_000
   );
 }
 
