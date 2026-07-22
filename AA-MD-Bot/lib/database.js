@@ -225,6 +225,8 @@ export const db = {
           goodbye: false, goodbyeMsg: 'Goodbye @user!',
           muted: false, antifake: false, antibadwords: false,
           antidelete: false, antiviewonce: false,
+          antidemote: false, antiflood: false, antifloodLimit: 7,
+          rules: '',
           badwordsList: [], warnings: {},
           createdAt: Date.now(),
         };

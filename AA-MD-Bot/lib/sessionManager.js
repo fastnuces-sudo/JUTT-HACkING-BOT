@@ -360,6 +360,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   // In-memory cache for anti-delete (last 60 messages per JID)
   const _msgCache = new Map();
   const _CACHE_MAX = 60;
+  const _floodMap = new Map(); // anti-flood tracker: { groupJid → { senderJid → { count, resetAt } } }
 
 
   // Delayed/retry delivery path — fires when WhatsApp fills in a message's
@@ -462,6 +463,46 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       }
 
       if (isJidBroadcast(msg.key.remoteJid)) return; // ignore broadcast JIDs
+
+      // ── Anti-Flood: track per-user message rate in groups ────────
+      try {
+        const floodJid = msg.key.remoteJid;
+        if (floodJid?.endsWith('@g.us') && !msg.key.fromMe) {
+          const g = db.groups.get(sessionId, floodJid);
+          if (g.antiflood) {
+            const limit  = g.antifloodLimit || 7;
+            const window = 10_000; // 10 seconds
+            const sender = msg.key.participant || msg.key.remoteJid;
+
+            if (!_floodMap.has(floodJid)) _floodMap.set(floodJid, new Map());
+            const jidMap = _floodMap.get(floodJid);
+            const now    = Date.now();
+            const rec    = jidMap.get(sender) || { count: 0, resetAt: now + window };
+
+            if (now > rec.resetAt) { rec.count = 1; rec.resetAt = now + window; }
+            else rec.count++;
+            jidMap.set(sender, rec);
+
+            if (rec.count >= limit) {
+              jidMap.delete(sender);
+              // Only kick non-admins
+              const meta     = await sock.groupMetadata(floodJid).catch(() => null);
+              const botRaw   = sock.user?.id || '';
+              const botId    = botRaw.replace(/:.*@/, '@');
+              const norm     = id => id?.includes(':') ? id.split(':')[0] + '@s.whatsapp.net' : id;
+              const botAdmin = meta?.participants?.find(p => norm(p.id) === norm(botId))?.admin;
+              const isAdm    = meta?.participants?.find(p => norm(p.id) === norm(sender))?.admin;
+              if (botAdmin && !isAdm) {
+                await sock.groupParticipantsUpdate(floodJid, [sender], 'remove').catch(() => {});
+                await sock.sendMessage(floodJid, {
+                  text: `⚠️ @${sender.split('@')[0]} was kicked for flooding.`,
+                  mentions: [sender],
+                }).catch(() => {});
+              }
+            }
+          }
+        }
+      } catch {}
 
       // ── Auto Read: fire-and-forget — never block the command handler ──
       try {
@@ -614,6 +655,31 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     await checkAntiFake({ id, participants, action }, sock, sessionId).catch(() => {});
 
     const g = db.groups.get(sessionId, id);
+
+    // ── Anti-Demote: kick anyone who demotes an admin ─────────
+    if (action === 'demote' && g.antidemote) {
+      try {
+        const meta   = await sock.groupMetadata(id);
+        const botRaw = sock.user?.id || '';
+        const botId  = botRaw.replace(/:.*@/, '@');
+        const norm   = jid => jid?.includes(':') ? jid.split(':')[0] + '@s.whatsapp.net' : jid;
+        const botIsAdmin = meta.participants.find(p => norm(p.id) === norm(botId))?.admin;
+        if (botIsAdmin) {
+          for (const jid of participants) {
+            const isAdmin = meta.participants.find(p => norm(p.id) === norm(jid))?.admin;
+            if (!isAdmin) { // was demoted (no longer admin)
+              await sock.groupParticipantsUpdate(id, [jid], 'remove').catch(() => {});
+              await sock.sendMessage(id, {
+                text: `⚠️ @${jid.split('@')[0]} was removed for demoting an admin.`,
+                mentions: [jid],
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // ── Welcome message ───────────────────────────────────────
     if (action === 'add' && g.welcome) {
       for (const jid of participants) {
         const msg = (g.welcomeMsg || 'Welcome @user!').replace('@user', `@${jid.split('@')[0]}`);
