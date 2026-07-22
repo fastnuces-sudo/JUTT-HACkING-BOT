@@ -1,5 +1,5 @@
-- [Firebase Realtime Database](firebase-database.md) — migrated from local JSON files; REST API + in-memory cache + debounced writes; key encoding for JIDs; initDatabase() must run first in main().
-- [Firebase Auth State](firebase-auth-state.md) — Baileys session auth (creds + signal keys) stored in Firebase RTDB via lib/firebaseAuthState.js; replaces useMultiFileAuthState; per-type key cache + 2.5s debounced writes; deleteFirebaseAuthState(sessionId) cleans up on logout.
+- [MongoDB database](mongodb-database.md) — replaced Firebase; URI built from MONGODB_PASSWORD secret; same in-memory cache + debounced bulkWrite pattern; Replit IP is dynamic so Atlas must allow 0.0.0.0/0.
+- [Firebase Auth State](firebase-auth-state.md) — Baileys session auth (creds + signal keys) still in Firebase RTDB via lib/firebaseAuthState.js (separate from main DB which is now MongoDB).
 - [Zero disk architecture](zero-disk.md) — bot writes nothing to volume except temp/ (FFmpeg only, cleaned every 30min); auth→Firebase, viewonce→memory-only (60min TTL), notes→db.notes (Firebase), DB backups removed.
 - [Per-session settings architecture](per-session-settings.md) — each connected WhatsApp number has independent settings via db.sessionSettings; group settings are per sessionId|groupJid composite key; proxy in commandHandler injects sessionId automatically so plugins need no changes.
 - [Dashboard and ownership](dashboard-ownership.md) — pairing-code only UI; session ID = phone number; auto-saves owner+superOwner on first connect; isOwner reads db first then config.
