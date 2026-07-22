@@ -25,8 +25,8 @@ function decodeObj(obj) {
 // ── In-memory cache (source of truth for sync reads) ─────────────────────────
 // All collections are persisted to Firebase and loaded on startup.
 // 'sessions' is excluded from flushOnExit (managed separately by WhatsApp auth state).
-const COLLECTIONS = ['users', 'groups', 'settings', 'sessions', 'sessionSettings', 'notes'];
-const cache = { users: {}, groups: {}, settings: {}, sessions: {}, sessionSettings: {}, notes: {} };
+const COLLECTIONS = ['groups', 'settings', 'sessions', 'sessionSettings', 'notes', 'birthdays'];
+const cache = { groups: {}, settings: {}, sessions: {}, sessionSettings: {}, notes: {}, birthdays: {} };
 
 // ── Firebase REST helpers ─────────────────────────────────────────────────────
 async function fbGet(fbPath) {
@@ -119,6 +119,28 @@ export async function initDatabase() {
     }
     const stats = COLLECTIONS.map(n => `${n}:${Object.keys(cache[n]).length}`).join('  ');
     console.log(`[DB] ✅ Firebase loaded — ${stats}`);
+
+    // ── One-time migration: copy birthday fields from legacy `users` → `birthdays` ──
+    // Runs on every startup but is idempotent: only migrates JIDs not already in `birthdays`.
+    const BDAY_FIELDS = ['birthday', 'bdayMsgs', 'bdayGroup', 'bdaySessionId', 'bdayName'];
+    const legacyUsers = data.users && typeof data.users === 'object' ? decodeObj(data.users) : {};
+    let migrated = 0;
+    for (const [jid, userData] of Object.entries(legacyUsers)) {
+      if (!userData || typeof userData !== 'object') continue;
+      // Skip if this JID is already in the birthdays collection
+      if (cache.birthdays[jid]) continue;
+      const hasBdayData = BDAY_FIELDS.some(f => userData[f] !== undefined && userData[f] !== null);
+      if (!hasBdayData) continue;
+      cache.birthdays[jid] = {};
+      for (const f of BDAY_FIELDS) {
+        if (userData[f] !== undefined) cache.birthdays[jid][f] = userData[f];
+      }
+      migrated++;
+    }
+    if (migrated > 0) {
+      console.log(`[DB] 🔄 Migrated ${migrated} birthday record(s) from legacy users → birthdays`);
+      scheduleSave('birthdays');
+    }
   } catch (e) {
     console.error('[DB] ❌ Firebase init failed, starting with empty cache:', e.message);
   }
@@ -167,47 +189,16 @@ if (SECRET) {
 // ── db API (identical surface to old file-based version) ─────────────────────
 export const db = {
 
-  users: {
-    get: (id) => {
-      if (!cache.users[id]) {
-        cache.users[id] = {
-          id, name: '', xp: 0, level: 1, balance: 1000, commandsUsed: 0,
-          lastDaily: null, dailyStreak: 0, warnings: 0, banned: false,
-          createdAt: Date.now(), inventory: [], lastSeen: Date.now(),
-        };
-        scheduleSave('users');
-      }
-      return cache.users[id];
+  // birthdays — lightweight per-JID birthday storage (replaces economy/level user records)
+  birthdays: {
+    get: (jid) => cache.birthdays[jid] || null,
+    set: (jid, data) => {
+      cache.birthdays[jid] = { ...(cache.birthdays[jid] || {}), ...data };
+      scheduleSave('birthdays');
+      return cache.birthdays[jid];
     },
-    set: (id, data) => {
-      cache.users[id] = { ...cache.users[id], ...data };
-      scheduleSave('users');
-      return cache.users[id];
-    },
-    all: () => cache.users,
-    delete: (id) => { delete cache.users[id]; scheduleSave('users'); },
-    addXP: (id, amount) => {
-      if (!cache.users[id]) db.users.get(id);
-      cache.users[id].xp = (cache.users[id].xp || 0) + amount;
-      const newLevel = Math.floor(0.1 * Math.sqrt(cache.users[id].xp)) + 1;
-      const leveled = newLevel > (cache.users[id].level || 1);
-      cache.users[id].level = newLevel;
-      scheduleSave('users');
-      return { xp: cache.users[id].xp, level: cache.users[id].level, leveled };
-    },
-    addBalance: (id, amount) => {
-      if (!cache.users[id]) db.users.get(id);
-      cache.users[id].balance = (cache.users[id].balance || 0) + amount;
-      scheduleSave('users');
-      return cache.users[id].balance;
-    },
-    deductBalance: (id, amount) => {
-      if (!cache.users[id]) db.users.get(id);
-      if ((cache.users[id].balance || 0) < amount) return false;
-      cache.users[id].balance -= amount;
-      scheduleSave('users');
-      return cache.users[id].balance;
-    },
+    all: () => cache.birthdays,
+    delete: (jid) => { delete cache.birthdays[jid]; scheduleSave('birthdays'); },
   },
 
   groups: {

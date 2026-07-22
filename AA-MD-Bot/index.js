@@ -191,7 +191,6 @@ async function startServer() {
       res.end(JSON.stringify({
         uptime: formatDuration(Date.now() - startTime),
         plugins: plugins.size,
-        users: Object.keys(db.users.all()).length,
         groups: Object.keys(db.groups.all()).length,
         sessions: safeSessions,
         connectedSessions: safeSessions.filter(s => s.status === 'connected').length,

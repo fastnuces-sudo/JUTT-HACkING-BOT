@@ -252,16 +252,6 @@ export async function handleMessage(sock, msg, sessionId) {
 
     const parsed = parseCommand(text);
     if (!parsed) {
-      if (!fromMe) {
-        // Batch: addXP ensures user exists + updates xp/level in one scheduleSave;
-        // then directly mutate the cache entry for the remaining fields so we
-        // don't trigger a second debounced save timer.
-        db.users.addXP(senderJid, config.xpPerMessage);
-        const _u = db.users.get(senderJid);
-        _u.lastSeen = Date.now();
-        _u.deviceSource = sessionId;
-        if (msg.pushName) _u.name = msg.pushName;
-      }
       return;
     }
 
@@ -394,16 +384,6 @@ export async function handleMessage(sock, msg, sessionId) {
       getQuoted: () => _quotedMsg || null,
       logger,
     });
-
-    if (!fromMe) {
-      // Batch: addXP triggers one debounced scheduleSave; mutate the cache
-      // entry directly for the rest so we don't fire a second timer.
-      db.users.addXP(senderJid, config.xpPerCommand);
-      const _uc = db.users.get(senderJid);
-      _uc.commandsUsed = (_uc.commandsUsed || 0) + 1;
-      _uc.lastSeen = Date.now();
-      if (msg.pushName) _uc.name = msg.pushName;
-    }
 
     if (eff('autoTyping', false)) {
       sock.sendPresenceUpdate('paused', jid).catch(() => {});

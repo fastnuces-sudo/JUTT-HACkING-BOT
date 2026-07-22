@@ -51,7 +51,7 @@ async function runBirthdayWishes(getSessions) {
   const today = new Date();
   const d = today.getDate(), m = today.getMonth() + 1;
 
-  const allUsers = db.users.all();
+  const allUsers = db.birthdays.all();
   for (const [userJid, userData] of Object.entries(allUsers)) {
     const bday = userData?.birthday;
     if (!bday || bday.day !== d || bday.month !== m) continue;
@@ -138,8 +138,8 @@ export default {
       const parsed = parseDate(dateStr);
       if (!parsed) return reply(`❌ Invalid date format.\nExample: *15 Aug* or *15/8*\n\n> 🤖 *AA MD Bot*`);
 
-      const existing = db_.users.get(targetJid) || {};
-      db_.users.set(targetJid, {
+      const existing = db_.birthdays.get(targetJid) || {};
+      db_.birthdays.set(targetJid, {
         birthday:      parsed,
         bdayGroup:     isGroupMsg ? jid : null,
         bdaySessionId: sock.sessionId || 'default',
@@ -165,11 +165,11 @@ export default {
     // ── .bday addmsg <text> ──────────────────────────────────────────────────
     if (sub === 'addmsg') {
       if (!rest) return reply(`❌ Please write a message.\nExample: *.bday addmsg Happy Birthday! 🎂*\n\n> 🤖 *AA MD Bot*`);
-      const userData = db_.users.get(senderJid) || {};
+      const userData = db_.birthdays.get(senderJid) || {};
       const existing = userData.bdayMsgs || [];
       if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\nDelete one first with *.bday delmsg <number>*.\n\n> 🤖 *AA MD Bot*`);
       const updated = [...existing, rest];
-      db_.users.set(senderJid, { bdayMsgs: updated });
+      db_.birthdays.set(senderJid, { bdayMsgs: updated });
       return reply(`✅ *Message #${updated.length} added!*\n\n_"${rest}"_\n\nYou now have ${updated.length} message(s) set. The bot will pick one randomly.\n\n> 🤖 *AA MD Bot*`);
     }
 
@@ -181,30 +181,30 @@ export default {
       if (!tJid || !msgText) return reply(
         `❌ Format: *.bday addmsgfor <number> <message>*\nExample: *.bday addmsgfor 923001234567 Happy Birthday! 🎂*\n\n> 🤖 *AA MD Bot*`
       );
-      const tData    = db_.users.get(tJid) || {};
+      const tData    = db_.birthdays.get(tJid) || {};
       const existing = tData.bdayMsgs || [];
       if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\n\n> 🤖 *AA MD Bot*`);
       const updated = [...existing, msgText];
-      db_.users.set(tJid, { bdayMsgs: updated });
+      db_.birthdays.set(tJid, { bdayMsgs: updated });
       return reply(`✅ *Message #${updated.length} added!*\n👤 Number: ${numToken}\n_"${msgText}"_\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday delmsg <num> ───────────────────────────────────────────────────
     if (sub === 'delmsg') {
-      const userData = db_.users.get(senderJid) || {};
+      const userData = db_.birthdays.get(senderJid) || {};
       const idx      = parseInt(rest) - 1;
       const existing = userData.bdayMsgs || [];
       if (isNaN(idx) || idx < 0 || idx >= existing.length) {
         return reply(`❌ Please enter a valid number (1-${existing.length}).\nSee your list with *.bday msgs*.\n\n> 🤖 *AA MD Bot*`);
       }
       existing.splice(idx, 1);
-      db_.users.set(senderJid, { bdayMsgs: existing });
+      db_.birthdays.set(senderJid, { bdayMsgs: existing });
       return reply(`✅ *Message deleted.*\nYou now have ${existing.length} message(s) remaining.\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday msgs ───────────────────────────────────────────────────────────
     if (sub === 'msgs') {
-      const userData = db_.users.get(senderJid) || {};
+      const userData = db_.birthdays.get(senderJid) || {};
       const msgs     = userData.bdayMsgs || [];
       if (!msgs.length) return reply(`📭 No wish messages set.\nAdd one with *.bday addmsg <text>*.\n\n> 🤖 *AA MD Bot*`);
       const list = msgs.map((m,i) => `*${i+1}.* ${m}`).join('\n');
@@ -213,13 +213,13 @@ export default {
 
     // ── .bday del ────────────────────────────────────────────────────────────
     if (sub === 'del') {
-      db_.users.set(senderJid, { birthday: null, bdayMsgs: [], bdayGroup: null });
+      db_.birthdays.set(senderJid, { birthday: null, bdayMsgs: [], bdayGroup: null });
       return reply(`🗑️ *Birthday removed.*\n\n> 🤖 *AA MD Bot*`);
     }
 
     // ── .bday list ───────────────────────────────────────────────────────────
     if (sub === 'list') {
-      const allU    = db.users.all();
+      const allU    = db.birthdays.all();
       const entries = [];
       for (const [, u] of Object.entries(allU)) {
         const b = u?.birthday;
@@ -241,7 +241,7 @@ export default {
     if (sub === 'today') {
       const today = new Date();
       const d = today.getDate(), m = today.getMonth()+1;
-      const allU  = db.users.all();
+      const allU  = db.birthdays.all();
       const bdays = Object.values(allU).filter(u => u?.birthday?.day === d && u?.birthday?.month === m);
       if (!bdays.length) return reply(`🎂 No birthdays today.\n\n> 🤖 *AA MD Bot*`);
       const txt = bdays.map(u => `🥳 *${u.bdayName || '?'}*${!u.bdayMsgs?.length ? ' ⚠️ (no msg)' : ''}`).join('\n');
@@ -249,7 +249,7 @@ export default {
     }
 
     // ── .bday — status + help ────────────────────────────────────────────────
-    const userData = db_.users.get(senderJid) || {};
+    const userData = db_.birthdays.get(senderJid) || {};
     const bday     = userData.birthday;
     const msgCount = userData.bdayMsgs?.length || 0;
     const ready    = bday && msgCount > 0;
