@@ -619,18 +619,20 @@ async function downloadVideoFromStreamUrl(ytUrl) {
   // Progressive streams are NOT throttled and download as a single file — they are the most
   // reliable path. DASH formats (bestvideo+bestaudio) require merging and are often throttled.
   // We try formats 18 and 22 first, then fall back to adaptive selection.
+  // android client is confirmed reliable for progressive mp4 URLs on this server.
+  // ios was used previously but returns "Requested format is not available" for
+  // formats 18/22 on many videos. android returns real progressive streams.
   const FORMATS = [
-    '18',                                              // 360p progressive mp4 (always works)
-    '22',                                              // 720p progressive mp4 (not always available)
-    'best[height<=480][ext=mp4][protocol^=https]/best[height<=360][ext=mp4][protocol^=https]',
-    'best[height<=480][ext=mp4]/best[height<=480]/best[ext=mp4]/best',
+    'best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best',  // adaptive — most reliable
+    'best[height<=480][ext=mp4]/best[height<=480]/best[ext=mp4]/best',  // try higher if available
+    '18',   // 360p progressive mp4 — works on some videos
+    '22',   // 720p progressive mp4 — works on some videos
   ];
 
-  // Try each format until we get a usable stream URL
   for (const fmt of FORMATS) {
-    // Use 'ios' client — returns real progressive URLs, not DASH manifests
+    // Use 'android' client — confirmed working; ios fails for formats 18/22 on this server
     const videoUrl = await withTimeout(20000,
-      tryYtdlpStreamUrl(ytUrl, fmt, 'ios')
+      tryYtdlpStreamUrl(ytUrl, fmt, 'android')
     );
     if (!videoUrl || videoUrl.includes('manifest')) continue;
 
@@ -642,9 +644,9 @@ async function downloadVideoFromStreamUrl(ytUrl) {
     return { buffer: playable?.length ? playable : vidBuf };
   }
 
-  // Fallback: android client (sometimes returns DASH but worth trying)
+  // Tier 2 — tv_embedded client as secondary
   const fallbackUrl = await withTimeout(20000,
-    tryYtdlpStreamUrl(ytUrl, 'best[height<=480][ext=mp4]/best[ext=mp4]/best')
+    tryYtdlpStreamUrl(ytUrl, 'best[height<=480][ext=mp4]/best[ext=mp4]/best', 'tv_embedded')
   );
   if (fallbackUrl && !fallbackUrl.includes('manifest')) {
     const buf = await withTimeout(90000, fetchBuf(fallbackUrl));
