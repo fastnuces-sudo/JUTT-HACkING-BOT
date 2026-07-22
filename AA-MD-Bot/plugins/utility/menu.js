@@ -44,15 +44,15 @@ const FOOTER = `\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*`;
 
 // ── Category display config ───────────────────────────────────────────────────
 const CAT_CFG = {
-  download:  { e: '⬇️',  n: 'DOWNLOADS',      max: 11 },
-  search:    { e: '🔍',  n: 'SEARCH & AI',     max: 14 },
+  download:  { e: '⬇️',  n: 'DOWNLOADS',      max: 14 },
+  search:    { e: '🔍',  n: 'SEARCH & AI',     max: 18 },
   media:     { e: '🎨',  n: 'MEDIA TOOLS',     max: 16 },
-  fun:       { e: '🎮',  n: 'FUN & GAMES',     max: 14 },
+  fun:       { e: '🎮',  n: 'FUN & GAMES',     max: 20 },
   economy:   { e: '💰',  n: 'ECONOMY',         max: 8  },
   level:     { e: '⭐',  n: 'LEVEL & XP',      max: 5  },
-  group:     { e: '👥',  n: 'GROUP',           max: 10 },
-  admin:     { e: '🛡️', n: 'GROUP ADMIN',     max: 11 },
-  tools:     { e: '🔧',  n: 'TOOLS',           max: 20 },
+  group:     { e: '👥',  n: 'GROUP',           max: 18 },
+  admin:     { e: '🛡️', n: 'GROUP ADMIN',     max: 20 },
+  tools:     { e: '🔧',  n: 'TOOLS',           max: 25 },
   utility:   { e: '🛠️', n: 'UTILITY',         max: 16 },
   gb:        { e: '📱',  n: 'GB FEATURES',     max: 8  },
   islamic:   { e: '☪️',  n: 'ISLAMIC',         max: 0  },

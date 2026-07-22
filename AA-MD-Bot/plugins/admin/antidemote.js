@@ -1,6 +1,6 @@
 export default {
   command: 'antidemote',
-  alias: ['antidemote'],
+  alias: ['nodemote', 'protectadmin'],
   description: 'Kick anyone who demotes a group admin',
   category: 'admin',
   groupOnly: true,
