@@ -14,25 +14,16 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ── Banner (loaded once at startup, never re-read) ────────────────────────────
-let _banner = undefined;
+// ── Banner ────────────────────────────────────────────────────────────────────
 function getBanner() {
-  if (_banner !== undefined) return _banner;
   for (const p of [
     path.join(__dirname, '../../banner.jpeg'),
     path.join(__dirname, '../../banner.jpg'),
   ]) {
-    try { if (fs.existsSync(p)) { _banner = fs.readFileSync(p); return _banner; } } catch {}
+    try { if (fs.existsSync(p)) return fs.readFileSync(p); } catch {}
   }
-  _banner = null;
   return null;
 }
-// Pre-load at module init so first .menu call has no disk I/O
-getBanner();
-
-// ── Menu text cache (owner / non-owner, 60s TTL) ──────────────────────────────
-const _menuCache = { owner: null, user: null, ownerTs: 0, userTs: 0 };
-const MENU_TTL = 60_000;
 
 // ── Newsletter context ────────────────────────────────────────────────────────
 function getCtx() {
@@ -174,19 +165,9 @@ export default {
     const uptime = upH > 0 ? `${upH}h ${upM}m` : `${upM}m ${upSec % 60}s`;
     const usedMB = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
 
-    const ctx = getCtx();
-
-    // ── Cache hit — skip full rebuild (invalidates every 60s) ────────────────
-    const cacheKey = isOwner ? 'owner' : 'user';
-    const tsKey    = isOwner ? 'ownerTs' : 'userTs';
-    if (_menuCache[cacheKey] && (Date.now() - _menuCache[tsKey]) < MENU_TTL) {
-      const cached = { text: _menuCache[cacheKey] };
-      if (ctx) cached.contextInfo = ctx;
-      return sock.sendMessage(jid, cached, { quoted: msg });
-    }
-
     const catMap    = buildCategoryMap(isOwner);
     const totalCmds = Object.values(catMap).reduce((s, a) => s + a.length, 0);
+    const ctx       = getCtx();
 
     // ── Single-category detail view ─────────────────────────────────────────
     if (args[0]) {
@@ -384,13 +365,18 @@ export default {
     menu += `╰${'─'.repeat(32)}\n`;
     menu += FOOTER;
 
-    // Store in cache for next call
-    _menuCache[cacheKey] = menu;
-    _menuCache[tsKey]    = Date.now();
-
-    // Send text-only — image upload adds 3-4s latency every call; text is instant
-    const payload = { text: menu };
+    const banner  = getBanner();
+    const payload = banner
+      ? { image: banner, caption: menu, mimetype: 'image/jpeg' }
+      : { text: menu };
     if (ctx) payload.contextInfo = ctx;
-    await sock.sendMessage(jid, payload, { quoted: msg });
+
+    try {
+      await sock.sendMessage(jid, payload, { quoted: msg });
+    } catch {
+      const fallback = { text: menu };
+      if (ctx) fallback.contextInfo = ctx;
+      await sock.sendMessage(jid, fallback, { quoted: msg });
+    }
   },
 };
