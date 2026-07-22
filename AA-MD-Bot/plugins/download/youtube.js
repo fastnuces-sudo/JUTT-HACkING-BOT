@@ -694,7 +694,9 @@ async function downloadVideoFromStreamUrl(ytUrl) {
     const buf = await withTimeout(90000, fetchBuf(fallbackUrl));
     if (isValidVideoBuffer(buf)) {
       const playable = await withTimeout(180000, ensurePlayableMp4(buf));
-      return { buffer: playable?.length ? playable : buf };
+      // Never return an unplayable raw buffer — if transcode failed, return null
+      // so downloadVideo() can try other sources (Step C / Step D).
+      if (playable?.length) return { buffer: playable };
     }
   }
 

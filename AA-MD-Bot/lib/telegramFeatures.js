@@ -173,12 +173,49 @@ async function fbDl(url) {
 }
 
 // ── Instagram ────────────────────────────────────────────────────────────────
-const IG_RX = /https?:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[A-Za-z0-9_-]+/i;
+const IG_RX = /https?:\/\/(www\.)?instagram\.com\/(p|reel|tv|stories)\/[A-Za-z0-9_-]+/i;
+
 async function igDl(url) {
-  const { stdout } = await execFileAsync(YTDLP, ['--get-url','-f','best[filesize<45M]/best','--no-playlist','--quiet',url], { timeout: 32000 });
-  const link = stdout.trim().split('\n')[0];
-  if (!link) throw new Error('Could not extract URL — post may be private');
-  return link;
+  // API 1: ryzendesu (no yt-dlp, fast)
+  try {
+    const { data } = await axios.get(
+      `https://api.ryzendesu.vip/api/downloader/igdl?url=${encodeURIComponent(url)}`,
+      { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    const vid = data?.data?.[0]?.url || data?.data?.url;
+    if (vid && typeof vid === 'string' && vid.startsWith('http')) return vid;
+  } catch {}
+
+  // API 2: davidcyriltech
+  try {
+    const { data } = await axios.get(
+      `https://apis.davidcyriltech.my.id/download/instagram?url=${encodeURIComponent(url)}`,
+      { timeout: 25000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    const link = pickUrl(data, 'result.video_url', 'result.url', 'url', 'video_url');
+    if (link) return link;
+  } catch {}
+
+  // API 3: saveig
+  try {
+    const { data } = await axios.get(
+      `https://api.saveig.app/api?url=${encodeURIComponent(url)}`,
+      { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+    const link = data?.data?.[0]?.url || pickUrl(data, 'url', 'data.url');
+    if (link && link.startsWith('http')) return link;
+  } catch {}
+
+  // Fallback: yt-dlp
+  try {
+    const { stdout } = await execFileAsync(YTDLP, ['--get-url','-f','best[filesize<45M]/best','--no-playlist','--quiet',url], { timeout: 32000 });
+    const link = stdout.trim().split('\n')[0];
+    if (link && link.startsWith('http')) return link;
+  } catch (e) {
+    if (e.code === 'ENOENT') throw new Error('yt-dlp not available — bot is still initialising, try again in 30 seconds');
+    throw new Error('Could not extract URL — post may be private or login required');
+  }
+  throw new Error('Could not extract URL — post must be public');
 }
 
 // ── Weather ──────────────────────────────────────────────────────────────────
@@ -522,6 +559,83 @@ async function fact() {
 // ── QR Code ───────────────────────────────────────────────────────────────────
 const qrUrl = (t) => `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=12&data=${encodeURIComponent(t)}`;
 
+// ── Calculator (safe) ─────────────────────────────────────────────────────────
+function calcExpr(expr) {
+  // Whitelist: digits, operators, parentheses, sqrt, pi, e, spaces
+  const clean = expr.trim().replace(/x/gi,'*').replace(/÷/g,'/').replace(/[^0-9+\-*/%.()^√πe\s]/g,'');
+  if (!clean) throw new Error('Invalid expression');
+  const js = clean
+    .replace(/\^/g, '**')
+    .replace(/√(\d+(\.\d+)?)/g, 'Math.sqrt($1)')
+    .replace(/π/g, 'Math.PI')
+    .replace(/\be\b/g, 'Math.E');
+  // eslint-disable-next-line no-new-func
+  const result = Function('"use strict"; return (' + js + ')')();
+  if (!isFinite(result)) throw new Error('Result is not a finite number');
+  const fmt = Number.isInteger(result) ? result : parseFloat(result.toFixed(10));
+  return { expr: clean, result: fmt };
+}
+
+// ── World Time ────────────────────────────────────────────────────────────────
+async function worldTime(query) {
+  // Try exact timezone string first
+  const ALIASES = {
+    karachi:'Asia/Karachi', pakistan:'Asia/Karachi', pk:'Asia/Karachi',
+    dubai:'Asia/Dubai', uae:'Asia/Dubai', london:'Europe/London',
+    newyork:'America/New_York', 'new york':'America/New_York', usa:'America/New_York',
+    tokyo:'Asia/Tokyo', japan:'Asia/Tokyo', beijing:'Asia/Shanghai', china:'Asia/Shanghai',
+    istanbul:'Europe/Istanbul', turkey:'Europe/Istanbul', riyadh:'Asia/Riyadh',
+    saudi:'Asia/Riyadh', lahore:'Asia/Karachi', islamabad:'Asia/Karachi',
+  };
+  const tz = ALIASES[query.toLowerCase().trim()] || query.replace(/\s+/g,'/');
+  try {
+    const { data } = await axios.get(`https://worldtimeapi.org/api/timezone/${tz}`, { timeout: 12000 });
+    if (data?.datetime) return { ...data, tz };
+  } catch {}
+  // Fuzzy: list all timezones and find closest
+  const { data: zones } = await axios.get('https://worldtimeapi.org/api/timezone', { timeout: 10000 });
+  const q = query.toLowerCase();
+  const match = zones?.find(z => z.toLowerCase().includes(q));
+  if (!match) throw new Error(`Timezone not found for "${query}".\n\nTry: Karachi, Dubai, London, Tokyo, New_York`);
+  const { data: d } = await axios.get(`https://worldtimeapi.org/api/timezone/${match}`, { timeout: 10000 });
+  return { ...d, tz: match };
+}
+
+// ── Currency Converter ────────────────────────────────────────────────────────
+async function currencyConvert(amount, from, to) {
+  // Free API — no key required
+  const { data } = await axios.get(
+    `https://api.exchangerate-api.com/v4/latest/${from.toUpperCase()}`,
+    { timeout: 12000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+  );
+  const rate = data?.rates?.[to.toUpperCase()];
+  if (!rate) throw new Error(`Currency "${to.toUpperCase()}" not found.\n\nTry: USD EUR GBP PKR SAR AED JPY INR`);
+  const result = amount * rate;
+  return { amount, from: from.toUpperCase(), to: to.toUpperCase(), rate, result };
+}
+
+// ── Random Meme ───────────────────────────────────────────────────────────────
+async function randomMeme() {
+  const { data } = await axios.get('https://meme-api.com/gimme', { timeout: 15000 });
+  if (!data?.url) throw new Error('No meme available right now');
+  return data;
+}
+
+// ── Password Generator ────────────────────────────────────────────────────────
+function genPassword(length = 16, type = 'strong') {
+  const len = Math.min(Math.max(parseInt(length) || 16, 6), 64);
+  const lower  = 'abcdefghijklmnopqrstuvwxyz';
+  const upper  = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const syms   = '!@#$%^&*()-_=+';
+  const chars  = type === 'pin' ? digits
+    : type === 'simple'  ? lower + digits
+    : lower + upper + digits + syms;
+  let pwd = '';
+  for (let i = 0; i < len; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+  return { password: pwd, length: len, strength: type };
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Bot init
 // ══════════════════════════════════════════════════════════════════════════════
@@ -538,7 +652,8 @@ export function initTelegramFeatures() {
     inline_keyboard: [
       [{ text: '🎵 Downloads',    callback_data: 'help_dl'     }, { text: '🤖 AI & Images',   callback_data: 'help_ai'   }],
       [{ text: '🔍 Search & Info',callback_data: 'help_search' }, { text: '🌐 Utilities',      callback_data: 'help_util' }],
-      [{ text: '😄 Fun',          callback_data: 'help_fun'    }, { text: '📋 All Commands',   callback_data: 'help_all'  }],
+      [{ text: '😄 Fun',          callback_data: 'help_fun'    }, { text: '🛠 Tools',           callback_data: 'help_tools'}],
+      [{ text: '📋 All Commands',  callback_data: 'help_all',  }],
     ],
   };
   const KB_BACK_START = {
@@ -591,7 +706,16 @@ export function initTelegramFeatures() {
       text:
         `┣ /joke — Random programming/misc joke\n` +
         `┣ /quote — Inspirational quote\n` +
-        `┗ /fact — Random interesting fact`,
+        `┣ /fact — Random interesting fact\n` +
+        `┗ /meme — Random meme image`,
+    },
+    help_tools: {
+      title: '🛠 Tools',
+      text:
+        `┣ /calc <i>expression</i> — Calculator (e.g. /calc 25*4+10)\n` +
+        `┣ /currency <i>100 USD PKR</i> — Currency converter\n` +
+        `┣ /time <i>city</i> — World clock (e.g. /time Karachi)\n` +
+        `┗ /password <i>[length]</i> — Generate strong password`,
     },
     help_all: {
       title: '📋 All Commands',
@@ -600,7 +724,8 @@ export function initTelegramFeatures() {
         `🤖 <b>AI:</b> /ai /imagine\n` +
         `🔍 <b>Search:</b> /wiki /movie /anime /lyrics /news /crypto /github /urban\n` +
         `🌐 <b>Utils:</b> /weather /translate /short /ss /qr\n` +
-        `😄 <b>Fun:</b> /joke /quote /fact\n` +
+        `😄 <b>Fun:</b> /joke /quote /fact /meme\n` +
+        `🛠 <b>Tools:</b> /calc /currency /time /password\n` +
         `⚙️ <b>General:</b> /ping /id /help`,
     },
   };
@@ -1386,8 +1511,150 @@ export function initTelegramFeatures() {
     } catch (e) { sendText(bot, chatId, `❌ QR generation failed: ${esc(e.message)}`); }
   });
 
+  // ── /meme ─────────────────────────────────────────────────────────────────────
+  bot.onText(/\/meme/, async (msg) => {
+    await bot.sendChatAction(msg.chat.id, 'upload_photo').catch(() => {});
+    try {
+      const m = await randomMeme();
+      await bot.sendPhoto(msg.chat.id, m.url, {
+        caption:
+          `😂 <b>${esc((m.title||'Meme').slice(0,100))}</b>\n${DIV}\n` +
+          (m.subreddit ? `\n📌 r/${esc(m.subreddit)}  ` : '') +
+          (m.ups ? `👍 ${m.ups.toLocaleString()}` : '') +
+          FOOTER,
+        parse_mode: 'HTML',
+      }).catch(async () => {
+        // Non-image (video/gif) — send as document
+        await bot.sendDocument(msg.chat.id, m.url, {
+          caption: `😂 <b>${esc((m.title||'Meme').slice(0,100))}</b>` + FOOTER,
+          parse_mode: 'HTML',
+        }).catch(() => sendText(bot, msg.chat.id, `😂 <a href="${esc(m.url)}">Open meme</a>` + FOOTER));
+      });
+    } catch (e) {
+      sendText(bot, msg.chat.id, `❌ Could not fetch meme: <i>${esc(e.message)}</i>`);
+    }
+  });
+
+  // ── /calc ─────────────────────────────────────────────────────────────────────
+  bot.onText(/\/calc(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id, expr = (match[1]||'').trim();
+    if (!expr) return sendText(bot, chatId,
+      `🧮 <b>Calculator</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/calc expression</code>\n\n` +
+      `<b>Examples:</b>\n` +
+      `• <code>/calc 25 * 4 + 10</code>\n` +
+      `• <code>/calc (100/3) * 7</code>\n` +
+      `• <code>/calc 2^10</code>\n` +
+      `• <code>/calc √144</code>\n\n` +
+      `Supports: + - * / % ^ √ ( )` + FOOTER
+    );
+    try {
+      const { result } = calcExpr(expr);
+      sendText(bot, chatId,
+        `🧮 <b>Calculator</b>\n${DIV}\n\n` +
+        `📝 <code>${esc(expr)}</code>\n\n` +
+        `✅ <b>= ${esc(String(result))}</b>` + FOOTER
+      );
+    } catch (e) {
+      sendText(bot, chatId, `❌ <b>Calculation failed</b>\n\n<i>${esc(e.message)}</i>\n\nExample: <code>/calc 25 * 4 + 10</code>`);
+    }
+  });
+
+  // ── /currency ─────────────────────────────────────────────────────────────────
+  bot.onText(/\/currency(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const parts  = (match[1]||'').trim().split(/\s+/);
+    if (parts.length < 3) return sendText(bot, chatId,
+      `💱 <b>Currency Converter</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/currency amount FROM TO</code>\n\n` +
+      `<b>Examples:</b>\n` +
+      `• <code>/currency 100 USD PKR</code>\n` +
+      `• <code>/currency 50 EUR USD</code>\n` +
+      `• <code>/currency 1000 SAR PKR</code>\n\n` +
+      `Common: USD EUR GBP PKR SAR AED INR TRY JPY` + FOOTER
+    );
+    const amount = parseFloat(parts[0]);
+    if (isNaN(amount)) return sendText(bot, chatId, `❌ Invalid amount: <code>${esc(parts[0])}</code>`);
+
+    const sent = await bot.sendMessage(chatId, `💱 <b>Converting...</b>`, HTML).catch(() => null);
+    if (!sent) return;
+    try {
+      const r = await currencyConvert(amount, parts[1], parts[2]);
+      edit(bot, chatId, sent.message_id,
+        `💱 <b>Currency Converter</b>\n${DIV}\n\n` +
+        `💵 <b>${esc(r.amount.toLocaleString())} ${esc(r.from)}</b>\n` +
+        `↓\n` +
+        `💰 <b>${esc(r.result.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 })) } ${esc(r.to)}</b>\n\n` +
+        `📊 Rate: 1 ${esc(r.from)} = ${esc(r.rate.toFixed(4))} ${esc(r.to)}\n` +
+        `<i>Source: ExchangeRate-API</i>` + FOOTER
+      );
+    } catch (e) {
+      edit(bot, chatId, sent.message_id, `❌ Conversion failed: <i>${esc(e.message)}</i>`);
+    }
+  });
+
+  // ── /time ─────────────────────────────────────────────────────────────────────
+  bot.onText(/\/time(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id, query = (match[1]||'').trim();
+    if (!query) return sendText(bot, chatId,
+      `🕐 <b>World Clock</b>\n${DIV}\n\n` +
+      `<b>Usage:</b> <code>/time city or timezone</code>\n\n` +
+      `<b>Examples:</b>\n` +
+      `• <code>/time Karachi</code>\n` +
+      `• <code>/time London</code>\n` +
+      `• <code>/time Dubai</code>\n` +
+      `• <code>/time New_York</code>\n` +
+      `• <code>/time Tokyo</code>` + FOOTER
+    );
+    const sent = await bot.sendMessage(chatId, `🌍 <b>Looking up time...</b>`, HTML).catch(() => null);
+    if (!sent) return;
+    try {
+      const t = await worldTime(query);
+      const dt     = new Date(t.datetime);
+      const time   = dt.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: true });
+      const date   = dt.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+      const offset = t.utc_offset || '';
+      edit(bot, chatId, sent.message_id,
+        `🕐 <b>World Clock</b>\n${DIV}\n\n` +
+        `📍 <b>${esc(t.tz.replace(/_/g,' '))}</b>\n\n` +
+        `🕐 <b>${esc(time)}</b>\n` +
+        `📅 ${esc(date)}\n` +
+        (offset ? `🌐 UTC ${esc(offset)}\n` : '') +
+        (t.abbreviation ? `🔤 ${esc(t.abbreviation)}\n` : '') +
+        (t.dst ? `☀️ Daylight Saving Time active\n` : '') +
+        FOOTER
+      );
+    } catch (e) {
+      edit(bot, chatId, sent.message_id, `❌ ${esc(e.message)}`);
+    }
+  });
+
+  // ── /password ─────────────────────────────────────────────────────────────────
+  bot.onText(/\/password(?:\s+(.+))?/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const args   = (match[1]||'').trim().split(/\s+/);
+    const len    = parseInt(args[0]) || 16;
+    const type   = args[1]?.toLowerCase() === 'pin' ? 'pin' : args[1]?.toLowerCase() === 'simple' ? 'simple' : 'strong';
+
+    try {
+      const { password, length, strength } = genPassword(len, type);
+      const STRENGTH_BAR = { pin: '🔐 PIN', simple: '🔑 Simple', strong: '🛡 Strong' };
+      sendText(bot, chatId,
+        `🔐 <b>Password Generator</b>\n${DIV}\n\n` +
+        `<code>${esc(password)}</code>\n\n` +
+        `📏 Length: <b>${length}</b>\n` +
+        `${STRENGTH_BAR[strength] || '🛡 Strong'}\n\n` +
+        `<i>Tap the password to copy it</i>\n\n` +
+        `<b>Usage:</b> <code>/password [length] [pin|simple|strong]</code>\n` +
+        `Examples: <code>/password 20</code>  <code>/password 6 pin</code>` + FOOTER
+      );
+    } catch (e) {
+      sendText(bot, chatId, `❌ ${esc(e.message)}`);
+    }
+  });
+
   // ── Catch-all ─────────────────────────────────────────────────────────────────
-  const KNOWN = /^\/(start|help|ping|id|play|video|tiktok|ig|fb|ai|imagine|weather|translate|wiki|movie|anime|lyrics|news|crypto|github|urban|short|ss|joke|quote|fact|qr)/;
+  const KNOWN = /^\/(start|help|ping|id|play|video|tiktok|ig|fb|ai|imagine|weather|translate|wiki|movie|anime|lyrics|news|crypto|github|urban|short|ss|joke|quote|fact|qr|meme|calc|currency|time|password)/;
   bot.on('message', (msg) => {
     if (msg.text?.startsWith('/') && !KNOWN.test(msg.text)) {
       sendText(bot, msg.chat.id, `❓ Unknown command.\n\nType /help to see all commands.`);
