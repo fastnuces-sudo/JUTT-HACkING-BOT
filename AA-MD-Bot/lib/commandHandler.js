@@ -283,7 +283,7 @@ export async function handleMessage(sock, msg, sessionId) {
     }
 
     if (eff('autoTyping', false) && !fromMe) {
-      await sock.sendPresenceUpdate('composing', jid).catch(() => {});
+      sock.sendPresenceUpdate('composing', jid).catch(() => {});
     }
 
     // Build quoted object with message + key so plugins can download media
@@ -367,7 +367,7 @@ export async function handleMessage(sock, msg, sessionId) {
     }
 
     if (eff('autoTyping', false)) {
-      await sock.sendPresenceUpdate('paused', jid).catch(() => {});
+      sock.sendPresenceUpdate('paused', jid).catch(() => {});
     }
   } catch (err) {
     logger.error({ err: err.message }, 'handleMessage error');

@@ -437,9 +437,8 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         if (cache.size > _CACHE_MAX) cache.delete(cache.keys().next().value);
       }
 
-      // ── Anti View-Once: download, store, auto-reveal ────────────
-      // (also fed by the messages.update listener above for delayed delivery)
-      await handleViewOnceMessage(msg, sock, sessionId);
+      // ── Anti View-Once: fire-and-forget — never block the command handler ──
+      handleViewOnceMessage(msg, sock, sessionId).catch(() => {});
 
       // ── Auto-Status handling (status@broadcast) ──────────────
       if (msg.key.remoteJid === 'status@broadcast') {
@@ -449,14 +448,11 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
       if (isJidBroadcast(msg.key.remoteJid)) continue;
 
-      // ── Auto Read: silently mark message as read (per-session) ──
+      // ── Auto Read: fire-and-forget — never block the command handler ──
       try {
-        // Check session setting first, fall back to global
         const autoRead = db.sessionSettings.getValue(sessionId, 'autoRead')
           ?? db.settings.getValue('autoRead');
-        if (autoRead) {
-          await sock.readMessages([msg.key]).catch(() => {});
-        }
+        if (autoRead) sock.readMessages([msg.key]).catch(() => {});
       } catch {}
 
       // ── Auto Reply: respond to DMs automatically (per-session) ──
@@ -537,8 +533,6 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
           messageHandler(sock, msg, sessionId)
             .catch(err => logger.error({ err: err.message }, 'Message handler error')),
         ]);
-        // Stay invisible after processing so phone keeps getting push notifications
-        sock.sendPresenceUpdate('unavailable').catch(() => {});
       } else {
         await Promise.all(_bgTasks);
       }
