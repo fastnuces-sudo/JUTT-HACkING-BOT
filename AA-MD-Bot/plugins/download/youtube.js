@@ -381,10 +381,14 @@ async function tryYtdlpVideo(ytUrl) {
   await fs.ensureDir(TEMP);
   const outFile = path.join(TEMP, `ytv_${Date.now()}.mp4`);
   const FORMATS = [
-    'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]',
-    'best[height<=480]',
-    'best[height<=720]',
-    'best',
+    // H.264+AAC formats — guaranteed WhatsApp-playable, no transcode needed
+    'bestvideo[vcodec^=avc][height<=480]+bestaudio[acodec=aac]/bestvideo[vcodec^=avc][height<=480]+bestaudio[ext=m4a]',
+    // Progressive formats (single file, H.264)
+    '18/22',
+    // mp4 container (may have vp9 — ensurePlayableMp4 will transcode)
+    'best[height<=480][ext=mp4]/best[height<=360][ext=mp4]/best[ext=mp4]',
+    // Last resort — any format, ensurePlayableMp4 handles transcode
+    'best[height<=480]/best',
   ];
 
   const attempt = async (client, ck) => {
@@ -655,11 +659,14 @@ async function downloadVideoFromStreamUrl(ytUrl) {
   // android client is confirmed reliable for progressive mp4 URLs on this server.
   // ios was used previously but returns "Requested format is not available" for
   // formats 18/22 on many videos. android returns real progressive streams.
+  // Try H.264 formats first — format 18/22 are progressive H.264+AAC and guaranteed
+  // WhatsApp-playable without any transcoding. mp4-container formats come next (may
+  // still need a transcode if the codec is vp9/av1). Generic 'best' is last resort.
   const FORMATS = [
-    'best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best',  // adaptive — most reliable
-    'best[height<=480][ext=mp4]/best[height<=480]/best[ext=mp4]/best',  // try higher if available
-    '18',   // 360p progressive mp4 — works on some videos
-    '22',   // 720p progressive mp4 — works on some videos
+    '18',   // 360p H.264+AAC progressive — guaranteed playable, no transcode needed
+    '22',   // 720p H.264+AAC progressive — guaranteed playable, no transcode needed
+    'best[height<=480][ext=mp4]/best[height<=360][ext=mp4]/best[ext=mp4]',
+    'best[height<=480]/best[height<=360]/best',
   ];
 
   for (const fmt of FORMATS) {
@@ -672,9 +679,11 @@ async function downloadVideoFromStreamUrl(ytUrl) {
     const vidBuf = await withTimeout(90000, fetchBuf(videoUrl));
     if (!isValidVideoBuffer(vidBuf)) continue;
 
-    // Transcode to H.264/AAC so WhatsApp plays it; fall back to raw if ffmpeg fails
+    // Transcode to H.264/AAC if needed. If ffmpeg fails, try the next format
+    // rather than returning an unplayable webm/vp9 buffer to WhatsApp.
     const playable = await withTimeout(180000, ensurePlayableMp4(vidBuf));
-    return { buffer: playable?.length ? playable : vidBuf };
+    if (playable?.length) return { buffer: playable };
+    // ensurePlayableMp4 returned null → ffmpeg failed for this format → try next
   }
 
   // Tier 2 — tv_embedded client as secondary
@@ -718,7 +727,7 @@ async function downloadVideo(ytUrl) {
     if (isValidVideoBuffer(buf)) {
       const playable = await withTimeout(180000, ensurePlayableMp4(buf));
       if (playable?.length) return { buffer: playable };
-      return { buffer: buf };
+      // Transcode failed — fall through to stream result / other sources
     }
   }
 
@@ -738,7 +747,7 @@ async function downloadVideo(ytUrl) {
     if (isValidVideoBuffer(buf)) {
       const playable = await withTimeout(180000, ensurePlayableMp4(buf));
       if (playable?.length) return { buffer: playable };
-      return { buffer: buf };
+      // Transcode failed — fall through to yt-dlp last resort
     }
   }
 
@@ -746,7 +755,9 @@ async function downloadVideo(ytUrl) {
   const raw = await withTimeout(180000, tryYtdlpVideo(ytUrl));
   if (!raw?.length || raw.length < 50000) return null;
   const playableRaw = await withTimeout(180000, ensurePlayableMp4(raw));
-  return { buffer: playableRaw?.length ? playableRaw : raw };
+  // Only return if transcode succeeded — never send a raw unplayable buffer
+  if (playableRaw?.length) return { buffer: playableRaw };
+  return null;
 }
 
 // ── UI captions ───────────────────────────────────────────────────────────────
