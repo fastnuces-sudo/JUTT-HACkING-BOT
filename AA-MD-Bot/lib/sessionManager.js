@@ -142,6 +142,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
   // the button appears regardless of which plugin/helper sends the message.
   const _origSend = sock.sendMessage.bind(sock);
   sock.sendMessage = async (jid, content, opts) => {
+    const origContent = content;
     try {
       const nlJid  = global._AA_NEWSLETTER_JID  || config.newsletterJid;
       const nlName = global._AA_NEWSLETTER_NAME || config.newsletterName || 'AA MD Bot';
@@ -170,7 +171,13 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         };
       }
     } catch (_) {}
-    return _origSend(jid, content, opts);
+    // Try with newsletter contextInfo; on failure retry with original payload (no contextInfo)
+    try {
+      return await _origSend(jid, content, opts);
+    } catch (sendErr) {
+      if (content !== origContent) return _origSend(jid, origContent, opts);
+      throw sendErr;
+    }
   };
 
   sock.ev.on('creds.update', () => {

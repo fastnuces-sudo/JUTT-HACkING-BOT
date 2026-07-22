@@ -720,16 +720,34 @@ export function initTelegramFeatures() {
         `⏬ <b>Downloading video...</b>\n🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Connecting to fastest source...</i>`
       );
 
-      const videoUrl = await resolveVideo(id);
-      if (!videoUrl) throw new Error('All download sources failed');
-
       await edit(bot, chatId, sent.message_id,
-        `⏬ <b>Downloading video...</b>\n🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Preparing file (this may take a moment)...</i>`
+        `⏬ <b>Downloading video...</b>\n🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Downloading with yt-dlp...</i>`
       );
 
-      // Download video as buffer for reliable delivery (Telegram often can't fetch CDN URLs)
-      let videoBuf;
-      try { videoBuf = await downloadBuffer(videoUrl, 49); } catch { videoBuf = null; }
+      // yt-dlp direct download to temp file (most reliable — avoids CDN blocks)
+      const tmpFile = nodePath.join(os.tmpdir(), `yt_vid_${Date.now()}_${id}.mp4`);
+      let videoBuf = null;
+      try {
+        await execFileAsync(YTDLP, [
+          '-f', 'bestvideo[ext=mp4][filesize<45M]+bestaudio[ext=m4a]/best[ext=mp4][filesize<45M]/best[filesize<45M]',
+          '--merge-output-format', 'mp4',
+          '--no-playlist', '--quiet',
+          '-o', tmpFile,
+          mkYtUrl(id),
+        ], { timeout: 150000 });
+        const stat = await fs.stat(tmpFile).catch(() => null);
+        if (stat?.size > 0) videoBuf = await fs.readFile(tmpFile);
+      } catch (_) {
+        // yt-dlp failed — try API URL as last resort
+        const videoUrl = await resolveVideo(id).catch(() => null);
+        if (videoUrl) {
+          try { videoBuf = await downloadBuffer(videoUrl, 45); } catch { videoBuf = null; }
+        }
+      } finally {
+        fs.unlink(tmpFile).catch(() => {});
+      }
+
+      if (!videoBuf) throw new Error('Video download failed — file too large or unavailable');
 
       const videoCap = `🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}` + FOOTER;
       const thumb    = id ? await ytThumbBuf(id) : null;
@@ -738,15 +756,10 @@ export function initTelegramFeatures() {
       await bot.sendChatAction(chatId, 'upload_video').catch(() => {});
 
       const videoSendOpts = { caption: videoCap, parse_mode: 'HTML', supports_streaming: true, ...(thumb ? { thumbnail: thumb } : {}) };
-      const vsource = videoBuf || videoUrl;
-      await bot.sendVideo(chatId, vsource, videoSendOpts).catch(async () => {
-        // Fallback: send as document
-        await bot.sendDocument(chatId, videoBuf || videoUrl, {
+      await bot.sendVideo(chatId, videoBuf, videoSendOpts).catch(async () => {
+        await bot.sendDocument(chatId, videoBuf, {
           caption: videoCap, parse_mode: 'HTML', ...(thumb ? { thumbnail: thumb } : {}),
-        }).catch(async () => {
-          // Last resort: just send the URL as text
-          if (videoUrl) await bot.sendMessage(chatId, `🎬 <b>${esc(title)}</b>\n\n🔗 <a href="${videoUrl}">Download Link</a>` + FOOTER, HTML).catch(() => {});
-        });
+        }).catch(() => {});
       });
     } catch (e) {
       edit(bot, chatId, sent.message_id,
