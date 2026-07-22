@@ -32,9 +32,6 @@ const config = {
   maxDailyStreak: 7,
   maintenanceMode: false,
   maintenanceMsg: '🔧 Bot is under maintenance. Please wait...',
-  // Default note sent to anyone who DMs the bot when no custom auto-reply is set.
-  // Set to null to disable.
-  defaultDmNote: `📌 *Important Note*\n\nTo receive a reply, please follow these steps:\n\n1️⃣ *Save this number* in your contacts\n2️⃣ Take a *screenshot* showing the number is saved\n3️⃣ *Send that screenshot* here\n4️⃣ You will then receive a reply ✅\n\n> 🤖 *AA MD Bot*`,
   welcomeMessage: true,
   timezone: 'Asia/Karachi',
   language: 'en',

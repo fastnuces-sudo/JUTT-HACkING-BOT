@@ -498,11 +498,6 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
                 const aiReply = await aiAutoReply(msgText, aiInst, msg.key.remoteJid);
                 await sock.sendMessage(msg.key.remoteJid, { text: aiReply }, { quoted: msg }).catch(() => {});
               } catch {}
-            } else if (!aiOn && config.defaultDmNote) {
-              // ── Default DM note (fallback when no auto-reply or AI is configured) ──
-              await sock.sendMessage(msg.key.remoteJid, {
-                text: config.defaultDmNote,
-              }).catch(() => {});
             }
           }
         }
