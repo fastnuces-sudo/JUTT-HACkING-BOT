@@ -23,6 +23,7 @@ import {
 import config from './config.js';
 import { cleanTemp, formatDuration } from './lib/helper.js';
 import { startBirthdayScheduler } from './plugins/utility/birthday.js';
+import { restoreReminders } from './plugins/utility/remind.js';
 import { initTelegramAdmin }    from './lib/telegramAdmin.js';
 import { initTelegramFeatures } from './lib/telegramFeatures.js';
 
@@ -358,6 +359,9 @@ async function main() {
 
   logger.info('📡 Initializing WhatsApp sessions...');
   await initAllSessions();
+
+  // ── Restore reminders saved before last restart ───────────────────────────
+  restoreReminders(() => sessions);
 
   // ── Birthday scheduler — runs at exactly midnight every day ───────────────
   startBirthdayScheduler(() => sessions);

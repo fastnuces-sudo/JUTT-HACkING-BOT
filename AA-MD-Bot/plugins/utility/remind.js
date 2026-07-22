@@ -13,6 +13,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { db } from '../../lib/database.js';
+import { sessions as _globalSessions } from '../../lib/sessionManager.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -21,17 +22,24 @@ const execFileAsync = promisify(execFile);
 const activeTimers = new Map();
 
 // ── Generate alarm voice note (OGG/Opus via ffmpeg) ──────────────────────────
-// Three short beeps — sounds like an alarm on the phone
+// Sounds like a phone ringing: rising-pitch double-beep pattern × 4 bursts (~4s)
 async function generateAlarm() {
   const out = path.join(os.tmpdir(), `alarm_${randomBytes(6).toString('hex')}.ogg`);
-  // 3 beeps at 880Hz (0.3s on, 0.15s off) × 3 — total ~1.4s
-  const filter =
-    'sine=frequency=880:duration=0.3[b1];' +
-    'aevalsrc=0:duration=0.15[s1];' +
-    'sine=frequency=880:duration=0.3[b2];' +
-    'aevalsrc=0:duration=0.15[s2];' +
-    'sine=frequency=880:duration=0.3[b3];' +
-    '[b1][s1][b2][s2][b3]concat=n=5:v=0:a=1[out]';
+  // Pattern: 880Hz beep (0.25s) + 1100Hz beep (0.25s) + 0.4s silence, × 4
+  const parts = [];
+  const concat = [];
+  let idx = 0;
+  for (let burst = 0; burst < 4; burst++) {
+    parts.push(`sine=frequency=880:duration=0.25[b${idx}]`);
+    concat.push(`[b${idx}]`);
+    idx++;
+    parts.push(`sine=frequency=1100:duration=0.25[b${idx}]`);
+    concat.push(`[b${idx}]`);
+    idx++;
+    parts.push(`aevalsrc=0:duration=0.4[s${burst}]`);
+    concat.push(`[s${burst}]`);
+  }
+  const filter = parts.join(';') + ';' + concat.join('') + `concat=n=${idx + 4}:v=0:a=1[out]`;
   await execFileAsync('ffmpeg', [
     '-y',
     '-filter_complex', filter,
@@ -209,8 +217,8 @@ export default {
     // Save to MongoDB (persists across restarts)
     db.reminders.set(id, job);
 
-    // Use sock directly for this session (already connected)
-    scheduleTimer(id, job, () => new Map([[job.sessionId, sock]]));
+    // Use the live sessions Map so reconnects don't break delivery
+    scheduleTimer(id, job, () => _globalSessions);
 
     return reply(
       `✅ *Reminder Set! (#${id.slice(-6)})*\n\n` +
