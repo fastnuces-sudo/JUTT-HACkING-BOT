@@ -8,6 +8,9 @@ import TelegramBot    from 'node-telegram-bot-api';
 import axios          from 'axios';
 import { execFile }   from 'child_process';
 import { promisify }  from 'util';
+import fs             from 'node:fs/promises';
+import os             from 'node:os';
+import nodePath       from 'node:path';
 import { logger }     from './logger.js';
 import playdl         from 'play-dl';
 
