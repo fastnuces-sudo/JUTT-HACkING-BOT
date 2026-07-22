@@ -52,7 +52,7 @@ export default {
     return reply(
       `${enable ? '✅' : '❌'} *Anti ViewOnce ${enable ? 'Enabled' : 'Disabled'}*\n\n` +
       `View-once media will ${enable ? 'now be automatically' : 'no longer be'} revealed to your *"You"* chat.\n\n` +
-      `💡 *Tip:* Also set a keyword with *.voword <keyword>* to reveal by replying.\n\n` +
+      `💡 *Tip:* Reply to any view-once with 4 same emojis (e.g. 🔥🔥🔥🔥) to reveal it manually.\n\n` +
       `> 👁️ *AA MD Bot*`
     );
   },

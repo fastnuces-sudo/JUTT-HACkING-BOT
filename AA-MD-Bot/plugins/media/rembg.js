@@ -11,8 +11,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMP = path.join(__dirname, '../../temp');
 
 const MODELS = [
-  'briaai/RMBG-1.4',
   'ZhengPeng7/BiRefNet',
+  'briaai/RMBG-2.0',
+  'briaai/RMBG-1.4',
 ];
 
 async function removeBackground(imageBuffer) {
@@ -21,10 +22,10 @@ async function removeBackground(imageBuffer) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const res = await axios.post(url, imageBuffer, {
-          headers: { 'Content-Type': 'image/jpeg' },
-          timeout: 60000,
+          headers: { 'Content-Type': 'application/octet-stream' },
+          timeout: 90000,
           responseType: 'arraybuffer',
-          maxContentLength: 10 * 1024 * 1024,
+          maxContentLength: 20 * 1024 * 1024,
         });
         const buf = Buffer.from(res.data);
         if (buf.length > 1000) return buf;

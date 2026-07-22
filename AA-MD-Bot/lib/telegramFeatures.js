@@ -218,11 +218,30 @@ BEHAVIOR:
 - Be warm, professional, and genuinely helpful — not robotic
 - If unsure: say so clearly and give your best reasoning`;
 
-const AI_MODELS   = ['openai', 'claude', 'unity'];
+const AI_MODELS    = ['openai', 'openai-fast'];
 const _aiMemory   = new Map(); // userId → messages[]
 const _aiLastUsed = new Map();
 const AI_MAX_USERS = 500;
 const AI_MAX_MSG   = 20;
+
+// ch.at free AI helper (no key required)
+async function chatAtCall(prompt, retries = 2) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      const res = await axios.post('https://ch.at/api/chat',
+        { message: prompt },
+        { headers: { 'Content-Type': 'application/json', 'User-Agent': 'AA-MD-Bot/3.0' }, timeout: 12000 }
+      );
+      const raw = typeof res.data === 'string' ? res.data
+        : (res.data?.answer || res.data?.reply || res.data?.message || res.data?.response || '');
+      const match = raw.match(/\bA:\s*([\s\S]+)$/);
+      const text = match ? match[1].trim() : (typeof raw === 'string' && raw.trim().length > 4 ? raw.trim() : null);
+      if (text) return text;
+    } catch {}
+    if (i < retries) await new Promise(r => setTimeout(r, 400 * i));
+  }
+  return null;
+}
 
 function aiEvict() {
   if (_aiMemory.size <= AI_MAX_USERS) return;
@@ -247,15 +266,38 @@ async function aiChat(userId, prompt) {
   aiAddHist(userId, 'user', prompt);
   const messages = [{ role:'system', content: AI_SYSTEM }, ...aiGetHist(userId)];
   let reply = null, lastErr = null;
-  for (const model of AI_MODELS) {
+
+  // 1. Try ch.at (no key, fast)
+  const flatPrompt = messages
+    .filter(m => m.role !== 'system')
+    .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+    .join('\n') + '\nAssistant:';
+  reply = await chatAtCall(flatPrompt).catch(() => null);
+
+  // 2. Try pollinations GET (simple fallback)
+  if (!reply) {
     try {
-      const { data } = await axios.post('https://text.pollinations.ai/openai', {
-        model, messages, temperature: 0.4, max_tokens: 2048,
-      }, { headers: { 'Content-Type':'application/json' }, timeout: 40000 });
-      const r = data?.choices?.[0]?.message?.content?.trim();
-      if (r) { reply = r; break; }
-    } catch (e) { lastErr = e; }
+      const res = await axios.get(
+        'https://text.pollinations.ai/' + encodeURIComponent(prompt.slice(0, 600)) + '?model=openai&seed=' + (Date.now() % 9999),
+        { timeout: 20000 }
+      );
+      if (typeof res.data === 'string' && res.data.trim()) reply = res.data.trim();
+    } catch {}
   }
+
+  // 3. Pollinations OpenAI-compatible POST (most capable)
+  if (!reply) {
+    for (const model of AI_MODELS) {
+      try {
+        const { data } = await axios.post('https://text.pollinations.ai/openai', {
+          model, messages, temperature: 0.4, max_tokens: 2048,
+        }, { headers: { 'Content-Type':'application/json' }, timeout: 40000 });
+        const r = data?.choices?.[0]?.message?.content?.trim();
+        if (r) { reply = r; break; }
+      } catch (e) { lastErr = e; }
+    }
+  }
+
   if (!reply) throw lastErr || new Error('All AI models failed');
 
   // Step 1: extract code blocks, escape HTML in non-code parts, put code back

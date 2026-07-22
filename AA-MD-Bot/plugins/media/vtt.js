@@ -18,15 +18,21 @@ const execFileAsync = promisify(execFile);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const tmpDir = path.join(__dirname, "../../temp");
 
-// Ordered by speed/reliability: turbo first, then large-v3, then fallbacks
+// Ordered by speed/reliability; base/small are fastest on free tier
 const HF_MODELS = [
-  "openai/whisper-large-v3-turbo",
-  "openai/whisper-large-v3",
-  "openai/whisper-medium",
   "openai/whisper-base",
+  "openai/whisper-small",
+  "openai/whisper-medium",
+  "openai/whisper-large-v3-turbo",
 ];
 
 async function getFfmpegBin() {
+  // Prefer system ffmpeg (always available on Replit); fall back to ffmpeg-static
+  try {
+    const { execFile: ef } = await import("child_process");
+    await new Promise((res, rej) => ef("ffmpeg", ["-version"], (e) => e ? rej(e) : res()));
+    return "ffmpeg";
+  } catch {}
   try {
     const m = await import("ffmpeg-static");
     return m.default || "ffmpeg";

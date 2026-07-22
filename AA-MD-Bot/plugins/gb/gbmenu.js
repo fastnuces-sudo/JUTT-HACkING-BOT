@@ -41,11 +41,12 @@ export default {
       `│  ▸ *${p}antiviewonce on/off*\n` +
       `│     Auto-reveal ALL view-once → "You"\n` +
       `│\n` +
-      `│  ▸ *${p}voword <keyword>*\n` +
-      `│     Set secret keyword — reply to any\n` +
-      `│     view-once with keyword → "You" chat\n` +
-      `│     Example: *${p}voword show*\n` +
-      `│  ▸ *${p}voword off* — remove keyword\n` +
+      `│  ▸ *Reply with 4 same emojis*\n` +
+      `│     e.g. 🔥🔥🔥🔥 on a view-once\n` +
+      `│     Reveals it to your "You" chat\n` +
+      `│\n` +
+      `│  ▸ *${p}avv* (reply to view-once)\n` +
+      `│     Manual reveal command\n` +
       `│\n` +
       `│  ▸ *${p}antidelete on/off*\n` +
       `│     Recover deleted messages\n` +

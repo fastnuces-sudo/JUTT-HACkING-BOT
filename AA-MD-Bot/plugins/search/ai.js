@@ -9,6 +9,39 @@ import axios from 'axios';
 
 const CHAT_URL = 'https://text.pollinations.ai/openai';
 
+// ── ch.at free AI (primary — no key required) ─────────────────────────────────
+async function callChAt(prompt, retries = 3) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      const res = await axios.post(
+        'https://ch.at/api/chat',
+        { message: prompt },
+        { headers: { 'Content-Type': 'application/json', 'User-Agent': 'AA-MD-Bot/3.0' }, timeout: 12000 }
+      );
+      // Response: plain text "Q: ...\nA: actual answer"
+      const raw = typeof res.data === 'string' ? res.data
+        : (res.data?.answer || res.data?.reply || res.data?.message || res.data?.response || '');
+      const match = raw.match(/\bA:\s*([\s\S]+)$/);
+      const text = match ? match[1].trim() : (typeof raw === 'string' && raw.trim().length > 4 ? raw.trim() : null);
+      if (text) return text;
+    } catch {}
+    if (i < retries) await new Promise(r => setTimeout(r, 500 * i));
+  }
+  return null;
+}
+
+// ── Pollinations GET (simple, fast) ──────────────────────────────────────────
+async function callPollinationsGet(prompt) {
+  try {
+    const res = await axios.get(
+      'https://text.pollinations.ai/' + encodeURIComponent(prompt.slice(0, 600)) +
+      '?model=openai&seed=' + (Date.now() % 9999),
+      { timeout: 20000 }
+    );
+    return typeof res.data === 'string' ? res.data.trim() : null;
+  } catch { return null; }
+}
+
 // ── System prompt ─────────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are AA MD Bot, a WhatsApp AI assistant by AA Mods.
 
@@ -90,12 +123,27 @@ async function chat(jid, userMsg) {
   let reply = null;
   let lastError = null;
 
-  for (const model of MODELS) {
-    try {
-      reply = await tryModel(model, messages);
-      break;
-    } catch (e) {
-      lastError = e;
+  // 1. Try ch.at (fast, no key) — build a flat prompt from recent history
+  const flatPrompt = messages
+    .filter(m => m.role !== 'system')
+    .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+    .join('\n') + '\nAssistant:';
+  reply = await callChAt(flatPrompt).catch(() => null);
+
+  // 2. Try pollinations GET (simple, usually fast)
+  if (!reply) {
+    reply = await callPollinationsGet(userMsg).catch(() => null);
+  }
+
+  // 3. Try pollinations OpenAI-compatible POST (most capable)
+  if (!reply) {
+    for (const model of MODELS) {
+      try {
+        reply = await tryModel(model, messages);
+        break;
+      } catch (e) {
+        lastError = e;
+      }
     }
   }
 
