@@ -1,11 +1,33 @@
 import { MongoClient } from 'mongodb';
 
 // ── Connection ────────────────────────────────────────────────────────────────
-// Priority: MONGODB_URI (Oracle VPS / any direct URI) > MONGODB_PASSWORD (Atlas SRV)
+// Priority order:
+//   1. MONGODB_URI — Oracle ADB, self-hosted Mongo, or Atlas full URI
+//   2. MONGODB_PASSWORD — legacy Atlas shorthand (password only)
 const MONGO_URI = process.env.MONGODB_URI ||
   (process.env.MONGODB_PASSWORD
     ? `mongodb+srv://a67515346_db_user:${encodeURIComponent(process.env.MONGODB_PASSWORD)}@aa-md-bot.i1j26yw.mongodb.net/?appName=AA-MD-Bot`
     : null);
+
+// Detect Oracle ADB MongoDB API from URI
+// Oracle ADB requires retryWrites:false and loadBalanced:true
+const IS_ORACLE_ADB = Boolean(
+  MONGO_URI && (
+    /oraclecloud\.com/i.test(MONGO_URI) ||
+    /authMechanism=PLAIN/i.test(MONGO_URI)
+  )
+);
+
+// Extract DB name from URI path (supports all URI formats)
+function extractDbName(uri) {
+  try {
+    const afterHost = uri.replace(/^mongodb(\+srv)?:\/\/[^@]+@[^/]+/, '');
+    const name = afterHost.split('?')[0].replace(/^\//, '').trim();
+    return name || 'aa_md_bot';
+  } catch {
+    return 'aa_md_bot';
+  }
+}
 
 let _client = null;
 let _db     = null;
@@ -14,10 +36,16 @@ export async function getDb() {
   if (_db) return _db;
   if (!MONGO_URI) return null;
   if (!_client) {
-    _client = new MongoClient(MONGO_URI, { serverSelectionTimeoutMS: 10000 });
+    const opts = {
+      serverSelectionTimeoutMS: 15000,
+      // Oracle ADB MongoDB API — required options
+      ...(IS_ORACLE_ADB ? { retryWrites: false, loadBalanced: true } : {}),
+    };
+    _client = new MongoClient(MONGO_URI, opts);
     await _client.connect();
   }
-  _db = _client.db('aa_md_bot');
+  const dbName = extractDbName(MONGO_URI);
+  _db = _client.db(dbName);
   return _db;
 }
 
