@@ -108,15 +108,19 @@ async function ensurePlayableMp4(inputBuf) {
       acodec = astdout.trim().toLowerCase();
     } catch {}
 
-    // Already H.264 video + AAC audio (or no audio track) in a real mp4 — safe to send as-is
+    // Choose transcode strategy based on detected codecs
+    let cmd;
     if (vcodec === 'h264' && (acodec === 'aac' || acodec === '')) {
-      return inputBuf;
+      // Already H.264/AAC — stream-copy + faststart only (fast, no quality loss).
+      // WhatsApp requires the moov atom at the BEGINNING of the file (faststart).
+      // Returning the raw buffer as-is skips this fix and causes silent playback failure.
+      cmd = `ffmpeg -i "${inp}" -c copy -movflags +faststart -y "${out}" -loglevel error`;
+    } else {
+      // Transcode VP9/AV1/WebM/other → H.264 + AAC + faststart
+      cmd = `ffmpeg -i "${inp}" -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -ar 44100 -movflags +faststart -y "${out}" -loglevel error`;
     }
 
-    await execAsync(
-      `ffmpeg -i "${inp}" -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -ar 44100 -movflags +faststart -y "${out}" -loglevel error`,
-      { timeout: 180000 }
-    );
+    await execAsync(cmd, { timeout: 180000 });
     if (await fs.pathExists(out)) {
       const outBuf = await fs.readFile(out);
       if (outBuf.length > 0) return outBuf;
