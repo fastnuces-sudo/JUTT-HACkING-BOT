@@ -1,0 +1,51 @@
+-----> Building on the Heroku-24 stack
+-----> Determining which buildpack to use for this app
+-----> Node.js app detected
+       
+-----> Creating runtime environment
+       
+       NPM_CONFIG_LOGLEVEL=error
+       NODE_VERBOSE=false
+       NODE_ENV=production
+       NODE_MODULES_CACHE=true
+-----> Installing binaries
+       engines.node (package.json):   unspecified
+       engines.npm (package.json):    unspecified (use default)
+       
+       No Node.js version specified, resolving current LTS version...
+       Downloading and installing node 24.18.0...
+       Validating checksum
+       Using default npm version: 11.16.0
+       
+-----> Installing dependencies
+       Installing node modules (package.json)
+       
+       > workspace@0.0.0 preinstall
+       > sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+       
+       Use pnpm instead
+       npm error code 1
+       npm error path /tmp/build_6864f65d
+       npm error command failed
+       npm error command sh -c sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+       npm notice
+       npm notice New major version of npm available! 11.16.0 -> 12.0.1
+       npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.0.1
+       npm notice To update run: npm install -g npm@12.0.1
+       npm notice
+       npm error A complete log of this run can be found in: /tmp/npmcache.Y4Y54/_logs/2026-07-24T14_37_38_138Z-debug-0.log
+-----> Build failed
+       
+       We're sorry this build is failing! You can troubleshoot common issues here:
+       https://devcenter.heroku.com/articles/troubleshooting-node-deploys
+       
+       Some possible problems:
+       
+       - Node version not specified in package.json
+         https://devcenter.heroku.com/articles/nodejs-support#specifying-a-node-js-version
+       
+       Love,
+       Heroku
+       
+ !     Push rejected, failed to compile Node.js app.
+ !     Push failed

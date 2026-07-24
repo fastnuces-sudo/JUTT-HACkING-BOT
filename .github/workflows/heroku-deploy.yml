@@ -1,0 +1,28 @@
+name: Deploy to Heroku
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'AA-MD-Bot/**'          # Only deploy when bot code changes
+
+  workflow_dispatch:            # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # Full history needed for subtree push
+
+      - name: Deploy AA-MD-Bot subfolder to Heroku
+        uses: akhileshns/heroku-deploy@v3.13.15
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          appdir: "AA-MD-Bot"   # ← deploys only this subfolder as root
+          usedocker: true       # ← uses Dockerfile (ffmpeg + yt-dlp + Deno)
+          docker_heroku_process_type: web

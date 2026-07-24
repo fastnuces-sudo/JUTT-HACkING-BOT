@@ -1,207 +1,212 @@
 # 🟣 AA MD Bot — Heroku Deploy Guide
 ## Docker Container Stack + Oracle ADB / MongoDB Atlas
 
-> Heroku supports two deploy methods. **Method A (Docker)** is recommended for this bot  
-> because it needs ffmpeg, yt-dlp, and Deno — which only work reliably inside a container.
+> ⚠️ **Monorepo issue — read first**  
+> This bot lives inside an `AA-MD-Bot/` subfolder. Pushing the repo root to Heroku  
+> picks up the wrong `package.json` and **fails with "Use pnpm instead"**.  
+> All methods below correctly deploy **only the subfolder**.
 
 ---
 
-## Database Options
+## Database — Which to use?
 
-| Database | Storage | Cost | Setup |
+| Database | Storage | Cost | Notes |
 |---|---|---|---|
-| **Oracle ADB 23ai** ✅ Recommended | **20 GB** | **Free forever** | [`ORACLE-ADB-GUIDE.md`](ORACLE-ADB-GUIDE.md) |
-| MongoDB Atlas | 512 MB | Free (M0) | [atlas.mongodb.com](https://cloud.mongodb.com) |
+| **Oracle ADB 23ai** ✅ Best | **20 GB** | **Free forever** | Guide: [`ORACLE-ADB-GUIDE.md`](ORACLE-ADB-GUIDE.md) |
+| MongoDB Atlas | 512 MB | Free (M0) | [cloud.mongodb.com](https://cloud.mongodb.com) → free cluster → Connect → get URI |
 
-Both give you a `MONGODB_URI` — paste it into Heroku config vars. No code change needed.
-
-> **Oracle ADB setup guide → [`deploy/ORACLE-ADB-GUIDE.md`](ORACLE-ADB-GUIDE.md)**  
-> Takes ~5 minutes. You get 20 GB free vs 512 MB on Atlas.
+Both give you a `MONGODB_URI` string — paste it into Heroku Config Vars. No code change needed.
 
 ---
 
-## Method A — Docker Container Stack (Recommended)
+## Method A — GitHub Actions ✅ Recommended (No CLI needed)
 
-This uses the `Dockerfile` in the repo root — ffmpeg, yt-dlp, and Deno are all installed inside the container automatically.
+Fully automatic. Every push to `main` triggers a deploy. Uses Docker so ffmpeg + yt-dlp + Deno all work.
 
-### Step 1 — Install Heroku CLI
+### Step 1 — Create Heroku App
+
+Go to **https://dashboard.heroku.com** → **New** → **Create new app**  
+Give it a name (e.g. `aa-md-bot-prod`) → Create app.
+
+> Do **not** connect GitHub in the Deploy tab — Actions handles this.
+
+### Step 2 — Set Config Vars on Heroku
+
+Go to your app → **Settings** → **Config Vars** → **Reveal Config Vars**
+
+Add these:
+
+| Key | Value |
+|---|---|
+| `MONGODB_URI` | Your Oracle ADB or Atlas connection string |
+| `SESSION_SECRET` | Any random 64-char string (generate: `openssl rand -hex 32`) |
+| `TELEGRAM_BOT_TOKEN` | *(optional)* |
+| `TELEGRAM_FEATURES_BOT_TOKEN` | *(optional)* |
+| `OPENWEATHER_API_KEY` | *(optional)* |
+| `OMDB_API_KEY` | *(optional)* |
+| `RAPIDAPI_KEY` | *(optional)* |
+| `OCR_SPACE_KEY` | *(optional)* |
+| `HF_TOKEN` | *(optional)* |
+| `TENOR_API_KEY` | *(optional)* |
+
+### Step 3 — Get Heroku API Key
+
+Heroku Dashboard → click your **profile icon** (top right) → **Account settings**  
+Scroll to **API Key** → **Reveal** → copy it.
+
+### Step 4 — Add Secrets to GitHub
+
+Go to your GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+
+Add all three:
+
+| Secret Name | Value |
+|---|---|
+| `HEROKU_API_KEY` | The API key from Step 3 |
+| `HEROKU_APP_NAME` | Your app name (e.g. `aa-md-bot-prod`) |
+| `HEROKU_EMAIL` | Your Heroku account email |
+
+### Step 5 — Push to GitHub
+
+The workflow file `.github/workflows/heroku-deploy.yml` is already in the repo.  
+Just push your code — GitHub Actions will build and deploy automatically:
 
 ```bash
-# macOS
-brew tap heroku/brew && brew install heroku
-
-# Ubuntu / Debian
-curl https://cli-assets.heroku.com/install.sh | sh
-
-# Windows — download from:
-# https://devcenter.heroku.com/articles/heroku-cli
+git add .
+git commit -m "Deploy to Heroku"
+git push origin main
 ```
 
-Verify: `heroku --version`
+Then go to GitHub → **Actions** tab to watch the build progress.
 
-### Step 2 — Login
+### Step 6 — Check Logs on Heroku
 
-```bash
-heroku login
-# Opens browser — log in there
+Heroku Dashboard → your app → **More** → **View logs**
+
+Good signs:
+```
+✨ AA MD Bot is ready!
+[DB] ✅ MongoDB loaded — groups:0  settings:0  sessionSettings:0 ...
 ```
 
-### Step 3 — Fork & Clone the Repo
+### Step 7 — Pair WhatsApp
+
+Open: `https://your-app-name.herokuapp.com`  
+Enter your number → Get Pairing Code → pair on WhatsApp.
+
+---
+
+## Method B — Heroku CLI + git subtree push (local machine)
+
+Use this if you prefer the command line without GitHub Actions.  
+Requires [Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli) installed locally.
 
 ```bash
+# Clone the full repo locally
 git clone https://github.com/YOUR_USERNAME/AA-MD-Bot.git
 cd AA-MD-Bot
-```
 
-### Step 4 — Create Heroku App
+# Login to Heroku
+heroku login
 
-```bash
-heroku create aa-md-bot
-# Or with a custom name:
+# Create app (skip if already created)
 heroku create your-app-name
+
+# Set container stack (Docker mode — required for ffmpeg/yt-dlp/Deno)
+heroku stack:set container -a your-app-name
+
+# Add Heroku remote
+heroku git:remote -a your-app-name
+
+# Set config vars
+heroku config:set MONGODB_URI="mongodb://ADMIN:..." -a your-app-name
+heroku config:set SESSION_SECRET="$(openssl rand -hex 32)" -a your-app-name
+
+# Push ONLY the AA-MD-Bot/ subfolder as the root — fixes the monorepo issue
+git subtree push --prefix AA-MD-Bot heroku main
 ```
 
-### Step 5 — Switch to Container Stack
-
+For future updates:
 ```bash
-heroku stack:set container -a aa-md-bot
+git pull origin main
+git subtree push --prefix AA-MD-Bot heroku main
 ```
 
-> This tells Heroku to use the `heroku.yml` + `Dockerfile` instead of the Node.js buildpack.
-
-### Step 6 — Set Config Vars (Environment Variables)
-
-```bash
-# Required — Oracle ADB (recommended)
-heroku config:set MONGODB_URI="mongodb://ADMIN:YourPassword@adb-xxxxx.adb.REGION.oraclecloudapps.com:27017/ADMIN?authMechanism=PLAIN&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&loadBalanced=true" -a aa-md-bot
-
-# Required — security
-heroku config:set SESSION_SECRET="$(openssl rand -hex 32)" -a aa-md-bot
-
-# Optional Telegram bots
-heroku config:set TELEGRAM_BOT_TOKEN="your_token" -a aa-md-bot
-heroku config:set TELEGRAM_FEATURES_BOT_TOKEN="your_token" -a aa-md-bot
-
-# Optional API keys
-heroku config:set OPENWEATHER_API_KEY="key" -a aa-md-bot
-heroku config:set OMDB_API_KEY="key" -a aa-md-bot
-heroku config:set RAPIDAPI_KEY="key" -a aa-md-bot
-heroku config:set OCR_SPACE_KEY="key" -a aa-md-bot
-heroku config:set HF_TOKEN="token" -a aa-md-bot
-heroku config:set TENOR_API_KEY="key" -a aa-md-bot
-```
-
-Or set them in the Heroku Dashboard:  
-**https://dashboard.heroku.com/apps/aa-md-bot/settings** → **Config Vars** section.
-
-### Step 7 — Deploy
-
-```bash
-git push heroku main
-```
-
-Heroku builds the Docker image automatically. Takes 3–5 minutes.  
-Watch the build log — at the end you'll see: `✨ AA MD Bot is ready!`
-
-### Step 8 — Pair WhatsApp
-
-```bash
-# Get your app URL
-heroku open -a aa-md-bot
-# Or manually: https://aa-md-bot.herokuapp.com
-```
-
-On the dashboard:
-1. Enter your WhatsApp number (with country code e.g. `923316041183`)
-2. Click **Get Pairing Code**
-3. On WhatsApp → **Settings → Linked Devices → Link a Device → Link with phone number**
-4. Enter the 8-digit code
+> If subtree push fails with "Updates were rejected":
+> ```bash
+> git push heroku $(git subtree split --prefix AA-MD-Bot main):main --force
+> ```
 
 ---
 
-## Method B — Node.js Buildpack (Simpler, Limited)
+## Method C — Separate GitHub Repo (cleanest long-term)
 
-> ⚠️ yt-dlp and Deno won't work with the basic buildpack.  
-> Download commands (`.play`, `.video`, `.ig`, etc.) will be limited.  
-> Use Method A (Docker) for full functionality.
-
-### Step 1–4 same as above, then:
+If you want direct GitHub → Heroku deploys without Actions:
 
 ```bash
-# Do NOT run heroku stack:set container — leave it on heroku-22
+# Clone the repo locally
+git clone https://github.com/YOUR_USERNAME/AA-MD-Bot.git
+cd AA-MD-Bot
 
-# Add buildpacks for ffmpeg
-heroku buildpacks:add https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git -a aa-md-bot
-heroku buildpacks:add heroku/nodejs -a aa-md-bot
+# Extract just the bot folder as a standalone repo
+git subtree split --prefix AA-MD-Bot -b heroku-deploy
 
-# Set config vars (same as Step 6 above)
-heroku config:set MONGODB_URI="..." -a aa-md-bot
-heroku config:set SESSION_SECRET="$(openssl rand -hex 32)" -a aa-md-bot
-
-# Deploy
-git push heroku main
+# Create a new empty GitHub repo: github.com/new → "AA-MD-Bot-Deploy"
+# Then push the bot-only branch there:
+git checkout heroku-deploy
+git remote add deploy https://github.com/YOUR_USERNAME/AA-MD-Bot-Deploy.git
+git push deploy heroku-deploy:main
 ```
 
-> The `Procfile` in the repo handles the start command automatically:  
-> `web: node --experimental-vm-modules index.js`
+Now in Heroku Dashboard → Deploy → connect `AA-MD-Bot-Deploy` repo → enable auto-deploy.
 
 ---
 
-## Useful Commands
+## Useful Commands (after deploy)
 
 ```bash
 # View live logs
-heroku logs --tail -a aa-md-bot
+heroku logs --tail -a your-app-name
 
-# Restart the bot
-heroku restart -a aa-md-bot
+# Restart
+heroku restart -a your-app-name
 
-# Open dashboard
-heroku open -a aa-md-bot
+# SSH into container (debug)
+heroku run bash -a your-app-name
+
+# Verify yt-dlp + Deno inside container
+heroku run "yt-dlp --version && deno --version" -a your-app-name
 
 # Check dyno status
-heroku ps -a aa-md-bot
-
-# SSH into the container (for debugging)
-heroku run bash -a aa-md-bot
-
-# Update after code change
-git pull
-git push heroku main
+heroku ps -a your-app-name
 ```
 
 ---
 
-## Heroku Pricing (2025)
+## Heroku Dyno Pricing
 
-| Dyno Type | RAM | Cost | Notes |
+| Dyno | RAM | Cost | Uptime |
 |---|---|---|---|
-| **Eco** | 512 MB | $5/month | Sleeps after 30 min idle — not ideal |
-| **Basic** | 512 MB | $7/month | Always on — recommended |
-| **Standard-1X** | 512 MB | $25/month | More reliable |
-| **Standard-2X** | 1 GB | $50/month | Best for heavy download usage |
+| Eco | 512 MB | $5/mo | **Sleeps after 30 min idle** ← WhatsApp drops |
+| **Basic** | 512 MB | **$7/mo** | **Always on** ✅ Recommended |
+| Standard-1X | 512 MB | $25/mo | Always on + metrics |
+| Standard-2X | 1 GB | $50/mo | Best for heavy download load |
 
-> **Recommended: Basic ($7/month)** — always on, 512 MB is enough for normal bot usage.  
-> If bot crashes under heavy download load (ffmpeg), upgrade to Standard-2X.
+> Use **Basic ($7/month)** — Eco sleeps and kills the WhatsApp connection.
 
 ---
 
-## Important Notes for Heroku
+## Important Notes
 
 ### Ephemeral Filesystem
-Heroku dynos have a **temporary filesystem** — files written to disk are lost on restart/redeploy.  
-This bot is already designed for this:
-- ✅ WhatsApp session → stored in MongoDB (`mongoAuthState.js`)
-- ✅ Settings, groups, notes → stored in MongoDB
-- ✅ `temp/` folder → ffmpeg temp files, auto-cleaned, fine to lose
+Heroku dynos have a **temporary disk** — everything written to disk is lost on restart.  
+This bot handles it correctly:
+- ✅ WhatsApp session → MongoDB (`mongoAuthState.js`)  
+- ✅ Settings / groups / notes → MongoDB  
+- ✅ `temp/` → ffmpeg scratch files, safe to lose  
 
 ### PORT
-Heroku assigns a random `PORT` via env var.  
-This bot already reads `process.env.PORT` — no changes needed. ✅
-
-### Sleep (Eco Dyno)
-Eco dynos sleep after 30 minutes of inactivity. WhatsApp connection drops on sleep.  
-Use **Basic dyno** ($7/month) to keep the bot always online.
+Heroku assigns a random port via `$PORT`. The bot already reads `process.env.PORT`. ✅
 
 ---
 
@@ -209,30 +214,23 @@ Use **Basic dyno** ($7/month) to keep the bot always online.
 
 | Problem | Fix |
 |---|---|
-| Build fails | `heroku logs --tail` — check for npm install errors |
-| `[DB] ⚠️ MONGODB_PASSWORD not set` | Set `MONGODB_URI` in config vars |
-| Bot crashes immediately | Check `SESSION_SECRET` is set |
-| Dashboard shows "Application Error" | `heroku logs --tail` — usually env var missing |
-| WhatsApp disconnects daily | Normal on Eco dyno (sleeps) — upgrade to Basic |
-| yt-dlp not found (Method B) | Switch to Method A (Docker) |
-| `Cannot find module` error | `heroku run npm install -a aa-md-bot` then restart |
+| **"Use pnpm instead"** build error | You pushed the repo root instead of the subfolder — use Method A or B |
+| **"Node.js app detected"** (not Docker) | `heroku stack:set container` wasn't run, OR `heroku.yml` not at root — use Method A |
+| `[DB] ⚠️ MONGODB_PASSWORD not set` | `MONGODB_URI` config var is empty on Heroku |
+| Dashboard shows "Application Error" | `heroku logs --tail` — usually a missing env var |
+| WhatsApp disconnects every day | Eco dyno sleeping — upgrade to Basic |
+| GitHub Actions fails: `No such app` | Check `HEROKU_APP_NAME` secret matches exactly |
+| GitHub Actions fails: `Unauthorized` | Check `HEROKU_API_KEY` secret is correct |
+| `git subtree push` rejected | Use the force-push variant shown in Method B |
 
 ---
 
 ## Quick Checklist ✅
 
-**Before deploying:**
-- [ ] Oracle ADB created and `MONGODB_URI` ready (or MongoDB Atlas URI)
-- [ ] Repo pushed to your GitHub account
-- [ ] Heroku CLI installed and logged in
-
-**Deploy:**
-- [ ] `heroku create your-app-name`
-- [ ] `heroku stack:set container` (Method A only)
-- [ ] All config vars set (`MONGODB_URI`, `SESSION_SECRET`)
-- [ ] `git push heroku main`
-
-**After deploy:**
-- [ ] `heroku logs --tail` — verify `✨ AA MD Bot is ready!`
+- [ ] Oracle ADB created → `MONGODB_URI` string ready
+- [ ] Heroku app created (dashboard.heroku.com)
+- [ ] Heroku Config Vars set (`MONGODB_URI` + `SESSION_SECRET`)
+- [ ] **Method A**: GitHub secrets set (`HEROKU_API_KEY`, `HEROKU_APP_NAME`, `HEROKU_EMAIL`) → push to trigger
+- [ ] Heroku logs show `✨ AA MD Bot is ready!`
 - [ ] Dashboard open → WhatsApp paired
-- [ ] Dyno set to **Basic** (not Eco) for 24/7 uptime
+- [ ] Dyno type set to **Basic** (not Eco)

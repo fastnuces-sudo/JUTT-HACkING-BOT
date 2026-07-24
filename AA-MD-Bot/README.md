@@ -58,20 +58,18 @@ bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/AA-MD-Bot/main
 
 ### Option 2 — Heroku
 
-**[`deploy/HEROKU.md`](deploy/HEROKU.md)** — full Heroku guide (Docker container stack).
+**[`deploy/HEROKU.md`](deploy/HEROKU.md)** — full Heroku guide (3 methods).
 
-```bash
-# Quick deploy via Heroku CLI
-heroku create your-app-name
-heroku stack:set container -a your-app-name
-heroku config:set MONGODB_URI="mongodb://ADMIN:..." -a your-app-name
-heroku config:set SESSION_SECRET="$(openssl rand -hex 32)" -a your-app-name
-git push heroku main
-```
+**Recommended: GitHub Actions** (no CLI needed, auto-deploys on every push):
 
-Or via **Heroku Dashboard** → New App → connect GitHub → set Config Vars → deploy.
+1. Create Heroku app at [dashboard.heroku.com](https://dashboard.heroku.com) → set Config Vars (`MONGODB_URI`, `SESSION_SECRET`)
+2. Get Heroku API key → add to GitHub repo as secrets (`HEROKU_API_KEY`, `HEROKU_APP_NAME`, `HEROKU_EMAIL`)
+3. Push to `main` → GitHub Actions builds and deploys automatically
 
-> Recommended dyno: **Basic ($7/month)** — always on. Eco sleeps and drops the WhatsApp connection.
+> ⚠️ Do **not** connect GitHub directly in Heroku's Deploy tab — it picks up the wrong `package.json`.  
+> The Actions workflow (`deploy/HEROKU.md → Method A`) deploys only the bot subfolder correctly.
+
+> Dyno: **Basic ($7/month)** — always on. Eco sleeps and drops the WhatsApp connection.
 
 ---
 
