@@ -1,7 +1,30 @@
-node_modules
-temp
-database/*.json
-session
-cookies.txt
+### Dependencies
+node_modules/
+
+### Runtime data (never commit)
 .env
+session/
+temp/
+logs/
 *.log
+
+### Old file-based database (replaced by MongoDB)
+database/*.json
+
+### yt-dlp cookies (user-specific)
+cookies.txt
+
+### SSH keys
+*.key
+*.pem
+
+### macOS
+.DS_Store
+
+### Editor
+.vscode/
+.idea/
+*.swp
+
+### PM2 runtime state
+.pm2/

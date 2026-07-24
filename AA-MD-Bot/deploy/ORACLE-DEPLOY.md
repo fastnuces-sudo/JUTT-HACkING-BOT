@@ -271,7 +271,7 @@ pm2 logs aa-md-bot --lines 50
 Good signs:
 ```
 ✨ AA MD Bot is ready!
-[DB] ✅ MongoDB loaded — groups:0  settings:0  reminders:0 ...
+[DB] ✅ MongoDB loaded — groups:0  settings:0  sessionSettings:0 ...
 📱 Connected to WhatsApp as +92XXXXXXXXXX
 ```
 
@@ -338,4 +338,4 @@ systemctl is-enabled pm2-ubuntu    # should show 'enabled'
 
 ---
 
-> 💡 **All 3 bots share the same Oracle ADB database.** Group settings, reminders, notes, and birthdays set on one bot are visible to all 3. Each bot still has its own WhatsApp session (independent numbers).
+> 💡 **All 3 bots share the same Oracle ADB database.** Group settings, notes, and birthdays set on one bot are visible to all 3. Each bot still has its own WhatsApp session (independent numbers).

@@ -181,8 +181,8 @@ Expected output: `✅ Oracle ADB connected: {"ok":1}`
    - `settings`
    - `sessionSettings`
    - `birthdays`
-   - `reminders`
    - `notes`
+   - `sessions`
 3. Click any collection to browse and edit documents
 
 ---
