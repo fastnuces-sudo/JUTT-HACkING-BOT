@@ -1,10 +1,11 @@
 import { MongoClient } from 'mongodb';
 
 // ── Connection ────────────────────────────────────────────────────────────────
-const MONGO_PASS = process.env.MONGODB_PASSWORD;
-const MONGO_URI  = MONGO_PASS
-  ? `mongodb+srv://a67515346_db_user:${encodeURIComponent(MONGO_PASS)}@aa-md-bot.i1j26yw.mongodb.net/?appName=AA-MD-Bot`
-  : null;
+// Priority: MONGODB_URI (Oracle VPS / any direct URI) > MONGODB_PASSWORD (Atlas SRV)
+const MONGO_URI = process.env.MONGODB_URI ||
+  (process.env.MONGODB_PASSWORD
+    ? `mongodb+srv://a67515346_db_user:${encodeURIComponent(process.env.MONGODB_PASSWORD)}@aa-md-bot.i1j26yw.mongodb.net/?appName=AA-MD-Bot`
+    : null);
 
 let _client = null;
 let _db     = null;
