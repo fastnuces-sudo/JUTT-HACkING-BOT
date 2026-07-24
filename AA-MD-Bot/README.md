@@ -56,9 +56,28 @@ bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/AA-MD-Bot/main
 
 ---
 
-### Option 2 — Docker / Railway / VPS
+### Option 2 — Heroku
 
-**[`deploy/DOCKER.md`](deploy/DOCKER.md)** — full guide for Docker, Railway, and any VPS.
+**[`deploy/HEROKU.md`](deploy/HEROKU.md)** — full Heroku guide (Docker container stack).
+
+```bash
+# Quick deploy via Heroku CLI
+heroku create your-app-name
+heroku stack:set container -a your-app-name
+heroku config:set MONGODB_URI="mongodb://ADMIN:..." -a your-app-name
+heroku config:set SESSION_SECRET="$(openssl rand -hex 32)" -a your-app-name
+git push heroku main
+```
+
+Or via **Heroku Dashboard** → New App → connect GitHub → set Config Vars → deploy.
+
+> Recommended dyno: **Basic ($7/month)** — always on. Eco sleeps and drops the WhatsApp connection.
+
+---
+
+### Option 3 — Docker / Railway / VPS
+
+**[`deploy/DOCKER.md`](deploy/DOCKER.md)** — full guide for Docker, Docker Compose, Railway, and any VPS.
 
 ```bash
 # Docker (quick start)
@@ -73,7 +92,7 @@ Railway: fork the repo → connect to Railway → it auto-detects the `Dockerfil
 
 ---
 
-### Option 3 — Replit (Development / Testing)
+### Option 4 — Replit (Development / Testing)
 
 Fork/clone into Replit, set secrets in the Secrets panel (same keys as `.env.example`), then run the **AA MD Bot** workflow. No installation needed.
 
