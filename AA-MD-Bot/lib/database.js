@@ -18,6 +18,15 @@ const IS_ORACLE_ADB = Boolean(
   )
 );
 
+// Self-hosted MongoDB (mongodb:// direct IP — not Atlas SRV)
+// Needs directConnection:true so driver doesn't do topology discovery
+const IS_SELF_HOSTED = Boolean(
+  MONGO_URI &&
+  MONGO_URI.startsWith('mongodb://') &&
+  !MONGO_URI.startsWith('mongodb+srv://') &&
+  !IS_ORACLE_ADB
+);
+
 // Extract DB name from URI path (supports all URI formats)
 function extractDbName(uri) {
   try {
@@ -37,9 +46,13 @@ export async function getDb() {
   if (!MONGO_URI) return null;
   if (!_client) {
     const opts = {
-      serverSelectionTimeoutMS: 15000,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 30000,
       // Oracle ADB MongoDB API — required options
       ...(IS_ORACLE_ADB ? { retryWrites: false, loadBalanced: true } : {}),
+      // Self-hosted direct IP — bypass topology discovery
+      ...(IS_SELF_HOSTED ? { directConnection: true } : {}),
     };
     _client = new MongoClient(MONGO_URI, opts);
     await _client.connect();
