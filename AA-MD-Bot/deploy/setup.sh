@@ -16,7 +16,7 @@
 set -euo pipefail
 
 SERVER_NUM="${1:-1}"
-REPO_URL="https://github.com/YOUR_USERNAME/AA-MD-Bot.git"   # ← update this
+REPO_URL="https://github.com/ahsanaliwadani/AA-MD-Bot.git"   # ← update this
 BOT_DIR="/home/ubuntu/AA-MD-Bot"
 NODE_VERSION="20"
 
