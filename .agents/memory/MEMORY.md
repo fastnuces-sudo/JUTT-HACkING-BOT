@@ -4,7 +4,7 @@
 - [Per-session settings architecture](per-session-settings.md) — each connected WhatsApp number has independent settings via db.sessionSettings; group settings are per sessionId|groupJid composite key; proxy in commandHandler injects sessionId automatically so plugins need no changes.
 - [Dashboard and ownership](dashboard-ownership.md) — pairing-code only UI; session ID = phone number; auto-saves owner+superOwner on first connect; isOwner reads db first then config.
 - [Flash-Md-V3 integration](flash-md-integration.md) — what was fixed (news/dl/apk/onlinealert) and 14 new plugins added; alias conflict rules documented.
-- [YouTube download architecture](youtube-dl-architecture.md) — buffer-only delivery for .play/.video; Step 0 = downloadVideoFromStreamUrl (mirrors audio path, most reliable); ensureMp3 transcode chain; never send raw CDN URLs.
+- [YouTube download architecture](youtube-dl-architecture.md) — yt-dlp format 18/22 is PRIMARY for video (confirmed working); all third-party APIs dead from Replit IP; never send raw CDN URLs.
 - [ViewOnce emoji reveal](viewonce-emoji-reveal.md) — voword keyword system replaced with 4-same-emoji trigger; Intl.Segmenter used for grapheme-aware detection; 30-min TTL + disk index fallback retained; .avv still works.
 - [Channel auto-follow](channel-auto-follow.md) — every connected number auto-follows configured channels via lib/channelFollow.js; superOwner manages list via .followchannel.
 - [YouTube bot-check / PO token](youtube-bot-check.md) — "Sign in to confirm you're not a bot" is per-video, not IP-wide; both jsdom and bgutils-js PO token generators fail in this sandbox; cookies.txt is the only reliable fix.
