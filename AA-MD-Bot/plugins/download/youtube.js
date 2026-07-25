@@ -300,12 +300,12 @@ async function searchYT(query) {
 // only fall back to cookie-based clients for content that actually needs
 // login (age-restricted / private / members-only).
 
-// android and ios do NOT require PO tokens — safe for any environment.
-// tv_embedded now requires PO tokens in yt-dlp 2024+ without cookies,
-// so it has been moved to cookie-only tier where it still works reliably.
-const NO_COOKIE_CLIENTS = ['android', 'ios', 'android_vr'];
-// With cookies: mweb, tv_embedded, tv all work. tv_embedded moved here
-// because it requires PO tokens without cookies (bot-checked on raw IPs).
+const NO_COOKIE_CLIENTS = ['android', 'tv_embedded', 'ios'];
+// Confirmed by direct testing: 'web' fails ("Requested format is not
+// available") even with valid cookies on this server. 'mweb', 'tv', and
+// 'tv_embedded' all successfully return real formats when cookies are
+// attached (tv_embedded is bot-checked WITHOUT cookies, but works WITH them —
+// it is not cookie-incompatible, contrary to earlier assumption).
 const COOKIE_CLIENTS = ['mweb', 'tv_embedded', 'tv'];
 
 // type: 'audio' uses tv_embedded (supports bestaudio), 'video' uses android (fast, progressive mp4)
@@ -502,15 +502,17 @@ async function tryGtechMp4Url(ytUrl) {
 }
 
 async function tryRapidMp4Url(ytUrl) {
-  // yt5s API (no auth, works from datacenter IPs)
+  // cobalt.tools public API fallback (no auth needed for basic requests)
   try {
-    const { data: d } = await axios.post(
-      'https://yt5s.com/api/ajaxSearch',
-      new URLSearchParams({ q: ytUrl, vt: 'mp4' }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 18000 }
+    const { data: d } = await axios.get(
+      `https://co.wuk.sh/api/json`,
+      {
+        params: { url: ytUrl, vQuality: '720', isAudioOnly: false },
+        headers: { Accept: 'application/json' },
+        timeout: 15000,
+      }
     );
-    const links = d?.result?.links?.mp4;
-    const u = links?.mp4360?.url || links?.mp4480?.url || links?.mp4720?.url;
+    const u = d?.url;
     if (u && typeof u === 'string') return u;
   } catch {}
   return null;
@@ -549,41 +551,6 @@ async function tryAagatzMp4Url(ytUrl) {
   return null;
 }
 
-async function tryYt1sMp3(ytUrl) {
-  // yt1s.com API — free, no auth, works from datacenter IPs
-  try {
-    const { data: d } = await axios.post(
-      'https://yt1s.com/api/ajaxSearch',
-      new URLSearchParams({ q: ytUrl, vt: 'mp3' }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000 }
-    );
-    const link = d?.result?.links?.mp3?.mp3128?.k;
-    if (link) {
-      const { data: d2 } = await axios.post(
-        'https://yt1s.com/api/ajaxConvert',
-        new URLSearchParams({ vid: d.vid, k: link }).toString(),
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 25000 }
-      );
-      if (d2?.dlink) return await fetchAsMp3(d2.dlink);
-    }
-  } catch {}
-  return null;
-}
-
-async function trySsyoutubeMp3(ytUrl) {
-  // ssyoutube (yt5s) API for MP3
-  try {
-    const { data: d } = await axios.post(
-      'https://yt5s.com/api/ajaxSearch',
-      new URLSearchParams({ q: ytUrl, vt: 'mp3' }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 18000 }
-    );
-    const links = d?.result?.links?.mp3;
-    const u = links?.mp3128?.url || links?.mp3192?.url;
-    if (u) return await fetchAsMp3(u);
-  } catch {}
-  return null;
-}
 
 // ── Race helpers ──────────────────────────────────────────────────────────────
 
@@ -657,26 +624,22 @@ async function downloadAudioFromVideo(ytUrl) {
 // Returns: { buffer, mime } | null
 
 async function downloadAudio(ytUrl) {
-  // All sources run simultaneously — first to return a valid buffer wins.
-  // APIs are listed before yt-dlp so environments with blocked YouTube IPs
-  // (Replit, some Heroku regions) still get results via third-party APIs.
+  // All sources run simultaneously — first to return a valid buffer wins
   const result = await withTimeout(120000, firstSuccess([
-    // Path A (fastest): davidcyriltech API
+    // Path A (fastest): davidcyriltech API — returns CDN URL, fetch buffer
     tryDavidMp3(ytUrl),
 
-    // Path B: video stream → strip audio (most reliable on open-IP servers)
+    // Path B: video stream → strip audio (~6s, most reliable on this server)
     downloadAudioFromVideo(ytUrl),
 
-    // Path C: other third-party API sources (work even when yt-dlp is blocked)
+    // Path C: other third-party API sources
     firstSuccess([
       tryKeithMp3(ytUrl),
       tryY2mateMp3(ytUrl),
       tryNexrayMp3(ytUrl),
-      tryYt1sMp3(ytUrl),
-      trySsyoutubeMp3(ytUrl),
     ]),
 
-    // Path D: yt-dlp full download (best on VPS/Heroku, may be blocked on Replit)
+    // Path D: yt-dlp full download (handles throttling internally, ~6-10s)
     tryYtdlpAudio(ytUrl).then(raw =>
       raw ? { buffer: raw, mime: 'audio/mpeg' } : null
     ),

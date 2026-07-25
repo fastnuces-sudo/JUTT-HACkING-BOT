@@ -70,20 +70,6 @@ Set `MONGODB_URI` in `.env` — pick the one that fits:
 
 ---
 
-## Docker
-
-```bash
-git clone https://github.com/ahsanaliwadani/AA-MD-Bot.git
-cd AA-MD-Bot
-cp .env.example .env       # fill in MONGODB_URI
-docker build -t aa-md-bot .
-docker run -d --env-file .env -p 5000:5000 --name aa-md-bot aa-md-bot
-```
-
-Full Docker guide: **[`deploy/DOCKER.md`](deploy/DOCKER.md)**
-
----
-
 ## Features
 
 | Category | Highlights |
