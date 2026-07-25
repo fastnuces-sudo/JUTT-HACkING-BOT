@@ -998,7 +998,15 @@ export default {
             );
           }
 
-          await sock.sendMessage(jid, { video: vdata.buffer, mimetype: 'video/mp4', caption: vcap }, { quoted: msg });
+          // WhatsApp rejects videos over ~64 MB — compress to 360p if needed
+          const WA_VIDEO_LIMIT = 60 * 1024 * 1024; // 60 MB safety margin
+          let videoBuffer = vdata.buffer;
+          if (videoBuffer.length > WA_VIDEO_LIMIT) {
+            const compressed = await compressVideo(videoBuffer);
+            if (compressed?.length) videoBuffer = compressed;
+          }
+
+          await sock.sendMessage(jid, { video: videoBuffer, mimetype: 'video/mp4', caption: vcap }, { quoted: msg });
           await react('✅');
           break;
         }
