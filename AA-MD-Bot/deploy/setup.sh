@@ -1,88 +1,142 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════
-#  AA MD Bot — Oracle / Ubuntu VPS Deploy Script
-#  One command deploy:
+#  AA MD Bot — Oracle Cloud VM Deploy Script
+#  Bot + MongoDB SAME VM — Oracle 43 GB storage use karta hai
 #
+#  Fresh Ubuntu 22.04 VM par ek hi baar chalao:
 #  bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/AA-MD-Bot/deploy/setup.sh)
-#
-#  Ya directly:
-#  bash setup.sh
 # ══════════════════════════════════════════════════════════════
 
 set -euo pipefail
 
 REPO_URL="https://github.com/ahsanaliwadani/AA-MD-Bot.git"
-
-# ── Repo structure note ───────────────────────────────────────
-# GitHub repo root = Replit workspace root (.replit, replit.md, scripts/)
-# Actual bot code is inside the AA-MD-Bot/ subfolder of the repo
-REPO_CLONE_DIR="/home/ubuntu/AA-MD-Bot-repo"   # where git clone goes
-BOT_DIR="$REPO_CLONE_DIR/AA-MD-Bot"             # actual bot — has package.json
-
+REPO_CLONE_DIR="/home/ubuntu/AA-MD-Bot-repo"   # git clone yahan hoga
+BOT_DIR="$REPO_CLONE_DIR/AA-MD-Bot"             # actual bot — package.json yahan
 NODE_VERSION="20"
 
 G='\033[0;32m'; C='\033[0;36m'; Y='\033[1;33m'; B='\033[1m'; R='\033[0m'; RE='\033[0;31m'
 ok()   { echo -e "${G}✔  $*${R}"; }
 inf()  { echo -e "${C}▶  $*${R}"; }
 hdr()  { echo -e "\n${B}${C}── $* ──${R}"; }
-err()  { echo -e "${RE}❌  $*${R}"; }
-fail() { err "$*"; exit 1; }
+fail() { echo -e "${RE}❌  $*${R}"; exit 1; }
 
 clear
 echo -e "${B}${C}"
-echo "╔══════════════════════════════════════════╗"
-echo "║        AA MD Bot — Auto Deploy           ║"
-echo "╚══════════════════════════════════════════╝"
+echo "╔══════════════════════════════════════════════╗"
+echo "║      AA MD Bot — Oracle VM Auto Deploy       ║"
+echo "║   Bot + MongoDB — same VM, local storage     ║"
+echo "╚══════════════════════════════════════════════╝"
 echo -e "${R}"
 
-# ── Collect info FIRST — then install everything ──────────────
-echo -e "${B}Pehle kuch info chahiye:${R}"
-echo ""
+# ── Collect optional info FIRST ──────────────────────────────
+echo -e "${B}Optional settings (Enter = skip karo):${R}\n"
 
-# MongoDB URI
-if [ -f "$BOT_DIR/.env" ] && grep -q "^MONGODB_URI=.\+" "$BOT_DIR/.env" 2>/dev/null; then
-  MONGODB_URI=$(grep "^MONGODB_URI=" "$BOT_DIR/.env" | cut -d= -f2-)
-  echo -e "  ${G}✔  MongoDB URI already set in .env — reusing${R}"
-else
-  echo -e "  ${C}MongoDB connection string (apna URI paste karo):${R}"
-  echo -e "  ${Y}Atlas    : mongodb+srv://user:pass@cluster.mongodb.net/aa_md_bot${R}"
-  echo -e "  ${Y}Self-VM  : mongodb://aa_bot_user:pass@10.0.0.X:27017/aa_md_bot?authSource=aa_md_bot${R}"
-  read -r -p "  MONGODB_URI= " MONGODB_URI
-  while [ -z "$MONGODB_URI" ]; do
-    echo -e "  ${Y}⚠  URI khali nahi ho sakti${R}"
-    read -r -p "  MONGODB_URI= " MONGODB_URI
-  done
-fi
-
-echo ""
-
-# Optional: Telegram tokens
 TELEGRAM_TOKEN=""
 TELEGRAM_FEATURES_TOKEN=""
-read -r -p "  Telegram bot token? (optional — Enter skip karo): " TELEGRAM_TOKEN
+read -r -p "  Telegram bot token? (optional): " TELEGRAM_TOKEN
 if [ -n "$TELEGRAM_TOKEN" ]; then
-  read -r -p "  Telegram features bot token? (optional — Enter skip karo): " TELEGRAM_FEATURES_TOKEN
+  read -r -p "  Telegram features bot token? (optional): " TELEGRAM_FEATURES_TOKEN
 fi
 
 echo ""
-inf "Theek hai! Ab sab kuch apne aap install hoga..."
+inf "MongoDB aur bot sab apne aap install hoga — koi aur kaam nahi..."
 echo ""
 
-# ── 1. System update ──────────────────────────────────────────
+# ── 1. System update ─────────────────────────────────────────
 hdr "1. System Update"
 sudo apt-get update -qq
 sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -yq
 ok "System updated"
 
-# ── 2. System dependencies ────────────────────────────────────
-hdr "2. System Dependencies (ffmpeg, git, curl)"
+# ── 2. System tools ──────────────────────────────────────────
+hdr "2. System Tools"
 sudo apt-get install -yq \
-  ffmpeg curl wget git unzip \
-  build-essential ca-certificates gnupg
-ok "System tools installed"
+  ffmpeg curl wget git unzip gnupg \
+  build-essential ca-certificates openssl
+ok "System tools ready"
 
-# ── 3. Node.js 20 ─────────────────────────────────────────────
-hdr "3. Node.js ${NODE_VERSION}"
+# ── 3. MongoDB 7 — same VM, local storage ────────────────────
+hdr "3. MongoDB 7 (local — same VM)"
+if ! command -v mongod &>/dev/null; then
+  inf "MongoDB install ho raha hai..."
+  curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc \
+    | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+  echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] \
+https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" \
+    | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+  sudo apt-get update -qq
+  sudo apt-get install -y mongodb-org
+  ok "MongoDB installed"
+else
+  ok "MongoDB already installed"
+fi
+
+# MongoDB data Oracle VM ki local disk par store hoga (/var/lib/mongodb)
+# Enable + start
+sudo systemctl enable mongod
+sudo systemctl start mongod
+sleep 3
+
+# Wait for mongod to be ready
+for i in {1..10}; do
+  mongosh --quiet --eval "db.runCommand({ping:1})" &>/dev/null && break
+  sleep 2
+done
+ok "MongoDB running (data: /var/lib/mongodb)"
+
+# ── 4. MongoDB user + database ───────────────────────────────
+hdr "4. MongoDB — Bot User Setup"
+
+# Generate strong random password
+DB_PASS=$(openssl rand -hex 20)
+
+# Check if user already exists
+EXISTING=$(mongosh --quiet aa_md_bot --eval \
+  "db.getUser('aa_bot_user') ? 'yes' : 'no'" 2>/dev/null || echo "no")
+
+if [ "$EXISTING" = "yes" ]; then
+  inf "Bot user already exist karta hai — password reset ho raha hai..."
+  mongosh --quiet aa_md_bot --eval \
+    "db.updateUser('aa_bot_user', {pwd: '${DB_PASS}'})" &>/dev/null
+  ok "Bot user password updated"
+else
+  mongosh --quiet aa_md_bot --eval "
+    db.createUser({
+      user: 'aa_bot_user',
+      pwd:  '${DB_PASS}',
+      roles: [{ role: 'readWrite', db: 'aa_md_bot' }]
+    })" &>/dev/null
+  ok "Bot user 'aa_bot_user' created"
+fi
+
+# Enable MongoDB auth (so user/pass required to connect)
+sudo tee /etc/mongod.conf > /dev/null << 'MONGOCFG'
+# AA MD Bot — MongoDB config
+storage:
+  dbPath: /var/lib/mongodb
+
+systemLog:
+  destination: file
+  logAppend: true
+  path: /var/log/mongodb/mongod.log
+
+net:
+  port: 27017
+  bindIp: 127.0.0.1        # Only localhost — bot same VM par hai, public expose nahi
+
+processManagement:
+  timeZoneInfo: /usr/share/zoneinfo
+
+security:
+  authorization: enabled    # User/pass required
+MONGOCFG
+
+sudo systemctl restart mongod
+sleep 3
+ok "MongoDB auth enabled (localhost only)"
+
+# ── 5. Node.js 20 ────────────────────────────────────────────
+hdr "5. Node.js ${NODE_VERSION}"
 if node --version 2>/dev/null | grep -q "^v${NODE_VERSION}"; then
   ok "Node.js $(node --version) already installed"
 else
@@ -91,16 +145,16 @@ else
   ok "Node.js $(node --version) installed"
 fi
 
-# ── 4. yt-dlp ─────────────────────────────────────────────────
-hdr "4. yt-dlp"
+# ── 6. yt-dlp ────────────────────────────────────────────────
+hdr "6. yt-dlp"
 sudo curl -sSL \
   https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
   -o /usr/local/bin/yt-dlp
 sudo chmod a+rx /usr/local/bin/yt-dlp
 ok "yt-dlp ready"
 
-# ── 5. Deno ───────────────────────────────────────────────────
-hdr "5. Deno (YouTube downloads ke liye)"
+# ── 7. Deno ──────────────────────────────────────────────────
+hdr "7. Deno (YouTube downloads)"
 if ! command -v deno &>/dev/null; then
   export DENO_INSTALL="/home/ubuntu/.deno"
   curl -fsSL https://deno.land/install.sh | sh >/dev/null 2>&1
@@ -111,46 +165,46 @@ if ! command -v deno &>/dev/null; then
   export PATH="/home/ubuntu/.deno/bin:$PATH"
   ok "Deno installed"
 else
-  ok "Deno already installed"
+  ok "Deno already installed ($(deno --version | head -1))"
 fi
 
-# ── 6. PM2 ────────────────────────────────────────────────────
-hdr "6. PM2 (process manager)"
+# ── 8. PM2 ───────────────────────────────────────────────────
+hdr "8. PM2"
 sudo npm install -g pm2 --registry=https://registry.npmjs.org/ >/dev/null 2>&1
 ok "PM2 $(pm2 --version) installed"
 
-# ── 7. Bot code ───────────────────────────────────────────────
-hdr "7. Bot Code"
+# ── 9. Bot code ──────────────────────────────────────────────
+hdr "9. Bot Code"
 if [ -d "$REPO_CLONE_DIR/.git" ]; then
-  inf "Repo already hai — update ho raha hai..."
+  inf "Repo update ho raha hai..."
   cd "$REPO_CLONE_DIR" && git pull
   ok "Code updated"
 else
-  inf "Repo clone ho raha hai..."
   git clone "$REPO_URL" "$REPO_CLONE_DIR"
   ok "Code cloned"
 fi
 
-# ── Verify bot directory has package.json ─────────────────────
+# Verify package.json exists in expected subdirectory
 if [ ! -f "$BOT_DIR/package.json" ]; then
-  fail "package.json nahi mila '$BOT_DIR' mein!\n\n    Expected structure:\n      $REPO_CLONE_DIR/          ← repo root (.replit, replit.md)\n      $REPO_CLONE_DIR/AA-MD-Bot/ ← actual bot (package.json yahan hona chahiye)\n\n    Shayad repo ka structure change ho gaya ho. Check karo:\n      ls $REPO_CLONE_DIR/\n      ls $REPO_CLONE_DIR/AA-MD-Bot/"
+  fail "package.json nahi mila: $BOT_DIR\nExpected: $REPO_CLONE_DIR/AA-MD-Bot/package.json\nCheck: ls $REPO_CLONE_DIR/"
 fi
 
-# ── 8. npm install (public registry — NOT Replit proxy) ──────
-hdr "8. Node.js Packages"
+# ── 10. npm install (public registry) ────────────────────────
+hdr "10. Node.js Packages"
 cd "$BOT_DIR"
-# --registry flag ensures we never use Replit-internal package-firewall.replit.local URLs
 npm install --omit=dev --registry=https://registry.npmjs.org/ --silent
-ok "Packages installed (public registry)"
+ok "Packages installed"
 
-# ── 9. Directories ────────────────────────────────────────────
-mkdir -p "$BOT_DIR/logs" "$BOT_DIR/temp" "$BOT_DIR/session" \
-         "$BOT_DIR/downloads" "$BOT_DIR/database" "$BOT_DIR/cache"
-ok "Directories ready"
+# ── 11. Directories ──────────────────────────────────────────
+mkdir -p "$BOT_DIR"/{logs,temp,session,downloads,database,cache}
+ok "Bot directories ready"
 
-# ── 10. .env — auto write ─────────────────────────────────────
-hdr "10. .env Configuration"
+# ── 12. .env — auto write ────────────────────────────────────
+hdr "12. .env Configuration"
 SESSION_SECRET=$(openssl rand -hex 32)
+
+# MongoDB URI — localhost (same VM)
+MONGODB_URI="mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot"
 
 cat > "$BOT_DIR/.env" << EOF
 PORT=5000
@@ -167,47 +221,55 @@ TENOR_API_KEY=
 SESSION_SECRET=${SESSION_SECRET}
 EOF
 
-ok ".env written to $BOT_DIR/.env"
+ok ".env written"
 
-# ── 11. Firewall ──────────────────────────────────────────────
-hdr "11. Firewall (port 5000 + SSH)"
+# ── 13. Firewall ─────────────────────────────────────────────
+hdr "13. Firewall"
 sudo ufw default deny incoming  >/dev/null
 sudo ufw default allow outgoing >/dev/null
 sudo ufw allow OpenSSH          >/dev/null
 sudo ufw allow 5000/tcp         >/dev/null
+# Port 27017 NOT opened — MongoDB localhost only
 sudo ufw --force enable         >/dev/null
-ok "Firewall active"
+ok "Firewall: SSH + 5000 open, MongoDB internal only"
 
-# ── 12. PM2 start + auto-restart on reboot ────────────────────
-hdr "12. Bot Start"
+# ── 14. PM2 start ────────────────────────────────────────────
+hdr "14. Bot Start"
 cd "$BOT_DIR"
 pm2 delete aa-md-bot 2>/dev/null || true
 pm2 start ecosystem.config.cjs
 PM2_CMD=$(pm2 startup systemd -u ubuntu --hp /home/ubuntu 2>&1 | grep "sudo env" || true)
 [ -n "$PM2_CMD" ] && eval "$PM2_CMD" >/dev/null 2>&1 || true
 pm2 save >/dev/null 2>&1
-ok "Bot started + auto-restart on reboot enabled"
+ok "Bot started + auto-restart enabled"
 
-# ── Done ──────────────────────────────────────────────────────
+# ── Done ─────────────────────────────────────────────────────
 PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
 
 echo ""
 echo -e "${G}${B}"
-echo "╔══════════════════════════════════════════╗"
-echo "║           ✅  Deploy Complete!           ║"
-echo "╚══════════════════════════════════════════╝"
+echo "╔══════════════════════════════════════════════╗"
+echo "║             ✅  Deploy Complete!             ║"
+echo "╚══════════════════════════════════════════════╝"
 echo -e "${R}"
 echo -e "  Dashboard  : ${C}http://${PUBLIC_IP}:5000${R}"
 echo ""
-echo -e "  ${B}Bot directory:${R}"
-echo -e "    ${C}$BOT_DIR${R}"
+echo -e "  ${B}MongoDB (local):${R}"
+echo -e "    Data path : /var/lib/mongodb"
+echo -e "    URI       : ${C}${MONGODB_URI}${R}"
+echo ""
+echo -e "  ${B}Bot directory:${R} ${C}$BOT_DIR${R}"
 echo ""
 echo -e "  ${B}Useful commands:${R}"
 echo "    pm2 logs aa-md-bot       ← live logs"
 echo "    pm2 status               ← bot status"
 echo "    pm2 restart aa-md-bot    ← restart"
+echo "    sudo systemctl status mongod ← MongoDB status"
 echo ""
-echo -e "  ${B}WhatsApp connect karne ke liye:${R}"
-echo -e "  Browser mein kholo: ${C}http://${PUBLIC_IP}:5000${R}"
+echo -e "  ${B}WhatsApp connect:${R}"
+echo -e "  Browser: ${C}http://${PUBLIC_IP}:5000${R}"
 echo "  Pairing code enter karo → WhatsApp link karo"
+echo ""
+echo -e "  ${Y}⚠  MONGODB URI save kar lo (upar diya hua hai)${R}"
+echo -e "  ${Y}   Ye .env mein already write ho gaya hai.${R}"
 echo ""
