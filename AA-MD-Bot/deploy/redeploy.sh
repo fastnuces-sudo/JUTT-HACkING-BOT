@@ -69,9 +69,9 @@ hdr()   { echo -e "\n${B}${C}━━━  $*  ━━━${R}${DIM} ($(_ts))${R}"; _
 elapsed() { echo $(( $(date +%s) - REDEPLOY_START )); }
 
 # Initialise log
-sudo touch "$LOG_FILE" 2>/dev/null && sudo chmod 644 "$LOG_FILE" \
-  || LOG_FILE="/tmp/aa-md-bot-redeploy.log"
-echo "" >> "$LOG_FILE"
+sudo touch "$LOG_FILE" 2>/dev/null && sudo chmod 666 "$LOG_FILE" 2>/dev/null \
+  || LOG_FILE="${HOME}/aa-md-bot-redeploy-$(date +%Y%m%d).log"
+echo "" >> "$LOG_FILE" 2>/dev/null || LOG_FILE="/tmp/aa-md-bot-redeploy.log" && echo "" >> "$LOG_FILE"
 echo "=== Redeploy $(date) ===" >> "$LOG_FILE"
 
 # ── Summary tracking ──────────────────────────────────────────────────────────

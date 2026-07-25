@@ -395,10 +395,12 @@ async function tryYtdlpVideo(ytUrl) {
   await fs.ensureDir(TEMP);
   const outFile = path.join(TEMP, `ytv_${Date.now()}.mp4`);
   const FORMATS = [
-    // H.264+AAC formats — guaranteed WhatsApp-playable, no transcode needed
-    'bestvideo[vcodec^=avc][height<=480]+bestaudio[acodec=aac]/bestvideo[vcodec^=avc][height<=480]+bestaudio[ext=m4a]',
-    // Progressive formats (single file, H.264)
+    // Format 18 = 360p H.264+AAC progressive (confirmed working, single file, no merge)
+    // Format 22 = 720p H.264+AAC progressive (same, higher quality)
+    // These are the FASTEST path — no ffmpeg merge, just stream-copy + faststart.
     '18/22',
+    // H.264+AAC DASH — needs merge but guaranteed codec compatibility
+    'bestvideo[vcodec^=avc][height<=480]+bestaudio[acodec=aac]/bestvideo[vcodec^=avc][height<=480]+bestaudio[ext=m4a]',
     // mp4 container (may have vp9 — ensurePlayableMp4 will transcode)
     'best[height<=480][ext=mp4]/best[height<=360][ext=mp4]/best[ext=mp4]',
     // Last resort — any format, ensurePlayableMp4 handles transcode
@@ -631,6 +633,42 @@ async function tryAagatzMp4Url(ytUrl) {
 
 // ── Race helpers ──────────────────────────────────────────────────────────────
 
+// ── URL-based video CDN (silva-md-bot approach) ───────────────────────────────
+// Returns a publicly-accessible CDN URL so WhatsApp downloads the video directly.
+// No buffer in RAM, no ffmpeg transcode — fast and works on low-memory servers.
+async function tryVideoApiUrl(ytUrl) {
+  // 1. davidcyriltech — confirmed working, returns yt-dl.click CDN URL
+  try {
+    const { data: d } = await axios.get(
+      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(ytUrl)}`,
+      { timeout: 30000 }
+    );
+    const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
+    if (u && typeof u === 'string' && u.startsWith('http')) return u;
+  } catch {}
+  // 2. nexray fallback
+  try {
+    const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`);
+    const u = d?.result?.url || d?.data?.url;
+    if (u && typeof u === 'string' && u.startsWith('http')) return u;
+  } catch {}
+  return null;
+}
+
+// ── URL-based audio CDN ───────────────────────────────────────────────────────
+// Returns a publicly-accessible CDN audio URL (same approach as video above).
+async function tryAudioApiUrl(ytUrl) {
+  try {
+    const { data: d } = await axios.get(
+      `https://apis.davidcyriltech.my.id/download/ytmp3?url=${encodeURIComponent(ytUrl)}`,
+      { timeout: 30000 }
+    );
+    const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
+    if (u && typeof u === 'string' && u.startsWith('http')) return u;
+  } catch {}
+  return null;
+}
+
 function firstSuccess(promises) {
   return new Promise(resolve => {
     let pending = promises.length;
@@ -798,51 +836,22 @@ async function downloadVideoFromStreamUrl(ytUrl) {
 // Returns: { buffer } | null
 
 async function downloadVideo(ytUrl) {
-  // Step A + B — Run davidcyriltech (primary) AND progressive stream in parallel
-  // Take whichever wins first, just like silva-md-bot races its sources
-  const [davidResult, streamResult] = await Promise.all([
-    withTimeout(28000, tryDavidMp4Url(ytUrl)),
-    withTimeout(100000, downloadVideoFromStreamUrl(ytUrl)),
-  ]);
-
-  // David API won — fetch buffer and transcode
-  if (davidResult) {
-    const buf = await withTimeout(90000, fetchBuf(davidResult));
-    if (isValidVideoBuffer(buf)) {
-      const playable = await withTimeout(180000, ensurePlayableMp4(buf));
-      if (playable?.length) return { buffer: playable };
-      // Transcode failed — fall through to stream result / other sources
-    }
+  // Step A — yt-dlp direct download to file (PRIMARY — confirmed working on this server)
+  // Format 18 (360p progressive H.264+AAC) downloaded successfully every time.
+  // Downloads to a temp FILE (not memory), so no fetchBuf timeout issues.
+  // tryYtdlpVideo now tries format 18/22 FIRST for maximum speed.
+  const raw = await withTimeout(240000, tryYtdlpVideo(ytUrl));
+  if (raw?.length > 50000) {
+    const playable = await withTimeout(120000, ensurePlayableMp4(raw));
+    if (playable?.length) return { buffer: playable };
+    // ensurePlayableMp4 failed but buffer is valid mp4 — return it anyway
+    if (isValidVideoBuffer(raw)) return { buffer: raw };
   }
 
-  // Stream result ready
+  // Step B — stream URL approach (get URL via yt-dlp, download in-process as fallback)
+  const streamResult = await withTimeout(150000, downloadVideoFromStreamUrl(ytUrl));
   if (streamResult?.buffer?.length) return streamResult;
 
-  // Step C — Race remaining third-party APIs
-  const fallbackUrl = await withTimeout(35000, firstSuccess([
-    tryKeithMp4Url(ytUrl),
-    tryGtechMp4Url(ytUrl),
-    tryRapidMp4Url(ytUrl),
-    tryNexrayMp4Url(ytUrl),
-    tryAagatzMp4Url(ytUrl),
-    tryYodlMp4Url(ytUrl),
-  ]));
-
-  if (fallbackUrl) {
-    const buf = await withTimeout(90000, fetchBuf(fallbackUrl));
-    if (isValidVideoBuffer(buf)) {
-      const playable = await withTimeout(180000, ensurePlayableMp4(buf));
-      if (playable?.length) return { buffer: playable };
-      // Transcode failed — fall through to yt-dlp last resort
-    }
-  }
-
-  // Step D — Full yt-dlp download as last resort
-  const raw = await withTimeout(180000, tryYtdlpVideo(ytUrl));
-  if (!raw?.length || raw.length < 50000) return null;
-  const playableRaw = await withTimeout(180000, ensurePlayableMp4(raw));
-  // Only return if transcode succeeded — never send a raw unplayable buffer
-  if (playableRaw?.length) return { buffer: playableRaw };
   return null;
 }
 
@@ -960,7 +969,23 @@ export default {
             ? buildVideoCaption(meta, botName)
             : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
 
-          // Always deliver as buffer + H.264/AAC transcode so WhatsApp plays it
+          // ── Step 1: URL-based approach (silva-md-bot method) ─────────────────
+          // WhatsApp downloads from CDN directly — no RAM buffer, no ffmpeg.
+          // Fast and reliable on constrained servers (Oracle, VPS, etc).
+          const videoApiUrl = await withTimeout(35000, tryVideoApiUrl(ytUrl));
+          if (videoApiUrl) {
+            try {
+              await sock.sendMessage(jid, {
+                video: { url: videoApiUrl },
+                mimetype: 'video/mp4',
+                caption: vcap,
+              }, { quoted: msg });
+              await react('✅');
+              break;
+            } catch {} // URL expired or invalid — fall through to yt-dlp buffer
+          }
+
+          // ── Step 2: yt-dlp buffer fallback (no external APIs needed) ─────────
           const vdata = await downloadVideo(ytUrl);
           if (!vdata?.buffer?.length) {
             await react('❌');
@@ -984,6 +1009,16 @@ export default {
           await react('🎶');
           const ytUrl = extractUrl(query);
           if (!ytUrl) return reply(`❌ Please provide a valid YouTube URL.\n\nTo search by name: *${prefix}play <song name>*`);
+          // Step 1: URL-based (fast, silva-md-bot approach)
+          const audioApiUrl = await withTimeout(35000, tryAudioApiUrl(ytUrl));
+          if (audioApiUrl) {
+            try {
+              await sock.sendMessage(jid, { audio: { url: audioApiUrl }, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
+              await react('✅');
+              break;
+            } catch {}
+          }
+          // Step 2: buffer fallback
           const adata = await downloadAudio(ytUrl);
           if (!adata?.buffer?.length) return reply('❌ MP3 download failed — all sources returned error.');
           await sock.sendMessage(jid, { audio: adata.buffer, mimetype: adata.mime || 'audio/mpeg', ptt: false }, { quoted: msg });

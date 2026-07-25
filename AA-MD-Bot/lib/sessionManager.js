@@ -718,7 +718,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       sock.ev.off('connection.update', _pairingHandler);
       if (_fallbackTimer) { clearTimeout(_fallbackTimer); _fallbackTimer = null; }
       try {
-        const code = await sock.requestPairingCode(phoneNumber);
+        // requestPairingCode requires digits only — strip +, spaces, dashes
+        const cleanPhone = String(phoneNumber).replace(/\D/g, '');
+        const code = await sock.requestPairingCode(cleanPhone);
         botEvents.emit('pairingCode', { sessionId, code, phoneNumber });
         logger.info({ sessionId, code, source }, '📲 Pairing code generated');
       } catch (err) {
