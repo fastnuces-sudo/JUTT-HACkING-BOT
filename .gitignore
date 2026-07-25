@@ -47,3 +47,8 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# package-lock.json contains Replit-internal proxy URLs (package-firewall.replit.local)
+# which break npm install on external servers (Oracle VM, Railway, etc.)
+# Always run fresh: npm install --registry=https://registry.npmjs.org/
+AA-MD-Bot/package-lock.json

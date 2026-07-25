@@ -161,7 +161,19 @@ export async function initDatabase() {
     const stats = COLLECTIONS.map(n => `${n}:${Object.keys(cache[n]).length}`).join('  ');
     console.log(`[DB] ✅ MongoDB loaded — ${stats}`);
   } catch (e) {
-    console.error('[DB] ❌ MongoDB init failed, starting with empty cache:', e.message);
+    const line = '═'.repeat(58);
+    console.error(`\n╔${line}╗`);
+    console.error(`║  ❌  MONGODB CONNECTION FAILED                         ║`);
+    console.error(`╠${line}╣`);
+    console.error(`║  Error : ${e.message.slice(0, 47).padEnd(47)} ║`);
+    console.error(`╠${line}╣`);
+    console.error(`║  ⚠️  These features will NOT work:                      ║`);
+    console.error(`║    • Session persistence (QR after every restart)      ║`);
+    console.error(`║    • Group settings (antilink, welcome, etc.)          ║`);
+    console.error(`║    • Reminders, notes, birthdays                       ║`);
+    console.error(`╠${line}╣`);
+    console.error(`║  Fix: Check MONGODB_URI / MONGODB_PASSWORD in .env     ║`);
+    console.error(`╚${line}╝\n`);
   }
 }
 

@@ -1,6 +1,9 @@
 ### Dependencies
 node_modules/
 
+# package-lock.json has Replit-internal proxy URLs — regenerated fresh on each deploy
+package-lock.json
+
 ### Runtime data (never commit)
 .env
 session/

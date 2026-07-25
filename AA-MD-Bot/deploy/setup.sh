@@ -3,7 +3,7 @@
 #  AA MD Bot — Oracle / Ubuntu VPS Deploy Script
 #  One command deploy:
 #
-#  bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh)
+#  bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/AA-MD-Bot/deploy/setup.sh)
 #
 #  Ya directly:
 #  bash setup.sh
@@ -12,13 +12,21 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/ahsanaliwadani/AA-MD-Bot.git"
-BOT_DIR="/home/ubuntu/AA-MD-Bot"
+
+# ── Repo structure note ───────────────────────────────────────
+# GitHub repo root = Replit workspace root (.replit, replit.md, scripts/)
+# Actual bot code is inside the AA-MD-Bot/ subfolder of the repo
+REPO_CLONE_DIR="/home/ubuntu/AA-MD-Bot-repo"   # where git clone goes
+BOT_DIR="$REPO_CLONE_DIR/AA-MD-Bot"             # actual bot — has package.json
+
 NODE_VERSION="20"
 
-G='\033[0;32m'; C='\033[0;36m'; Y='\033[1;33m'; B='\033[1m'; R='\033[0m'
-ok()  { echo -e "${G}✔  $*${R}"; }
-inf() { echo -e "${C}▶  $*${R}"; }
-hdr() { echo -e "\n${B}${C}── $* ──${R}"; }
+G='\033[0;32m'; C='\033[0;36m'; Y='\033[1;33m'; B='\033[1m'; R='\033[0m'; RE='\033[0;31m'
+ok()   { echo -e "${G}✔  $*${R}"; }
+inf()  { echo -e "${C}▶  $*${R}"; }
+hdr()  { echo -e "\n${B}${C}── $* ──${R}"; }
+err()  { echo -e "${RE}❌  $*${R}"; }
+fail() { err "$*"; exit 1; }
 
 clear
 echo -e "${B}${C}"
@@ -37,7 +45,8 @@ if [ -f "$BOT_DIR/.env" ] && grep -q "^MONGODB_URI=.\+" "$BOT_DIR/.env" 2>/dev/n
   echo -e "  ${G}✔  MongoDB URI already set in .env — reusing${R}"
 else
   echo -e "  ${C}MongoDB connection string (apna URI paste karo):${R}"
-  echo -e "  ${Y}Example: mongodb://aa_bot_user:Password@10.0.0.X:27017/aa_md_bot?authSource=aa_md_bot${R}"
+  echo -e "  ${Y}Atlas    : mongodb+srv://user:pass@cluster.mongodb.net/aa_md_bot${R}"
+  echo -e "  ${Y}Self-VM  : mongodb://aa_bot_user:pass@10.0.0.X:27017/aa_md_bot?authSource=aa_md_bot${R}"
   read -r -p "  MONGODB_URI= " MONGODB_URI
   while [ -z "$MONGODB_URI" ]; do
     echo -e "  ${Y}⚠  URI khali nahi ho sakti${R}"
@@ -107,29 +116,36 @@ fi
 
 # ── 6. PM2 ────────────────────────────────────────────────────
 hdr "6. PM2 (process manager)"
-sudo npm install -g pm2 >/dev/null 2>&1
+sudo npm install -g pm2 --registry=https://registry.npmjs.org/ >/dev/null 2>&1
 ok "PM2 $(pm2 --version) installed"
 
 # ── 7. Bot code ───────────────────────────────────────────────
 hdr "7. Bot Code"
-if [ -d "$BOT_DIR/.git" ]; then
+if [ -d "$REPO_CLONE_DIR/.git" ]; then
   inf "Repo already hai — update ho raha hai..."
-  cd "$BOT_DIR" && git pull
+  cd "$REPO_CLONE_DIR" && git pull
   ok "Code updated"
 else
   inf "Repo clone ho raha hai..."
-  git clone "$REPO_URL" "$BOT_DIR"
-  ok "Code cloned to $BOT_DIR"
+  git clone "$REPO_URL" "$REPO_CLONE_DIR"
+  ok "Code cloned"
 fi
 
-# ── 8. npm install ────────────────────────────────────────────
+# ── Verify bot directory has package.json ─────────────────────
+if [ ! -f "$BOT_DIR/package.json" ]; then
+  fail "package.json nahi mila '$BOT_DIR' mein!\n\n    Expected structure:\n      $REPO_CLONE_DIR/          ← repo root (.replit, replit.md)\n      $REPO_CLONE_DIR/AA-MD-Bot/ ← actual bot (package.json yahan hona chahiye)\n\n    Shayad repo ka structure change ho gaya ho. Check karo:\n      ls $REPO_CLONE_DIR/\n      ls $REPO_CLONE_DIR/AA-MD-Bot/"
+fi
+
+# ── 8. npm install (public registry — NOT Replit proxy) ──────
 hdr "8. Node.js Packages"
 cd "$BOT_DIR"
-npm install --omit=dev --silent
-ok "Packages installed"
+# --registry flag ensures we never use Replit-internal package-firewall.replit.local URLs
+npm install --omit=dev --registry=https://registry.npmjs.org/ --silent
+ok "Packages installed (public registry)"
 
 # ── 9. Directories ────────────────────────────────────────────
-mkdir -p logs temp session downloads database cache
+mkdir -p "$BOT_DIR/logs" "$BOT_DIR/temp" "$BOT_DIR/session" \
+         "$BOT_DIR/downloads" "$BOT_DIR/database" "$BOT_DIR/cache"
 ok "Directories ready"
 
 # ── 10. .env — auto write ─────────────────────────────────────
@@ -138,6 +154,7 @@ SESSION_SECRET=$(openssl rand -hex 32)
 
 cat > "$BOT_DIR/.env" << EOF
 PORT=5000
+SERVER_ID=server-1
 MONGODB_URI=${MONGODB_URI}
 TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}
 TELEGRAM_FEATURES_BOT_TOKEN=${TELEGRAM_FEATURES_TOKEN}
@@ -150,7 +167,7 @@ TENOR_API_KEY=
 SESSION_SECRET=${SESSION_SECRET}
 EOF
 
-ok ".env written"
+ok ".env written to $BOT_DIR/.env"
 
 # ── 11. Firewall ──────────────────────────────────────────────
 hdr "11. Firewall (port 5000 + SSH)"
@@ -181,6 +198,9 @@ echo "║           ✅  Deploy Complete!           ║"
 echo "╚══════════════════════════════════════════╝"
 echo -e "${R}"
 echo -e "  Dashboard  : ${C}http://${PUBLIC_IP}:5000${R}"
+echo ""
+echo -e "  ${B}Bot directory:${R}"
+echo -e "    ${C}$BOT_DIR${R}"
 echo ""
 echo -e "  ${B}Useful commands:${R}"
 echo "    pm2 logs aa-md-bot       ← live logs"
