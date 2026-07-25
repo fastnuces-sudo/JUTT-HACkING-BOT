@@ -1,341 +1,229 @@
-# 🚀 AA MD Bot — Oracle Cloud Free Tier Deployment
-## 3 Servers + Oracle Autonomous Database (20 GB Free)
+# 🚀 AA MD Bot — Oracle Cloud Free Tier Deploy Guide
 
-> **Total cost: ₹0 / $0** — entirely within Oracle Always Free limits
+> **Total cost: $0** — Oracle Always Free limits ke andar
 
 ---
 
 ## Architecture
 
 ```
-Oracle Cloud Free Tier
+Oracle Cloud Free Tier (Always Free)
 │
-├── Autonomous Database (ADB 23ai)  ←── 20 GB, managed, zero maintenance
-│         ↑ all 3 servers connect to this one DB
-│
-├── VM1 — Server 1  (ARM, 1 OCPU, 8 GB RAM)
-├── VM2 — Server 2  (ARM, 1 OCPU, 8 GB RAM)
-└── VM3 — Server 3  (ARM, 1 OCPU, 8 GB RAM)
+├── VM1 — Bot + MongoDB  (ARM, 2 OCPU, 12 GB RAM)   ← sab kuch ek VM par
+├── VM2 — Bot            (ARM, 1 OCPU, 6 GB RAM)    ← VM1 ke MongoDB se connect
+└── VM3 — Bot            (ARM, 1 OCPU, 6 GB RAM)    ← VM1 ke MongoDB se connect
 ```
 
-**Always Free resources used:**
+**Strategy:**
+- **VM1** par MongoDB install hoga — woh shared database server hai
+- **VM2 aur VM3** same MongoDB se connect karte hain (private IP se)
+- Sab bots ka data share hota hai (groups, settings, sessions)
+
+**Oracle Always Free resources:**
+
 | Resource | Free Limit | Used |
 |---|---|---|
-| ARM OCPUs | 4 total | 3 (1 per VM) |
-| ARM RAM | 24 GB total | 18 GB (6 GB per VM) |
-| Block Storage | 200 GB | ~45 GB |
-| Oracle ADB | 2 databases | 1 |
-| ADB Storage | 20 GB | ~1 GB (grows with use) |
+| ARM OCPUs | 4 total | 4 (2 VM1 + 1 VM2 + 1 VM3) |
+| ARM RAM | 24 GB total | 24 GB (12+6+6) |
+| Block Storage | 200 GB | ~15 GB |
 
 ---
 
-## Quick Reference — All Commands
+## ⚡ Ek Command — Poora Deploy
+
+### VM1 (MongoDB + Bot)
+
+SSH ke baad sirf yeh ek command:
 
 ```bash
-# Start / stop / restart bot
-pm2 restart aa-md-bot
-pm2 stop aa-md-bot
-pm2 logs aa-md-bot
+bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh)
+```
 
-# Update bot after code change
-cd /home/ubuntu/AA-MD-Bot && git pull && npm install --omit=dev && pm2 restart aa-md-bot
+**Yeh script apne aap karta hai:**
+- ✅ System update
+- ✅ ffmpeg, git, curl install
+- ✅ MongoDB 7 install, start, auth enable
+- ✅ MongoDB user + database auto-create (random password)
+- ✅ Node.js 20 install
+- ✅ yt-dlp + Deno install
+- ✅ PM2 install
+- ✅ Bot code clone
+- ✅ npm install
+- ✅ `.env` auto-write (MONGODB_URI + SESSION_SECRET sab auto)
+- ✅ Firewall set
+- ✅ Bot start + auto-restart on reboot
 
-# Check bot status
-pm2 status
+**Koi bhi input nahi dena — sab apne aap hota hai.**
 
-# Edit config
-nano /home/ubuntu/AA-MD-Bot/.env
+Script khatam hone par yeh dikhai dega:
+```
+✅  Deploy Complete!
+Dashboard  : http://YOUR_IP:5000
+MongoDB URI: mongodb://aa_bot_user:xxxxx@127.0.0.1:27017/aa_md_bot
 ```
 
 ---
 
-# PART A — Oracle Autonomous Database (do this FIRST)
+### VM2 aur VM3 (Sirf Bot — VM1 ka MongoDB use karte hain)
 
-**Full guide → [`deploy/ORACLE-ADB-GUIDE.md`](./ORACLE-ADB-GUIDE.md)**
+VM1 ka setup complete hone ke baad VM2/VM3 par:
 
-Short version:
-1. Oracle Console → **Autonomous Database** → Create
-2. Choose **23ai**, **Transaction Processing**, **Serverless**, **Always Free ON**
-3. Set ADMIN password → Create → wait 3 minutes
-4. Open DB → **Database connection** → copy **MongoDB API** connection string
-5. Keep this string ready — you'll paste it into `.env` on each server
+**Step 1 — VM1 par MongoDB ko network access do:**
+```bash
+# VM1 par chalao:
+sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 127.0.0.1,0.0.0.0/' /etc/mongod.conf
+sudo systemctl restart mongod
+```
+
+**Step 2 — VM1 ki `.env` se MONGODB_URI copy karo:**
+```bash
+# VM1 par chalao:
+grep MONGODB_URI /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/.env
+```
+
+URI mein `127.0.0.1` ko VM1 ka **private IP** se replace karo:
+```
+mongodb://aa_bot_user:PASSWORD@10.0.0.X:27017/aa_md_bot?authSource=aa_md_bot
+```
+
+**Step 3 — VM2/VM3 par setup chalao:**
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh)
+```
+
+Setup ke baad VM1 ka MongoDB URI set karo:
+```bash
+nano /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/.env
+# MONGODB_URI=mongodb://aa_bot_user:PASSWORD@10.0.0.X:27017/aa_md_bot?authSource=aa_md_bot
+pm2 restart aa-md-bot
+```
 
 ---
 
-# PART B — Create 3 Oracle VMs
+## Oracle Cloud VMs Banana
 
-## Step 1 — Create VCN
+### Step 1 — Sign Up
+[cloud.oracle.com](https://cloud.oracle.com) → Free Tier account banao
 
-1. Oracle Console → search **VCN** → **Virtual Cloud Networks**
-2. Click **Start VCN Wizard** → **Create VCN with Internet Connectivity**
-3. VCN Name: `aa-bot-vcn` | CIDR: `10.0.0.0/16`
-4. Click **Next** → **Create**
+### Step 2 — VCN (Network)
+Console → **Networking → Virtual Cloud Networks**
+→ **Start VCN Wizard** → Create VCN with Internet Connectivity
+→ Name: `aa-bot-vcn` → Create
 
----
+### Step 3 — Ports Open Karo
+VCN → **Security Lists → Default Security List → Add Ingress Rules:**
 
-## Step 2 — Open Ports in Security List
-
-VCN → **Security Lists** → **Default Security List** → **Add Ingress Rules**:
-
-| Source CIDR | Protocol | Port | Description |
+| Source CIDR | Protocol | Port | Use |
 |---|---|---|---|
 | `0.0.0.0/0` | TCP | `22` | SSH |
 | `0.0.0.0/0` | TCP | `5000` | Bot Dashboard |
 
-> MongoDB port not needed — Oracle ADB is cloud-managed (connects outbound on 27017 automatically)
+> Port 27017 (MongoDB) public nahi kholna — VMs private IP se connect karte hain
 
----
+### Step 4 — VMs Banao
 
-## Step 3 — Create 3 VMs
+**Compute → Instances → Create Instance** (3 baar):
 
-**Compute → Instances → Create Instance** (repeat 3 times)
+| Field | VM1 | VM2 | VM3 |
+|---|---|---|---|
+| Name | `aa-bot-server-1` | `aa-bot-server-2` | `aa-bot-server-3` |
+| Image | Ubuntu 22.04 | Ubuntu 22.04 | Ubuntu 22.04 |
+| Shape | VM.Standard.A1.Flex | VM.Standard.A1.Flex | VM.Standard.A1.Flex |
+| OCPU | **2** | **1** | **1** |
+| RAM | **12 GB** | **6 GB** | **6 GB** |
+| SSH Key | Generate → Save |
 
-| Field | Value |
-|---|---|
-| Name | `aa-bot-server-1` (then 2, then 3) |
-| Image | **Ubuntu 22.04** |
-| Shape | **VM.Standard.A1.Flex** (ARM Ampere) |
-| OCPU | **1** |
-| Memory | **6 GB** (or 8 GB — your choice, stays within 24 GB total) |
-| Subnet | Public Subnet, ✅ Assign public IPv4 |
-| SSH Key | Generate → **Save private key** |
+> VM1 ko zyada resources do — woh MongoDB bhi chala raha hai
 
-After creating, note down the **Public IP** of each VM.
-
-> ⚠️ Use ARM shape (Ampere A1.Flex) — AMD micro shapes only have 1 GB RAM, too small for the bot.
-
----
-
-## Step 4 — Fix SSH Key Permissions
-
-On your computer (Mac/Linux terminal or Windows PowerShell):
-
+### Step 5 — SSH Connect
 ```bash
-# Mac / Linux
+# Mac/Linux
 chmod 400 aa-bot-server-1.key
-chmod 400 aa-bot-server-2.key
-chmod 400 aa-bot-server-3.key
+ssh -i aa-bot-server-1.key ubuntu@VM1_PUBLIC_IP
 ```
 
 ```powershell
 # Windows PowerShell
 icacls "aa-bot-server-1.key" /inheritance:r /grant:r "$env:USERNAME:(R)"
-```
-
----
-
-## Step 5 — Push Code to GitHub
-
-Before running setup on VMs, push this repository to your GitHub account:
-
-```bash
-# On your local machine
-git remote add origin https://github.com/YOUR_USERNAME/AA-MD-Bot.git
-git push -u origin main
-```
-
-Also update `REPO_URL` in `deploy/setup.sh`:
-```bash
-REPO_URL="https://github.com/YOUR_USERNAME/AA-MD-Bot.git"
-```
-
----
-
-# PART C — Setup Each Server
-
-## Step 6 — Connect to VM1 via SSH
-
-```bash
 ssh -i aa-bot-server-1.key ubuntu@VM1_PUBLIC_IP
 ```
 
-Type `yes` when asked about authenticity, then press Enter.
+---
+
+## WhatsApp Pair Karna
+
+VM setup ke baad browser mein:
+- VM1: `http://VM1_PUBLIC_IP:5000`
+- VM2: `http://VM2_PUBLIC_IP:5000`
+- VM3: `http://VM3_PUBLIC_IP:5000`
+
+Har VM par:
+1. WhatsApp number enter karo (country code ke saath, e.g. `923316041183`)
+2. **Get Pairing Code** click karo
+3. WhatsApp: **Settings → Linked Devices → Link a Device → Link with phone number**
+4. 8-digit code enter karo
 
 ---
 
-## Step 7 — Run Setup Script on VM1
+## Useful Commands
 
 ```bash
-# Download and run setup script
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/AA-MD-Bot/main/deploy/setup.sh -o setup.sh
-bash setup.sh 1
-```
+# Bot
+pm2 status                        # status dekho
+pm2 logs aa-md-bot                # live logs
+pm2 logs aa-md-bot --err          # sirf errors
+pm2 restart aa-md-bot             # restart
+pm2 stop aa-md-bot                # stop
 
-**What this installs automatically:**
-- ✅ System updates + ffmpeg
-- ✅ Node.js 20
-- ✅ yt-dlp (latest)
-- ✅ Deno (for YouTube n-challenge)
-- ✅ PM2 (process manager, auto-restart on reboot)
-- ✅ Bot code (git clone)
-- ✅ npm packages
-- ✅ UFW firewall (SSH + 5000 open)
-- ✅ `.env` template created
-
-Takes **5–8 minutes**. When done you'll see: `✅ Server 1 Setup Complete!`
-
----
-
-## Step 8 — Configure .env on VM1
-
-```bash
-nano /home/ubuntu/AA-MD-Bot/.env
-```
-
-Fill in your values:
-```env
-PORT=5000
-SERVER_ID=server-1
-
-# Oracle ADB connection string (from ORACLE-ADB-GUIDE.md Step 3)
-MONGODB_URI=mongodb://ADMIN:YourPassword@adb-xxxxx.adb.REGION.oraclecloudapps.com:27017/ADMIN?authMechanism=PLAIN&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&loadBalanced=true
-
-# Telegram bots (optional)
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_FEATURES_BOT_TOKEN=
-```
-
-Save: **Ctrl+X → Y → Enter**
-
-Restart bot:
-```bash
+# Update (naya code deploy)
+cd /home/ubuntu/AA-MD-Bot-repo
+git pull
+cd AA-MD-Bot
+npm install --omit=dev
 pm2 restart aa-md-bot
-pm2 logs aa-md-bot --lines 40
-```
 
-Look for: `[DB] ✅ MongoDB loaded`
+# MongoDB
+sudo systemctl status mongod      # MongoDB status
+sudo systemctl restart mongod     # MongoDB restart
+mongosh -u aa_bot_user -p --authenticationDatabase aa_md_bot   # DB console
 
----
-
-## Step 9 — Setup VM2
-
-Open a **new terminal window**:
-
-```bash
-ssh -i aa-bot-server-2.key ubuntu@VM2_PUBLIC_IP
-
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/AA-MD-Bot/main/deploy/setup.sh -o setup.sh
-bash setup.sh 2
-```
-
-Then configure `.env` — same as VM1 but change `SERVER_ID=server-2`:
-```bash
-nano /home/ubuntu/AA-MD-Bot/.env
-```
-
----
-
-## Step 10 — Setup VM3
-
-Same as VM2, use `SERVER_ID=server-3`:
-
-```bash
-ssh -i aa-bot-server-3.key ubuntu@VM3_PUBLIC_IP
-
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/AA-MD-Bot/main/deploy/setup.sh -o setup.sh
-bash setup.sh 3
-nano /home/ubuntu/AA-MD-Bot/.env   # set SERVER_ID=server-3
+# Config edit (Telegram tokens etc.)
+nano /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/.env
 pm2 restart aa-md-bot
 ```
 
 ---
 
-# PART D — Pair WhatsApp on All 3 Servers
-
-## Step 11 — Open Dashboards
-
-In your browser:
-- Server 1: `http://VM1_PUBLIC_IP:5000`
-- Server 2: `http://VM2_PUBLIC_IP:5000`
-- Server 3: `http://VM3_PUBLIC_IP:5000`
-
-## Step 12 — Pair Each Bot
-
-On each dashboard:
-1. Enter the WhatsApp number (with country code, e.g. `923316041183`)
-2. Click **Get Pairing Code**
-3. On WhatsApp: **Settings → Linked Devices → Link a Device → Link with phone number**
-4. Enter the 8-digit pairing code shown on screen
-
----
-
-# PART E — Verify Everything Works
-
-## Step 13 — Check Logs
-
-On each server:
-```bash
-pm2 logs aa-md-bot --lines 50
-```
-
-Good signs:
-```
-✨ AA MD Bot is ready!
-[DB] ✅ MongoDB loaded — groups:0  settings:0  sessionSettings:0 ...
-📱 Connected to WhatsApp as +92XXXXXXXXXX
-```
-
-## Step 14 — Test Database Connection
-
-```bash
-cd /home/ubuntu/AA-MD-Bot
-node -e "import('./lib/database.js').then(async m => { const db = await m.getDb(); console.log(db ? '✅ Oracle ADB OK' : '❌ No connection'); process.exit(0); })"
-```
-
-## Step 15 — Verify Auto-Restart
-
-```bash
-pm2 list                  # should show aa-md-bot as 'online'
-systemctl is-enabled pm2-ubuntu    # should show 'enabled'
-```
-
----
-
-# Troubleshooting
+## Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| Dashboard won't load | Check `pm2 logs aa-md-bot --err` |
-| `[DB] ⚠️ MONGODB_PASSWORD not set` | MONGODB_URI is empty in .env — paste Oracle ADB URI |
-| `Connection timeout` | Check Oracle ADB URI has all params (retryWrites=false etc.) |
-| `Authentication failed` | Wrong ADMIN password — check/reset in Oracle Console |
-| Bot crashes immediately | Run `pm2 logs aa-md-bot` to see error |
-| Port 5000 not reachable | Oracle Console → VCN → Security List → add port 5000 |
-| SSH key rejected | Run `chmod 400 key-file.key` again |
-| Bot disconnects often | Normal — WhatsApp disconnects idle bots; PM2 auto-reconnects |
-| yt-dlp not found | `sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp` |
+| Dashboard load nahi ho raha | `pm2 logs aa-md-bot --err` dekho |
+| `MongoDB connection failed` | `sudo systemctl status mongod` — start karo |
+| Port 5000 reachable nahi | Oracle Console → VCN → Security List → port 5000 add karo |
+| VM2/VM3 DB connect nahi | VM1 par `bindIp` check karo (`0.0.0.0`), port 27017 private network mein open karo |
+| `pm2 not found` | `source ~/.bashrc` chalao phir dobara try karo |
+| yt-dlp outdated | `sudo yt-dlp -U` |
+| Bot crash on start | `.env` mein `MONGODB_URI` check karo — sahi hai? |
 
 ---
 
-# Complete Checklist ✅
+## Deploy Checklist ✅
 
-**Oracle ADB:**
-- [ ] ADB created (23ai, Transaction Processing, Always Free)
-- [ ] ADMIN password saved
-- [ ] MongoDB API connection string copied
+**Oracle VMs:**
+- [ ] VCN banaya
+- [ ] Ports 22 + 5000 open
+- [ ] VM1 (2 OCPU, 12 GB) + VM2 + VM3 banaye
+- [ ] SSH keys saved
 
-**VMs:**
-- [ ] VCN created
-- [ ] Security List: ports 22 and 5000 opened
-- [ ] VM1 created (1 OCPU, 6–8 GB, Ubuntu 22.04, ARM)
-- [ ] VM2 created
-- [ ] VM3 created
-- [ ] SSH key files saved for all 3 VMs
+**VM1 (MongoDB + Bot):**
+- [ ] `bash <(curl ...)` chalaya — koi input nahi diya
+- [ ] Script ne `✅ Deploy Complete!` dikhaya
+- [ ] Dashboard: `http://VM1_IP:5000` open hota hai
+- [ ] WhatsApp paired
 
-**Setup:**
-- [ ] `setup.sh 1` run on VM1
-- [ ] `setup.sh 2` run on VM2
-- [ ] `setup.sh 3` run on VM3
-- [ ] `.env` configured on all 3 (MONGODB_URI filled in)
-- [ ] `pm2 restart aa-md-bot` on all 3
-- [ ] `pm2 save` on all 3
-
-**WhatsApp:**
-- [ ] Dashboard accessible on all 3 (port 5000)
-- [ ] WhatsApp paired on Server 1
-- [ ] WhatsApp paired on Server 2
-- [ ] WhatsApp paired on Server 3
-
----
-
-> 💡 **All 3 bots share the same Oracle ADB database.** Group settings, notes, and birthdays set on one bot are visible to all 3. Each bot still has its own WhatsApp session (independent numbers).
+**VM2 + VM3:**
+- [ ] VM1 par MongoDB `bindIp` update kiya
+- [ ] Setup script chalaya
+- [ ] VM1 ka MONGODB_URI `.env` mein set kiya
+- [ ] WhatsApp paired

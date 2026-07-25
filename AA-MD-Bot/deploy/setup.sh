@@ -24,22 +24,10 @@ clear
 echo -e "${B}${C}"
 echo "╔══════════════════════════════════════════════╗"
 echo "║      AA MD Bot — Oracle VM Auto Deploy       ║"
-echo "║   Bot + MongoDB — same VM, local storage     ║"
+echo "║   Bot + MongoDB — same VM, fully automatic   ║"
 echo "╚══════════════════════════════════════════════╝"
 echo -e "${R}"
-
-# ── Collect optional info FIRST ──────────────────────────────
-echo -e "${B}Optional settings (Enter = skip karo):${R}\n"
-
-TELEGRAM_TOKEN=""
-TELEGRAM_FEATURES_TOKEN=""
-read -r -p "  Telegram bot token? (optional): " TELEGRAM_TOKEN
-if [ -n "$TELEGRAM_TOKEN" ]; then
-  read -r -p "  Telegram features bot token? (optional): " TELEGRAM_FEATURES_TOKEN
-fi
-
-echo ""
-inf "MongoDB aur bot sab apne aap install hoga — koi aur kaam nahi..."
+inf "Koi input nahi chahiye — sab kuch apne aap hoga..."
 echo ""
 
 # ── 1. System update ─────────────────────────────────────────
@@ -207,21 +195,28 @@ SESSION_SECRET=$(openssl rand -hex 32)
 MONGODB_URI="mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot"
 
 cat > "$BOT_DIR/.env" << EOF
+# ── AA MD Bot — Auto-generated on $(date '+%Y-%m-%d %H:%M:%S') ──
 PORT=5000
 SERVER_ID=server-1
+
+# Database — MongoDB on this VM (auto-configured)
 MONGODB_URI=${MONGODB_URI}
-TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}
-TELEGRAM_FEATURES_BOT_TOKEN=${TELEGRAM_FEATURES_TOKEN}
-OPENWEATHER_API_KEY=
-OMDB_API_KEY=
-RAPIDAPI_KEY=
-OCR_SPACE_KEY=
-HF_TOKEN=
-TENOR_API_KEY=
+
+# Security — auto-generated
 SESSION_SECRET=${SESSION_SECRET}
+
+# ── Optional — fill in later if needed ────────────────────────
+# TELEGRAM_BOT_TOKEN=          # get from @BotFather
+# TELEGRAM_FEATURES_BOT_TOKEN= # second bot from @BotFather
+# OPENWEATHER_API_KEY=         # openweathermap.org
+# OMDB_API_KEY=                # omdbapi.com
+# RAPIDAPI_KEY=                # rapidapi.com
+# OCR_SPACE_KEY=               # ocr.space
+# HF_TOKEN=                    # huggingface.co
+# TENOR_API_KEY=               # developers.google.com/tenor
 EOF
 
-ok ".env written"
+ok ".env auto-written — koi manual step nahi tha"
 
 # ── 13. Firewall ─────────────────────────────────────────────
 hdr "13. Firewall"

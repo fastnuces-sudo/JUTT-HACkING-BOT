@@ -5,74 +5,76 @@
 </p>
 
 <p align="center">
-  <b>Multi-Device WhatsApp Bot — 226+ Plugins | Multi-Session | Oracle Cloud / MongoDB</b>
+  <b>Multi-Device WhatsApp Bot — 226+ Plugins | Multi-Session | Oracle Cloud</b>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white" />
   <img src="https://img.shields.io/badge/Platform-WhatsApp-25D366?logo=whatsapp&logoColor=white" />
   <img src="https://img.shields.io/badge/DB-MongoDB-47A248?logo=mongodb&logoColor=white" />
-  <img src="https://img.shields.io/badge/Deploy-Oracle_Cloud-F80000?logo=oracle&logoColor=white" />
+  <img src="https://img.shields.io/badge/Deploy-Oracle_Cloud_Free-F80000?logo=oracle&logoColor=white" />
 </p>
 
 ---
 
-## Deploy on Oracle Cloud (Ubuntu VM)
+## ⚡ Deploy — Sirf Ek Command
 
-**Ek hi command — bas itna karo:**
+Oracle Cloud VM par SSH ke baad:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh)
 ```
 
-Script khud poochega:
-- `MONGODB_URI` — apna MongoDB connection string paste karo
-- Telegram token (optional)
+**Koi input nahi — sab apne aap hota hai:**
 
-Baaki sab apne aap:
-✅ Node.js 20 · ffmpeg · yt-dlp · Deno · PM2 install  
-✅ Repo clone · npm install · .env likha  
-✅ Firewall set · Bot start · Auto-restart on reboot
+| Step | Kya hota hai |
+|---|---|
+| MongoDB 7 | Same VM par install + start |
+| DB User | `aa_bot_user` auto-create, random password |
+| Node.js 20 | Install |
+| yt-dlp + Deno | Install |
+| PM2 | Install + auto-restart on reboot |
+| Repo | Clone + `npm install` |
+| `.env` | `MONGODB_URI` + `SESSION_SECRET` auto-write |
+| Firewall | SSH + port 5000 open |
+| Bot | Start |
 
-**Deploy ke baad dashboard:**
+Script khatam hone par:
 ```
-http://YOUR_SERVER_IP:5000
+✅  Deploy Complete!
+Dashboard  : http://YOUR_IP:5000
+MongoDB URI: mongodb://aa_bot_user:xxxxx@127.0.0.1:27017/aa_md_bot
 ```
-WhatsApp pairing code wahan se milega.
 
 ---
 
-## Manual Deploy (any Ubuntu/Debian VPS)
+## 🌐 WhatsApp Pair Karna
 
-```bash
-git clone https://github.com/ahsanaliwadani/AA-MD-Bot.git
-cd AA-MD-Bot
-npm install
-cp .env.example .env
-nano .env          # set MONGODB_URI and other values
-npm start          # OR: pm2 start ecosystem.config.cjs
+1. Browser mein kholo: `http://YOUR_VM_IP:5000`
+2. WhatsApp number enter karo (country code ke saath, e.g. `923316041183`)
+3. **Get Pairing Code** click karo
+4. WhatsApp → **Settings → Linked Devices → Link a Device → Link with phone number**
+5. 8-digit code enter karo — ho gaya ✅
+
+---
+
+## 🏗 3 VM Architecture (Oracle Always Free)
+
+```
+VM1 (2 OCPU, 12 GB) — Bot + MongoDB server
+VM2 (1 OCPU,  6 GB) — Bot  ──┐
+VM3 (1 OCPU,  6 GB) — Bot  ──┴── VM1 ke MongoDB se connect
 ```
 
-Requires: **Node.js >= 20.6**, **ffmpeg**, **yt-dlp** on PATH.
+VM1 par setup ke baad VM2/VM3 par bhi same command chalao — sirf `.env` mein `MONGODB_URI` ka IP change karo VM1 ka private IP daal kar.
+
+**Full 3-VM guide:** [`deploy/ORACLE-DEPLOY.md`](deploy/ORACLE-DEPLOY.md)
 
 ---
 
-## Database Options
+## ✨ Features
 
-Set `MONGODB_URI` in `.env` — pick the one that fits:
-
-| Option | Example URI | Notes |
-|---|---|---|
-| **Self-hosted MongoDB on same VM** | `mongodb://user:pass@127.0.0.1:27017/aa_md_bot` | Best for single-VM setup |
-| **MongoDB on another Oracle VM** | `mongodb://user:pass@10.0.0.X:27017/aa_md_bot` | Use private IP |
-| **Oracle ADB 23ai (MongoDB API)** | `mongodb://ADMIN:pass@adb-xxx.oraclecloud.com:27017/ADMIN?authMechanism=PLAIN&tls=true&...` | Full guide: [ORACLE-ADB-GUIDE.md](deploy/ORACLE-ADB-GUIDE.md) |
-| **MongoDB Atlas** | `mongodb+srv://user:pass@cluster.mongodb.net/aa_md_bot` | 512 MB free |
-
----
-
-## Features
-
-| Category | Highlights |
+| Category | Plugins |
 |---|---|
 | 📥 Downloads | YouTube, Instagram, TikTok, Twitter, Spotify, Reddit, Pinterest, Threads |
 | 🔍 Search | Google, YouTube, Wikipedia, News, Anime, Lyrics, Stickers |
@@ -85,77 +87,63 @@ Set `MONGODB_URI` in `.env` — pick the one that fits:
 
 ---
 
-## Configuration
+## ⚙️ Optional Settings
 
-Copy `.env.example` to `.env` and fill in values:
+Deploy ke baad Telegram tokens ya API keys add karne hon to:
 
-| Variable | Required | Description |
-|---|---|---|
-| `MONGODB_URI` | **Yes** | MongoDB connection string (see Database Options above) |
-| `PORT` | No | Dashboard port (default `5000`) |
-| `SERVER_ID` | No | `server-1` / `server-2` / `server-3` |
-| `TELEGRAM_BOT_TOKEN` | No | Admin/pairing Telegram bot |
-| `TELEGRAM_FEATURES_BOT_TOKEN` | No | Features mirror Telegram bot |
-| `OPENWEATHER_API_KEY` | No | Weather plugin |
-| `OMDB_API_KEY` | No | Movie/series search plugin |
+```bash
+nano /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/.env
+# uncomment karo jo chahiye
+pm2 restart aa-md-bot
+```
+
+| Variable | Kya karta hai |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | Admin/pairing Telegram bot |
+| `TELEGRAM_FEATURES_BOT_TOKEN` | Features mirror bot |
+| `OPENWEATHER_API_KEY` | `.weather` command |
+| `OMDB_API_KEY` | `.movie` command |
+| `OCR_SPACE_KEY` | `.ocr` command |
+| `HF_TOKEN` | AI commands |
 
 ---
 
-## PM2 Commands
+## 🔧 PM2 Commands
 
 ```bash
-pm2 status                   # check if running
-pm2 restart aa-md-bot        # restart
-pm2 logs aa-md-bot           # live logs
-pm2 logs aa-md-bot --err     # errors only
-pm2 monit                    # live monitor (CPU/RAM)
+pm2 status                    # bot status
+pm2 logs aa-md-bot            # live logs
+pm2 logs aa-md-bot --err      # sirf errors
+pm2 restart aa-md-bot         # restart
+pm2 monit                     # CPU/RAM monitor
 ```
 
-## Updating
+## 🔄 Update Karna
 
 ```bash
-cd /home/ubuntu/AA-MD-Bot
+cd /home/ubuntu/AA-MD-Bot-repo
 git pull
+cd AA-MD-Bot
 npm install --omit=dev
 pm2 restart aa-md-bot
-pm2 logs aa-md-bot
 ```
 
 ---
 
-## Pairing WhatsApp
-
-Open the dashboard in your browser: `http://YOUR_SERVER_IP:5000`
-
-1. Enter your WhatsApp number (with country code, e.g. `923316041183`)
-2. Click **Get Pairing Code**
-3. In WhatsApp: **Settings → Linked Devices → Link a Device → Link with phone number**
-4. Enter the 8-digit code shown on the dashboard
-
----
-
-## Troubleshooting
+## 🛠 Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| `MONGODB_URI not set` | Set `MONGODB_URI` in `.env`, then `pm2 restart aa-md-bot` |
-| `Connection timeout` | Check MongoDB is running: `sudo systemctl status mongod` |
-| `Authentication failed` | Wrong MongoDB user/password in URI |
-| Dashboard not loading | `pm2 logs aa-md-bot --err` — check startup errors |
-| Port 5000 not reachable | Oracle Console → VCN → Security List → add ingress rule for TCP 5000 |
-| yt-dlp not found | `sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp` |
-| YouTube "sign in to confirm" | Add cookies to `cookies.txt` — see `cookies.txt.example` |
-| Bot disconnects | Normal — WhatsApp disconnects idle sessions; PM2 auto-reconnects |
+| Dashboard nahi khulta | `pm2 logs aa-md-bot --err` |
+| `MongoDB connection failed` | `sudo systemctl restart mongod` |
+| Port 5000 reachable nahi | Oracle Console → VCN → Security List → port 5000 add karo |
+| YouTube bot-check error | `cookies.txt` file banao — `cookies.txt.example` dekho |
+| Bot disconnect hota hai | Normal — PM2 auto-reconnect karta hai |
 
 ---
 
 ## Stack
 
-- **[Baileys](https://github.com/WhiskeySockets/Baileys)** — WhatsApp Web API
-- **[MongoDB Node.js Driver](https://www.mongodb.com/docs/drivers/node/current/)** — database
-- **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** + **ffmpeg** — media downloads
-- **[PM2](https://pm2.keymetrics.io/)** — process management on Oracle VM
-
----
+[Baileys](https://github.com/WhiskeySockets/Baileys) · [MongoDB](https://www.mongodb.com/) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [ffmpeg](https://ffmpeg.org/) · [PM2](https://pm2.keymetrics.io/)
 
 **Developer:** Ahsan Ali Wadani — AA Mods
