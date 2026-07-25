@@ -37,6 +37,8 @@ export const sessionInfo = new Map();
 
 // Track reconnect attempts per session for exponential backoff
 const reconnectAttempts = new Map();
+// Track when each session last became stably connected (>30s = stable, reset counter)
+const connectedAt = new Map();
 
 let messageHandler = null;
 let connectionHandler = null;
@@ -199,7 +201,13 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
     if (connection === 'open') {
       wasRegistered = true;
-      reconnectAttempts.delete(sessionId);
+      // Only reset 440 conflict counter if PREVIOUS connection was stable (>30s).
+      // If bot connects and immediately gets kicked (440 loop), counter must survive.
+      const lastConnected = connectedAt.get(sessionId);
+      if (!lastConnected || (Date.now() - lastConnected) > 30000) {
+        reconnectAttempts.delete(sessionId);
+      }
+      connectedAt.set(sessionId, Date.now());
       sessionQRs.delete(sessionId);
       sessionStatus.set(sessionId, 'connected');
       const phone = sock.user?.id?.split('@')[0]?.split(':')[0] || '';
@@ -288,8 +296,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       logger.warn({ sessionId, reason, wasRegistered }, 'Connection closed');
 
       if (isLoggedOut) {
-        // Permanently logged out — clean ALL data for this session from Firebase
+        // Permanently logged out — clean ALL data for this session
         reconnectAttempts.delete(sessionId);
+        connectedAt.delete(sessionId);
         sessionInfo.delete(sessionId);
         sessionStatus.set(sessionId, 'logged_out');
         botEvents.emit('status', { sessionId, status: 'logged_out' });
@@ -324,19 +333,21 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         if (isConflict) {
           const attempts = (reconnectAttempts.get(sessionId) || 0) + 1;
           reconnectAttempts.set(sessionId, attempts);
+          connectedAt.delete(sessionId); // force stable-check on next connect
 
           if (attempts > 5) {
-            // Too many conflicts in a row — stop retrying to avoid fight loop
+            // Too many rapid conflicts — stop retrying to avoid fight loop with another device
             reconnectAttempts.delete(sessionId);
+            connectedAt.delete(sessionId);
             sessionStatus.set(sessionId, 'disconnected');
             botEvents.emit('status', { sessionId, status: 'disconnected' });
-            logger.error({ sessionId }, '🛑 Too many session conflicts (440). Stop reconnecting — close other WhatsApp sessions/tabs then restart bot.');
+            logger.error({ sessionId, attempts }, '🛑 Session 440 loop stopped after 5 conflicts. Another device/server is using this WhatsApp number. Disconnect that device then restart bot.');
           } else {
             // Exponential backoff: 15s → 30s → 60s → 120s → 120s
             const delay = Math.min(15000 * Math.pow(2, attempts - 1), 120000);
             sessionStatus.set(sessionId, 'reconnecting');
             botEvents.emit('status', { sessionId, status: 'reconnecting' });
-            logger.info({ sessionId, attempt: attempts, delaySec: delay / 1000 }, `🔄 Session conflict — reconnecting in ${delay / 1000}s (attempt ${attempts}/5)...`);
+            logger.info({ sessionId, attempt: attempts, delaySec: Math.round(delay / 1000) }, `🔄 Session conflict (440) — retry in ${Math.round(delay / 1000)}s (${attempts}/5)`);
             setTimeout(() => createSession(sessionId, false, null), delay);
           }
 

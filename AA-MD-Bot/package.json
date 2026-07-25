@@ -18,7 +18,13 @@
     "postinstall": "node -e \"const fs=require('fs');['logs','temp','session','downloads','database','cache'].forEach(d=>{try{fs.mkdirSync(d,{recursive:true})}catch{}});console.log('✅ Directories ready');\"",
     "prepare": "node -e \"const fs=require('fs');if(!fs.existsSync('.env')&&fs.existsSync('.env.example')){fs.copyFileSync('.env.example','.env');console.log('📋 .env created from .env.example — edit it before starting');}\" 2>/dev/null || true"
   },
-  "keywords": ["whatsapp", "bot", "md", "baileys", "oracle"],
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "md",
+    "baileys",
+    "oracle"
+  ],
   "author": "Ahsan Ali Wadani (AA Mods)",
   "license": "MIT",
   "dependencies": {
@@ -49,7 +55,6 @@
     "qrcode-terminal": "^0.12.0",
     "sharp": "^0.35.2",
     "wa-sticker-formatter": "^4.4.4",
-    "youtube-po-token-generator": "^0.6.0",
     "yt-dlp-wrap": "^2.3.12"
   }
 }
