@@ -1,3 +1,16 @@
+// Load .env from the project root — works with plain `pm2 restart aa-md-bot`,
+// `node index.js`, `npm start`, or any other launch method.
+// Uses override:false so vars already in the environment (set by shell/PM2) take precedence.
+import { createRequire } from 'module';
+const _require = createRequire(import.meta.url);
+try {
+  const _dotenv = _require('dotenv');
+  const _path   = _require('path');
+  const _url    = _require('url');
+  const _dir    = _path.dirname(_url.fileURLToPath(import.meta.url));
+  _dotenv.config({ path: _path.join(_dir, '.env'), override: false });
+} catch {}
+
 // Ensure common binary locations are in PATH (works on Replit, Railway, VPS, etc.)
 const extraPaths = ['/home/runner/.local/bin', '/usr/local/bin', '/usr/bin'];
 for (const p of extraPaths) {
