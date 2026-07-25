@@ -4,11 +4,11 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Resolve yt-dlp binary path once — works on Replit, Railway, VPS, Docker
+// Resolve yt-dlp binary path — works on Replit, Heroku, Railway, VPS, Docker
 const CANDIDATES = [
-  '/home/runner/.local/bin/yt-dlp',   // Replit
-  '/usr/local/bin/yt-dlp',            // pip install (Railway/Docker/VPS)
-  '/usr/bin/yt-dlp',                   // system package
+  '/home/runner/.local/bin/yt-dlp',   // Replit (workflow installs here)
+  '/usr/local/bin/yt-dlp',            // Docker / VPS binary
+  '/usr/bin/yt-dlp',                  // system package
   '/opt/homebrew/bin/yt-dlp',         // macOS Homebrew
 ];
 
@@ -21,16 +21,13 @@ function resolveYtdlp() {
 
 export const YTDLP = resolveYtdlp();
 
-// Resolve Deno binary for yt-dlp's JS challenge solver (nsig/"n" parameter).
-// IMPORTANT: yt-dlp's JS challenge engine (EJS) only supports Deno right now —
-// Node.js (even v20/v22) is explicitly marked "unsupported" by yt-dlp's own
-// runtime check. Without a working JS runtime, YouTube serves ONLY storyboard
-// (mhtml) formats for many videos — no audio/video streams at all. This is
-// what caused "all sources returned error" for real-world/less-popular videos.
+// Resolve Deno binary — yt-dlp's JS challenge engine (EJS) requires Deno.
+// Without it, YouTube serves ONLY storyboard (mhtml) formats for many videos.
+// Node.js is explicitly "unsupported" by yt-dlp's own runtime check.
 function resolveDeno() {
   const candidates = [
-    `${process.env.HOME || '/home/runner'}/.deno/bin/deno`, // installed via deno.land/install.sh
-    '/usr/local/bin/deno',
+    `${process.env.HOME || '/home/runner'}/.deno/bin/deno`, // deno.land/install.sh
+    '/usr/local/bin/deno',   // Docker / VPS
     '/usr/bin/deno',
   ];
   for (const p of candidates) {
@@ -39,24 +36,31 @@ function resolveDeno() {
   return 'deno'; // fallback: rely on PATH
 }
 
-// Common flags for all yt-dlp invocations:
-// --js-runtimes deno:PATH → required for YouTube's "n" challenge (nsig) —
-//   without this, only images/storyboards are returned for many videos.
-// --no-check-certificate  → skip SSL issues in sandboxed environments
 const _denoPath = resolveDeno();
-export const YTDLP_FLAGS = `--js-runtimes "deno:${_denoPath}" --no-check-certificate`;
 
-// Returns --cookies flag string if cookies.txt exists, else empty string
-// Use getCookiesFlag() only with exec() (shell string interpolation).
-const COOKIES_PATH = path.join(__dirname, '..', 'cookies.txt');
+// ── Common yt-dlp flags ───────────────────────────────────────────────────────
+// --js-runtimes          → Deno for YouTube n-challenge (nsig) — required
+// --no-check-certificate → skip SSL issues in sandboxed/proxy environments
+// --socket-timeout 30    → don't hang forever on blocked connections
+// --retries 2            → retry transient network errors, then fall to next source
+// --fragment-retries 2   → retry failed fragments in DASH streams
+// --no-warnings          → suppress non-error output (logged by bot separately)
+export const YTDLP_FLAGS = [
+  `--js-runtimes "deno:${_denoPath}"`,
+  '--no-check-certificate',
+  '--socket-timeout 30',
+  '--retries 2',
+  '--fragment-retries 2',
+  '--no-warnings',
+].join(' ');
+
+// Returns --cookies flag string if cookies.txt exists (for exec shell string)
+export const COOKIES_PATH = path.join(__dirname, '..', 'cookies.txt');
 export function getCookiesFlag() {
   return existsSync(COOKIES_PATH) ? `--cookies "${COOKIES_PATH}"` : '';
 }
 
-// Returns ['--cookies', '<path>'] array if cookies.txt exists, else []
-// Use getCookiesArgs() with execFile() (args array — avoids shell injection).
+// Returns ['--cookies', '<path>'] array if cookies.txt exists (for execFile)
 export function getCookiesArgs() {
   return existsSync(COOKIES_PATH) ? ['--cookies', COOKIES_PATH] : [];
 }
-
-export { COOKIES_PATH };

@@ -147,7 +147,12 @@ function scheduleSave(name) {
 // ── Public init: load all data from MongoDB ───────────────────────────────────
 export async function initDatabase() {
   if (!MONGO_URI) {
-    console.warn('[DB] ⚠️  MONGODB_URI not set — using in-memory only (data lost on restart). Set MONGODB_URI in .env');
+    console.warn(
+      '[DB] ⚠️  No database configured — running in-memory only (ALL data lost on restart)\n' +
+      '     To persist data, set one of these in your .env or Replit Secrets:\n' +
+      '       MONGODB_URI  = mongodb+srv://user:pass@cluster.mongodb.net/dbname   (Atlas / Oracle ADB)\n' +
+      '       MONGODB_PASSWORD = <your-atlas-password>  (legacy shorthand for the built-in cluster)'
+    );
     return;
   }
   try {
