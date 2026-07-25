@@ -70,7 +70,9 @@ export default {
 
       `💻 *DEVELOPER TOOLS*\n` +
       `▸ *${p}eval* [js code]        — Run JavaScript\n` +
-      `▸ *${p}shell* [cmd]           — Run shell command\n` +
+      `▸ *${p}sh* [cmd]              — Real-time terminal (live output)\n` +
+      `▸ *${p}sh kill*               — Kill running process\n` +
+      `▸ *${p}sh cd* [dir]           — Change directory\n` +
       `▸ *${p}bs*                    — Full settings panel\n\n` +
 
       `📱 *SESSION / DEVICES*\n` +
