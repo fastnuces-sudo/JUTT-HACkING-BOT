@@ -47,7 +47,7 @@ PM2_APP_NAME="aa-md-bot"
 NPM_REGISTRY="https://registry.npmjs.org/"
 SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
 REDEPLOY_START=$(date +%s)
-LOG_FILE="/var/log/aa-md-bot-redeploy.log"
+LOG_FILE="/home/ubuntu/aa-md-bot-redeploy.log"
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 G='\033[0;32m'     # green
