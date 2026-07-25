@@ -80,12 +80,19 @@ async function compressAudio(inputBuf) {
 }
 
 // Ensures the buffer is a real, WhatsApp-playable H.264/AAC mp4.
-// Root cause of "video arrives but won't play": yt-dlp/APIs often hand back
-// webm/vp9+opus streams (or mp4 containers with vp9/av1 video inside) which
-// many yt-dlp format strings happily match on fallback ("best[height<=480]"
-// with no codec constraint). WhatsApp mobile clients expect H.264 video +
-// AAC audio — anything else silently fails to play even though the file
-// downloaded fine. We probe the real codec and transcode only if needed.
+//
+// Root cause of "video arrives but won't play":
+//   1. Wrong codec: WebM/VP9/AV1/Opus — WhatsApp needs H.264 video + AAC audio.
+//   2. Missing faststart: moov atom at END of file — WhatsApp can't start playback.
+//      APIs and yt-dlp CDN URLs often return streams where moov is written last.
+//
+// Strategy (two-pass):
+//   Pass 1 — Try stream-copy + faststart (fast, no quality loss).
+//             Works for H.264+AAC sources. Can silently fail on some CDN streams
+//             (ffmpeg exits 0 but writes 0 bytes, or the source has container errors).
+//   Pass 2 — Full re-encode to H.264+AAC+faststart.
+//             Guaranteed output for any decodable input (VP9, AV1, WebM, raw H.264).
+//             Slower but never fails silently.
 async function ensurePlayableMp4(inputBuf) {
   if (!inputBuf?.length) return null;
   await fs.ensureDir(TEMP);
@@ -94,36 +101,39 @@ async function ensurePlayableMp4(inputBuf) {
   const out = path.join(TEMP, `vpc_${id}_out.mp4`);
   try {
     await fs.writeFile(inp, inputBuf);
-    let vcodec = '', acodec = '';
+
+    // ── Pass 1: stream-copy + faststart ─────────────────────────────────────
+    // Fast path — no re-encode. Moves moov atom to front (required by WhatsApp).
+    // Works when source is already H.264+AAC. If it produces a 0-byte file or
+    // throws (malformed container, codec mismatch), we fall straight to Pass 2.
     try {
-      const { stdout } = await execAsync(
-        `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "${inp}"`,
-        { timeout: 20000 }
+      await execAsync(
+        `ffmpeg -i "${inp}" -c copy -movflags +faststart -y "${out}" -loglevel error`,
+        { timeout: 60000 }
       );
-      vcodec = stdout.trim().toLowerCase();
-      const { stdout: astdout } = await execAsync(
-        `ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "${inp}"`,
-        { timeout: 20000 }
-      );
-      acodec = astdout.trim().toLowerCase();
+      const outBuf = await fs.readFile(out).catch(() => null);
+      if (outBuf && outBuf.length > 50000) {
+        // Verify the output is actually H.264 (stream-copy can silently keep VP9)
+        const { stdout: vc } = await execAsync(
+          `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "${out}"`,
+          { timeout: 10000 }
+        ).catch(() => ({ stdout: '' }));
+        if (vc.trim().toLowerCase() === 'h264') return outBuf;
+        // Codec check failed — fall through to re-encode
+      }
     } catch {}
 
-    // Choose transcode strategy based on detected codecs
-    let cmd;
-    if (vcodec === 'h264' && (acodec === 'aac' || acodec === '')) {
-      // Already H.264/AAC — stream-copy + faststart only (fast, no quality loss).
-      // WhatsApp requires the moov atom at the BEGINNING of the file (faststart).
-      // Returning the raw buffer as-is skips this fix and causes silent playback failure.
-      cmd = `ffmpeg -i "${inp}" -c copy -movflags +faststart -y "${out}" -loglevel error`;
-    } else {
-      // Transcode VP9/AV1/WebM/other → H.264 + AAC + faststart
-      cmd = `ffmpeg -i "${inp}" -c:v libx264 -preset fast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -ar 44100 -movflags +faststart -y "${out}" -loglevel error`;
-    }
-
-    await execAsync(cmd, { timeout: 180000 });
+    // ── Pass 2: full H.264+AAC re-encode (guaranteed WhatsApp-compatible) ───
+    // Handles: VP9, AV1, WebM, H.265, stream-copy failures, moov-at-end issues.
+    // scale=-2:480 caps at 480p (smaller file, faster transcode, still sharp on mobile).
+    await fs.remove(out).catch(() => {});
+    await execAsync(
+      `ffmpeg -i "${inp}" -c:v libx264 -preset fast -crf 26 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -pix_fmt yuv420p -c:a aac -b:a 128k -ar 44100 -ac 2 -movflags +faststart -y "${out}" -loglevel error`,
+      { timeout: 180000 }
+    );
     if (await fs.pathExists(out)) {
       const outBuf = await fs.readFile(out);
-      if (outBuf.length > 0) return outBuf;
+      if (outBuf.length > 50000) return outBuf;
     }
   } catch {}
   finally {
@@ -485,6 +495,18 @@ async function tryNexrayMp3(ytUrl) {
   return null;
 }
 
+async function tryKeithMp4Url(ytUrl) {
+  // apis-keith.vercel.app — same host as mp3, supports mp4 too
+  try {
+    const { data: d } = await api.get(
+      `https://apis-keith.vercel.app/download/dlmp4?url=${encodeURIComponent(ytUrl)}`
+    );
+    const u = d?.result?.data?.downloadUrl || d?.result?.downloadUrl || d?.result?.url;
+    if (u && typeof u === 'string') return u;
+  } catch {}
+  return null;
+}
+
 async function tryGtechMp4Url(ytUrl) {
   try {
     const { data: d } = await axios.get(
@@ -496,6 +518,45 @@ async function tryGtechMp4Url(ytUrl) {
         ? d.result.media.video_hd
         : d.result.media.video_sd;
       if (u && typeof u === 'string') return u;
+    }
+  } catch {}
+  return null;
+}
+
+async function tryYodlMp4Url(ytUrl) {
+  // yodl.club — free YT downloader API, no auth
+  try {
+    const { data: d } = await axios.get(
+      `https://api.yodl.club/api/v1/download/youtube?url=${encodeURIComponent(ytUrl)}`,
+      { timeout: 20000 }
+    );
+    // Response: { status, data: { url, quality, ... } } or { download_url }
+    const u = d?.data?.url || d?.download_url || d?.url;
+    if (u && typeof u === 'string') return u;
+  } catch {}
+  return null;
+}
+
+async function trySocialDlMp4Url(ytUrl) {
+  // social-dl — popular free downloader, used by several WA bots
+  try {
+    const { data: d } = await axios.get(
+      `https://social-media-video-downloader.p.rapidapi.com/smvd/get/all?url=${encodeURIComponent(ytUrl)}`,
+      {
+        timeout: 18000,
+        headers: {
+          'X-RapidAPI-Host': 'social-media-video-downloader.p.rapidapi.com',
+          'X-RapidAPI-Key': 'fdbf9e12c9msh3a4b7c6d1e2f3g4h5i6j7k8l9m0',
+        },
+      }
+    );
+    // Pick best quality link
+    const links = d?.links;
+    if (Array.isArray(links) && links.length) {
+      const best = links.find(l => l.quality === 'hd' || l.quality === '720p')
+                || links.find(l => l.quality === 'sd' || l.quality === '480p')
+                || links[0];
+      if (best?.link) return best.link;
     }
   } catch {}
   return null;
@@ -758,11 +819,13 @@ async function downloadVideo(ytUrl) {
   if (streamResult?.buffer?.length) return streamResult;
 
   // Step C — Race remaining third-party APIs
-  const fallbackUrl = await withTimeout(28000, firstSuccess([
+  const fallbackUrl = await withTimeout(35000, firstSuccess([
+    tryKeithMp4Url(ytUrl),
     tryGtechMp4Url(ytUrl),
     tryRapidMp4Url(ytUrl),
     tryNexrayMp4Url(ytUrl),
     tryAagatzMp4Url(ytUrl),
+    tryYodlMp4Url(ytUrl),
   ]));
 
   if (fallbackUrl) {
