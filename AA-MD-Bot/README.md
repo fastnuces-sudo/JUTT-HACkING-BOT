@@ -19,35 +19,26 @@
 
 ## Deploy on Oracle Cloud (Ubuntu VM)
 
-**Fastest way — one command per server:**
+**Ek hi command — bas itna karo:**
 
 ```bash
-# SSH into your Oracle VM, then run:
-bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh) 1
-# Use 2 or 3 for second/third VM
+bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh)
 ```
 
-**What gets installed automatically:**
-- Node.js 20, npm, PM2
-- ffmpeg, yt-dlp, Deno
-- All bot dependencies (`npm install`)
-- UFW firewall (SSH + port 5000)
-- PM2 auto-restart on reboot
+Script khud poochega:
+- `MONGODB_URI` — apna MongoDB connection string paste karo
+- Telegram token (optional)
 
-**After setup — configure .env:**
-```bash
-nano /home/ubuntu/AA-MD-Bot/.env
-# Set MONGODB_URI to your MongoDB connection string
-# Save (Ctrl+X → Y → Enter), then:
-pm2 restart aa-md-bot
-pm2 logs aa-md-bot
-```
+Baaki sab apne aap:
+✅ Node.js 20 · ffmpeg · yt-dlp · Deno · PM2 install  
+✅ Repo clone · npm install · .env likha  
+✅ Firewall set · Bot start · Auto-restart on reboot
 
-**Good signs in logs:**
+**Deploy ke baad dashboard:**
 ```
-[DB] ✅ MongoDB loaded
-✨ AA MD Bot is ready!
+http://YOUR_SERVER_IP:5000
 ```
+WhatsApp pairing code wahan se milega.
 
 ---
 
