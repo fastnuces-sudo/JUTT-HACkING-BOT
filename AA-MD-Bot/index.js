@@ -326,9 +326,10 @@ async function main() {
   printBanner();
   logger.info('🚀 Starting AA MD Bot...');
 
-  // Ensure directories
-  // Only temp/ is needed — everything else now lives in Firebase
-  fs.ensureDirSync(path.join(__dirname, 'temp'));
+  // Ensure all required directories exist (created on every startup — safe to repeat)
+  for (const dir of ['temp', 'logs', 'session', 'downloads', 'database', 'cache']) {
+    fs.ensureDirSync(path.join(__dirname, dir));
+  }
 
   // Load database from Firebase before anything reads from db
   await initDatabase();

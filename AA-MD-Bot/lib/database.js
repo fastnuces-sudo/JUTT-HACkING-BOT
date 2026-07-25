@@ -147,7 +147,7 @@ function scheduleSave(name) {
 // ── Public init: load all data from MongoDB ───────────────────────────────────
 export async function initDatabase() {
   if (!MONGO_URI) {
-    console.warn('[DB] ⚠️  MONGODB_PASSWORD not set — using in-memory only (data lost on restart)');
+    console.warn('[DB] ⚠️  MONGODB_URI not set — using in-memory only (data lost on restart). Set MONGODB_URI in .env');
     return;
   }
   try {

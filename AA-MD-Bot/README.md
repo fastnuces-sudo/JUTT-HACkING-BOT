@@ -5,15 +5,91 @@
 </p>
 
 <p align="center">
-  <b>Multi-Device WhatsApp Bot — 226+ Plugins | Multi-Session | Oracle ADB / MongoDB</b>
+  <b>Multi-Device WhatsApp Bot — 226+ Plugins | Multi-Session | Oracle Cloud / MongoDB</b>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white" />
   <img src="https://img.shields.io/badge/Platform-WhatsApp-25D366?logo=whatsapp&logoColor=white" />
-  <img src="https://img.shields.io/badge/DB-Oracle_ADB_|_MongoDB-F80000?logo=oracle&logoColor=white" />
-  <img src="https://img.shields.io/badge/Deploy-Oracle_|_Railway_|_Docker-blue" />
+  <img src="https://img.shields.io/badge/DB-MongoDB-47A248?logo=mongodb&logoColor=white" />
+  <img src="https://img.shields.io/badge/Deploy-Oracle_Cloud-F80000?logo=oracle&logoColor=white" />
 </p>
+
+---
+
+## Deploy on Oracle Cloud (Ubuntu VM)
+
+**Fastest way — one command per server:**
+
+```bash
+# SSH into your Oracle VM, then run:
+bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh) 1
+# Use 2 or 3 for second/third VM
+```
+
+**What gets installed automatically:**
+- Node.js 20, npm, PM2
+- ffmpeg, yt-dlp, Deno
+- All bot dependencies (`npm install`)
+- UFW firewall (SSH + port 5000)
+- PM2 auto-restart on reboot
+
+**After setup — configure .env:**
+```bash
+nano /home/ubuntu/AA-MD-Bot/.env
+# Set MONGODB_URI to your MongoDB connection string
+# Save (Ctrl+X → Y → Enter), then:
+pm2 restart aa-md-bot
+pm2 logs aa-md-bot
+```
+
+**Good signs in logs:**
+```
+[DB] ✅ MongoDB loaded
+✨ AA MD Bot is ready!
+```
+
+---
+
+## Manual Deploy (any Ubuntu/Debian VPS)
+
+```bash
+git clone https://github.com/ahsanaliwadani/AA-MD-Bot.git
+cd AA-MD-Bot
+npm install
+cp .env.example .env
+nano .env          # set MONGODB_URI and other values
+npm start          # OR: pm2 start ecosystem.config.cjs
+```
+
+Requires: **Node.js >= 20.6**, **ffmpeg**, **yt-dlp** on PATH.
+
+---
+
+## Database Options
+
+Set `MONGODB_URI` in `.env` — pick the one that fits:
+
+| Option | Example URI | Notes |
+|---|---|---|
+| **Self-hosted MongoDB on same VM** | `mongodb://user:pass@127.0.0.1:27017/aa_md_bot` | Best for single-VM setup |
+| **MongoDB on another Oracle VM** | `mongodb://user:pass@10.0.0.X:27017/aa_md_bot` | Use private IP |
+| **Oracle ADB 23ai (MongoDB API)** | `mongodb://ADMIN:pass@adb-xxx.oraclecloud.com:27017/ADMIN?authMechanism=PLAIN&tls=true&...` | Full guide: [ORACLE-ADB-GUIDE.md](deploy/ORACLE-ADB-GUIDE.md) |
+| **MongoDB Atlas** | `mongodb+srv://user:pass@cluster.mongodb.net/aa_md_bot` | 512 MB free |
+
+---
+
+## Docker
+
+```bash
+git clone https://github.com/ahsanaliwadani/AA-MD-Bot.git
+cd AA-MD-Bot
+cp .env.example .env       # fill in MONGODB_URI
+docker build -t aa-md-bot .
+docker run -d --env-file .env -p 5000:5000 --name aa-md-bot aa-md-bot
+```
+
+Full Docker guide: **[`deploy/DOCKER.md`](deploy/DOCKER.md)**
 
 ---
 
@@ -32,135 +108,35 @@
 
 ---
 
-## Deploy Options
-
-### Option 1 — Oracle Cloud (Free, Recommended)
-
-**3 ARM VMs + Oracle ADB 23ai — totally free forever.**
-
-Full step-by-step guide: **[`deploy/ORACLE-DEPLOY.md`](deploy/ORACLE-DEPLOY.md)**  
-Database setup: **[`deploy/ORACLE-ADB-GUIDE.md`](deploy/ORACLE-ADB-GUIDE.md)**
-
-Quick summary:
-```
-Oracle Always Free:
- ├── 3 × ARM VM (1 OCPU, 6–8 GB RAM each)   ← runs the bot
- └── Oracle ADB 23ai (20 GB)                 ← shared database
-```
-
-```bash
-# On each VM — run once after first SSH login:
-bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/AA-MD-Bot/main/deploy/setup.sh) 1
-# (use 2 or 3 for the second/third VM)
-```
-
----
-
-### Option 2 — Heroku
-
-**[`deploy/HEROKU.md`](deploy/HEROKU.md)** — full Heroku guide (3 methods).
-
-**Recommended: GitHub Actions** (no CLI needed, auto-deploys on every push):
-
-1. Create Heroku app at [dashboard.heroku.com](https://dashboard.heroku.com) → set Config Vars (`MONGODB_URI`, `SESSION_SECRET`)
-2. Get Heroku API key → add to GitHub repo as secrets (`HEROKU_API_KEY`, `HEROKU_APP_NAME`, `HEROKU_EMAIL`)
-3. Push to `main` → GitHub Actions builds and deploys automatically
-
-> ⚠️ Do **not** connect GitHub directly in Heroku's Deploy tab — it picks up the wrong `package.json`.  
-> The Actions workflow (`deploy/HEROKU.md → Method A`) deploys only the bot subfolder correctly.
-
-> Dyno: **Basic ($7/month)** — always on. Eco sleeps and drops the WhatsApp connection.
-
----
-
-### Option 3 — Docker / Railway / VPS
-
-**[`deploy/DOCKER.md`](deploy/DOCKER.md)** — full guide for Docker, Docker Compose, Railway, and any VPS.
-
-```bash
-# Docker (quick start)
-git clone https://github.com/YOUR_USERNAME/AA-MD-Bot.git
-cd AA-MD-Bot
-cp .env.example .env        # fill in your values
-docker build -t aa-md-bot .
-docker run -d --env-file .env -p 5000:5000 aa-md-bot
-```
-
-Railway: fork the repo → connect to Railway → it auto-detects the `Dockerfile`.
-
----
-
-### Option 4 — Replit (Development / Testing)
-
-Fork/clone into Replit, set secrets in the Secrets panel (same keys as `.env.example`), then run the **AA MD Bot** workflow. No installation needed.
-
----
-
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in your values:
-
-```bash
-cp .env.example .env
-nano .env
-```
+Copy `.env.example` to `.env` and fill in values:
 
 | Variable | Required | Description |
 |---|---|---|
+| `MONGODB_URI` | **Yes** | MongoDB connection string (see Database Options above) |
 | `PORT` | No | Dashboard port (default `5000`) |
 | `SERVER_ID` | No | `server-1` / `server-2` / `server-3` |
-| `MONGODB_URI` | **Yes*** | Oracle ADB or MongoDB connection string |
-| `MONGODB_PASSWORD` | Legacy | Old Atlas shorthand — use `MONGODB_URI` instead |
-| `SESSION_SECRET` | **Yes** | Random 64-char string for dashboard auth |
-| `TELEGRAM_BOT_TOKEN` | No | Admin/pairing bot (from @BotFather) |
-| `TELEGRAM_FEATURES_BOT_TOKEN` | No | Features bot (download, search, etc.) |
-| `OPENWEATHER_API_KEY` | No | Weather commands |
-| `OMDB_API_KEY` | No | Movie info commands |
-| `RAPIDAPI_KEY` | No | Some search plugins |
-| `OCR_SPACE_KEY` | No | Image-to-text (`.ocr`) |
-| `HF_TOKEN` | No | Hugging Face AI commands |
-| `TENOR_API_KEY` | No | GIF search |
-
-> \* Without `MONGODB_URI` the bot runs with **in-memory storage** — data is lost on restart.  
-> Get a free Oracle ADB → [`deploy/ORACLE-ADB-GUIDE.md`](deploy/ORACLE-ADB-GUIDE.md)
+| `TELEGRAM_BOT_TOKEN` | No | Admin/pairing Telegram bot |
+| `TELEGRAM_FEATURES_BOT_TOKEN` | No | Features mirror Telegram bot |
+| `OPENWEATHER_API_KEY` | No | Weather plugin |
+| `OMDB_API_KEY` | No | Movie/series search plugin |
 
 ---
 
-## First-Time Setup (Pairing WhatsApp)
-
-1. Start the bot and open the dashboard: `http://SERVER_IP:5000`
-2. Enter your WhatsApp number (with country code, e.g. `923316041183`)
-3. Click **Get Pairing Code**
-4. On WhatsApp: **Settings → Linked Devices → Link a Device → Link with phone number**
-5. Enter the 8-character code shown on the dashboard
-
-The bot reconnects automatically on restart — you only pair once.
-
----
-
-## Plugin Categories
-
-```
-plugins/
-├── admin/      — 28 plugins  (ban, mute, kick, warn, broadcast …)
-├── download/   — 14 plugins  (yt, ig, tiktok, spotify, reddit …)
-├── fun/        — 26 plugins  (meme, dare, truth, roast, ship …)
-├── gb/         — 14 plugins  (GBWhatsApp tools)
-├── group/      — 18 plugins  (tagall, poll, welcome, antidelete …)
-├── islamic/    — 61 plugins  (prayer, quran, hadith, dua …)
-├── media/      — 22 plugins  (sticker, video convert, compress …)
-├── owner/      — 29 plugins  (session, settings, mode, prefix …)
-├── search/     — 35 plugins  (google, wiki, news, anime, lyrics …)
-├── tools/      — 23 plugins  (calc, currency, weather, ocr, ai …)
-└── utility/    — 20 plugins  (ping, info, help, uptime …)
-```
-
----
-
-## Updating the Bot
+## PM2 Commands
 
 ```bash
-# On any server VM:
+pm2 status                   # check if running
+pm2 restart aa-md-bot        # restart
+pm2 logs aa-md-bot           # live logs
+pm2 logs aa-md-bot --err     # errors only
+pm2 monit                    # live monitor (CPU/RAM)
+```
+
+## Updating
+
+```bash
 cd /home/ubuntu/AA-MD-Bot
 git pull
 npm install --omit=dev
@@ -170,12 +146,14 @@ pm2 logs aa-md-bot
 
 ---
 
-## Telegram Mirror Bot (Optional)
+## Pairing WhatsApp
 
-Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_FEATURES_BOT_TOKEN` in `.env`.
+Open the dashboard in your browser: `http://YOUR_SERVER_IP:5000`
 
-- **Admin bot** — pairing, session management, restart via Telegram
-- **Features bot** — `/yt`, `/ig`, `/twitter`, `/spotify`, `/reddit`, `/pin`, `/threads`, `/weather`, `/calc`, and more
+1. Enter your WhatsApp number (with country code, e.g. `923316041183`)
+2. Click **Get Pairing Code**
+3. In WhatsApp: **Settings → Linked Devices → Link a Device → Link with phone number**
+4. Enter the 8-digit code shown on the dashboard
 
 ---
 
@@ -183,26 +161,24 @@ Set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_FEATURES_BOT_TOKEN` in `.env`.
 
 | Problem | Fix |
 |---|---|
-| `MONGODB_PASSWORD not set` | Set `MONGODB_URI` in `.env` |
-| Video won't play on WhatsApp | Bot re-encodes automatically — update to latest code |
-| Port 5000 not reachable | Open port in firewall/security list |
-| Bot crashes on start | `pm2 logs aa-md-bot --err` — check for missing env vars |
+| `MONGODB_URI not set` | Set `MONGODB_URI` in `.env`, then `pm2 restart aa-md-bot` |
+| `Connection timeout` | Check MongoDB is running: `sudo systemctl status mongod` |
+| `Authentication failed` | Wrong MongoDB user/password in URI |
+| Dashboard not loading | `pm2 logs aa-md-bot --err` — check startup errors |
+| Port 5000 not reachable | Oracle Console → VCN → Security List → add ingress rule for TCP 5000 |
 | yt-dlp not found | `sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp` |
 | YouTube "sign in to confirm" | Add cookies to `cookies.txt` — see `cookies.txt.example` |
-| Bot disconnects often | Normal — WhatsApp disconnects idle sessions; PM2 auto-reconnects |
+| Bot disconnects | Normal — WhatsApp disconnects idle sessions; PM2 auto-reconnects |
 
 ---
 
 ## Stack
 
 - **[Baileys](https://github.com/WhiskeySockets/Baileys)** — WhatsApp Web API
-- **[MongoDB Node.js Driver](https://www.mongodb.com/docs/drivers/node/current/)** — database (works with Oracle ADB 23ai)
+- **[MongoDB Node.js Driver](https://www.mongodb.com/docs/drivers/node/current/)** — database
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** + **ffmpeg** — media downloads
-- **[Telegraf](https://telegraf.js.org/)** — Telegram mirror bot
-- **[PM2](https://pm2.keymetrics.io/)** — process management
+- **[PM2](https://pm2.keymetrics.io/)** — process management on Oracle VM
 
 ---
 
-## Developer
-
-**Ahsan Ali Wadani** — AA Mods
+**Developer:** Ahsan Ali Wadani — AA Mods
