@@ -37,7 +37,7 @@ if [ -f "$BOT_DIR/.env" ] && grep -q "^MONGODB_URI=.\+" "$BOT_DIR/.env" 2>/dev/n
   echo -e "  ${G}✔  MongoDB URI already set in .env — reusing${R}"
 else
   echo -e "  ${C}MongoDB connection string (apna URI paste karo):${R}"
-  echo -e "  ${Y}Example: mongodb://user:pass@127.0.0.1:27017/aa_md_bot${R}"
+  echo -e "  ${Y}Example: mongodb://aa_bot_user:Password@10.0.0.X:27017/aa_md_bot?authSource=aa_md_bot${R}"
   read -r -p "  MONGODB_URI= " MONGODB_URI
   while [ -z "$MONGODB_URI" ]; do
     echo -e "  ${Y}⚠  URI khali nahi ho sakti${R}"
