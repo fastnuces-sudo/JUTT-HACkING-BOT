@@ -23,7 +23,6 @@ import {
 import config from './config.js';
 import { cleanTemp, formatDuration } from './lib/helper.js';
 import { startBirthdayScheduler } from './plugins/utility/birthday.js';
-import { restoreReminders }      from './plugins/utility/remind.js';
 import { initTelegramAdmin }    from './lib/telegramAdmin.js';
 import { initTelegramFeatures } from './lib/telegramFeatures.js';
 
@@ -363,9 +362,6 @@ async function main() {
 
   // ── Birthday scheduler — runs at exactly midnight every day ───────────────
   startBirthdayScheduler(() => sessions);
-
-  // ── Restore reminders from MongoDB (survive restarts) ─────────────────────
-  restoreReminders(() => sessions);
 
   // ── Telegram bots ─────────────────────────────────────────────────────────
   try {

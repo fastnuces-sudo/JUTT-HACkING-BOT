@@ -223,11 +223,6 @@ export async function handleMessage(sock, msg, sessionId) {
     const botMode = eff('botMode', 'public');
     if (botMode === 'private' && !owner && !fromMe) return;
 
-    if (settings.maintenanceMode && !owner) {
-      await reply(sock, msg, config.maintenanceMsg).catch(() => {});
-      return;
-    }
-
     // NOTE: auto-read is handled in sessionManager before commandHandler is called — no duplicate here.
 
     // Auto-react to every incoming message (not own messages, not view-once)
@@ -256,6 +251,13 @@ export async function handleMessage(sock, msg, sessionId) {
     }
 
     const { command, args, text: argText, prefix } = parsed;
+
+    // Maintenance mode — only block commands, never plain messages.
+    // Owner can always use commands even during maintenance.
+    if (settings.maintenanceMode && !owner) {
+      await reply(sock, msg, config.maintenanceMsg).catch(() => {});
+      return;
+    }
 
     if (isBanned(senderJid) && !owner) {
       await reply(sock, msg, '❌ You are banned from using this bot.').catch(() => {});

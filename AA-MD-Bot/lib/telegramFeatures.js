@@ -16,7 +16,9 @@ import playdl         from 'play-dl';
 
 const execFileAsync = promisify(execFile);
 const TOKEN  = process.env.TELEGRAM_FEATURES_BOT_TOKEN;
-const YTDLP  = '/home/runner/.local/bin/yt-dlp';
+// Use the same yt-dlp resolver as the WhatsApp bot (handles Replit/VPS/Oracle automatically)
+import { YTDLP as _YTDLP } from './ytdlp.js';
+const YTDLP  = _YTDLP;
 const HTML   = { parse_mode: 'HTML' };
 
 // ── Style ────────────────────────────────────────────────────────────────────

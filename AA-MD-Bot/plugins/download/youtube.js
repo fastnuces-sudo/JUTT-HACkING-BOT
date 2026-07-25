@@ -502,18 +502,34 @@ async function tryGtechMp4Url(ytUrl) {
 }
 
 async function tryRapidMp4Url(ytUrl) {
-  // cobalt.tools public API fallback (no auth needed for basic requests)
+  // ryzendesu API — reliable, no auth needed
   try {
     const { data: d } = await axios.get(
-      `https://co.wuk.sh/api/json`,
-      {
-        params: { url: ytUrl, vQuality: '720', isAudioOnly: false },
-        headers: { Accept: 'application/json' },
-        timeout: 15000,
-      }
+      `https://api.ryzendesu.vip/api/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`,
+      { timeout: 20000 }
     );
-    const u = d?.url;
+    const u = d?.data?.url || d?.url || d?.result?.url;
     if (u && typeof u === 'string') return u;
+  } catch {}
+  // yt5s.com fallback
+  try {
+    const { data: d } = await axios.post(
+      'https://www.yt5s.com/api/ajaxSearch',
+      new URLSearchParams({ q: ytUrl, vt: 'mp4' }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000 }
+    );
+    // pick 720p → 480p → 360p → first available
+    const links = d?.result?.links?.mp4;
+    const best = links?.mp4720 || links?.mp4480 || links?.mp4360 || Object.values(links || {})[0];
+    if (best?.url) return best.url;
+    if (best?.k && d?.vid) {
+      const { data: d2 } = await axios.post(
+        'https://www.yt5s.com/api/ajaxConvert',
+        new URLSearchParams({ vid: d.vid, k: best.k }).toString(),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 25000 }
+      );
+      if (d2?.dlink) return d2.dlink;
+    }
   } catch {}
   return null;
 }

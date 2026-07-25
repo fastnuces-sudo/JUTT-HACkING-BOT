@@ -1,0 +1,311 @@
+You are an expert Linux DevOps engineer.
+
+Create a production-ready redeploy.sh script for my project "AA MD Bot".
+
+This script is ONLY for updating an already deployed Oracle Cloud VM.
+
+DO NOT install Ubuntu packages.
+
+DO NOT reinstall MongoDB.
+
+DO NOT reinstall Node.js.
+
+DO NOT reinstall nginx.
+
+DO NOT reinstall certbot.
+
+DO NOT recreate firewall.
+
+The VM is already fully configured.
+
+==========================================================
+PROJECT
+==========================================================
+
+Repository:
+
+https://github.com/ahsanaliwadani/AA-MD-Bot
+
+Clone directory:
+
+/home/ubuntu/AA-MD-Bot-repo
+
+Bot directory can be either:
+
+/home/ubuntu/AA-MD-Bot-repo
+
+OR
+
+/home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot
+
+Automatically detect the correct one.
+
+==========================================================
+GOAL
+==========================================================
+
+The script should safely update the bot without breaking anything.
+
+It must be safe to run hundreds of times.
+
+==========================================================
+REQUIREMENTS
+==========================================================
+
+1.
+
+Use
+
+set -Eeuo pipefail
+
+2.
+
+Trap errors.
+
+Show readable error messages.
+
+3.
+
+Verify Git is installed.
+
+4.
+
+Verify PM2 is installed.
+
+5.
+
+Verify Node.js exists.
+
+6.
+
+Verify npm exists.
+
+If something important is missing,
+
+show a readable error.
+
+7.
+
+Check repository exists.
+
+If not,
+
+stop with helpful message.
+
+8.
+
+Go to repository.
+
+9.
+
+Automatically stash uncommitted changes if needed.
+
+10.
+
+git fetch
+
+11.
+
+git pull origin main
+
+12.
+
+Automatically detect correct bot directory.
+
+13.
+
+Verify package.json exists.
+
+14.
+
+Set npm registry
+
+https://registry.npmjs.org/
+
+15.
+
+Detect if package.json changed.
+
+Only run npm install when package.json changed.
+
+Otherwise skip.
+
+16.
+
+If npm install fails:
+
+Automatically delete
+
+node_modules
+
+package-lock.json
+
+Retry npm install.
+
+17.
+
+Verify node_modules exists.
+
+18.
+
+Verify ecosystem.config.cjs exists.
+
+19.
+
+Restart PM2:
+
+pm2 restart aa-md-bot --update-env
+
+20.
+
+If process doesn't exist:
+
+pm2 start ecosystem.config.cjs
+
+21.
+
+Save PM2.
+
+22.
+
+Verify bot started.
+
+Wait until:
+
+http://127.0.0.1:5000
+
+returns HTTP 200.
+
+23.
+
+If bot doesn't start,
+
+print PM2 logs automatically.
+
+24.
+
+Check nginx status.
+
+25.
+
+If nginx exists,
+
+reload nginx.
+
+26.
+
+Do NOT overwrite nginx config.
+
+27.
+
+Do NOT touch SSL certificates.
+
+28.
+
+Do NOT touch MongoDB.
+
+29.
+
+Do NOT touch firewall.
+
+30.
+
+Do NOT touch iptables.
+
+31.
+
+Do NOT modify .env.
+
+32.
+
+If .env.example changed,
+
+display warning.
+
+Example:
+
+⚠ New variables detected.
+
+Run:
+
+diff .env .env.example
+
+33.
+
+Display deployment summary.
+
+Example:
+
+✔ Git Updated
+
+✔ Dependencies Installed
+
+✔ PM2 Restarted
+
+✔ Dashboard Online
+
+34.
+
+Display useful URLs.
+
+Dashboard
+
+HTTP
+
+HTTPS (if available)
+
+35.
+
+Display useful commands.
+
+pm2 logs aa-md-bot
+
+pm2 status
+
+pm2 restart aa-md-bot
+
+36.
+
+Use colors.
+
+37.
+
+Use clean formatting.
+
+38.
+
+Use functions.
+
+39.
+
+Use readable comments.
+
+40.
+
+Must be production ready.
+
+41.
+
+Must be idempotent.
+
+42.
+
+Must be Oracle Cloud compatible.
+
+43.
+
+Must support Ubuntu 22.04 ARM64.
+
+44.
+
+Do not shorten the script.
+
+Return the COMPLETE redeploy.sh.
+
+Do not omit anything.
+
+No placeholders.
+
+No pseudo code.
+
+Generate the final production-ready script.
