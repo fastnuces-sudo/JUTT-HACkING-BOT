@@ -68,11 +68,22 @@ export default {
       `▸ *${p}banuser* ban @num      — Ban a user\n` +
       `▸ *${p}banuser* unban @num    — Unban a user\n\n` +
 
+      `🖥️ *SERVER TERMINAL*\n` +
+      `▸ *${p}sh* [command]          — Run any server command\n` +
+      `   _Live output — message har 2s me update hota hai_\n` +
+      `▸ *${p}sh kill*               — Running process band karo\n` +
+      `▸ *${p}sh cd* [dir]           — Directory change karo (persist)\n` +
+      `▸ *${p}sh pwd*                — Current directory dekho\n` +
+      `▸ *${p}sh clear*              — Directory reset karo\n` +
+      `   📌 _Examples:_\n` +
+      `   \`${p}sh pm2 status\`\n` +
+      `   \`${p}sh df -h\`\n` +
+      `   \`${p}sh free -h\`\n` +
+      `   \`${p}sh tail -n 50 logs/pm2-out.log\`\n` +
+      `   \`${p}sh top -bn1 | head -20\`\n\n` +
+
       `💻 *DEVELOPER TOOLS*\n` +
       `▸ *${p}eval* [js code]        — Run JavaScript\n` +
-      `▸ *${p}sh* [cmd]              — Real-time terminal (live output)\n` +
-      `▸ *${p}sh kill*               — Kill running process\n` +
-      `▸ *${p}sh cd* [dir]           — Change directory\n` +
       `▸ *${p}bs*                    — Full settings panel\n\n` +
 
       `📱 *SESSION / DEVICES*\n` +
