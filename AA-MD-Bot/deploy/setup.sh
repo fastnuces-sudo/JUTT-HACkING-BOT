@@ -598,7 +598,6 @@ cd "$BOT_DIR"
 # Set npm registry explicitly + disable interactive spinner (prevents hang in piped/non-TTY envs)
 npm config set registry "$NPM_REGISTRY"
 npm config set progress false
-npm config set spin false
 ok "npm registry set: $NPM_REGISTRY"
 
 _npm_install() {
@@ -1144,7 +1143,6 @@ hdr "3. npm install"
 cd "\$BOT_DIR"
 npm config set registry "\$NPM_REGISTRY"
 npm config set progress false
-npm config set spin false
 
 # Check if package.json changed since last install
 PKG_HASH_FILE="\$BOT_DIR/.npm-install-hash"
