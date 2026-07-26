@@ -904,87 +904,150 @@ sudo ufw --force enable >/dev/null
 ok "UFW: SSH(22) HTTP(80) HTTPS(443) Dashboard(5000) open | MongoDB(27017) blocked"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 18 — Nginx Configuration (reverse proxy → 127.0.0.1:5000)
+# STEP 18 — Nginx Configuration (fully idempotent, assumes nothing exists)
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "18. Nginx Configuration"
 
 NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}"
 NGINX_ENABLED="/etc/nginx/sites-enabled/${DOMAIN}"
 
-# If any core nginx file is missing (mime.types, nginx.conf, etc.) the package
-# is in a broken state — reinstall it to restore all default files.
-if [ ! -f /etc/nginx/mime.types ] || [ ! -f /etc/nginx/nginx.conf ]; then
-  inf "nginx config files missing — reinstalling nginx to restore defaults..."
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install --reinstall -yq nginx
-  ok "nginx reinstalled"
+# ── 1. Ensure nginx binary is present ────────────────────────────────────────
+if ! command -v nginx &>/dev/null; then
+  inf "nginx install ho raha hai..."
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq nginx nginx-common nginx-core
+  ok "nginx installed"
 fi
 
-# Ensure nginx site dirs exist
-sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+# ── 2. Ensure nginx-common is installed (it owns mime.types and nginx.conf) ──
+# Reinstalling nginx (meta-package) does NOT restore these files — nginx-common does.
+if [ ! -f /etc/nginx/mime.types ]; then
+  inf "mime.types missing — nginx-common reinstall kar rahe hain..."
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install --reinstall -yq nginx-common
+  ok "nginx-common reinstalled"
+fi
 
-# Ensure nginx.conf includes sites-enabled (absent on some minimal installs)
+# ── 3. If mime.types STILL missing, generate a minimal one ───────────────────
+if [ ! -f /etc/nginx/mime.types ]; then
+  inf "mime.types still missing — generating minimal mime.types..."
+  sudo tee /etc/nginx/mime.types > /dev/null << 'MIMETYPES'
+types {
+    text/html                             html htm shtml;
+    text/css                              css;
+    text/xml                              xml;
+    image/gif                             gif;
+    image/jpeg                            jpeg jpg;
+    application/javascript                js;
+    application/json                      json;
+    image/png                             png;
+    image/svg+xml                         svg svgz;
+    image/webp                            webp;
+    font/woff                             woff;
+    font/woff2                            woff2;
+    application/octet-stream              bin exe dll;
+    audio/mpeg                            mp3;
+    video/mp4                             mp4;
+    video/webm                            webm;
+    application/zip                       zip;
+}
+MIMETYPES
+  ok "mime.types generated"
+fi
+
+# ── 4. Ensure all required directories exist ─────────────────────────────────
+sudo mkdir -p /etc/nginx/sites-available \
+              /etc/nginx/sites-enabled \
+              /etc/nginx/conf.d \
+              /etc/nginx/modules-enabled \
+              /var/log/nginx
+
+# ── 5. Generate nginx.conf if missing ────────────────────────────────────────
+if [ ! -f /etc/nginx/nginx.conf ]; then
+  inf "nginx.conf missing — generating..."
+  sudo tee /etc/nginx/nginx.conf > /dev/null << 'MAINNGINX'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+
+events {
+    worker_connections 768;
+    multi_accept on;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+    gzip on;
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+MAINNGINX
+  ok "nginx.conf generated"
+fi
+
+# ── 6. Ensure sites-enabled is included in nginx.conf ────────────────────────
 if ! sudo grep -q 'sites-enabled' /etc/nginx/nginx.conf 2>/dev/null; then
-  inf "nginx.conf mein sites-enabled include nahi tha — add kar rahe hain..."
-  sudo sed -i '/include \/etc\/nginx\/conf\.d/a\\tinclude /etc/nginx/sites-enabled/*;' \
-    /etc/nginx/nginx.conf 2>/dev/null || true
-  ok "nginx.conf: sites-enabled include added"
+  inf "nginx.conf: sites-enabled include add kar rahe hain..."
+  echo "    include /etc/nginx/sites-enabled/*;" \
+    | sudo tee -a /etc/nginx/nginx.conf > /dev/null
+  ok "sites-enabled include added"
 fi
 
-# Remove default site if it conflicts
+# ── 7. Remove default site ────────────────────────────────────────────────────
 sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
 
+# ── 8. Write site config ──────────────────────────────────────────────────────
 sudo tee "$NGINX_CONF" > /dev/null << NGINXCONF
-# AA MD Bot — Nginx Config for ${DOMAIN}
-# Reverse proxy to Node.js dashboard on port 5000
-# HTTPS/SSL added by certbot automatically
-
+# AA MD Bot — Nginx reverse proxy for ${DOMAIN}
 server {
     listen 80;
     listen [::]:80;
     server_name ${DOMAIN};
 
-    # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
 
-    # Proxy to bot dashboard
     location / {
         proxy_pass         http://127.0.0.1:5000;
         proxy_http_version 1.1;
-
-        # WebSocket support (needed for real-time dashboard)
         proxy_set_header Upgrade    \$http_upgrade;
         proxy_set_header Connection 'upgrade';
-
         proxy_set_header Host             \$host;
         proxy_set_header X-Real-IP        \$remote_addr;
         proxy_set_header X-Forwarded-For  \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-
         proxy_cache_bypass \$http_upgrade;
-
-        # Timeouts
         proxy_connect_timeout  60s;
         proxy_send_timeout     60s;
         proxy_read_timeout     60s;
     }
 
-    # Large file uploads (media sharing)
     client_max_body_size 200M;
 }
 NGINXCONF
 
-# Enable site
+# ── 9. Create symlink ─────────────────────────────────────────────────────────
 sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED"
 ok "Nginx site config created: $NGINX_CONF"
 
-# Test config
+# ── 10. Test — abort ONLY if nginx -t fails ───────────────────────────────────
 inf "Nginx config test..."
-sudo nginx -t 2>&1 | while IFS= read -r line; do inf "$line"; done
+NGINX_TEST_OUT=$(sudo nginx -t 2>&1 || true)
+echo "$NGINX_TEST_OUT" | while IFS= read -r line; do inf "$line"; done
+if echo "$NGINX_TEST_OUT" | grep -q 'failed'; then
+  fail "nginx -t failed — config fix karo phir dobara run karo"
+fi
 ok "Nginx config valid"
 
-# Reload nginx
+# ── 11. Enable and start ──────────────────────────────────────────────────────
 sudo systemctl enable nginx >/dev/null
 sudo systemctl restart nginx
 ok "Nginx running and enabled"
