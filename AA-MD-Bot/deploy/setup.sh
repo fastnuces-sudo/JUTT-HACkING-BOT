@@ -907,6 +907,16 @@ hdr "18. Nginx Configuration"
 NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}"
 NGINX_ENABLED="/etc/nginx/sites-enabled/${DOMAIN}"
 
+# Ensure nginx site dirs exist (missing on some ARM64 Ubuntu installs)
+sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+
+# Ensure nginx.conf includes sites-enabled (may be absent on minimal installs)
+if ! sudo grep -q 'sites-enabled' /etc/nginx/nginx.conf 2>/dev/null; then
+  inf "nginx.conf mein sites-enabled include nahi tha — add kar rahe hain..."
+  sudo sed -i '/http {/a\\tinclude /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
+  ok "nginx.conf: sites-enabled include added"
+fi
+
 # Remove default site if it conflicts
 sudo rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
 
