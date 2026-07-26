@@ -1,18 +1,19 @@
 # AA MD Bot
 
-A production-ready multi-device WhatsApp bot with 147 plugins, multi-session support, economy system, XP/levels, media processing, and full owner/sudo control.
+A production-ready multi-device WhatsApp bot with 226 plugins, multi-session support, media processing, and full owner/sudo control. Persistent bot data and WhatsApp authentication state are stored in MongoDB.
 
 ## Run & Operate
 
 - Workflow **"AA MD Bot"** starts the bot automatically — just hit Run.
-- On first start, scan the QR code shown in the console to connect WhatsApp.
+- On first start, use the dashboard pairing flow to connect WhatsApp.
 - Web dashboard: `http://localhost:5000/` (visible in the Replit preview pane).
+- Persistent storage requires `MONGODB_URI` (or the legacy `MONGODB_PASSWORD`) in the environment. Without it, the bot intentionally runs in memory and loses data on restart.
 
 ## Stack
 
 - Node.js, JavaScript (ESM)
 - WhatsApp: @whiskeysockets/baileys (Multi-Device)
-- DB: JSON-based (fs-extra), stored in `AA-MD-Bot/database/`
+- DB: MongoDB with an in-memory write-through cache
 - Key packages: axios, chalk, fs-extra, moment, pino, qrcode-terminal, jimp, yt-dlp
 
 ## Where things live
@@ -20,14 +21,15 @@ A production-ready multi-device WhatsApp bot with 147 plugins, multi-session sup
 - `AA-MD-Bot/index.js` — main entry point
 - `AA-MD-Bot/config.js` — bot configuration (owners, prefix, API keys, etc.)
 - `AA-MD-Bot/lib/` — core engine (sessions, commands, plugins, database)
-- `AA-MD-Bot/plugins/` — 147 plugins in 13 categories
-- `AA-MD-Bot/database/` — JSON databases (users, groups, settings)
-- `AA-MD-Bot/session/` — WhatsApp session files (auto-created on first scan)
+- `AA-MD-Bot/plugins/` — 226 plugins in 11 categories
+- `AA-MD-Bot/lib/database.js` — MongoDB persistence and cache
+- `AA-MD-Bot/lib/mongoAuthState.js` — MongoDB-backed WhatsApp auth state
+- `AA-MD-Bot/session/` — runtime directory; auth is stored in MongoDB
 - `AA-MD-Bot/dashboard.html` — web dashboard UI
 
 ## Plugin categories
 
-admin (10), download (7), economy (8), fun (15), gb (13), group (11), owner (23), islamic (61), level (5), media (12), search (13), tools (10), utility (18)
+admin, download, search, fun, gb, group, owner, islamic, media, tools, and utility
 
 ## Configuration (`AA-MD-Bot/config.js`)
 
@@ -47,9 +49,10 @@ admin (10), download (7), economy (8), fun (15), gb (13), group (11), owner (23)
 
 ## Gotchas
 
-- Must scan QR code in console on first run to connect WhatsApp.
+- Use the dashboard pairing flow to connect WhatsApp on first run.
 - ffmpeg should be available for media plugins (sticker/blur/flip/grayscale/resize/toaudio).
 - `ownerNumber` in `config.js` controls who has owner-level access.
-- Sessions are stored in `AA-MD-Bot/session/` — don't delete while running.
+- On Oracle Cloud, MongoDB and PM2 are managed by the deployment script; do not delete `/var/lib/mongodb` unless you intentionally want to erase all sessions and bot data.
 - Use `.reload` command in WhatsApp to hot-reload plugins without restarting.
 - yt-dlp is downloaded automatically by the workflow startup command.
+- The Oracle setup script preserves an existing local MongoDB password on reruns, replaces only example placeholders, and stops before HTTPS setup if port 5000 is not healthy.

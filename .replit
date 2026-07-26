@@ -3,7 +3,7 @@ modules = ["nodejs-20", "bash", "web"]
 [deployment]
 router = "application"
 deploymentTarget = "vm"
-run = ["sh", "-c", "cd AA-MD-Bot && node index.js"]
+run = ["sh", "-c", "cd AA-MD-Bot && npm start"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
@@ -30,7 +30,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "mkdir -p /home/runner/.local/bin && ([ -f /home/runner/.local/bin/yt-dlp ] || (curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /home/runner/.local/bin/yt-dlp && chmod +x /home/runner/.local/bin/yt-dlp)) && ([ -f /home/runner/.deno/bin/deno ] || (mkdir -p /home/runner/.deno/bin && curl -fsSL https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip -o /tmp/_deno.zip && unzip -o /tmp/_deno.zip -d /home/runner/.deno/bin/ && chmod +x /home/runner/.deno/bin/deno && rm -f /tmp/_deno.zip) || true) && cd /home/runner/workspace/AA-MD-Bot && npm install --prefer-offline 2>/dev/null; node index.js"
+args = "mkdir -p /home/runner/.local/bin && ([ -f /home/runner/.local/bin/yt-dlp ] || (curl -sL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /home/runner/.local/bin/yt-dlp && chmod +x /home/runner/.local/bin/yt-dlp)) && ([ -f /home/runner/.deno/bin/deno ] || (mkdir -p /home/runner/.deno/bin && curl -fsSL https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip -o /tmp/_deno.zip && unzip -o /tmp/_deno.zip -d /home/runner/.deno/bin/ && chmod +x /home/runner/.deno/bin/deno && rm -f /tmp/_deno.zip) || true) && cd /home/runner/workspace/AA-MD-Bot && npm install --prefer-offline 2>/dev/null && npm start"
 waitForPort = 5000
 
 [agent]

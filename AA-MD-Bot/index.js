@@ -344,7 +344,7 @@ async function main() {
     fs.ensureDirSync(path.join(__dirname, dir));
   }
 
-  // Load database from Firebase before anything reads from db
+  // Load persistent database state before anything reads from db
   await initDatabase();
 
   // Restore newsletter JID — db first (set via .setnewsletter), then config fallback

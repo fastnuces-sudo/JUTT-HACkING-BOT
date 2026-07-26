@@ -192,8 +192,28 @@ ok "MongoDB running (data: /var/lib/mongodb)"
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "4. MongoDB User Setup"
 
-# Strong random password (32 hex chars — no special chars, safe in URI)
-DB_PASS=$(openssl rand -hex 32)
+# Strong random password (32 hex chars — no special chars, safe in URI).
+# Preserve the existing password on reruns; otherwise the MongoDB user would
+# be reset while the existing .env still contained the old password.
+DB_PASS=""
+_existing_env=""
+for _candidate in \
+  "$REPO_CLONE_DIR/AA-MD-Bot/.env" \
+  "$REPO_CLONE_DIR/.env"; do
+  if [ -f "$_candidate" ]; then
+    _existing_env="$_candidate"
+    break
+  fi
+done
+if [ -n "$_existing_env" ]; then
+  _existing_uri=$(sed -n 's/^MONGODB_URI=//p' "$_existing_env" | head -1)
+  if [[ "$_existing_uri" =~ ^mongodb://aa_bot_user:([^@]+)@127\.0\.0\.1:27017/ ]] \
+     && [ "${BASH_REMATCH[1]}" != "PASSWORD" ]; then
+    DB_PASS="${BASH_REMATCH[1]}"
+    inf "Existing local MongoDB password preserved for safe rerun"
+  fi
+fi
+[ -n "$DB_PASS" ] || DB_PASS=$(openssl rand -hex 32)
 
 # ── Strategy: temporarily disable auth via sed on main config,
 #    restart via systemd, create/update user, restore auth.
@@ -602,6 +622,16 @@ EOF
   ok ".env freshly created"
 else
   ok ".env already exists — merging missing variables only"
+  # npm's prepare hook or a manual copy may have left the example placeholders
+  # in place. Replace only those placeholders; preserve all real user values.
+  if grep -q '^MONGODB_URI=mongodb://aa_bot_user:PASSWORD@127\.0\.0\.1:27017/' "$ENV_FILE"; then
+    sed -i "s#^MONGODB_URI=.*#MONGODB_URI=${MONGODB_URI}#" "$ENV_FILE"
+    ok ".env: placeholder MONGODB_URI replaced with generated local URI"
+  fi
+  if grep -q '^SESSION_SECRET=change_this_to_a_random_64_char_string$' "$ENV_FILE"; then
+    sed -i "s#^SESSION_SECRET=.*#SESSION_SECRET=$(openssl rand -hex 32)#" "$ENV_FILE"
+    ok ".env: placeholder SESSION_SECRET replaced with generated secret"
+  fi
   # Merge only keys that are missing
   _env_merge "PORT"           "5000"             "$ENV_FILE"
   _env_merge "SERVER_ID"      "server-1"         "$ENV_FILE"
@@ -851,7 +881,8 @@ inf "Bot ke ready hone ka wait kar rahe hain (max 90s)..."
 _PORT_READY=false
 for i in $(seq 1 30); do
   HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-    --max-time 3 http://127.0.0.1:5000/ 2>/dev/null || echo "000")
+    --max-time 3 http://127.0.0.1:5000/ 2>/dev/null || true)
+  HTTP_CODE="${HTTP_CODE:-000}"
   if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "301" || "$HTTP_CODE" == "302" ]]; then
     _PORT_READY=true
     ok "Bot ready! HTTP $HTTP_CODE on port 5000 (attempt $i)"
@@ -864,6 +895,7 @@ done
 if [[ "$_PORT_READY" == "false" ]]; then
   warn "Bot 90 seconds mein ready nahi hua — PM2 logs check karo:"
   warn "  pm2 logs $PM2_APP_NAME --lines 50"
+  fail "Dashboard port 5000 is not responding; deployment stopped before HTTPS setup"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1013,7 +1045,13 @@ echo ""
 pm2 logs "\$PM2_APP_NAME" --lines 30
 REDEPLOY_EOF
 
+# Use the maintained repository script instead of leaving the VM with an
+# older generated copy when setup.sh itself is updated.
+if [ -f "$BOT_DIR/deploy/redeploy.sh" ]; then
+  cp "$BOT_DIR/deploy/redeploy.sh" "$REDEPLOY_SCRIPT"
+fi
 chmod +x "$REDEPLOY_SCRIPT"
+chmod 600 "$ENV_FILE"
 chown ubuntu:ubuntu "$REDEPLOY_SCRIPT"
 ok "redeploy.sh created: $REDEPLOY_SCRIPT"
 
@@ -1055,7 +1093,9 @@ echo ""
 echo -e "  ${B}━━━ MongoDB ━━━${R}"
 echo -e "  Status        : $(sudo systemctl is-active mongod 2>/dev/null || echo 'unknown')"
 echo -e "  Data path     : /var/lib/mongodb"
-echo -e "  URI           : ${C}${MONGODB_URI}${R}"
+MASKED_MONGODB_URI=$(printf '%s' "$MONGODB_URI" \
+  | sed -E 's#(mongodb://[^:]+:)[^@]+@#\1********@#')
+echo -e "  URI           : ${C}${MASKED_MONGODB_URI}${R}"
 echo ""
 
 echo -e "  ${B}━━━ Bot ━━━${R}"
@@ -1092,9 +1132,8 @@ echo -e "  4. WhatsApp → Settings → Linked Devices → Link with phone numbe
 echo -e "  5. 8-digit code enter karo — ho gaya ✅"
 echo ""
 
-echo -e "  ${Y}⚠  MONGODB URI aur SESSION_SECRET save kar lo!${R}"
-echo -e "  ${Y}   Ye .env mein already write ho gaya hai.${R}"
-echo -e "  ${DIM}   cat ${ENV_FILE}${R}"
+echo -e "  ${Y}⚠  MONGODB URI aur SESSION_SECRET .env mein save hain.${R}"
+echo -e "  ${DIM}   sudo chmod 600 ${ENV_FILE}${R}"
 echo ""
 echo -e "  ${DIM}Total deploy time: ${ELAPSED}s${R}"
 echo ""

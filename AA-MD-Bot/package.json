@@ -16,7 +16,7 @@
     "pm2:restart": "pm2 restart aa-md-bot",
     "pm2:logs": "pm2 logs aa-md-bot",
     "postinstall": "node -e \"const fs=require('fs');['logs','temp','session','downloads','database','cache'].forEach(d=>{try{fs.mkdirSync(d,{recursive:true})}catch{}});console.log('✅ Directories ready');\"",
-    "prepare": "node -e \"const fs=require('fs');if(!fs.existsSync('.env')&&fs.existsSync('.env.example')){fs.copyFileSync('.env.example','.env');console.log('📋 .env created from .env.example — edit it before starting');}\" 2>/dev/null || true"
+    "prepare": "node -e \"console.log('✅ Dependencies ready')\""
   },
   "keywords": [
     "whatsapp",

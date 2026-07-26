@@ -4,29 +4,20 @@ import { MongoClient } from 'mongodb';
 // Priority order:
 //   1. MONGODB_URI — Oracle ADB, self-hosted Mongo, or Atlas full URI
 //   2. MONGODB_PASSWORD — legacy Atlas shorthand (password only)
-const MONGO_URI = process.env.MONGODB_URI ||
-  (process.env.MONGODB_PASSWORD
-    ? `mongodb+srv://a67515346_db_user:${encodeURIComponent(process.env.MONGODB_PASSWORD)}@aa-md-bot.i1j26yw.mongodb.net/?appName=AA-MD-Bot`
-    : null);
+// Do not resolve this at module-import time. `index.js` loads `.env` in its
+// startup body, while ESM evaluates static dependencies before that body runs.
+// Resolving lazily keeps `node index.js` and PM2 launches consistent.
+function getMongoUri() {
+  const configuredUri = process.env.MONGODB_URI?.trim();
+  if (configuredUri && !/PASSWORD|change_this/i.test(configuredUri)) return configuredUri;
+
+  const password = process.env.MONGODB_PASSWORD?.trim();
+  if (!password || /PASSWORD|change_this/i.test(password)) return null;
+  return `mongodb+srv://a67515346_db_user:${encodeURIComponent(password)}@aa-md-bot.i1j26yw.mongodb.net/?appName=AA-MD-Bot`;
+}
 
 // Detect Oracle ADB MongoDB API from URI
 // Oracle ADB requires retryWrites:false and loadBalanced:true
-const IS_ORACLE_ADB = Boolean(
-  MONGO_URI && (
-    /oraclecloud\.com/i.test(MONGO_URI) ||
-    /authMechanism=PLAIN/i.test(MONGO_URI)
-  )
-);
-
-// Self-hosted MongoDB (mongodb:// direct IP — not Atlas SRV)
-// Needs directConnection:true so driver doesn't do topology discovery
-const IS_SELF_HOSTED = Boolean(
-  MONGO_URI &&
-  MONGO_URI.startsWith('mongodb://') &&
-  !MONGO_URI.startsWith('mongodb+srv://') &&
-  !IS_ORACLE_ADB
-);
-
 // Extract DB name from URI path (supports all URI formats)
 function extractDbName(uri) {
   try {
@@ -43,21 +34,28 @@ let _db     = null;
 
 export async function getDb() {
   if (_db) return _db;
-  if (!MONGO_URI) return null;
+  const mongoUri = getMongoUri();
+  if (!mongoUri) return null;
   if (!_client) {
+    const isOracleAdb = /oraclecloud\.com/i.test(mongoUri) ||
+      /authMechanism=PLAIN/i.test(mongoUri);
+    // Self-hosted MongoDB (mongodb:// direct IP — not Atlas SRV) needs
+    // directConnection so the driver does not perform topology discovery.
+    const isSelfHosted = mongoUri.startsWith('mongodb://') &&
+      !mongoUri.startsWith('mongodb+srv://') && !isOracleAdb;
     const opts = {
       serverSelectionTimeoutMS: 10000,
       connectTimeoutMS: 10000,
       socketTimeoutMS: 30000,
       // Oracle ADB MongoDB API — required options
-      ...(IS_ORACLE_ADB ? { retryWrites: false, loadBalanced: true } : {}),
+      ...(isOracleAdb ? { retryWrites: false, loadBalanced: true } : {}),
       // Self-hosted direct IP — bypass topology discovery
-      ...(IS_SELF_HOSTED ? { directConnection: true } : {}),
+      ...(isSelfHosted ? { directConnection: true } : {}),
     };
-    _client = new MongoClient(MONGO_URI, opts);
+    _client = new MongoClient(mongoUri, opts);
     await _client.connect();
   }
-  const dbName = extractDbName(MONGO_URI);
+  const dbName = extractDbName(mongoUri);
   _db = _client.db(dbName);
   return _db;
 }
@@ -146,7 +144,7 @@ function scheduleSave(name) {
 
 // ── Public init: load all data from MongoDB ───────────────────────────────────
 export async function initDatabase() {
-  if (!MONGO_URI) {
+  if (!getMongoUri()) {
     console.warn(
       '[DB] ⚠️  No database configured — running in-memory only (ALL data lost on restart)\n' +
       '     To persist data, set one of these in your .env or Replit Secrets:\n' +
@@ -209,14 +207,15 @@ process.on('SIGTERM', async () => { await flushOnExit(); process.exit(0); });
 process.on('SIGINT',  async () => { await flushOnExit(); process.exit(0); });
 
 // ── Periodic safety-net flush (every 5 minutes) ───────────────────────────────
-if (MONGO_URI) {
-  setInterval(() => {
-    for (const name of COLLECTIONS) {
-      if (name === 'sessions') continue;
-      flushCollection(name).catch(e => console.error('[DB] periodic flush error:', e.message));
-    }
-  }, 5 * 60 * 1000);
-}
+setInterval(() => {
+  // Environment loading can happen after this module is evaluated. Check at
+  // execution time so a valid .env is never treated as an in-memory-only run.
+  if (!getMongoUri()) return;
+  for (const name of COLLECTIONS) {
+    if (name === 'sessions') continue;
+    flushCollection(name).catch(e => console.error('[DB] periodic flush error:', e.message));
+  }
+}, 5 * 60 * 1000);
 
 // ── db API ────────────────────────────────────────────────────────────────────
 export const db = {

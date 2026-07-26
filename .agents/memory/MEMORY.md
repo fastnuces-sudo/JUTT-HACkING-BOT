@@ -17,3 +17,4 @@
 - [Telegram integration](telegram-integration.md) — two bots: TELEGRAM_BOT_TOKEN=admin/pairing, TELEGRAM_FEATURES_BOT_TOKEN=features; both started from index.js after sessions init.
 - [Emoji reveal requires prefix](viewonce-emoji-reveal.md) — trigger is now .🔥🔥🔥🔥 (prefix + 4 same emojis); bare 4-same-emoji no longer triggers.
 - [SuperOwnerOnly scope](per-session-settings.md) — devices/adddevice/deldevice/setprefix/mode/anticall/antispam/autoreact + all tools plugins are superOwnerOnly.
+- [Oracle deployment reruns](oracle-deploy-reruns.md) — preserve the local MongoDB password, replace only placeholders, and stop before HTTPS when port 5000 is unhealthy.

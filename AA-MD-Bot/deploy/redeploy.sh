@@ -390,7 +390,8 @@ inf "Waiting for bot dashboard on http://127.0.0.1:5000 (max 90s)..."
 _BOT_ONLINE=false
 for _i in $(seq 1 30); do
   _http=$(curl -s -o /dev/null -w '%{http_code}' \
-    --max-time 3 http://127.0.0.1:5000/ 2>/dev/null || echo "000")
+     --max-time 3 http://127.0.0.1:5000/ 2>/dev/null || true)
+  _http="${_http:-000}"
   if [[ "$_http" == "200" || "$_http" == "301" || "$_http" == "302" ]]; then
     _BOT_ONLINE=true
     ok "Dashboard online — HTTP $_http (attempt $_i/30)"
@@ -411,6 +412,7 @@ if [[ "$_BOT_ONLINE" == "false" ]]; then
   pm2 logs "$PM2_APP_NAME" --lines 30 --nostream 2>/dev/null || true
   echo ""
   warn "Check manually: pm2 logs $PM2_APP_NAME --lines 100"
+  fail "Dashboard port 5000 is not responding; redeploy failed"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
