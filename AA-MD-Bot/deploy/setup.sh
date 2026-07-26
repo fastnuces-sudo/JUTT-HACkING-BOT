@@ -595,28 +595,32 @@ ok "Bot directory detected: $BOT_DIR"
 hdr "11. Node.js Packages"
 cd "$BOT_DIR"
 
-# Set npm registry explicitly
-# NPM_CONFIG_PROGRESS=false : env-var method avoids the npm 10 "Exit handler never called"
-# bug that --no-progress CLI flag and `npm config set progress false` both trigger on ARM64
+# npm 10 on ARM64 has a bug: "Exit handler never called" — exits 0 but installs nothing.
+# Fix: downgrade to npm 9 (stable, no bug) + always start from a clean slate.
 npm config set registry "$NPM_REGISTRY"
 ok "npm registry set: $NPM_REGISTRY"
 
-_npm_install() {
-  # NPM_CONFIG_PROGRESS=false : suppress spinner via env (not CLI flag — avoids npm 10 ARM64 bug)
-  # --legacy-peer-deps        : skips expensive peer-dep resolution tree (npm 10+ is much faster)
-  # timeout 600               : hard kill if truly stuck, then retry
-  NPM_CONFIG_PROGRESS=false timeout 600 npm install --omit=dev \
+# Downgrade to npm 9 to avoid the "Exit handler never called" bug on ARM64 npm 10
+_CURRENT_NPM=$(npm --version 2>/dev/null || echo "0")
+if [[ "$_CURRENT_NPM" == 10* ]]; then
+  inf "npm 10 detected — downgrading to npm 9 (ARM64 bug fix)..."
+  npm install -g npm@9 --registry="$NPM_REGISTRY" --silent 2>/dev/null || true
+  ok "npm $(npm --version) ready"
+fi
+
+# Always wipe node_modules before install — prevents ENOTEMPTY race errors on re-run
+inf "node_modules clean kar rahe hain (fresh install ke liye)..."
+rm -rf node_modules package-lock.json
+
+inf "npm install running... (2-5 minute lagenge)"
+if ! npm install --omit=dev \
     --registry="$NPM_REGISTRY" \
     --no-audit \
     --no-fund \
-    --legacy-peer-deps
-}
-
-inf "npm install running... (2-5 minute lagenge — output aayega, normal hai)"
-if ! _npm_install; then
-  warn "npm install failed ya timeout — node_modules + package-lock.json hata ke retry ho raha hai..."
+    --legacy-peer-deps; then
+  warn "npm install failed — retry kar rahe hain..."
   rm -rf node_modules package-lock.json
-  NPM_CONFIG_PROGRESS=false timeout 600 npm install --omit=dev \
+  npm install --omit=dev \
     --registry="$NPM_REGISTRY" \
     --no-audit \
     --no-fund \
@@ -910,10 +914,43 @@ NGINX_ENABLED="/etc/nginx/sites-enabled/${DOMAIN}"
 # Ensure nginx site dirs exist (missing on some ARM64 Ubuntu installs)
 sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 
-# Ensure nginx.conf includes sites-enabled (may be absent on minimal installs)
-if ! sudo grep -q 'sites-enabled' /etc/nginx/nginx.conf 2>/dev/null; then
+# If nginx.conf is missing (can happen on ARM64 Ubuntu), generate a complete one
+if [ ! -f /etc/nginx/nginx.conf ]; then
+  inf "nginx.conf missing — generating fresh config..."
+  sudo mkdir -p /etc/nginx/conf.d
+  sudo tee /etc/nginx/nginx.conf > /dev/null << 'MAINNGINX'
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+}
+
+http {
+    sendfile on;
+    tcp_nopush on;
+    types_hash_max_size 2048;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
+    gzip on;
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*;
+}
+MAINNGINX
+  ok "nginx.conf generated"
+elif ! sudo grep -q 'sites-enabled' /etc/nginx/nginx.conf 2>/dev/null; then
+  # nginx.conf exists but doesn't include sites-enabled — patch it
   inf "nginx.conf mein sites-enabled include nahi tha — add kar rahe hain..."
-  sudo sed -i '/http {/a\\tinclude /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
+  sudo sed -i '/^}/{ /http/!{ s|^}|    include /etc/nginx/sites-enabled/*;\n}| } }' \
+    /etc/nginx/nginx.conf 2>/dev/null \
+    || echo "    include /etc/nginx/sites-enabled/*;" \
+       | sudo tee -a /etc/nginx/nginx.conf > /dev/null
   ok "nginx.conf: sites-enabled include added"
 fi
 
