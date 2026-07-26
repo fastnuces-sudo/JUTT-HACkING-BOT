@@ -152,8 +152,58 @@ operationProfiling:
   slowOpThresholdMs: 500
 MONGOCFG
 
-sudo systemctl enable mongod
-sudo systemctl restart mongod
+# ── Helper: make MongoDB's filesystem paths systemd-safe (idempotent) ─────────
+# MongoDB's package does not always create these paths on Oracle Ubuntu ARM64.
+# Prepare them before every enable/start/restart so fresh VMs and reruns behave
+# identically.
+_mongod_prepare_paths() {
+  sudo install -d -m 755 -o mongodb -g mongodb /var/log/mongodb
+  sudo touch /var/log/mongodb/mongod.log
+  sudo chown -R mongodb:mongodb /var/log/mongodb
+  sudo chmod 755 /var/log/mongodb
+  sudo chmod 640 /var/log/mongodb/mongod.log
+
+  sudo install -d -o mongodb -g mongodb /var/lib/mongodb
+  sudo chown -R mongodb:mongodb /var/lib/mongodb
+}
+
+# ── Helper: start/restart mongod and wait for systemd Active (running) ────────
+# Prints the last 30 journal lines before returning failure.
+_mongod_service_wait() {
+  local ACTION="${1:-restart}" LABEL="${2:-MongoDB}" i
+
+  _mongod_prepare_paths
+  if ! sudo systemctl "$ACTION" mongod; then
+    warn "$LABEL service command failed — mongod journal:"
+    sudo journalctl -u mongod --no-pager -n 30 2>/dev/null \
+      | while IFS= read -r l; do warn "  $l"; done || true
+    return 1
+  fi
+
+  for i in $(seq 1 30); do
+    if sudo systemctl is-active --quiet mongod; then
+      ok "$LABEL active (running) (attempt $i/30)"
+      return 0
+    fi
+    sleep 1
+  done
+
+  warn "$LABEL did not reach Active (running) — mongod journal:"
+  sudo journalctl -u mongod --no-pager -n 30 2>/dev/null \
+    | while IFS= read -r l; do warn "  $l"; done || true
+  return 1
+}
+
+# Prepare the paths before enabling the service as well as before starting it.
+_mongod_prepare_paths
+if ! sudo systemctl enable mongod; then
+  warn "MongoDB service enable failed — mongod journal:"
+  sudo journalctl -u mongod --no-pager -n 30 2>/dev/null \
+    | while IFS= read -r l; do warn "  $l"; done || true
+  fail "MongoDB service enable nahi hua"
+fi
+_mongod_service_wait restart "MongoDB (auth-on)" \
+  || fail "MongoDB restart nahi hua — 'sudo journalctl -u mongod -n 30' se check karo"
 
 # ── Helper: ping mongod using exit code only (no output parsing) ──────────────
 # Usage: _mongo_ping "mongodb://..." → returns 0 if up, 1 if not
@@ -173,10 +223,10 @@ _mongo_wait() {
     inf "  attempt $i/$MAX — waiting 2s..."
     sleep 2
   done
-  # Show last 15 lines of mongod journal for diagnosis
+  # Show last 30 lines of mongod journal for diagnosis
   echo ""
   warn "$LABEL ${MAX}x2s mein ready nahi hua — mongod journal:"
-  sudo journalctl -u mongod --no-pager -n 15 2>/dev/null \
+  sudo journalctl -u mongod --no-pager -n 30 2>/dev/null \
     | while IFS= read -r l; do warn "  $l"; done || true
   return 1
 }
@@ -231,7 +281,8 @@ sudo sed -i -E 's/^([[:space:]]*)authorization:[[:space:]]*enabled/\1authorizati
   /etc/mongod.conf
 inf "mongod.conf auth line after sed: $(grep 'authorization' /etc/mongod.conf || echo '(not found)')"
 
-sudo systemctl start mongod
+_mongod_service_wait start "MongoDB (auth-off)" \
+  || fail "MongoDB auth-disable ke baad start nahi hua\n  Debug: sudo journalctl -u mongod -n 30"
 
 # Wait for no-auth mongod to be ready
 inf "No-auth mongod start hone ka wait kar rahe hain (max 60s)..."
@@ -283,8 +334,8 @@ sudo sed -i -E 's/^([[:space:]]*)authorization:[[:space:]]*disabled/\1authorizat
   /etc/mongod.conf
 inf "mongod.conf auth line after restore: $(grep 'authorization' /etc/mongod.conf || echo '(not found)')"
 
-sudo systemctl restart mongod
-sleep 2
+_mongod_service_wait restart "MongoDB (auth-on, restart)" \
+  || fail "MongoDB auth re-enable ke baad start nahi hua"
 
 # Wait for auth-enabled mongod to be ready
 inf "Auth mongod ready hone ka wait kar rahe hain (max 30s)..."
