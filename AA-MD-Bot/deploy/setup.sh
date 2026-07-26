@@ -189,7 +189,7 @@ sudo systemctl start mongod
 inf "MongoDB start hone ka wait kar rahe hain (max 30s)..."
 _mongo_ready=false
 for i in $(seq 1 15); do
-  if mongosh --quiet --directConnection \
+  if mongosh --quiet \
        "mongodb://127.0.0.1:27017/admin" \
        --eval "db.runCommand({ping:1}).ok" 2>/dev/null | grep -q "1"; then
     _mongo_ready=true
@@ -199,31 +199,31 @@ for i in $(seq 1 15); do
   inf "  attempt $i/15 — waiting 2s..."
   sleep 2
 done
-[[ "$_mongo_ready" == "false" ]] && { warn "MongoDB 30s mein ready nahi hua"; }
+[[ "$_mongo_ready" == "false" ]] && { warn "MongoDB 30s mein ready nahi hua — phir bhi user create try karte hain..."; }
 
 # ── Check if user already exists ──────────────────────────────────────────────
-EXISTING=$(mongosh --quiet --directConnection \
+EXISTING=$(mongosh --quiet \
   "mongodb://127.0.0.1:27017/aa_md_bot" \
   --eval "JSON.stringify(db.getUser('aa_bot_user') !== null)" 2>/dev/null || echo "false")
 
 if echo "$EXISTING" | grep -q "true"; then
   inf "User already exist karta hai — password update ho raha hai..."
-  mongosh --directConnection \
+  mongosh \
     "mongodb://127.0.0.1:27017/aa_md_bot" \
     --eval "db.updateUser('aa_bot_user', {
       pwd: '${DB_PASS}',
       roles: [{ role: 'readWrite', db: 'aa_md_bot' }]
-    })" 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  mongosh: $l"; done
+    })" 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  mongosh: $l"; done || true
   ok "MongoDB user password updated"
 else
   inf "MongoDB bot user create ho raha hai..."
-  mongosh --directConnection \
+  mongosh \
     "mongodb://127.0.0.1:27017/aa_md_bot" \
     --eval "db.createUser({
       user: 'aa_bot_user',
       pwd:  '${DB_PASS}',
       roles: [{ role: 'readWrite', db: 'aa_md_bot' }]
-    })" 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  mongosh: $l"; done
+    })" 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  mongosh: $l"; done || true
   ok "MongoDB user 'aa_bot_user' created"
 fi
 
@@ -237,7 +237,7 @@ inf "Auth mongod ready hone ka wait kar rahe hain (max 30s)..."
 sleep 3
 _auth_ready=false
 for i in $(seq 1 15); do
-  if mongosh --quiet --directConnection \
+  if mongosh --quiet \
        "mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot" \
        --eval "db.runCommand({ping:1}).ok" 2>/dev/null | grep -q "1"; then
     _auth_ready=true
@@ -251,9 +251,9 @@ if [[ "$_auth_ready" == "true" ]]; then
 else
   # Auth might work but mongosh can't connect — try a raw shell test
   warn "mongosh auth check failed — manual verify try kar rahe hain..."
-  mongosh --directConnection \
+  mongosh \
     "mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot" \
-    --eval "db.stats()" 2>&1 | tail -5 | while IFS= read -r l; do warn "  $l"; done
+    --eval "db.stats()" 2>&1 | tail -5 | while IFS= read -r l; do warn "  $l"; done || true
   warn "Agar upar output aaya (no auth error) to DB theek hai — bot chalega"
 fi
 
