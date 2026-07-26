@@ -595,27 +595,35 @@ ok "Bot directory detected: $BOT_DIR"
 hdr "11. Node.js Packages"
 cd "$BOT_DIR"
 
-# Set npm registry explicitly
+# Set npm registry explicitly + disable interactive spinner (prevents hang in piped/non-TTY envs)
 npm config set registry "$NPM_REGISTRY"
+npm config set progress false
+npm config set spin false
 ok "npm registry set: $NPM_REGISTRY"
 
 _npm_install() {
-  # --silent removed: deployment logs should remain visible
-  npm install --omit=dev \
-    --registry="$NPM_REGISTRY" \
-    --no-audit \
-    --no-fund
-}
-
-inf "npm install running..."
-if ! _npm_install; then
-  warn "npm install failed — node_modules + package-lock.json hata ke retry ho raha hai..."
-  rm -rf node_modules package-lock.json
-  npm install --omit=dev \
+  # --no-progress  : prevents spinner deadlock in piped/non-TTY SSH sessions (Oracle Cloud)
+  # --legacy-peer-deps : skips slow peer-dep resolution tree — much faster on npm 10+
+  # timeout 600    : kills and lets retry if truly stuck (max 10 min per attempt)
+  timeout 600 npm install --omit=dev \
     --registry="$NPM_REGISTRY" \
     --no-audit \
     --no-fund \
-  || fail "npm install second attempt bhi fail hua — logs check karo"
+    --no-progress \
+    --legacy-peer-deps
+}
+
+inf "npm install running... (yeh 2-5 minute le sakta hai — koi spinner nahi aayega, normal hai)"
+if ! _npm_install; then
+  warn "npm install failed ya timeout — node_modules + package-lock.json hata ke retry ho raha hai..."
+  rm -rf node_modules package-lock.json
+  timeout 600 npm install --omit=dev \
+    --registry="$NPM_REGISTRY" \
+    --no-audit \
+    --no-fund \
+    --no-progress \
+    --legacy-peer-deps \
+  || fail "npm install second attempt bhi fail hua — logs check karo: $DEPLOY_LOG"
 fi
 ok "Node.js packages installed"
 
@@ -1135,6 +1143,8 @@ ok "Bot dir: \$BOT_DIR"
 hdr "3. npm install"
 cd "\$BOT_DIR"
 npm config set registry "\$NPM_REGISTRY"
+npm config set progress false
+npm config set spin false
 
 # Check if package.json changed since last install
 PKG_HASH_FILE="\$BOT_DIR/.npm-install-hash"
@@ -1144,11 +1154,11 @@ STORED_HASH=\$(cat "\$PKG_HASH_FILE" 2>/dev/null || echo "")
 if [ "\$CURRENT_HASH" = "\$STORED_HASH" ] && [ -d "\$BOT_DIR/node_modules" ]; then
   ok "package.json unchanged — npm install skip kiya"
 else
-  inf "package.json changed — npm install ho raha hai..."
-  if ! npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund; then
-    warn "npm install failed — retry kar rahe hain..."
+  inf "package.json changed — npm install ho raha hai... (2-5 min, koi spinner nahi — normal hai)"
+  if ! timeout 600 npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --no-progress --legacy-peer-deps; then
+    warn "npm install failed ya timeout — retry kar rahe hain..."
     rm -rf node_modules package-lock.json
-    npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund
+    timeout 600 npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --no-progress --legacy-peer-deps
   fi
   echo "\$CURRENT_HASH" > "\$PKG_HASH_FILE"
   ok "npm install complete"
