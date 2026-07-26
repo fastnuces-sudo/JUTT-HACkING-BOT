@@ -299,8 +299,9 @@ export async function handleReplyReveal(msg, sock, sessionId) {
     // Trigger 1: voword keyword present anywhere in the text
     const hasKeyword = !!(voKeyword && msgText.toLowerCase().includes(voKeyword.toLowerCase()));
 
-    // Trigger 2: prefix + 4 same emojis (e.g. .🔥🔥🔥🔥 / .❤️❤️❤️❤️)
-    const textBody       = msgText.startsWith(prefix) ? msgText.slice(prefix.length) : '';
+    // Trigger 2: 4 same emojis — works with OR without prefix
+    // e.g. 🔥🔥🔥🔥 OR .🔥🔥🔥🔥 both trigger reveal
+    const textBody       = msgText.startsWith(prefix) ? msgText.slice(prefix.length) : msgText;
     const isEmojiTrigger = emojiEnabled && textBody.length > 0 && hasFourSameEmoji(textBody);
 
     if (!hasKeyword && !isEmojiTrigger) return; // not a reveal trigger — ignore

@@ -1,23 +1,22 @@
 ---
 name: ViewOnce Reveal System
-description: How the view-once reveal system works — only .vv and .avv commands; all auto-triggers removed.
+description: How the view-once reveal system works — emoji trigger, .avv/.vv commands, antiviewonce auto-forward.
 ---
 
 # ViewOnce Reveal System
 
 ## Rule
-Only `.vv` and `.avv` commands reveal view-once media. All auto-triggers (emoji, asdf keyword) have been removed. `antiviewonce on/off` auto-forward still works independently.
+- **Emoji trigger (active):** reply to any message with 4 same emojis — works WITH or WITHOUT prefix (e.g. `🔥🔥🔥🔥` OR `.🔥🔥🔥🔥`). Both trigger reveal via `handleReplyReveal()`.
+- **Manual command:** `.avv` / `.vv` / `.reveal` — reply to a view-once message to reveal it (owner only).
+- **Auto-forward:** `.antiviewonce on/off` — auto-sends every view-once to owner's self-chat as it arrives.
 
-**Why:** User requested removal of emoji trigger and "asdf" keyword — only manual .vv/.avv should work.
+**Why (emoji trigger fix):** The `textBody` was set to `''` when message had no prefix, so bare `🔥🔥🔥🔥` never matched. Fixed by: `const textBody = msgText.startsWith(prefix) ? msgText.slice(prefix.length) : msgText;`
 
 **How to apply:**
-- `handleReplyReveal()` in `lib/antiViewOnce.js` now returns immediately (disabled).
-- `.vv` is an alias in `plugins/owner/reveal.js` — reply to a view-once message to reveal it.
-- `.avv` is also in the same file — manual reveal by reply.
+- `handleReplyReveal()` in `lib/antiViewOnce.js` — `textBody` now uses full `msgText` as fallback (not empty string).
+- `hasFourSameEmoji()` uses `Intl.Segmenter` for grapheme-aware detection.
 - `handleViewOnceMessage()` still captures and caches all view-once media (unchanged).
-- `antiViewOnce on/off` auto-forward to self-chat still works.
 
-## What was removed
-- Emoji trigger (4 same emojis reply) — `hasFourSameEmoji()` still exists but is no longer called.
-- `asdf` keyword trigger — removed from `handleReplyReveal()`.
-- Menu entries for emoji trigger and asdf — removed from `plugins/utility/menu.js`.
+## voKeyword
+- Optional keyword trigger also works (stored in `db.settings.voKeyword`).
+- Both keyword and emoji trigger can be active simultaneously.
