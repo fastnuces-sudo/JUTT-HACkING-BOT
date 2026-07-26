@@ -911,46 +911,22 @@ hdr "18. Nginx Configuration"
 NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}"
 NGINX_ENABLED="/etc/nginx/sites-enabled/${DOMAIN}"
 
-# Ensure nginx site dirs exist (missing on some ARM64 Ubuntu installs)
+# If any core nginx file is missing (mime.types, nginx.conf, etc.) the package
+# is in a broken state — reinstall it to restore all default files.
+if [ ! -f /etc/nginx/mime.types ] || [ ! -f /etc/nginx/nginx.conf ]; then
+  inf "nginx config files missing — reinstalling nginx to restore defaults..."
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install --reinstall -yq nginx
+  ok "nginx reinstalled"
+fi
+
+# Ensure nginx site dirs exist
 sudo mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 
-# If nginx.conf is missing (can happen on ARM64 Ubuntu), generate a complete one
-if [ ! -f /etc/nginx/nginx.conf ]; then
-  inf "nginx.conf missing — generating fresh config..."
-  sudo mkdir -p /etc/nginx/conf.d
-  sudo tee /etc/nginx/nginx.conf > /dev/null << 'MAINNGINX'
-user www-data;
-worker_processes auto;
-pid /run/nginx.pid;
-include /etc/nginx/modules-enabled/*.conf;
-
-events {
-    worker_connections 768;
-}
-
-http {
-    sendfile on;
-    tcp_nopush on;
-    types_hash_max_size 2048;
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers on;
-    access_log /var/log/nginx/access.log;
-    error_log /var/log/nginx/error.log;
-    gzip on;
-    include /etc/nginx/conf.d/*.conf;
-    include /etc/nginx/sites-enabled/*;
-}
-MAINNGINX
-  ok "nginx.conf generated"
-elif ! sudo grep -q 'sites-enabled' /etc/nginx/nginx.conf 2>/dev/null; then
-  # nginx.conf exists but doesn't include sites-enabled — patch it
+# Ensure nginx.conf includes sites-enabled (absent on some minimal installs)
+if ! sudo grep -q 'sites-enabled' /etc/nginx/nginx.conf 2>/dev/null; then
   inf "nginx.conf mein sites-enabled include nahi tha — add kar rahe hain..."
-  sudo sed -i '/^}/{ /http/!{ s|^}|    include /etc/nginx/sites-enabled/*;\n}| } }' \
-    /etc/nginx/nginx.conf 2>/dev/null \
-    || echo "    include /etc/nginx/sites-enabled/*;" \
-       | sudo tee -a /etc/nginx/nginx.conf > /dev/null
+  sudo sed -i '/include \/etc\/nginx\/conf\.d/a\\tinclude /etc/nginx/sites-enabled/*;' \
+    /etc/nginx/nginx.conf 2>/dev/null || true
   ok "nginx.conf: sites-enabled include added"
 fi
 
