@@ -169,63 +169,93 @@ ok "MongoDB running (data: /var/lib/mongodb)"
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "4. MongoDB User Setup"
 
-# Strong random password (32 hex = 64 chars)
+# Strong random password (32 hex chars — no special chars, safe in URI)
 DB_PASS=$(openssl rand -hex 32)
 
-# First restart mongod WITHOUT auth to create/update user (auth restart done after)
-# Temporarily disable auth to manage users
-sudo tee /tmp/mongod-noauth.conf > /dev/null << 'NOAUTHCFG'
-storage:
-  dbPath: /var/lib/mongodb
-net:
-  port: 27017
-  bindIp: 127.0.0.1
-systemLog:
-  destination: file
-  logAppend: true
-  path: /var/log/mongodb/mongod.log
-processManagement:
-  timeZoneInfo: /usr/share/zoneinfo
-NOAUTHCFG
+# ── Reliable approach: temporarily disable auth in the MAIN config,
+#    start via systemd (no --fork race condition), create user, restore auth.
+# ── Why not --fork: Oracle ARM64 systemd-managed mongod using --fork
+#    in parallel silently fails — mongod isn't ready when mongosh connects.
 
-sudo systemctl stop mongod
-sudo mongod --config /tmp/mongod-noauth.conf --fork \
-  --logpath /var/log/mongodb/setup.log &>/dev/null || true
-sleep 3
+inf "MongoDB auth temporarily disable ho rahi hai (user create karne ke liye)..."
+sudo systemctl stop mongod 2>/dev/null || true
+sleep 2
 
-# Check if user already exists
-EXISTING=$(mongosh --quiet aa_md_bot --eval \
-  "db.getUser('aa_bot_user') ? 'yes' : 'no'" 2>/dev/null || echo "no")
+# Patch main config: disable auth temporarily
+sudo sed -i 's/^\s*authorization:\s*enabled/  authorization: disabled/' /etc/mongod.conf
+sudo systemctl start mongod
 
-if [ "$EXISTING" = "yes" ]; then
-  inf "Bot user already exist karta hai — password update ho raha hai..."
-  mongosh --quiet aa_md_bot --eval \
-    "db.updateUser('aa_bot_user', {pwd: '${DB_PASS}', \
-     roles: [{role:'readWrite',db:'aa_md_bot'}]})" &>/dev/null
+# Wait up to 30s for mongod to be ready (proper readiness check, not just sleep)
+inf "MongoDB start hone ka wait kar rahe hain (max 30s)..."
+_mongo_ready=false
+for i in $(seq 1 15); do
+  if mongosh --quiet --directConnection \
+       "mongodb://127.0.0.1:27017/admin" \
+       --eval "db.runCommand({ping:1}).ok" 2>/dev/null | grep -q "1"; then
+    _mongo_ready=true
+    ok "MongoDB ready (attempt $i)"
+    break
+  fi
+  inf "  attempt $i/15 — waiting 2s..."
+  sleep 2
+done
+[[ "$_mongo_ready" == "false" ]] && { warn "MongoDB 30s mein ready nahi hua"; }
+
+# ── Check if user already exists ──────────────────────────────────────────────
+EXISTING=$(mongosh --quiet --directConnection \
+  "mongodb://127.0.0.1:27017/aa_md_bot" \
+  --eval "JSON.stringify(db.getUser('aa_bot_user') !== null)" 2>/dev/null || echo "false")
+
+if echo "$EXISTING" | grep -q "true"; then
+  inf "User already exist karta hai — password update ho raha hai..."
+  mongosh --directConnection \
+    "mongodb://127.0.0.1:27017/aa_md_bot" \
+    --eval "db.updateUser('aa_bot_user', {
+      pwd: '${DB_PASS}',
+      roles: [{ role: 'readWrite', db: 'aa_md_bot' }]
+    })" 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  mongosh: $l"; done
   ok "MongoDB user password updated"
 else
   inf "MongoDB bot user create ho raha hai..."
-  mongosh --quiet aa_md_bot --eval "
-    db.createUser({
+  mongosh --directConnection \
+    "mongodb://127.0.0.1:27017/aa_md_bot" \
+    --eval "db.createUser({
       user: 'aa_bot_user',
       pwd:  '${DB_PASS}',
       roles: [{ role: 'readWrite', db: 'aa_md_bot' }]
-    })" &>/dev/null
+    })" 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  mongosh: $l"; done
   ok "MongoDB user 'aa_bot_user' created"
 fi
 
-# Stop temp mongod, restore auth config, start via systemd
-sudo pkill -f "mongod --config /tmp/mongod-noauth" 2>/dev/null || true
-sleep 2
-sudo systemctl start mongod
-sleep 3
+# ── Re-enable auth + restart via systemd ─────────────────────────────────────
+inf "MongoDB auth re-enable ho rahi hai..."
+sudo sed -i 's/^\s*authorization:\s*disabled/  authorization: enabled/' /etc/mongod.conf
+sudo systemctl restart mongod
 
-# Verify auth works
-VERIFY=$(mongosh --quiet \
-  "mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot" \
-  --eval "db.runCommand({ping:1}).ok" 2>/dev/null || echo "0")
-[[ "$VERIFY" == "1" ]] && ok "MongoDB auth verified ✔" \
-  || warn "MongoDB auth verification failed — check manually"
+# Wait for auth mongod to be ready
+inf "Auth mongod ready hone ka wait kar rahe hain (max 30s)..."
+sleep 3
+_auth_ready=false
+for i in $(seq 1 15); do
+  if mongosh --quiet --directConnection \
+       "mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot" \
+       --eval "db.runCommand({ping:1}).ok" 2>/dev/null | grep -q "1"; then
+    _auth_ready=true
+    break
+  fi
+  sleep 2
+done
+
+if [[ "$_auth_ready" == "true" ]]; then
+  ok "MongoDB auth verified ✔ — user login successful"
+else
+  # Auth might work but mongosh can't connect — try a raw shell test
+  warn "mongosh auth check failed — manual verify try kar rahe hain..."
+  mongosh --directConnection \
+    "mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot" \
+    --eval "db.stats()" 2>&1 | tail -5 | while IFS= read -r l; do warn "  $l"; done
+  warn "Agar upar output aaya (no auth error) to DB theek hai — bot chalega"
+fi
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 5 — Node.js 20
