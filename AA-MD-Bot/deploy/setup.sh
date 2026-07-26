@@ -624,10 +624,11 @@ else
   ok ".env already exists — merging missing variables only"
   # npm's prepare hook or a manual copy may have left the example placeholders
   # in place. Replace only those placeholders; preserve all real user values.
-  if grep -q '^MONGODB_URI=mongodb://aa_bot_user:PASSWORD@127\.0\.0\.1:27017/' "$ENV_FILE"; then
+  _current_uri=$(sed -n 's/^MONGODB_URI=//p' "$ENV_FILE" | head -1)
+if [[ "$_current_uri" != mongodb://aa_bot_user:*@127.0.0.1:27017/* ]]; then
     sed -i "s#^MONGODB_URI=.*#MONGODB_URI=${MONGODB_URI}#" "$ENV_FILE"
-    ok ".env: placeholder MONGODB_URI replaced with generated local URI"
-  fi
+    ok ".env: MONGODB_URI local URI se set kiya gaya (placeholder ya galat value replace hui)"
+fi
   if grep -q '^SESSION_SECRET=change_this_to_a_random_64_char_string$' "$ENV_FILE"; then
     sed -i "s#^SESSION_SECRET=.*#SESSION_SECRET=$(openssl rand -hex 32)#" "$ENV_FILE"
     ok ".env: placeholder SESSION_SECRET replaced with generated secret"
