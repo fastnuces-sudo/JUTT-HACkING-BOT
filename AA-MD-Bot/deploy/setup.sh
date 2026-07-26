@@ -155,13 +155,36 @@ MONGOCFG
 sudo systemctl enable mongod
 sudo systemctl restart mongod
 
-# Wait for mongod to be ready (up to 30s)
-inf "MongoDB start hone ka wait kar rahe hain..."
-for i in $(seq 1 15); do
-  mongosh --quiet --eval "db.runCommand({ping:1})" &>/dev/null && break
-  [[ $i -eq 15 ]] && fail "MongoDB 30 seconds mein start nahi hua"
-  sleep 2
-done
+# ── Helper: ping mongod using exit code only (no output parsing) ──────────────
+# Usage: _mongo_ping "mongodb://..." → returns 0 if up, 1 if not
+_mongo_ping() {
+  mongosh --quiet "$1" --eval "db.adminCommand({ping:1})" &>/dev/null
+}
+
+# ── Helper: wait for mongod with timeout + diagnostics on failure ─────────────
+# Usage: _mongo_wait "mongodb://..." <max_attempts> <label>
+_mongo_wait() {
+  local URI="$1" MAX="${2:-15}" LABEL="${3:-MongoDB}" i
+  for i in $(seq 1 "$MAX"); do
+    if _mongo_ping "$URI"; then
+      ok "$LABEL ready (attempt $i/$MAX)"
+      return 0
+    fi
+    inf "  attempt $i/$MAX — waiting 2s..."
+    sleep 2
+  done
+  # Show last 15 lines of mongod journal for diagnosis
+  echo ""
+  warn "$LABEL ${MAX}x2s mein ready nahi hua — mongod journal:"
+  sudo journalctl -u mongod --no-pager -n 15 2>/dev/null \
+    | while IFS= read -r l; do warn "  $l"; done || true
+  return 1
+}
+
+# Wait for mongod to be ready (auth enabled — ping works without creds in MongoDB 7)
+inf "MongoDB start hone ka wait kar rahe hain (max 30s)..."
+_mongo_wait "mongodb://127.0.0.1:27017/admin" 15 "MongoDB (auth-on)" \
+  || fail "MongoDB start nahi hua — 'sudo journalctl -u mongod -n 30' se check karo"
 ok "MongoDB running (data: /var/lib/mongodb)"
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -172,89 +195,93 @@ hdr "4. MongoDB User Setup"
 # Strong random password (32 hex chars — no special chars, safe in URI)
 DB_PASS=$(openssl rand -hex 32)
 
-# ── Reliable approach: temporarily disable auth in the MAIN config,
-#    start via systemd (no --fork race condition), create user, restore auth.
-# ── Why not --fork: Oracle ARM64 systemd-managed mongod using --fork
-#    in parallel silently fails — mongod isn't ready when mongosh connects.
+# ── Strategy: temporarily disable auth via sed on main config,
+#    restart via systemd, create/update user, restore auth.
+# ── No --fork: Oracle ARM64 systemd-managed mongod + --fork = race condition.
+# ── No --directConnection: not a valid mongosh CLI flag (CLI ≠ URI option).
 
-inf "MongoDB auth temporarily disable ho rahi hai (user create karne ke liye)..."
+inf "MongoDB auth temporarily disable kar rahe hain (user create karne ke liye)..."
 sudo systemctl stop mongod 2>/dev/null || true
-sleep 2
+sleep 1
 
-# Patch main config: disable auth temporarily
-sudo sed -i 's/^\s*authorization:\s*enabled/  authorization: disabled/' /etc/mongod.conf
+# Disable auth in mongod.conf
+# The line is:  "  authorization: enabled    # comment"
+# sed matches "authorization: enabled" and replaces in-place — comment stays
+sudo sed -i -E 's/^([[:space:]]*)authorization:[[:space:]]*enabled/\1authorization: disabled/' \
+  /etc/mongod.conf
+inf "mongod.conf auth line after sed: $(grep 'authorization' /etc/mongod.conf || echo '(not found)')"
+
 sudo systemctl start mongod
 
-# Wait up to 30s for mongod to be ready (proper readiness check, not just sleep)
-inf "MongoDB start hone ka wait kar rahe hain (max 30s)..."
-_mongo_ready=false
-for i in $(seq 1 15); do
-  if mongosh --quiet \
-       "mongodb://127.0.0.1:27017/admin" \
-       --eval "db.runCommand({ping:1}).ok" 2>/dev/null | grep -q "1"; then
-    _mongo_ready=true
-    ok "MongoDB ready (attempt $i)"
-    break
-  fi
-  inf "  attempt $i/15 — waiting 2s..."
-  sleep 2
-done
-[[ "$_mongo_ready" == "false" ]] && { warn "MongoDB 30s mein ready nahi hua — phir bhi user create try karte hain..."; }
+# Wait for no-auth mongod to be ready
+inf "No-auth mongod start hone ka wait kar rahe hain (max 60s)..."
+_mongo_wait "mongodb://127.0.0.1:27017/admin" 30 "MongoDB (auth-off)" \
+  || fail "MongoDB auth-disable ke baad start nahi hua\n  Debug: sudo journalctl -u mongod -n 30"
 
-# ── Check if user already exists ──────────────────────────────────────────────
-EXISTING=$(mongosh --quiet \
-  "mongodb://127.0.0.1:27017/aa_md_bot" \
-  --eval "JSON.stringify(db.getUser('aa_bot_user') !== null)" 2>/dev/null || echo "false")
+# ── Create or update bot user ─────────────────────────────────────────────────
+_MONGO_BASE="mongodb://127.0.0.1:27017"
 
-if echo "$EXISTING" | grep -q "true"; then
-  inf "User already exist karta hai — password update ho raha hai..."
-  mongosh \
-    "mongodb://127.0.0.1:27017/aa_md_bot" \
-    --eval "db.updateUser('aa_bot_user', {
-      pwd: '${DB_PASS}',
-      roles: [{ role: 'readWrite', db: 'aa_md_bot' }]
-    })" 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  mongosh: $l"; done || true
-  ok "MongoDB user password updated"
+# Check if user exists: use exit code + output capture
+UCHECK=$(mongosh --quiet "${_MONGO_BASE}/aa_md_bot" \
+  --eval "print(db.getUser('aa_bot_user') ? 'EXISTS' : 'MISSING')" 2>/dev/null || echo "MISSING")
+
+if echo "$UCHECK" | grep -q "EXISTS"; then
+  inf "User 'aa_bot_user' already exists — password update kar rahe hain..."
+  _UCMD="db.updateUser('aa_bot_user',{pwd:'${DB_PASS}',roles:[{role:'readWrite',db:'aa_md_bot'}]})"
+  _ULABEL="password updated"
 else
-  inf "MongoDB bot user create ho raha hai..."
-  mongosh \
-    "mongodb://127.0.0.1:27017/aa_md_bot" \
-    --eval "db.createUser({
-      user: 'aa_bot_user',
-      pwd:  '${DB_PASS}',
-      roles: [{ role: 'readWrite', db: 'aa_md_bot' }]
-    })" 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  mongosh: $l"; done || true
-  ok "MongoDB user 'aa_bot_user' created"
+  inf "User 'aa_bot_user' create kar rahe hain..."
+  _UCMD="db.createUser({user:'aa_bot_user',pwd:'${DB_PASS}',roles:[{role:'readWrite',db:'aa_md_bot'}]})"
+  _ULABEL="created"
 fi
 
-# ── Re-enable auth + restart via systemd ─────────────────────────────────────
-inf "MongoDB auth re-enable ho rahi hai..."
-sudo sed -i 's/^\s*authorization:\s*disabled/  authorization: enabled/' /etc/mongod.conf
-sudo systemctl restart mongod
-
-# Wait for auth mongod to be ready
-inf "Auth mongod ready hone ka wait kar rahe hain (max 30s)..."
-sleep 3
-_auth_ready=false
-for i in $(seq 1 15); do
-  if mongosh --quiet \
-       "mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot" \
-       --eval "db.runCommand({ping:1}).ok" 2>/dev/null | grep -q "1"; then
-    _auth_ready=true
-    break
-  fi
-  sleep 2
-done
-
-if [[ "$_auth_ready" == "true" ]]; then
-  ok "MongoDB auth verified ✔ — user login successful"
+# Run user create/update — capture output + exit code explicitly
+_UTMP=$(mktemp)
+if mongosh --quiet "${_MONGO_BASE}/aa_md_bot" --eval "$_UCMD" >"$_UTMP" 2>&1; then
+  grep -v "^$" "$_UTMP" | while IFS= read -r l; do inf "  $l"; done || true
+  ok "MongoDB user 'aa_bot_user' ${_ULABEL}"
 else
-  # Auth might work but mongosh can't connect — try a raw shell test
-  warn "mongosh auth check failed — manual verify try kar rahe hain..."
-  mongosh \
-    "mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot" \
-    --eval "db.stats()" 2>&1 | tail -5 | while IFS= read -r l; do warn "  $l"; done || true
-  warn "Agar upar output aaya (no auth error) to DB theek hai — bot chalega"
+  # Show error output and fail
+  warn "mongosh user operation failed — output:"
+  cat "$_UTMP" | while IFS= read -r l; do warn "  $l"; done || true
+  rm -f "$_UTMP"
+  fail "MongoDB user create/update fail hua — setup dobara chalao"
+fi
+rm -f "$_UTMP"
+
+# ── Verify user was actually created (before re-enabling auth) ────────────────
+UVERIFY=$(mongosh --quiet "${_MONGO_BASE}/aa_md_bot" \
+  --eval "print(db.getUser('aa_bot_user') ? 'OK' : 'MISSING')" 2>/dev/null || echo "MISSING")
+if ! echo "$UVERIFY" | grep -q "OK"; then
+  fail "User create hua hi nahi — MongoDB mein dobara check karo:\n  mongosh mongodb://127.0.0.1:27017/aa_md_bot --eval \"db.getUsers()\""
+fi
+ok "User verification passed — 'aa_bot_user' exists in aa_md_bot db"
+
+# ── Re-enable auth + restart via systemd ─────────────────────────────────────
+inf "MongoDB auth re-enable kar rahe hain..."
+sudo sed -i -E 's/^([[:space:]]*)authorization:[[:space:]]*disabled/\1authorization: enabled/' \
+  /etc/mongod.conf
+inf "mongod.conf auth line after restore: $(grep 'authorization' /etc/mongod.conf || echo '(not found)')"
+
+sudo systemctl restart mongod
+sleep 2
+
+# Wait for auth-enabled mongod to be ready
+inf "Auth mongod ready hone ka wait kar rahe hain (max 30s)..."
+_mongo_wait "mongodb://127.0.0.1:27017/admin" 15 "MongoDB (auth-on, restart)" \
+  || fail "MongoDB auth re-enable ke baad start nahi hua"
+
+# ── Final: verify login with bot credentials ──────────────────────────────────
+inf "Bot credentials se login verify kar rahe hain..."
+_AUTH_URI="mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot"
+if _mongo_ping "$_AUTH_URI"; then
+  ok "MongoDB auth verified ✔ — 'aa_bot_user' login successful"
+else
+  # Show what mongosh says for diagnosis
+  warn "Auth login fail — mongosh output:"
+  mongosh --quiet "$_AUTH_URI" --eval "db.stats()" 2>&1 \
+    | tail -10 | while IFS= read -r l; do warn "  $l"; done || true
+  fail "MongoDB bot user login fail hua — credentials sahi nahi hain\n  Manual check: mongosh '${_AUTH_URI}' --eval \"db.stats()\""
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
