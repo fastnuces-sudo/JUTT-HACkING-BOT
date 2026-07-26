@@ -694,13 +694,23 @@ hdr "15. PM2 Ecosystem Config"
 ECOSYSTEM_FILE="$BOT_DIR/ecosystem.config.cjs"
 LOGS_DIR="$BOT_DIR/logs"
 
-inf "ecosystem.config.cjs fresh likh rahe hain (absolute paths, PM2 native env_file)..."
+inf "ecosystem.config.cjs fresh likh rahe hain (dotenv explicit load — PM2 v7 env_file workaround)..."
 cat > "$ECOSYSTEM_FILE" << ECOSYSTEM
 // AA MD Bot — PM2 Ecosystem Config
 // Auto-written by setup.sh — safe to re-run anytime
-// Uses PM2 native env_file (absolute path) — no dotenv at ecosystem level.
+// Uses dotenv explicitly at ecosystem load time — reliable on PM2 v7.x
+// (PM2 v7.0.3 ka env_file option process config mein sirf reference store karta hai
+//  lekin actual key-value pairs environment mein load nahi hoti — isliye dotenv use karo)
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const BOT_DIR = __dirname;
+
+// .env se saare variables load hue — spread karo env block mein
+let _dotenvVars = {};
+try {
+  const _r = require('dotenv').config({ path: path.join(__dirname, '.env') });
+  if (_r.parsed) _dotenvVars = _r.parsed;
+} catch {}
 
 module.exports = {
   apps: [{
@@ -709,9 +719,6 @@ module.exports = {
     cwd         : BOT_DIR,
     interpreter : 'node',
     node_args   : '--experimental-vm-modules',
-
-    // PM2 native .env loading — absolute path so it works from any CWD
-    env_file    : path.join(BOT_DIR, '.env'),
 
     // Restart policy
     instances     : 1,
@@ -730,11 +737,12 @@ module.exports = {
     error_file      : path.join(BOT_DIR, 'logs', 'pm2-err.log'),
     merge_logs      : true,
 
-    // Base env (env_file vars are merged on top of this)
+    // All .env vars explicitly spread — process.env mein sab kuch milega
     env: {
       NODE_ENV  : 'production',
-      PORT      : '5000',
-      SERVER_ID : 'server-1',
+      PORT      : _dotenvVars.PORT      || '5000',
+      SERVER_ID : _dotenvVars.SERVER_ID || 'server-1',
+      ..._dotenvVars,
     },
   }],
 };

@@ -1,0 +1,52 @@
+Mera AA-MD-Bot repo ke deploy/setup.sh script mein ek confirmed bug hai jo PM2 v7.x ke sath Telegram bot tokens (aur baaki .env variables) ko load hone se rok deta hai.
+
+BUG — PM2's "env_file" option reliably kaam nahi karta PM2 v7.0.3 mein
+setup.sh ke Step 15 mein ecosystem.config.cjs is tarah generate hota hai:
+
+  module.exports = {
+    apps: [{
+      ...
+      env_file    : path.join(BOT_DIR, '.env'),
+      ...
+    }],
+  };
+
+PM2 v7.0.3 mein "env_file" option process ke config mein sirf ek reference ke taur par store hota hai, lekin uske andar ki actual key-value pairs (jaise TELEGRAM_BOT_TOKEN, MONGODB_URI) environment mein load nahi hoti. Nateeja: bot chalta hai, lekin .env mein daale gaye Telegram tokens (ya koi bhi naya variable) kaam nahi karte — "TELEGRAM_BOT_TOKEN not set" warning aati rehti hai bawajood .env mein sahi value hone ke.
+
+Ye tab hi visible hota hai jab "pm2 env 0" chala kar dekha jaye — us mein "env_file" path to dikhta hai lekin uske andar ke variables (TELEGRAM_BOT_TOKEN, etc.) environment list mein nahi hote.
+
+FIX — dotenv seedha ecosystem.config.cjs mein load karo, env_file par depend mat karo
+
+1. package.json ke dependencies mein "dotenv" add karo (agar already nahi hai):
+   npm install dotenv --save
+
+2. setup.sh ke Step 15 mein jo ecosystem.config.cjs generate hota hai, uske top mein ye line add karo (path require ke turant baad):
+
+   const path = require('path');
+   require('dotenv').config({ path: path.join(__dirname, '.env') });
+   const BOT_DIR = __dirname;
+
+   Ye dotenv se .env ko explicitly load karega process.env mein, is se pehle ke module.exports run ho. "env_file" property ko rehne do (harmless hai), lekin dotenv hi asal source of truth hoga.
+
+3. Repo mein already jo ecosystem.config.cjs committed hai (agar hai), usme bhi yehi dotenv line add karo taake naye clone/deploy mein bhi ye fix by-default aaye.
+
+ADDITIONAL FIX — redeploy.sh mein "pm2 restart" ki jagah "pm2 delete + pm2 start" use karo
+
+Abhi redeploy.sh (setup.sh ke Step 22 mein generate hota hai) ye karta hai:
+
+  pm2 restart "$PM2_APP_NAME" 2>/dev/null || pm2 start "$BOT_DIR/ecosystem.config.cjs"
+
+Masla: "pm2 restart" process ko restart karta hai lekin ecosystem.config.cjs file dobara nahi padhta — is liye agar future mein .env mein koi naya variable add ho ya change ho, restart se wo naya value load nahi hogi (process purana cached environment use karta rahega). Sirf "pm2 delete" phir "pm2 start ecosystem.config.cjs" se hi ecosystem file (aur uske andar ka dotenv load) dobara chalta hai.
+
+Fix: redeploy.sh mein ye line:
+
+  pm2 restart "$PM2_APP_NAME" 2>/dev/null || pm2 start "$BOT_DIR/ecosystem.config.cjs"
+
+Ise is se replace karo:
+
+  pm2 delete "$PM2_APP_NAME" 2>/dev/null || true
+  pm2 start "$BOT_DIR/ecosystem.config.cjs"
+
+Ye guarantee karega ke har redeploy par .env ki latest values (naye Telegram tokens, API keys, kuch bhi) sahi se load hon, bina manually "pm2 delete && pm2 start" karne ki zaroorat ke.
+
+Sab fixes ke baad confirm karo ke koi aur jagah (repo mein kahin aur bhi) "env_file" par depend to nahi kiya gaya hai bina dotenv fallback ke.
