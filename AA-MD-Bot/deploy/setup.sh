@@ -632,43 +632,60 @@ echo ""
 ok ".env configuration complete"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 15 — ecosystem.config.cjs (auto-generate if missing)
+# STEP 15 — ecosystem.config.cjs (always write fresh — never keep old)
+# Why: repo version uses complex dotenv-at-ecosystem-load that can fail silently.
+# Setup.sh version uses env_file (PM2 native) + absolute path → always reliable.
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "15. PM2 Ecosystem Config"
 ECOSYSTEM_FILE="$BOT_DIR/ecosystem.config.cjs"
+LOGS_DIR="$BOT_DIR/logs"
 
-if [ ! -f "$ECOSYSTEM_FILE" ]; then
-  inf "ecosystem.config.cjs nahi mila — auto-generate ho raha hai..."
-  cat > "$ECOSYSTEM_FILE" << 'ECOSYSTEM'
-// AA MD Bot — PM2 Ecosystem Config (auto-generated)
+inf "ecosystem.config.cjs fresh likh rahe hain (absolute paths, PM2 native env_file)..."
+cat > "$ECOSYSTEM_FILE" << ECOSYSTEM
+// AA MD Bot — PM2 Ecosystem Config
+// Auto-written by setup.sh — safe to re-run anytime
+// Uses PM2 native env_file (absolute path) — no dotenv at ecosystem level.
+const path = require('path');
+const BOT_DIR = __dirname;
+
 module.exports = {
   apps: [{
-    name: 'aa-md-bot',
-    script: 'index.js',
-    interpreter: 'node',
-    interpreter_args: '--experimental-vm-modules',
-    env_file: '.env',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
-    restart_delay: 3000,
-    max_restarts: 20,
-    min_uptime: '10s',
-    error_file: './logs/pm2-error.log',
-    out_file: './logs/pm2-out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss',
-    merge_logs: true,
+    name        : 'aa-md-bot',
+    script      : path.join(BOT_DIR, 'index.js'),
+    cwd         : BOT_DIR,
+    interpreter : 'node',
+    node_args   : '--experimental-vm-modules',
+
+    // PM2 native .env loading — absolute path so it works from any CWD
+    env_file    : path.join(BOT_DIR, '.env'),
+
+    // Restart policy
+    instances     : 1,
+    autorestart   : true,
+    watch         : false,
+    max_restarts  : 10,
+    restart_delay : 5000,
+    min_uptime    : '30s',
+
+    // Memory guard
+    max_memory_restart: '1500M',
+
+    // Logs — absolute paths
+    log_date_format : 'YYYY-MM-DD HH:mm:ss',
+    out_file        : path.join(BOT_DIR, 'logs', 'pm2-out.log'),
+    error_file      : path.join(BOT_DIR, 'logs', 'pm2-err.log'),
+    merge_logs      : true,
+
+    // Base env (env_file vars are merged on top of this)
     env: {
-      NODE_ENV: 'production',
+      NODE_ENV  : 'production',
+      PORT      : '5000',
+      SERVER_ID : 'server-1',
     },
   }],
 };
 ECOSYSTEM
-  ok "ecosystem.config.cjs auto-generated"
-else
-  ok "ecosystem.config.cjs already exists — kept as is"
-fi
+ok "ecosystem.config.cjs written ($(wc -l < "$ECOSYSTEM_FILE") lines)"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 16 — Oracle Cloud iptables Fix
