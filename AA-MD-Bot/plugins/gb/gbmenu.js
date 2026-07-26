@@ -33,6 +33,12 @@ export default {
       `│  ▸ *${p}privacy bluetick on/off*\n` +
       `│     Toggle blue ticks on/off\n` +
       `│\n` +
+      `│  ▸ *${p}fls 8:30pm*  /  *${p}fls 20:30*\n` +
+      `│     Set a custom last seen time 🕐\n` +
+      `│     Bot goes offline at that exact time daily\n` +
+      `│     Setting persists across bot restarts\n` +
+      `│  ▸ *${p}fls status*  /  *${p}fls off*\n` +
+      `│\n` +
       `│  ▸ *${p}anticall on/off*\n` +
       `│     Block incoming calls\n` +
       `╰${'─'.repeat(34)}\n\n` +

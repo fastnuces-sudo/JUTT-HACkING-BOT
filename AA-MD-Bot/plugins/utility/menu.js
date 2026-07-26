@@ -227,6 +227,10 @@ export default {
       menu += `│  ▸ *${pref}privacy*\n`;
       menu += `│     _Last seen, DP, blue ticks settings_\n`;
       menu += `│\n`;
+      menu += `│  ▸ *${pref}fls 8:30pm / 20:30*\n`;
+      menu += `│     _Set custom last seen time (daily)_\n`;
+      menu += `│  ▸ *${pref}fls off* — disable fake last seen\n`;
+      menu += `│\n`;
       menu += `│  ▸ *${pref}anticall on/off*\n`;
       menu += `│     _Block incoming calls_\n`;
       menu += `│\n`;
