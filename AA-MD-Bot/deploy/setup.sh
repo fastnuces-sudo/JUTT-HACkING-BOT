@@ -435,19 +435,46 @@ if [[ "$ARCH" == "aarch64" ]]; then
   sudo pip3 install --break-system-packages -U yt-dlp 2>/dev/null \
     || sudo pip3 install -U yt-dlp 2>/dev/null \
     || { sudo apt-get install -yq python3-pip; sudo pip3 install -U yt-dlp; }
-  # Ensure it's on PATH for ubuntu user
-  YT_DLP_PATH=$(which yt-dlp 2>/dev/null || echo "/usr/local/bin/yt-dlp")
-  if [ ! -f /usr/local/bin/yt-dlp ] && [ -f "$YT_DLP_PATH" ]; then
+  # pip can install the module without creating /usr/local/bin/yt-dlp
+  # (notably when the distro Python and pip have different script paths).
+  # Resolve an existing executable first; otherwise create a stable wrapper
+  # that invokes the installed universal Python module.
+  YT_DLP_PATH=$(command -v yt-dlp 2>/dev/null || true)
+  if [[ -z "$YT_DLP_PATH" || ! -x "$YT_DLP_PATH" ]]; then
+    PYTHON_BIN=$(command -v python3 2>/dev/null || true)
+    if [[ -z "$PYTHON_BIN" ]] || ! "$PYTHON_BIN" -c 'import yt_dlp' >/dev/null 2>&1; then
+      fail "yt-dlp Python module install hua lekin import nahi ho raha"
+    fi
+    sudo tee /usr/local/bin/yt-dlp > /dev/null <<YTDLP_WRAPPER
+#!/usr/bin/env bash
+exec "$PYTHON_BIN" -m yt_dlp "\$@"
+YTDLP_WRAPPER
+    YT_DLP_PATH="/usr/local/bin/yt-dlp"
+  elif [[ "$YT_DLP_PATH" != "/usr/local/bin/yt-dlp" ]]; then
     sudo ln -sf "$YT_DLP_PATH" /usr/local/bin/yt-dlp
+    YT_DLP_PATH="/usr/local/bin/yt-dlp"
   fi
 else
   inf "x86_64 detected — installing yt-dlp prebuilt binary..."
+  YT_DLP_PATH="/usr/local/bin/yt-dlp"
   sudo curl -sSL \
     "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp" \
     -o /usr/local/bin/yt-dlp
 fi
-sudo chmod a+rx /usr/local/bin/yt-dlp
-ok "yt-dlp ready ($(yt-dlp --version 2>/dev/null || echo 'installed'))"
+
+if [[ ! -f "$YT_DLP_PATH" ]]; then
+  fail "yt-dlp executable create nahi hua: $YT_DLP_PATH"
+fi
+sudo chmod a+rx "$YT_DLP_PATH"
+if [[ "$YT_DLP_PATH" != "/usr/local/bin/yt-dlp" ]]; then
+  sudo ln -sf "$YT_DLP_PATH" /usr/local/bin/yt-dlp
+fi
+command -v yt-dlp >/dev/null 2>&1 \
+  || fail "yt-dlp PATH par available nahi hai"
+YT_DLP_VERSION=$(yt-dlp --version 2>/dev/null || true)
+[[ -n "$YT_DLP_VERSION" ]] \
+  || fail "yt-dlp installed hai lekin execute nahi ho raha"
+ok "yt-dlp ready ($YT_DLP_VERSION)"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 7 — Deno (ARM64 aware)

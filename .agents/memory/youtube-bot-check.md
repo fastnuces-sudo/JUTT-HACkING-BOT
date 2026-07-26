@@ -30,6 +30,13 @@ Real-world/less-popular videos (e.g. niche religious/regional songs, not just bo
 
 **How to apply:** `lib/ytdlp.js` resolves Deno (not Node) for `YTDLP_FLAGS`. If yt-dlp download failures resurface, first check `yt-dlp -v -F <url>` output for "JS runtimes: none" or "(unsupported)" before assuming it's a bot-check or dead API issue.
 
+## ARM64 pip installs may omit the yt-dlp launcher
+On Oracle Ubuntu ARM64, `pip3 install yt-dlp` can report the package as already installed while not creating `/usr/local/bin/yt-dlp` because Python and pip use different script paths. The installer must resolve an existing executable or create `/usr/local/bin/yt-dlp` as a wrapper around the exact Python interpreter that imports `yt_dlp`, then verify `yt-dlp --version`.
+
+**Why:** Assuming the conventional pip launcher path caused an otherwise successful ARM64 install to abort during `chmod`.
+
+**How to apply:** Keep the ARM64 install idempotent and validate both executable presence and actual execution before continuing to Deno or the bot setup.
+
 ## 'web' client fails even with valid cookies — use mweb/tv/tv_embedded instead (confirmed 2026-07-05)
 Contrary to earlier assumption, `tv_embedded` DOES accept `--cookies` in the installed yt-dlp version (it's bot-checked without cookies but works fine with them) — it was wrongly excluded from the cookie-tier client list. Meanwhile `web` consistently fails with "Requested format is not available" even with valid cookies on this server. Confirmed working cookie-tier clients (tested against a real failing video end-to-end, both audio -x and video -f download): `mweb`, `tv_embedded`, `tv`. `COOKIE_CLIENTS` in `plugins/download/youtube.js` should be `['mweb', 'tv_embedded', 'tv']`, not `['web', 'mweb']`.
 
