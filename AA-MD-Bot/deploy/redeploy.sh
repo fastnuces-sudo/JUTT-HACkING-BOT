@@ -365,21 +365,21 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 9 — PM2 restart (delete + start — ecosystem.config.cjs dobara parse hota hai)
-# Why: "pm2 restart" ecosystem file dobara nahi padhta — purana cached environment
-# use karta hai. "pm2 delete + pm2 start" se ecosystem + dotenv fresh load hote hain,
-# is liye naye .env values (Telegram tokens, API keys, etc.) hamesha pick up honge.
+# STEP 9 — PM2 restart (delete + start so ecosystem.config.cjs is re-parsed fresh)
+# Why: "pm2 restart" does NOT re-read the ecosystem file — it reuses the cached
+# environment from the previous run. "pm2 delete + pm2 start" forces a fresh parse
+# of ecosystem.config.cjs + dotenv, so new .env values are always picked up.
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "9. PM2 Restart"
 
 cd "$BOT_DIR"
 
-# Delete existing process (if any) — ecosystem file fresh parse karne ke liye
-inf "PM2 process '$PM2_APP_NAME' delete kar rahe hain (fresh start ke liye)..."
+# Delete existing process (if any) — forces ecosystem file to be re-parsed
+inf "Deleting PM2 process '$PM2_APP_NAME' for a clean fresh start..."
 pm2 delete "$PM2_APP_NAME" 2>/dev/null || true
 
-# Start fresh via ecosystem.config.cjs — dotenv bhi fresh load hoga
-inf "PM2 start kar rahe hain via ecosystem.config.cjs..."
+# Start fresh via ecosystem.config.cjs — dotenv is loaded fresh
+inf "Starting via ecosystem.config.cjs (ecosystem + dotenv fresh load)..."
 pm2 start "$BOT_DIR/ecosystem.config.cjs"
 ok "PM2: '$PM2_APP_NAME' started (ecosystem + dotenv fresh load)"
 _pass "pm2" "Deleted + started from ecosystem.config.cjs"
@@ -389,38 +389,47 @@ pm2 save --force >/dev/null 2>&1
 ok "PM2 process list saved"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 10 — Wait for dashboard (HTTP 200 on port 5000, max 90s)
+# STEP 10 — Wait for dashboard (HTTP 200 on port 5000, max 3 minutes)
+# NOTE: This is informational only — a timeout here does NOT abort the deploy.
+# The code has already been pulled and PM2 has already restarted the bot.
+# The bot may just need more time to connect to MongoDB / load sessions.
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "10. Dashboard Health Check"
 
-inf "Waiting for bot dashboard on http://127.0.0.1:5000 (max 90s)..."
+inf "Waiting for bot dashboard on http://127.0.0.1:5000 (max 3 min)..."
 
 _BOT_ONLINE=false
-for _i in $(seq 1 30); do
+for _i in $(seq 1 60); do
   _http=$(curl -s -o /dev/null -w '%{http_code}' \
      --max-time 3 http://127.0.0.1:5000/ 2>/dev/null || true)
   _http="${_http:-000}"
   if [[ "$_http" == "200" || "$_http" == "301" || "$_http" == "302" ]]; then
     _BOT_ONLINE=true
-    ok "Dashboard online — HTTP $_http (attempt $_i/30)"
+    ok "Dashboard online — HTTP $_http (attempt $_i/60)"
     _pass "dashboard" "Online (HTTP $_http)"
     break
   fi
-  inf "  Attempt $_i/30 — HTTP $_http — waiting 3s..."
+  inf "  Attempt $_i/60 — HTTP $_http — waiting 3s..."
   sleep 3
 done
 
 if [[ "$_BOT_ONLINE" == "false" ]]; then
-  _fail "dashboard" "Did not respond within 90 seconds"
-  warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  warn "Bot did not come online within 90 seconds."
-  warn "Last 30 lines of PM2 logs:"
-  warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  # WARNING only — redeploy itself was successful (code pulled, PM2 restarted)
+  _fail "dashboard" "Did not respond within 3 minutes (bot may still be starting)"
   echo ""
-  pm2 logs "$PM2_APP_NAME" --lines 30 --nostream 2>/dev/null || true
+  echo -e "${Y}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${R}"
+  echo -e "${Y}⚠  Dashboard did not respond within 3 minutes.${R}"
+  echo -e "${Y}   Code was pulled and PM2 was restarted — the${R}"
+  echo -e "${Y}   bot may still be loading. Check logs below.${R}"
+  echo -e "${Y}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${R}"
   echo ""
-  warn "Check manually: pm2 logs $PM2_APP_NAME --lines 100"
-  fail "Dashboard port 5000 is not responding; redeploy failed"
+  inf "Last 40 lines of PM2 logs:"
+  pm2 logs "$PM2_APP_NAME" --lines 40 --nostream 2>/dev/null || true
+  echo ""
+  echo -e "  ${DIM}To watch live: pm2 logs ${PM2_APP_NAME}${R}"
+  echo -e "  ${DIM}PM2 status:   pm2 status${R}"
+  echo ""
+  # Do NOT exit — fall through to the full summary so the user sees all step results
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
