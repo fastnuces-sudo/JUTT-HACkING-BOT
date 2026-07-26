@@ -313,7 +313,10 @@ export async function handleMessage(sock, msg, sessionId) {
       } catch {}
     }
 
-    if (eff('autoTyping', false) && !fromMe) {
+    // Skip composing presence when fake last seen is active — firing "composing"
+    // implicitly marks the number as online and resets the scheduled last-seen time.
+    const fakeLsActive = db.sessionSettings.getValue(sessionId, 'fake_lastseen_active');
+    if (eff('autoTyping', false) && !fromMe && !fakeLsActive) {
       sock.sendPresenceUpdate('composing', jid).catch(() => {});
     }
 
@@ -387,7 +390,7 @@ export async function handleMessage(sock, msg, sessionId) {
       logger,
     });
 
-    if (eff('autoTyping', false)) {
+    if (eff('autoTyping', false) && !fakeLsActive) {
       sock.sendPresenceUpdate('paused', jid).catch(() => {});
     }
   } catch (err) {

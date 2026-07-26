@@ -376,6 +376,28 @@ async function main() {
   // ── Birthday scheduler — runs at exactly midnight every day ───────────────
   startBirthdayScheduler(() => sessions);
 
+  // ── Fake Last Seen scheduler — checks every minute ────────────────────────
+  // For each session that has fake_lastseen_active=true, fires sendPresenceUpdate('unavailable')
+  // at the exact HH:MM the user configured, so WA records that moment as last seen.
+  setInterval(() => {
+    const now   = new Date();
+    const hh    = String(now.getHours()).padStart(2, '0');
+    const mm    = String(now.getMinutes()).padStart(2, '0');
+    const curHHMM = `${hh}:${mm}`;
+
+    for (const [sessionId, sock] of sessions.entries()) {
+      try {
+        const active = db.sessionSettings.getValue(sessionId, 'fake_lastseen_active');
+        if (!active) continue;
+        const target = db.sessionSettings.getValue(sessionId, 'fake_lastseen_time');
+        if (!target || target !== curHHMM) continue;
+        // Exact minute match — fire unavailable
+        sock.sendPresenceUpdate('unavailable').catch(() => {});
+        logger.info({ sessionId, time: curHHMM }, '🕐 Fake last seen fired');
+      } catch {}
+    }
+  }, 60_000);
+
   // ── Telegram bots ─────────────────────────────────────────────────────────
   try {
     initTelegramAdmin({
