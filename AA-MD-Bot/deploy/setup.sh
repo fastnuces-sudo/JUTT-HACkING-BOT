@@ -284,6 +284,56 @@ else
   fail "MongoDB bot user login fail hua — credentials sahi nahi hain\n  Manual check: mongosh '${_AUTH_URI}' --eval \"db.stats()\""
 fi
 
+# ── Collections + Indexes + Default documents ─────────────────────────────────
+# Bot ki zarurat ke mutabiq sab collections explicitly create karte hain.
+# MongoDB implicit create bhi karta hai, lekin explicit karne se:
+#   ✔ Index already exist karta hai first write se pehle
+#   ✔ Re-run par koi error nahi (idempotent)
+#   ✔ auth_keys.sessionId index — deleteMany({sessionId}) fast hoti hai
+inf "Collections, indexes aur default documents initialize kar rahe hain..."
+mongosh --quiet "$_AUTH_URI" --eval '
+  // ── Collections (no-op agar already exist) ──────────────────────────────
+  var colls = [
+    "groups", "settings", "sessionSettings",
+    "notes", "birthdays", "sessions", "reminders",
+    "auth_creds", "auth_keys"
+  ];
+  for (var c of colls) {
+    try { db.createCollection(c); } catch(e) { /* already exists */ }
+  }
+
+  // ── Indexes ────────────────────────────────────────────────────────────
+  // auth_keys: sessionId index — logout/delete par deleteMany({sessionId}) fast karta hai
+  db.auth_keys.createIndex({ sessionId: 1 }, { name: "sessionId_1", background: true });
+  // auth_creds: sessionId index — multi-session lookup ke liye
+  db.auth_creds.createIndex({ sessionId: 1 }, { name: "sessionId_1", background: true });
+  // groups: sessionId prefix — db.groups.all(sessionId) filter fast
+  db.groups.createIndex({ sessionId: 1 }, { name: "sessionId_1", background: true });
+
+  // ── Default settings document (setOnInsert — kabhi overwrite nahi) ─────
+  db.settings.updateOne(
+    { _id: "__settings__" },
+    { $setOnInsert: { _id: "__settings__", createdAt: new Date() } },
+    { upsert: true }
+  );
+
+  // ── Report ─────────────────────────────────────────────────────────────
+  print("--- collections ---");
+  for (var c of colls) {
+    try {
+      var n = db.getCollection(c).countDocuments();
+      print(c + ": " + n + " docs");
+    } catch(e) { print(c + ": ERROR " + e.message); }
+  }
+  print("--- indexes ---");
+  var idxColls = ["auth_keys","auth_creds","groups"];
+  for (var ic of idxColls) {
+    var idxs = db.getCollection(ic).getIndexes().map(function(i){ return i.name; }).join(", ");
+    print(ic + ": [" + idxs + "]");
+  }
+' 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  $l"; done || true
+ok "Collections (9), indexes (3) aur default settings document ready"
+
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 5 — Node.js 20
 # ══════════════════════════════════════════════════════════════════════════════
