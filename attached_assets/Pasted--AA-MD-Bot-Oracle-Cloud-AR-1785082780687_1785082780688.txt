@@ -1,0 +1,182 @@
+
+╔══════════════════════════════════════════════════════════╗
+║        AA MD Bot — Oracle Cloud ARM64 Auto Deploy        ║
+║   Bot + MongoDB + Nginx + HTTPS — same VM, automatic     ║
+╚══════════════════════════════════════════════════════════╝
+
+  Architecture : aarch64
+  User         : ubuntu
+  Log          : /tmp/aa-md-bot-deploy.log
+
+▶  Koi input nahi chahiye — sab kuch apne aap hoga...
+
+
+━━━  1. System Update  ━━━ (16:14:59)
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Calculating upgrade...
+The following packages have been kept back:
+  linux-headers-oracle linux-image-oracle linux-oracle
+0 upgraded, 0 newly installed, 0 to remove and 3 not upgraded.
+✔  System packages updated
+
+━━━  2. System Tools  ━━━ (16:15:03)
+Reading package lists...
+Building dependency tree...
+Reading state information...
+build-essential is already the newest version (12.9ubuntu3).
+certbot is already the newest version (1.21.0-1build1).
+iptables-persistent is already the newest version (1.0.16).
+netfilter-persistent is already the newest version (1.0.16).
+python3-certbot-nginx is already the newest version (1.21.0-1).
+ca-certificates is already the newest version (20260601~22.04.1).
+curl is already the newest version (7.81.0-1ubuntu1.25).
+git is already the newest version (1:2.34.1-1ubuntu1.17).
+gnupg is already the newest version (2.2.27-3ubuntu2.5).
+nginx is already the newest version (1.18.0-6ubuntu14.18).
+openssl is already the newest version (3.0.2-0ubuntu1.25).
+software-properties-common is already the newest version (0.99.22.9).
+unzip is already the newest version (6.0-26ubuntu3.2).
+wget is already the newest version (1.21.2-2ubuntu1.4).
+apt-transport-https is already the newest version (2.4.14).
+ffmpeg is already the newest version (7:4.4.2-0ubuntu0.22.04.1).
+0 upgraded, 0 newly installed, 0 to remove and 3 not upgraded.
+✔  System tools + nginx + certbot + iptables-persistent ready
+
+━━━  3. MongoDB 7 (local — aarch64)  ━━━ (16:15:04)
+✔  MongoDB already installed — skipping (db version v7.0.39)
+✔  MongoDB (auth-on) active (running) (attempt 1/30)
+▶  MongoDB start hone ka wait kar rahe hain (max 30s)...
+▶    attempt 1/15 — waiting 2s...
+✔  MongoDB (auth-on) ready (attempt 2/15)
+✔  MongoDB running (data: /var/lib/mongodb)
+
+━━━  4. MongoDB User Setup  ━━━ (16:15:08)
+▶  Existing local MongoDB password preserved for safe rerun
+▶  MongoDB auth temporarily disable kar rahe hain (user create karne ke liye)...
+▶  mongod.conf auth line after sed:   authorization: disabled    # username/password required
+✔  MongoDB (auth-off) active (running) (attempt 1/30)
+▶  No-auth mongod start hone ka wait kar rahe hain (max 60s)...
+▶    attempt 1/30 — waiting 2s...
+✔  MongoDB (auth-off) ready (attempt 2/30)
+▶  User 'aa_bot_user' already exists — password update kar rahe hain...
+▶    { ok: 1 }
+✔  MongoDB user 'aa_bot_user' password updated
+✔  User verification passed — 'aa_bot_user' exists in aa_md_bot db
+▶  MongoDB auth re-enable kar rahe hain...
+▶  mongod.conf auth line after restore:   authorization: enabled    # username/password required
+✔  MongoDB (auth-on, restart) active (running) (attempt 1/30)
+▶  Auth mongod ready hone ka wait kar rahe hain (max 30s)...
+▶    attempt 1/15 — waiting 2s...
+✔  MongoDB (auth-on, restart) ready (attempt 2/15)
+▶  Bot credentials se login verify kar rahe hain...
+✔  MongoDB auth verified ✔ — 'aa_bot_user' login successful
+▶  Collections, indexes aur default documents initialize kar rahe hain...
+▶    --- collections ---
+▶    groups: 0 docs
+▶    settings: 1 docs
+▶    sessionSettings: 0 docs
+▶    notes: 0 docs
+▶    birthdays: 0 docs
+▶    sessions: 0 docs
+▶    reminders: 0 docs
+▶    auth_creds: 0 docs
+▶    auth_keys: 0 docs
+▶    --- indexes ---
+▶    auth_keys: [_id_, sessionId_1]
+▶    auth_creds: [_id_, sessionId_1]
+▶    groups: [_id_, sessionId_1]
+✔  Collections (9), indexes (3) aur default settings document ready
+
+━━━  5. Node.js 20  ━━━ (16:15:18)
+✔  Node.js v20.20.2 already installed
+
+━━━  6. yt-dlp  ━━━ (16:15:19)
+▶  ARM64 detected — installing yt-dlp via pip (universal)...
+Requirement already satisfied: yt-dlp in /usr/local/lib/python3.10/dist-packages (2026.7.4)
+✔  yt-dlp ready (2026.07.04)
+
+━━━  7. Deno (YouTube n-challenge / nsig)  ━━━ (16:15:22)
+✔  Deno already installed (deno 2.9.4 (stable, release, aarch64-unknown-linux-gnu))
+
+━━━  8. PM2 (Process Manager)  ━━━ (16:15:22)
+▶  PM2 already installed — updating to latest...
+
+changed 77 packages in 19s
+
+8 packages are looking for funding
+  run `npm fund` for details
+✔  PM2 7.0.3 ready
+
+━━━  9. Bot Code  ━━━ (16:15:41)
+▶  Repository already exists — git pull kar rahe hain...
+✔  Code updated (ea50846 Add verification log for installed Node packages)
+
+━━━  10. Bot Directory Detection  ━━━ (16:15:43)
+✔  Bot directory detected: /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot
+
+━━━  11. Node.js Packages  ━━━ (16:15:43)
+✔  npm registry set: https://registry.npmjs.org/
+▶  npm install running... (2-5 minute lagenge — output aayega, normal hai)
+npm error Exit handler never called!
+npm error This is an error with npm itself. Please report this error at:
+npm error   <https://github.com/npm/cli/issues>
+npm error A complete log of this run can be found in: /home/ubuntu/.npm/_logs/2026-07-26T16_15_43_802Z-debug-0.log
+✔  Node.js packages installed
+⚠  fs-extra resolve nahi hua — npm install fs-extra --save try kar rahe hain...
+npm error code ENOTEMPTY
+npm error syscall rename
+npm error path /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/node_modules/axios
+npm error dest /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/node_modules/.axios-ghYiagd2
+npm error errno -39
+npm error ENOTEMPTY: directory not empty, rename '/home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/node_modules/axios' -> '/home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/node_modules/.axios-ghYiagd2'
+npm error A complete log of this run can be found in: /home/ubuntu/.npm/_logs/2026-07-26T16_16_54_787Z-debug-0.log
+✔  Dependency verified after targeted install: fs-extra
+✔  Dependency verified: axios
+✔  Dependency verified: @whiskeysockets/baileys
+
+━━━  12. Bot Directories  ━━━ (16:16:55)
+✔  Bot directories ready: logs temp session downloads database cache
+
+━━━  13. Public IP + Domain  ━━━ (16:16:55)
+▶  Public IP: 130.110.123.57
+▶  Domain: 130-110-123-57.nip.io (nip.io — no DNS config needed)
+✔  IP=130.110.123.57  DOMAIN=130-110-123-57.nip.io
+
+━━━  14. .env Configuration  ━━━ (16:16:56)
+✔  .env already exists — merging missing variables only
+▶  .env: PORT already set — skip kiya
+▶  .env: SERVER_ID already set — skip kiya
+▶  .env: MONGODB_URI already set — skip kiya
+▶  .env: SESSION_SECRET already set — skip kiya
+
+  ━━━ Optional: Telegram Bot Tokens ━━━
+  (30 saniye mein Enter dabao skip karne ke liye)
+
+  TELEGRAM_BOT_TOKEN (Enter to skip):
+✔  .env configuration complete
+
+━━━  15. PM2 Ecosystem Config  ━━━ (16:17:26)
+▶  ecosystem.config.cjs fresh likh rahe hain (dotenv explicit load — PM2 v7 env_file workaround)...
+✔  ecosystem.config.cjs written (50 lines)
+
+━━━  16. Oracle Cloud iptables Fix  ━━━ (16:17:26)
+▶  iptables: port 22 already ACCEPT — skip
+▶  iptables: port 80 already ACCEPT — skip
+▶  iptables: port 443 already ACCEPT — skip
+▶  iptables: port 5000 already ACCEPT — skip
+▶  iptables rules save ho rahi hain (netfilter-persistent)...
+✔  iptables rules permanently saved
+
+━━━  17. UFW Firewall  ━━━ (16:17:26)
+✔  UFW: SSH(22) HTTP(80) HTTPS(443) Dashboard(5000) open | MongoDB(27017) blocked
+
+━━━  18. Nginx Configuration  ━━━ (16:17:27)
+▶  nginx.conf mein sites-enabled include nahi tha — add kar rahe hain...
+sed: can't read /etc/nginx/nginx.conf: No such file or directory
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌  Unexpected error at line 0 (exit code: 2)
+    Last command: sudo sed -i '/http {/a\tinclude /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
