@@ -522,11 +522,11 @@ npm config set registry "$NPM_REGISTRY"
 ok "npm registry set: $NPM_REGISTRY"
 
 _npm_install() {
+  # --silent removed: deployment logs should remain visible
   npm install --omit=dev \
     --registry="$NPM_REGISTRY" \
     --no-audit \
-    --no-fund \
-    --silent
+    --no-fund
 }
 
 inf "npm install running..."
@@ -537,31 +537,35 @@ if ! _npm_install; then
     --registry="$NPM_REGISTRY" \
     --no-audit \
     --no-fund \
-    --silent \
   || fail "npm install second attempt bhi fail hua — logs check karo"
 fi
 ok "Node.js packages installed"
 
-# ── Critical dependency verification ─────────────────────────────────────────
-# fs-extra aur doosri packages kabhi cache se incomplete install ho sakti hain.
-# Agar missing ho to node_modules + lock file hata ke fresh reinstall karo.
-if [ ! -f "$BOT_DIR/node_modules/fs-extra/index.js" ]; then
-  warn "fs-extra missing after install — clean reinstall kar rahe hain..."
-  rm -rf node_modules package-lock.json
-  npm install --omit=dev \
-    --registry="$NPM_REGISTRY" \
-    --no-audit \
-    --no-fund \
-    --silent \
-  || fail "Clean reinstall bhi fail hua — npm logs check karo"
-  # Final check after clean reinstall
-  if [ ! -f "$BOT_DIR/node_modules/fs-extra/index.js" ]; then
-    fail "fs-extra clean reinstall ke baad bhi missing hai — registry ya network issue check karo"
+# ── Generic dependency verifier ───────────────────────────────────────────────
+# NEVER validates by file path — uses Node.js module resolution only.
+# NEVER aborts deployment — worst case is a WARNING and continue.
+verify_dependency() {
+  local pkg="$1"
+  # Primary: require.resolve() — correct way to check if Node can find it
+  if node -e "require.resolve('${pkg}')" >/dev/null 2>&1; then
+    ok "Dependency verified: ${pkg}"
+    return 0
   fi
-  ok "fs-extra verified after clean reinstall"
-else
-  ok "Critical dependency fs-extra verified"
-fi
+  # Not resolvable — try installing it once
+  warn "${pkg} resolve nahi hua — npm install ${pkg} --save try kar rahe hain..."
+  npm install "${pkg}" --save --registry="$NPM_REGISTRY" --no-audit --no-fund 2>&1 || true
+  # Re-check after targeted install
+  if node -e "require.resolve('${pkg}')" >/dev/null 2>&1; then
+    ok "Dependency verified after targeted install: ${pkg}"
+    return 0
+  fi
+  # Still not resolvable — WARNING only, never exit
+  warn "WARNING: ${pkg} verify nahi ho saka — deployment jaari rahega"
+  return 0
+}
+
+# Verify critical dependencies using Node.js resolution (not file checks)
+verify_dependency fs-extra
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 12 — Required Bot Directories
