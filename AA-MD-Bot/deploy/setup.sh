@@ -34,7 +34,7 @@ REPO_CLONE_DIR="/home/ubuntu/AA-MD-Bot-repo"   # git clone yahan hoga
 NODE_VERSION="20"
 PM2_APP_NAME="aa-md-bot"
 NPM_REGISTRY="https://registry.npmjs.org/"
-DEPLOY_LOG="/var/log/aa-md-bot-deploy.log"
+DEPLOY_LOG="/tmp/aa-md-bot-deploy.log"   # default: always writable
 SCRIPT_START=$(date +%s)
 
 # ── Colours ───────────────────────────────────────────────────────────────────
@@ -56,8 +56,7 @@ hdr()   { echo -e "\n${B}${C}━━━  $*  ━━━${R}${DIM} ($(_ts))${R}"; \
            echo "--- $* ---" >> "$DEPLOY_LOG" 2>/dev/null || true; }
 elapsed() { echo $(( $(date +%s) - SCRIPT_START )); }
 
-# Initialise deploy log
-sudo touch "$DEPLOY_LOG" 2>/dev/null && sudo chmod 644 "$DEPLOY_LOG" || DEPLOY_LOG="/tmp/aa-md-bot-deploy.log"
+# Initialise deploy log (always /tmp — no root needed)
 echo "=== AA MD Bot Deploy $(date) ===" >> "$DEPLOY_LOG"
 
 # ── Architecture guard ────────────────────────────────────────────────────────
