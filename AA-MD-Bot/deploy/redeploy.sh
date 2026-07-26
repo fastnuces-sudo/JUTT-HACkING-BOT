@@ -281,13 +281,12 @@ else
     inf "node_modules missing — running npm install..."
   fi
 
-  # Helper: run npm install with standard flags
+  # Helper: run npm install with standard flags (--silent removed: logs must be visible)
   _npm_install() {
     npm install --omit=dev \
       --registry="$NPM_REGISTRY" \
       --no-audit \
-      --no-fund \
-      --silent
+      --no-fund
   }
 
   if _npm_install; then

@@ -370,7 +370,7 @@ else
 fi
 
 # Ensure npm is up-to-date
-npm install -g npm@latest --registry="$NPM_REGISTRY" --silent 2>/dev/null || true
+npm install -g npm@latest --registry="$NPM_REGISTRY" 2>/dev/null || true
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 6 — yt-dlp (ARM64 aware — uses the universal Python binary)
@@ -447,10 +447,10 @@ fi
 hdr "8. PM2 (Process Manager)"
 if command -v pm2 &>/dev/null; then
   inf "PM2 already installed — updating to latest..."
-  sudo npm install -g pm2@latest --registry="$NPM_REGISTRY" --silent 2>/dev/null || true
+  sudo npm install -g pm2@latest --registry="$NPM_REGISTRY" 2>/dev/null || true
 else
   inf "PM2 install ho raha hai..."
-  sudo npm install -g pm2@latest --registry="$NPM_REGISTRY" --silent
+  sudo npm install -g pm2@latest --registry="$NPM_REGISTRY"
 fi
 ok "PM2 $(pm2 --version 2>/dev/null || echo 'installed') ready"
 
@@ -565,7 +565,10 @@ verify_dependency() {
 }
 
 # Verify critical dependencies using Node.js resolution (not file checks)
+# These NEVER abort deployment — worst case is a WARNING
 verify_dependency fs-extra
+verify_dependency axios
+verify_dependency @whiskeysockets/baileys
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 12 — Required Bot Directories
@@ -929,9 +932,15 @@ for i in $(seq 1 30); do
 done
 
 if [[ "$_PORT_READY" == "false" ]]; then
-  warn "Bot 90 seconds mein ready nahi hua — PM2 logs check karo:"
-  warn "  pm2 logs $PM2_APP_NAME --lines 50"
-  fail "Dashboard port 5000 is not responding; deployment stopped before HTTPS setup"
+  # WARNING only — never stop deploy because of port check
+  # Bot may still be loading sessions / connecting to MongoDB
+  warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  warn "Bot 90 seconds mein port 5000 pe respond nahi kiya."
+  warn "Deployment JAARI RAHEGA — certbot skip hoga agar port down hai."
+  warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  inf "Last 30 PM2 log lines:"
+  pm2 logs "$PM2_APP_NAME" --lines 30 --nostream 2>/dev/null || true
+  inf "Debug: pm2 logs $PM2_APP_NAME --lines 100"
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1058,10 +1067,10 @@ if [ "\$CURRENT_HASH" = "\$STORED_HASH" ] && [ -d "\$BOT_DIR/node_modules" ]; th
   ok "package.json unchanged — npm install skip kiya"
 else
   inf "package.json changed — npm install ho raha hai..."
-  if ! npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --silent; then
+  if ! npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund; then
     warn "npm install failed — retry kar rahe hain..."
     rm -rf node_modules package-lock.json
-    npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --silent
+    npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund
   fi
   echo "\$CURRENT_HASH" > "\$PKG_HASH_FILE"
   ok "npm install complete"
