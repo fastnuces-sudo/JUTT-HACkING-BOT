@@ -526,7 +526,6 @@ _npm_install() {
     --registry="$NPM_REGISTRY" \
     --no-audit \
     --no-fund \
-    --prefer-offline \
     --silent
 }
 
@@ -534,7 +533,6 @@ inf "npm install running..."
 if ! _npm_install; then
   warn "npm install failed — node_modules + package-lock.json hata ke retry ho raha hai..."
   rm -rf node_modules package-lock.json
-  # Try without --prefer-offline on retry
   npm install --omit=dev \
     --registry="$NPM_REGISTRY" \
     --no-audit \
@@ -543,6 +541,27 @@ if ! _npm_install; then
   || fail "npm install second attempt bhi fail hua — logs check karo"
 fi
 ok "Node.js packages installed"
+
+# ── Critical dependency verification ─────────────────────────────────────────
+# fs-extra aur doosri packages kabhi cache se incomplete install ho sakti hain.
+# Agar missing ho to node_modules + lock file hata ke fresh reinstall karo.
+if [ ! -f "$BOT_DIR/node_modules/fs-extra/index.js" ]; then
+  warn "fs-extra missing after install — clean reinstall kar rahe hain..."
+  rm -rf node_modules package-lock.json
+  npm install --omit=dev \
+    --registry="$NPM_REGISTRY" \
+    --no-audit \
+    --no-fund \
+    --silent \
+  || fail "Clean reinstall bhi fail hua — npm logs check karo"
+  # Final check after clean reinstall
+  if [ ! -f "$BOT_DIR/node_modules/fs-extra/index.js" ]; then
+    fail "fs-extra clean reinstall ke baad bhi missing hai — registry ya network issue check karo"
+  fi
+  ok "fs-extra verified after clean reinstall"
+else
+  ok "Critical dependency fs-extra verified"
+fi
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 12 — Required Bot Directories
@@ -624,11 +643,15 @@ else
   ok ".env already exists — merging missing variables only"
   # npm's prepare hook or a manual copy may have left the example placeholders
   # in place. Replace only those placeholders; preserve all real user values.
+  # Logic: replace if URI is not already a real local URI
+  # (i.e. not matching mongodb://aa_bot_user:<realpass>@127.0.0.1:27017/...)
+  # Also replace if the password field is literally "PASSWORD" (example placeholder).
   _current_uri=$(sed -n 's/^MONGODB_URI=//p' "$ENV_FILE" | head -1)
-if [[ "$_current_uri" != mongodb://aa_bot_user:*@127.0.0.1:27017/* ]]; then
+  if [[ "$_current_uri" != mongodb://aa_bot_user:*@127.0.0.1:27017/* ]] \
+     || [[ "$_current_uri" == *:PASSWORD@* ]]; then
     sed -i "s#^MONGODB_URI=.*#MONGODB_URI=${MONGODB_URI}#" "$ENV_FILE"
     ok ".env: MONGODB_URI local URI se set kiya gaya (placeholder ya galat value replace hui)"
-fi
+  fi
   if grep -q '^SESSION_SECRET=change_this_to_a_random_64_char_string$' "$ENV_FILE"; then
     sed -i "s#^SESSION_SECRET=.*#SESSION_SECRET=$(openssl rand -hex 32)#" "$ENV_FILE"
     ok ".env: placeholder SESSION_SECRET replaced with generated secret"
