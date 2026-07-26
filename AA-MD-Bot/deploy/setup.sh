@@ -595,32 +595,31 @@ ok "Bot directory detected: $BOT_DIR"
 hdr "11. Node.js Packages"
 cd "$BOT_DIR"
 
-# Set npm registry explicitly + disable interactive spinner (prevents hang in piped/non-TTY envs)
+# Set npm registry explicitly
+# NPM_CONFIG_PROGRESS=false : env-var method avoids the npm 10 "Exit handler never called"
+# bug that --no-progress CLI flag and `npm config set progress false` both trigger on ARM64
 npm config set registry "$NPM_REGISTRY"
-npm config set progress false
 ok "npm registry set: $NPM_REGISTRY"
 
 _npm_install() {
-  # --no-progress  : prevents spinner deadlock in piped/non-TTY SSH sessions (Oracle Cloud)
-  # --legacy-peer-deps : skips slow peer-dep resolution tree — much faster on npm 10+
-  # timeout 600    : kills and lets retry if truly stuck (max 10 min per attempt)
-  timeout 600 npm install --omit=dev \
+  # NPM_CONFIG_PROGRESS=false : suppress spinner via env (not CLI flag — avoids npm 10 ARM64 bug)
+  # --legacy-peer-deps        : skips expensive peer-dep resolution tree (npm 10+ is much faster)
+  # timeout 600               : hard kill if truly stuck, then retry
+  NPM_CONFIG_PROGRESS=false timeout 600 npm install --omit=dev \
     --registry="$NPM_REGISTRY" \
     --no-audit \
     --no-fund \
-    --no-progress \
     --legacy-peer-deps
 }
 
-inf "npm install running... (yeh 2-5 minute le sakta hai — koi spinner nahi aayega, normal hai)"
+inf "npm install running... (2-5 minute lagenge — output aayega, normal hai)"
 if ! _npm_install; then
   warn "npm install failed ya timeout — node_modules + package-lock.json hata ke retry ho raha hai..."
   rm -rf node_modules package-lock.json
-  timeout 600 npm install --omit=dev \
+  NPM_CONFIG_PROGRESS=false timeout 600 npm install --omit=dev \
     --registry="$NPM_REGISTRY" \
     --no-audit \
     --no-fund \
-    --no-progress \
     --legacy-peer-deps \
   || fail "npm install second attempt bhi fail hua — logs check karo: $DEPLOY_LOG"
 fi
@@ -857,8 +856,9 @@ _iptables_allow_port() {
   fi
 
   # Find the REJECT rule line number (insert BEFORE it)
+  # || true : grep exits 1 when no match — under set -Eeuo pipefail this kills the script
   REJECT_LINE=$(sudo iptables -L INPUT --line-numbers -n 2>/dev/null \
-    | grep -E '\bREJECT\b' | awk '{print $1}' | head -1)
+    | grep -E '\bREJECT\b' | awk '{print $1}' | head -1 || true)
 
   if [ -n "$REJECT_LINE" ]; then
     # Insert ACCEPT before REJECT
@@ -1152,11 +1152,11 @@ STORED_HASH=\$(cat "\$PKG_HASH_FILE" 2>/dev/null || echo "")
 if [ "\$CURRENT_HASH" = "\$STORED_HASH" ] && [ -d "\$BOT_DIR/node_modules" ]; then
   ok "package.json unchanged — npm install skip kiya"
 else
-  inf "package.json changed — npm install ho raha hai... (2-5 min, koi spinner nahi — normal hai)"
-  if ! timeout 600 npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --no-progress --legacy-peer-deps; then
+  inf "package.json changed — npm install ho raha hai... (2-5 min)"
+  if ! NPM_CONFIG_PROGRESS=false timeout 600 npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --legacy-peer-deps; then
     warn "npm install failed ya timeout — retry kar rahe hain..."
     rm -rf node_modules package-lock.json
-    timeout 600 npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --no-progress --legacy-peer-deps
+    NPM_CONFIG_PROGRESS=false timeout 600 npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --legacy-peer-deps
   fi
   echo "\$CURRENT_HASH" > "\$PKG_HASH_FILE"
   ok "npm install complete"
