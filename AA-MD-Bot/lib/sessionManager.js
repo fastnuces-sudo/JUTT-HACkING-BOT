@@ -26,6 +26,44 @@ import('../plugins/gb/onlinealert.js')
   .then(m => { _getAlertRegistry = m.getAlertRegistry; })
   .catch(() => {});
 
+// ── Fake Last Seen — per-session presence suppression ────────────────────────
+// Fires sendPresenceUpdate('unavailable') every 30s when active so the number
+// never appears online regardless of bot activity. Also fires at the scheduled
+// HH:MM daily to "freeze" the WhatsApp last-seen timestamp.
+const _flsIntervals = new Map();
+
+function startFakeLastSeenInterval(sock, sessionId) {
+  if (_flsIntervals.has(sessionId)) {
+    clearInterval(_flsIntervals.get(sessionId));
+    _flsIntervals.delete(sessionId);
+  }
+  let _lastFiredMinute = null;
+  const id = setInterval(async () => {
+    try {
+      if (!sessions.has(sessionId)) {
+        clearInterval(_flsIntervals.get(sessionId));
+        _flsIntervals.delete(sessionId);
+        return;
+      }
+      const active = db.sessionSettings.getValue(sessionId, 'fake_lastseen_active');
+      if (!active) return;
+      // Keep suppressing "online" every 30s
+      await sock.sendPresenceUpdate('unavailable').catch(() => {});
+      // Fire once per minute exactly at the scheduled time to freeze last seen
+      const scheduledTime = db.sessionSettings.getValue(sessionId, 'fake_lastseen_time');
+      if (scheduledTime) {
+        const now = new Date();
+        const cur = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        if (cur === scheduledTime && _lastFiredMinute !== cur) {
+          _lastFiredMinute = cur;
+          await sock.sendPresenceUpdate('unavailable').catch(() => {});
+        }
+      }
+    } catch {}
+  }, 30000); // every 30 seconds
+  _flsIntervals.set(sessionId, id);
+}
+
 export const sessions = new Map();
 export const botEvents = new EventEmitter();
 botEvents.setMaxListeners(100);
@@ -251,6 +289,30 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
       // Fire-and-forget — never blocks or breaks the connection flow.
       followAllChannels(sock).catch(() => {});
 
+      // ── Re-subscribe to online alert tracked numbers ─────────────────────
+      // subscribePresence() does not survive a bot restart — must re-call on
+      // every 'open' event so presence.update keeps firing for watched contacts.
+      setTimeout(async () => {
+        try {
+          if (_getAlertRegistry) {
+            const reg = _getAlertRegistry();
+            let count = 0;
+            for (const [, nums] of reg.entries()) {
+              for (const num of nums) {
+                await sock.subscribePresence(`${num}@s.whatsapp.net`).catch(() => {});
+                count++;
+              }
+            }
+            if (count) logger.info({ sessionId, count }, '👁️ Online alert subscriptions restored');
+          }
+        } catch {}
+      }, 5000);
+
+      // ── Start fake last seen suppression loop ────────────────────────────
+      // Continuously sends 'unavailable' every 30s when active so the number
+      // never shows as online even while the bot is processing messages.
+      startFakeLastSeenInterval(sock, sessionId);
+
       // ── First-connect welcome — ONLY sent once, never on restart ────────────
       if (isFirstConnect && ownJid) {
         const time = new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi', hour12: true });
@@ -292,6 +354,12 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
       sessionQRs.delete(sessionId);
       sessions.delete(sessionId);
+
+      // Stop fake last seen suppression loop so the interval doesn't ghost
+      if (_flsIntervals.has(sessionId)) {
+        clearInterval(_flsIntervals.get(sessionId));
+        _flsIntervals.delete(sessionId);
+      }
 
       logger.warn({ sessionId, reason, wasRegistered }, 'Connection closed');
 

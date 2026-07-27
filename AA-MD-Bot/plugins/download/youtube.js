@@ -443,8 +443,7 @@ async function tryYtdlpVideo(ytUrl) {
   return null;
 }
 
-// ── Third-party API sources (kept as parallel race — use first that works) ────
-// Note: These may be temporarily down. yt-dlp stream URL is the reliable primary.
+// ── Audio API sources ─────────────────────────────────────────────────────────
 
 async function tryKeithMp3(ytUrl) {
   try {
@@ -496,142 +495,6 @@ async function tryNexrayMp3(ytUrl) {
   } catch {}
   return null;
 }
-
-async function tryKeithMp4Url(ytUrl) {
-  // apis-keith.vercel.app — same host as mp3, supports mp4 too
-  try {
-    const { data: d } = await api.get(
-      `https://apis-keith.vercel.app/download/dlmp4?url=${encodeURIComponent(ytUrl)}`
-    );
-    const u = d?.result?.data?.downloadUrl || d?.result?.downloadUrl || d?.result?.url;
-    if (u && typeof u === 'string') return u;
-  } catch {}
-  return null;
-}
-
-async function tryGtechMp4Url(ytUrl) {
-  try {
-    const { data: d } = await axios.get(
-      `https://gtech-api-xtp1.onrender.com/api/video/yt?url=${encodeURIComponent(ytUrl)}`,
-      { timeout: 18000 }
-    );
-    if (d?.status && d?.result?.media) {
-      const u = (d.result.media.video_hd && d.result.media.video_hd !== 'No HD video URL available')
-        ? d.result.media.video_hd
-        : d.result.media.video_sd;
-      if (u && typeof u === 'string') return u;
-    }
-  } catch {}
-  return null;
-}
-
-async function tryYodlMp4Url(ytUrl) {
-  // yodl.club — free YT downloader API, no auth
-  try {
-    const { data: d } = await axios.get(
-      `https://api.yodl.club/api/v1/download/youtube?url=${encodeURIComponent(ytUrl)}`,
-      { timeout: 20000 }
-    );
-    // Response: { status, data: { url, quality, ... } } or { download_url }
-    const u = d?.data?.url || d?.download_url || d?.url;
-    if (u && typeof u === 'string') return u;
-  } catch {}
-  return null;
-}
-
-async function trySocialDlMp4Url(ytUrl) {
-  // social-dl — popular free downloader, used by several WA bots
-  try {
-    const { data: d } = await axios.get(
-      `https://social-media-video-downloader.p.rapidapi.com/smvd/get/all?url=${encodeURIComponent(ytUrl)}`,
-      {
-        timeout: 18000,
-        headers: {
-          'X-RapidAPI-Host': 'social-media-video-downloader.p.rapidapi.com',
-          'X-RapidAPI-Key': 'fdbf9e12c9msh3a4b7c6d1e2f3g4h5i6j7k8l9m0',
-        },
-      }
-    );
-    // Pick best quality link
-    const links = d?.links;
-    if (Array.isArray(links) && links.length) {
-      const best = links.find(l => l.quality === 'hd' || l.quality === '720p')
-                || links.find(l => l.quality === 'sd' || l.quality === '480p')
-                || links[0];
-      if (best?.link) return best.link;
-    }
-  } catch {}
-  return null;
-}
-
-async function tryRapidMp4Url(ytUrl) {
-  // ryzendesu API — reliable, no auth needed
-  try {
-    const { data: d } = await axios.get(
-      `https://api.ryzendesu.vip/api/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`,
-      { timeout: 20000 }
-    );
-    const u = d?.data?.url || d?.url || d?.result?.url;
-    if (u && typeof u === 'string') return u;
-  } catch {}
-  // yt5s.com fallback
-  try {
-    const { data: d } = await axios.post(
-      'https://www.yt5s.com/api/ajaxSearch',
-      new URLSearchParams({ q: ytUrl, vt: 'mp4' }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000 }
-    );
-    // pick 720p → 480p → 360p → first available
-    const links = d?.result?.links?.mp4;
-    const best = links?.mp4720 || links?.mp4480 || links?.mp4360 || Object.values(links || {})[0];
-    if (best?.url) return best.url;
-    if (best?.k && d?.vid) {
-      const { data: d2 } = await axios.post(
-        'https://www.yt5s.com/api/ajaxConvert',
-        new URLSearchParams({ vid: d.vid, k: best.k }).toString(),
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 25000 }
-      );
-      if (d2?.dlink) return d2.dlink;
-    }
-  } catch {}
-  return null;
-}
-
-async function tryDavidMp4Url(ytUrl) {
-  try {
-    const { data: d } = await axios.get(
-      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(ytUrl)}`,
-      { timeout: 30000 }
-    );
-    const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
-    if (u && typeof u === 'string') return u;
-  } catch {}
-  return null;
-}
-
-async function tryNexrayMp4Url(ytUrl) {
-  try {
-    const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.result?.url || d?.data?.url;
-    if (u) return u;
-  } catch {}
-  return null;
-}
-
-async function tryAagatzMp4Url(ytUrl) {
-  try {
-    const { data: d } = await axios.get(
-      `https://api.agatz.xyz/api/ytmp4?url=${encodeURIComponent(ytUrl)}`,
-      { timeout: 18000 }
-    );
-    const u = d?.data?.url || d?.url || d?.result;
-    if (u && typeof u === 'string') return u;
-  } catch {}
-  return null;
-}
-
-
-// ── Race helpers ──────────────────────────────────────────────────────────────
 
 // ── URL-based video CDN (silva-md-bot approach) ───────────────────────────────
 // Returns a publicly-accessible CDN URL so WhatsApp downloads the video directly.
@@ -764,94 +627,19 @@ async function downloadAudio(ytUrl) {
   return null;
 }
 
-// ── Video via progressive stream URL (mirrors downloadAudioFromVideo — proven reliable) ─────
-// .play works because downloadAudioFromVideo fetches a full progressive mp4 via android client,
-// then strips the audio. We do the same but keep the video track. This is the most reliable
-// path because we know the URL format works on this server.
-//
-// Returns: { buffer } | null
-
-async function downloadVideoFromStreamUrl(ytUrl) {
-  // YouTube format 18 = 360p progressive mp4 (H.264+AAC), format 22 = 720p progressive mp4.
-  // Progressive streams are NOT throttled and download as a single file — they are the most
-  // reliable path. DASH formats (bestvideo+bestaudio) require merging and are often throttled.
-  // We try formats 18 and 22 first, then fall back to adaptive selection.
-  // android client is confirmed reliable for progressive mp4 URLs on this server.
-  // ios was used previously but returns "Requested format is not available" for
-  // formats 18/22 on many videos. android returns real progressive streams.
-  // Try H.264 formats first — format 18/22 are progressive H.264+AAC and guaranteed
-  // WhatsApp-playable without any transcoding. mp4-container formats come next (may
-  // still need a transcode if the codec is vp9/av1). Generic 'best' is last resort.
-  const FORMATS = [
-    '18',   // 360p H.264+AAC progressive — guaranteed playable, no transcode needed
-    '22',   // 720p H.264+AAC progressive — guaranteed playable, no transcode needed
-    'best[height<=480][ext=mp4]/best[height<=360][ext=mp4]/best[ext=mp4]',
-    'best[height<=480]/best[height<=360]/best',
-  ];
-
-  for (const fmt of FORMATS) {
-    // Use 'android' client — confirmed working; ios fails for formats 18/22 on this server
-    const videoUrl = await withTimeout(20000,
-      tryYtdlpStreamUrl(ytUrl, fmt, 'android')
-    );
-    if (!videoUrl || videoUrl.includes('manifest')) continue;
-
-    const vidBuf = await withTimeout(90000, fetchBuf(videoUrl));
-    if (!isValidVideoBuffer(vidBuf)) continue;
-
-    // Transcode to H.264/AAC if needed. If ffmpeg fails, try the next format
-    // rather than returning an unplayable webm/vp9 buffer to WhatsApp.
-    const playable = await withTimeout(180000, ensurePlayableMp4(vidBuf));
-    if (playable?.length) return { buffer: playable };
-    // ensurePlayableMp4 returned null → ffmpeg failed for this format → try next
-  }
-
-  // Tier 2 — tv_embedded client as secondary
-  const fallbackUrl = await withTimeout(20000,
-    tryYtdlpStreamUrl(ytUrl, 'best[height<=480][ext=mp4]/best[ext=mp4]/best', 'tv_embedded')
-  );
-  if (fallbackUrl && !fallbackUrl.includes('manifest')) {
-    const buf = await withTimeout(90000, fetchBuf(fallbackUrl));
-    if (isValidVideoBuffer(buf)) {
-      const playable = await withTimeout(180000, ensurePlayableMp4(buf));
-      // Never return an unplayable raw buffer — if transcode failed, return null
-      // so downloadVideo() can try other sources (Step C / Step D).
-      if (playable?.length) return { buffer: playable };
-    }
-  }
-
-  return null;
-}
-
 // ── Video orchestrator (silva-md-bot approach) ────────────────────────────────
-// davidcyriltech API is the primary source (same as silva-md-bot ytmp4.js).
-// Progressive stream runs in parallel as the reliable fallback.
-// All results downloaded as buffer + transcoded to H.264/AAC for WhatsApp.
-//
-// Step A: davidcyriltech API (primary — fast when online, same as silva-md-bot)
-// Step B: Progressive stream URL (runs in parallel with A, most reliable)
-// Step C: Race other third-party API URLs
-// Step D: yt-dlp full download (last resort)
-//
+// Step 1: davidcyriltech URL (tryVideoApiUrl — called by execute handler, not here)
+// Step 2 (this function): yt-dlp full file download — format 18/22 first (360/720p H.264+AAC
+//         progressive, no merge needed), then DASH H.264, then best[mp4].
 // Returns: { buffer } | null
 
 async function downloadVideo(ytUrl) {
-  // Step A — yt-dlp direct download to file (PRIMARY — confirmed working on this server)
-  // Format 18 (360p progressive H.264+AAC) downloaded successfully every time.
-  // Downloads to a temp FILE (not memory), so no fetchBuf timeout issues.
-  // tryYtdlpVideo now tries format 18/22 FIRST for maximum speed.
   const raw = await withTimeout(240000, tryYtdlpVideo(ytUrl));
   if (raw?.length > 50000) {
     const playable = await withTimeout(120000, ensurePlayableMp4(raw));
     if (playable?.length) return { buffer: playable };
-    // ensurePlayableMp4 failed but buffer is valid mp4 — return it anyway
     if (isValidVideoBuffer(raw)) return { buffer: raw };
   }
-
-  // Step B — stream URL approach (get URL via yt-dlp, download in-process as fallback)
-  const streamResult = await withTimeout(150000, downloadVideoFromStreamUrl(ytUrl));
-  if (streamResult?.buffer?.length) return streamResult;
-
   return null;
 }
 
