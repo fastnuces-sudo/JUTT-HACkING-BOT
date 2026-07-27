@@ -42,6 +42,7 @@ async function enhanceImage(imageUrl) {
         `https://api.princetechn.com/api/tools/remini?apikey=prince_tech_api_azfsbshfb&url=${encodeURIComponent(imageUrl)}`,
         { timeout: 60000, headers: { 'User-Agent': 'Mozilla/5.0' } }
       );
+      if (!res.data?.success) throw new Error(res.data?.message || 'API returned failure');
       const imgUrl = res.data?.result?.image_url;
       if (!imgUrl) throw new Error('No image URL in response');
       const imgRes = await axios.get(imgUrl, {
