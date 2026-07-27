@@ -845,7 +845,9 @@ export function initTelegramFeatures() {
         `┃   <i>or: /translate ur: Hello → translate to Urdu</i>\n` +
         `┣ /short <i>url</i> — Shorten a URL (TinyURL)\n` +
         `┣ /ss <i>url</i> — Screenshot a website\n` +
-        `┗ /qr <i>text or URL</i> — Generate QR code`,
+        `┣ /qr <i>text or URL</i> — Generate QR code\n` +
+        `┣ /sticker <i>url or reply photo</i> — Image → sticker\n` +
+        `┗ /ocr <i>url or reply photo</i> — Extract text from image`,
     },
     help_fun: {
       title: '😄 Fun',
@@ -869,7 +871,7 @@ export function initTelegramFeatures() {
         `🎵 <b>Downloads:</b> /play /video /tiktok /ig /fb /twitter /pin /threads /spotify /reddit\n` +
         `🤖 <b>AI:</b> /ai /imagine\n` +
         `🔍 <b>Search:</b> /wiki /movie /anime /lyrics /news /crypto /github /urban\n` +
-        `🌐 <b>Utils:</b> /weather /translate /short /ss /qr\n` +
+        `🌐 <b>Utils:</b> /weather /translate /short /ss /qr /sticker /ocr\n` +
         `😄 <b>Fun:</b> /joke /quote /fact /meme\n` +
         `🛠 <b>Tools:</b> /calc /currency /time /password\n` +
         `⚙️ <b>General:</b> /ping /id /help`,
@@ -979,16 +981,37 @@ export function initTelegramFeatures() {
         `⏬ <b>Downloading audio...</b>\n🎵 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Connecting to fastest source...</i>`
       );
 
-      const audioUrl = await resolveAudio(id);
-      if (!audioUrl) throw new Error('All download sources failed');
+      let audioUrl = await resolveAudio(id);
+      let audioBuf = null;
 
-      await edit(bot, chatId, sent.message_id,
-        `⏬ <b>Downloading audio...</b>\n🎵 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Preparing file...</i>`
-      );
+      if (audioUrl) {
+        await edit(bot, chatId, sent.message_id,
+          `⏬ <b>Downloading audio...</b>\n🎵 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Preparing file...</i>`
+        );
+        try { audioBuf = await downloadBuffer(audioUrl, 49); } catch { audioBuf = null; }
+      }
 
-      // Download audio buffer for reliable delivery
-      let audioBuf;
-      try { audioBuf = await downloadBuffer(audioUrl, 49); } catch { audioBuf = null; }
+      // ── yt-dlp fallback (when all APIs fail or buffer download fails) ─────
+      if (!audioBuf && !audioUrl) {
+        await edit(bot, chatId, sent.message_id,
+          `⏬ <b>Downloading audio...</b>\n🎵 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Using yt-dlp fallback...</i>`
+        );
+        const tmpAudio = nodePath.join(os.tmpdir(), `tg_aud_${Date.now()}.mp3`);
+        try {
+          await execFileAsync(YTDLP, [
+            '--extractor-args', 'youtube:player_client=android',
+            '-x', '--audio-format', 'mp3', '--audio-quality', '128K',
+            '--no-playlist', '--quiet', '--no-warnings',
+            '-o', tmpAudio,
+            mkYtUrl(id),
+          ], { timeout: 120000 });
+          const stat = await fs.stat(tmpAudio).catch(() => null);
+          if (stat && stat.size > 0) audioBuf = await fs.readFile(tmpAudio);
+        } catch {} finally {
+          fs.unlink(tmpAudio).catch(() => {});
+        }
+        if (!audioBuf) throw new Error('All download sources failed — paste the YouTube URL directly');
+      }
 
       const audioCap = `🎵 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}` + FOOTER;
       const thumb    = id ? await ytThumbBuf(id) : null;
@@ -1034,33 +1057,40 @@ export function initTelegramFeatures() {
       );
 
       await edit(bot, chatId, sent.message_id,
-        `⏬ <b>Downloading video...</b>\n🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Downloading with yt-dlp...</i>`
+        `⏬ <b>Downloading video...</b>\n🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Connecting to fastest source...</i>`
       );
 
-      // yt-dlp direct download to temp file (most reliable — avoids CDN blocks)
-      const tmpFile = nodePath.join(os.tmpdir(), `yt_vid_${Date.now()}_${id}.mp4`);
       let videoBuf = null;
-      try {
-        await execFileAsync(YTDLP, [
-          '-f', 'bestvideo[ext=mp4][filesize<45M]+bestaudio[ext=m4a]/best[ext=mp4][filesize<45M]/best[filesize<45M]',
-          '--merge-output-format', 'mp4',
-          '--no-playlist', '--quiet',
-          '-o', tmpFile,
-          mkYtUrl(id),
-        ], { timeout: 150000 });
-        const stat = await fs.stat(tmpFile).catch(() => null);
-        if (stat?.size > 0) videoBuf = await fs.readFile(tmpFile);
-      } catch (_) {
-        // yt-dlp failed — try API URL as last resort
-        const videoUrl = await resolveVideo(id).catch(() => null);
-        if (videoUrl) {
-          try { videoBuf = await downloadBuffer(videoUrl, 45); } catch { videoBuf = null; }
-        }
-      } finally {
-        fs.unlink(tmpFile).catch(() => {});
+
+      // ── Step 1: API race (fastest — returns CDN URL, download buffer) ─────
+      const videoUrl = await resolveVideo(id).catch(() => null);
+      if (videoUrl) {
+        try { videoBuf = await downloadBuffer(videoUrl, 45); } catch { videoBuf = null; }
       }
 
-      if (!videoBuf) throw new Error('Video download failed — file too large or unavailable');
+      // ── Step 2: yt-dlp (format 18=360p H.264+AAC, 22=720p — single file, no merge) ──
+      if (!videoBuf) {
+        await edit(bot, chatId, sent.message_id,
+          `⏬ <b>Downloading video...</b>\n🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}\n<i>Using yt-dlp (this may take 20-40s)...</i>`
+        );
+        const tmpFile = nodePath.join(os.tmpdir(), `tg_vid_${Date.now()}.mp4`);
+        try {
+          await execFileAsync(YTDLP, [
+            '--extractor-args', 'youtube:player_client=android',
+            '-f', '18/22/bestvideo[ext=mp4][height<=480]+bestaudio[ext=m4a]/best[ext=mp4][filesize<45M]/best[filesize<45M]',
+            '--merge-output-format', 'mp4',
+            '--no-playlist', '--quiet', '--no-warnings',
+            '-o', tmpFile,
+            mkYtUrl(id),
+          ], { timeout: 180000 });
+          const stat = await fs.stat(tmpFile).catch(() => null);
+          if (stat && stat.size > 50000) videoBuf = await fs.readFile(tmpFile);
+        } catch {} finally {
+          fs.unlink(tmpFile).catch(() => {});
+        }
+      }
+
+      if (!videoBuf) throw new Error('Video download failed — file too large, unavailable, or bot-checked');
 
       const videoCap = `🎬 <b>${esc(title)}</b>\n${duration ? `⏱ ${esc(duration)}\n` : ''}` + FOOTER;
       const thumb    = id ? await ytThumbBuf(id) : null;
@@ -1603,9 +1633,31 @@ export function initTelegramFeatures() {
 
     try {
       await bot.sendChatAction(chatId, 'upload_photo').catch(() => {});
-      const imgUrl = screenshotUrl(url);
+      let imgBuf = null;
+
+      // Primary: siputzx (fast, full-page, desktop)
+      try {
+        const res = await axios.get('https://api.siputzx.my.id/api/tools/ssweb', {
+          params: { url, theme: 'light', device: 'desktop' },
+          responseType: 'arraybuffer',
+          timeout: 30000,
+          headers: { accept: '*/*' },
+        });
+        const buf = Buffer.from(res.data);
+        if (buf.length > 5000) imgBuf = buf;
+      } catch {}
+
+      // Fallback: screenshotmachine
+      if (!imgBuf) {
+        const res = await axios.get(screenshotUrl(url), { responseType: 'arraybuffer', timeout: 30000 });
+        const buf = Buffer.from(res.data);
+        if (buf.length > 5000) imgBuf = buf;
+      }
+
+      if (!imgBuf) throw new Error('Both screenshot APIs returned empty response');
+
       await bot.deleteMessage(chatId, sent.message_id).catch(() => {});
-      await bot.sendPhoto(chatId, imgUrl, {
+      await bot.sendPhoto(chatId, imgBuf, {
         caption: `📸 <b>Screenshot</b>\n🔗 ${esc(url.slice(0,80))}${url.length>80?'...':''}` + FOOTER,
         parse_mode: 'HTML',
       });
@@ -2004,8 +2056,133 @@ export function initTelegramFeatures() {
     }
   });
 
+  // ── /sticker ──────────────────────────────────────────────────────────────────
+  bot.onText(/\/sticker(?:\s+(\S+))?/, async (msg, match) => {
+    const chatId    = msg.chat.id;
+    const urlArg    = (match[1] || '').trim();
+    const replyDoc  = msg.reply_to_message?.document;
+    const replyPhoto = msg.reply_to_message?.photo;
+
+    if (!urlArg && !replyPhoto && !replyDoc) return sendText(bot, chatId,
+      `🎭 <b>Sticker Maker</b>\n${DIV}\n\n` +
+      `<b>Usage:</b>\n` +
+      `• <code>/sticker https://image-url.com</code>\n` +
+      `• Reply to any photo with <code>/sticker</code>\n\n` +
+      `<i>Converts any image (JPG/PNG/WebP) into a Telegram sticker</i>` + FOOTER
+    );
+
+    const w = cooldown(msg.from.id, 5000);
+    if (w) return sendText(bot, chatId, `⏳ Please wait <b>${w}s</b>.`);
+
+    const sent = await bot.sendMessage(chatId, `🎭 <b>Creating sticker...</b>`, HTML).catch(() => null);
+    if (!sent) return;
+
+    try {
+      await bot.sendChatAction(chatId, 'upload_document').catch(() => {});
+
+      let imgBuf;
+      if (urlArg) {
+        imgBuf = await downloadBuffer(urlArg, 10);
+      } else if (replyPhoto) {
+        const photo = replyPhoto[replyPhoto.length - 1];
+        const file  = await bot.getFile(photo.file_id);
+        imgBuf = await downloadBuffer(`https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`, 10);
+      } else {
+        const file = await bot.getFile(replyDoc.file_id);
+        imgBuf = await downloadBuffer(`https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`, 10);
+      }
+
+      // Convert to 512×512 WebP via ffmpeg (available on the server)
+      const tmpIn  = nodePath.join(os.tmpdir(), `stk_in_${Date.now()}.bin`);
+      const tmpOut = nodePath.join(os.tmpdir(), `stk_out_${Date.now()}.webp`);
+      let webpBuf  = null;
+      try {
+        await fs.writeFile(tmpIn, imgBuf);
+        await execFileAsync('ffmpeg', [
+          '-i', tmpIn,
+          '-vf', "scale='if(gt(iw,ih),512,-2)':'if(gt(ih,iw),512,-2)',pad=512:512:(512-iw)/2:(512-ih)/2:color=white@0",
+          '-y', tmpOut,
+        ], { timeout: 30000 });
+        const stat = await fs.stat(tmpOut).catch(() => null);
+        if (stat?.size > 0) webpBuf = await fs.readFile(tmpOut);
+      } catch {} finally {
+        fs.unlink(tmpIn).catch(() => {});
+        fs.unlink(tmpOut).catch(() => {});
+      }
+
+      await bot.deleteMessage(chatId, sent.message_id).catch(() => {});
+      if (webpBuf) {
+        await bot.sendSticker(chatId, webpBuf).catch(async () => {
+          await bot.sendDocument(chatId, webpBuf, { caption: `🎭 <b>Sticker (WebP)</b>` + FOOTER, parse_mode: 'HTML' });
+        });
+      } else {
+        // ffmpeg failed — send original as sticker attempt
+        await bot.sendSticker(chatId, imgBuf).catch(async () => {
+          await bot.sendDocument(chatId, imgBuf, { caption: `🎭 <b>Image (sticker conversion failed — download and add manually)</b>` + FOOTER, parse_mode: 'HTML' });
+        });
+      }
+    } catch (e) {
+      edit(bot, chatId, sent.message_id, `❌ Sticker creation failed: <i>${esc(e.message)}</i>`);
+    }
+  });
+
+  // ── /ocr ──────────────────────────────────────────────────────────────────────
+  bot.onText(/\/ocr(?:\s+(\S+))?/, async (msg, match) => {
+    const chatId    = msg.chat.id;
+    const urlArg    = (match[1] || '').trim();
+    const replyPhoto = msg.reply_to_message?.photo;
+    const replyDoc  = msg.reply_to_message?.document;
+
+    if (!urlArg && !replyPhoto && !replyDoc) return sendText(bot, chatId,
+      `🔍 <b>OCR — Image Text Extractor</b>\n${DIV}\n\n` +
+      `<b>Usage:</b>\n` +
+      `• <code>/ocr https://image-url.com</code>\n` +
+      `• Reply to any photo with <code>/ocr</code>\n\n` +
+      `<i>Extracts text from screenshots, photos, documents</i>` + FOOTER
+    );
+
+    const w = cooldown(msg.from.id, 6000);
+    if (w) return sendText(bot, chatId, `⏳ Please wait <b>${w}s</b>.`);
+
+    const sent = await bot.sendMessage(chatId, `🔍 <b>Reading image text...</b>`, HTML).catch(() => null);
+    if (!sent) return;
+
+    try {
+      await bot.sendChatAction(chatId, 'typing').catch(() => {});
+
+      let imageUrl = urlArg;
+
+      // If reply to photo/doc, get the Telegram file URL
+      if (!imageUrl) {
+        const fileId = replyPhoto
+          ? replyPhoto[replyPhoto.length - 1].file_id
+          : replyDoc.file_id;
+        const file  = await bot.getFile(fileId);
+        imageUrl = `https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`;
+      }
+
+      // ocr.space free API — 25k requests/month, no signup needed with key 'helloworld'
+      const { data } = await axios.post(
+        'https://api.ocr.space/parse/image',
+        new URLSearchParams({ url: imageUrl, apikey: 'helloworld', language: 'eng', isOverlayRequired: 'false' }),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30000 }
+      );
+
+      const result = data?.ParsedResults?.[0]?.ParsedText?.trim();
+      if (!result) throw new Error(data?.ErrorMessage?.[0] || 'No text found in image');
+
+      await bot.deleteMessage(chatId, sent.message_id).catch(() => {});
+      sendText(bot, chatId,
+        `🔍 <b>Extracted Text</b>\n${DIV}\n\n` +
+        `${esc(result.slice(0, 3500))}${result.length > 3500 ? '\n\n<i>…truncated</i>' : ''}` + FOOTER
+      );
+    } catch (e) {
+      edit(bot, chatId, sent.message_id, `❌ OCR failed: <i>${esc(e.message)}</i>\n\n💡 Make sure the image contains clear, readable text.`);
+    }
+  });
+
   // ── Catch-all ─────────────────────────────────────────────────────────────────
-  const KNOWN = /^\/(start|help|ping|id|play|video|tiktok|ig|fb|ai|imagine|weather|translate|wiki|movie|anime|lyrics|news|crypto|github|urban|short|ss|joke|quote|fact|qr|meme|calc|currency|time|password|twitter|tw|xdl|pin|pinterest|threads|th|spotify|spot|spdl|reddit|rdl)/;
+  const KNOWN = /^\/(start|help|ping|id|play|video|tiktok|ig|fb|ai|imagine|weather|translate|wiki|movie|anime|lyrics|news|crypto|github|urban|short|ss|joke|quote|fact|qr|meme|calc|currency|time|password|twitter|tw|xdl|pin|pinterest|threads|th|spotify|spot|spdl|reddit|rdl|sticker|ocr)/;
   bot.on('message', (msg) => {
     if (msg.text?.startsWith('/') && !KNOWN.test(msg.text)) {
       sendText(bot, msg.chat.id, `❓ Unknown command.\n\nType /help to see all commands.`);

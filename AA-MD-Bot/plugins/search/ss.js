@@ -1,15 +1,17 @@
 // ============================================
 // AA MD Bot - Website Screenshot
-// Uses thum.io (free, no API key needed)
+// Primary : api.siputzx.my.id (fast, full-page)
+// Fallback : thum.io (free, no API key)
 // ============================================
 
 import axios from 'axios';
 
-const THUM = 'https://image.thum.io/get/width/1280/crop/800/url';
+const SIPUTZX = 'https://api.siputzx.my.id/api/tools/ssweb';
+const THUM    = 'https://image.thum.io/get/width/1280/crop/800/url';
 
 export default {
   command: 'screenshot',
-  alias: ['webss', 'snap', 'webshot', 'capture'],
+  alias: ['ss', 'ssweb', 'webss', 'snap', 'webshot', 'capture'],
   description: 'Take a screenshot of any website',
   category: 'search',
 
@@ -29,13 +31,34 @@ export default {
     await react('📸');
 
     try {
-      // thum.io path: everything after /url/ is treated as the target URL.
-      // Use encodeURI (not encodeURIComponent) — preserves :, /, ?, & but encodes spaces etc.
-      const ssUrl = `${THUM}/${encodeURI(url)}`;
-      const { data: imgBuf } = await axios.get(ssUrl, { responseType: 'arraybuffer', timeout: 30000 });
+      let imgBuf = null;
+
+      // ── Primary: siputzx (full-page, light theme, desktop) ──────────────────
+      try {
+        const { data } = await axios.get(SIPUTZX, {
+          params: { url, theme: 'light', device: 'desktop' },
+          responseType: 'arraybuffer',
+          timeout: 30000,
+          headers: { accept: '*/*' },
+        });
+        const buf = Buffer.from(data);
+        if (buf.length > 5000) imgBuf = buf;
+      } catch {}
+
+      // ── Fallback: thum.io ────────────────────────────────────────────────────
+      if (!imgBuf) {
+        const { data } = await axios.get(`${THUM}/${encodeURI(url)}`, {
+          responseType: 'arraybuffer',
+          timeout: 30000,
+        });
+        const buf = Buffer.from(data);
+        if (buf.length > 5000) imgBuf = buf;
+      }
+
+      if (!imgBuf) throw new Error('Both screenshot APIs returned empty response');
 
       await sock.sendMessage(jid, {
-        image: Buffer.from(imgBuf),
+        image: imgBuf,
         caption:
           `📸 *Website Screenshot*\n\n` +
           `🌐 *URL:* ${url}\n\n` +
