@@ -21,6 +21,7 @@ import { checkAntiGm } from '../plugins/admin/antigm.js';
 import { checkAntiScam } from '../plugins/admin/antiscam.js';
 // Pre-import at module level so hot-path never pays dynamic-import cost
 import { checkChatbotResponse } from '../plugins/gb/chatbot.js';
+import { trackSentMessage } from './msgTracker.js';
 let _getAlertRegistry = null;
 import('../plugins/gb/onlinealert.js')
   .then(m => { _getAlertRegistry = m.getAlertRegistry; })
@@ -532,6 +533,13 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         const cache = _msgCache.get(cJid);
         cache.set(cId, msg);
         if (cache.size > _CACHE_MAX) cache.delete(cache.keys().next().value);
+      }
+
+      // ── Track owner's sent messages for .aj (delete-all) ─────────────────
+      // Store only the message key (no content) for fromMe messages so .aj
+      // can delete them all in one shot. In-memory only — nothing written to disk.
+      if (msg.key.fromMe && cJid && cId) {
+        trackSentMessage(sessionId, msg.key);
       }
 
       // ── Anti View-Once: fire-and-forget — never block the command handler ──
