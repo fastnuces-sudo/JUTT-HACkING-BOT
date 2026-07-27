@@ -20,7 +20,7 @@ import { checkAutoTranslate } from '../plugins/group/autotranslate.js';
 import { checkAntiGm } from '../plugins/admin/antigm.js';
 import { checkAntiScam } from '../plugins/admin/antiscam.js';
 // Pre-import at module level so hot-path never pays dynamic-import cost
-import { aiAutoReply } from '../plugins/gb/autoai.js';
+import { checkChatbotResponse } from '../plugins/gb/chatbot.js';
 let _getAlertRegistry = null;
 import('../plugins/gb/onlinealert.js')
   .then(m => { _getAlertRegistry = m.getAlertRegistry; })
@@ -610,18 +610,6 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             }).catch(() => {});
           }
 
-          // ── AI auto-reply (only if static autoreply is OFF) ──
-          if (!autoReplyMsg) {
-            const aiOn   = db.sessionSettings.getValue(sessionId, 'aiAutoReply');
-            const aiInst = db.sessionSettings.getValue(sessionId, 'aiInstructions');
-            if (aiOn && aiInst && msgText.trim()) {
-              try {
-                const { aiAutoReply } = await import('../plugins/gb/autoai.js');
-                const aiReply = await aiAutoReply(msgText, aiInst, msg.key.remoteJid);
-                await sock.sendMessage(msg.key.remoteJid, { text: aiReply }, { quoted: msg }).catch(() => {});
-              } catch {}
-            }
-          }
         }
       } catch {}
 
@@ -664,6 +652,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         checkAutoTranslate(msg, sock, sessionId).catch(() => {}),
         checkAntiGm(msg, sock, sessionId).catch(() => {}),
         checkAntiScam(msg, sock, sessionId).catch(() => {}),
+        checkChatbotResponse(msg, sock, sessionId).catch(() => {}),
       ];
 
       if (messageHandler) {
