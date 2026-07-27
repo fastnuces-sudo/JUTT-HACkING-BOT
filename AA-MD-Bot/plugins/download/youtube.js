@@ -509,7 +509,17 @@ async function tryVideoApiUrl(ytUrl) {
     const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
     if (u && typeof u === 'string' && u.startsWith('http')) return u;
   } catch {}
-  // 2. nexray fallback
+  // 2. EliteProTech — confirmed working, fast CDN URL
+  try {
+    const { data: d } = await axios.get(
+      `https://eliteprotech-apis.zone.id/ytdown?url=${encodeURIComponent(ytUrl)}&format=mp4`,
+      { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
+    );
+    if (d?.success && d?.downloadURL && typeof d.downloadURL === 'string' && d.downloadURL.startsWith('http')) {
+      return d.downloadURL;
+    }
+  } catch {}
+  // 3. nexray fallback
   try {
     const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`);
     const u = d?.result?.url || d?.data?.url;
