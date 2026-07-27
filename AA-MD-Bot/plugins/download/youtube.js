@@ -767,20 +767,33 @@ export default {
             ? buildVideoCaption(meta, botName)
             : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
 
-          // ── Step 1: URL-based approach (silva-md-bot method) ─────────────────
-          // WhatsApp downloads from CDN directly — no RAM buffer, no ffmpeg.
-          // Fast and reliable on constrained servers (Oracle, VPS, etc).
+          // ── Step 1: API CDN URL → download buffer → ensure H.264+AAC+faststart ──
+          // Sending a raw CDN URL to WhatsApp often fails on mobile (moov atom at
+          // end, wrong codec, or CDN blocks WA's user agent). Downloading the
+          // buffer and running ensurePlayableMp4 guarantees mobile playback.
           const videoApiUrl = await withTimeout(35000, tryVideoApiUrl(ytUrl));
           if (videoApiUrl) {
             try {
-              await sock.sendMessage(jid, {
-                video: { url: videoApiUrl },
-                mimetype: 'video/mp4',
-                caption: vcap,
-              }, { quoted: msg });
-              await react('✅');
-              break;
-            } catch {} // URL expired or invalid — fall through to yt-dlp buffer
+              const rawBuf = await withTimeout(90000, fetchBuf(videoApiUrl));
+              if (rawBuf?.length > 50000) {
+                // Pass 1: fast stream-copy+faststart (h264 sources ~3s)
+                // Pass 2: full re-encode if codec isn't h264 (~30-60s)
+                const playable = await withTimeout(120000, ensurePlayableMp4(rawBuf));
+                const sendBuf  = playable?.length ? playable
+                               : isValidVideoBuffer(rawBuf) ? rawBuf : null;
+                if (sendBuf) {
+                  const WA_LIMIT = 60 * 1024 * 1024;
+                  const finalBuf = sendBuf.length > WA_LIMIT
+                    ? (await compressVideo(sendBuf) || sendBuf)
+                    : sendBuf;
+                  await sock.sendMessage(jid, {
+                    video: finalBuf, mimetype: 'video/mp4', caption: vcap,
+                  }, { quoted: msg });
+                  await react('✅');
+                  break;
+                }
+              }
+            } catch {} // fall through to yt-dlp buffer
           }
 
           // ── Step 2: yt-dlp buffer fallback (no external APIs needed) ─────────

@@ -1,53 +1,56 @@
+// ============================================
 // AA MD Bot - Background Remover
-// Free: HuggingFace briaai/RMBG-1.4 (no key needed)
+// Primary:  Nexray API (confirmed working, returns PNG)
+// Fallback: Additional URL-based APIs
+// Accepts: reply to image OR send image with caption
+// ============================================
+
 import axios from 'axios';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { generateId } from '../../lib/helper.js';
+import { uploadToCatbox } from '../../lib/imageUpload.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMP = path.join(__dirname, '../../temp');
-
-const MODELS = [
-  'ZhengPeng7/BiRefNet',
-  'briaai/RMBG-2.0',
-  'briaai/RMBG-1.4',
-];
-
-async function removeBackground(imageBuffer) {
-  for (const model of MODELS) {
-    const url = `https://api-inference.huggingface.co/models/${model}`;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const res = await axios.post(url, imageBuffer, {
-          headers: { 'Content-Type': 'application/octet-stream' },
-          timeout: 90000,
-          responseType: 'arraybuffer',
-          maxContentLength: 20 * 1024 * 1024,
-        });
-        const buf = Buffer.from(res.data);
-        if (buf.length > 1000) return buf;
-      } catch (err) {
-        let est = null;
-        try { est = JSON.parse(Buffer.from(err.response?.data || '{}').toString())?.estimated_time; } catch {}
-        if (err.response?.status === 503 && est && attempt < 2) {
-          await new Promise(r => setTimeout(r, Math.min(est * 1000, 25000)));
-          continue;
-        }
-        break;
-      }
-    }
-  }
+function getImageMsg(msg) {
+  const ctx   = msg.message?.extendedTextMessage?.contextInfo;
+  const quoted = ctx?.quotedMessage;
+  // quoted image or own image
+  if (quoted?.imageMessage)         return { content: quoted,       quoted, ctx };
+  if (msg.message?.imageMessage)    return { content: msg.message,  quoted: null, ctx: null };
   return null;
 }
 
-function getImageMsg(msg) {
-  const ctx = msg.message?.extendedTextMessage?.contextInfo;
-  const quoted = ctx?.quotedMessage;
-  const content = quoted || msg.message;
-  return content?.imageMessage ? { content, quoted, ctx } : null;
+// ── API fallback chain ────────────────────────────────────────────────────────
+async function removeBgFromUrl(imageUrl) {
+  const apis = [
+    // 1. Nexray — confirmed working, returns PNG
+    async () => {
+      const res = await axios.get(
+        `https://api.nexray.web.id/tools/removebg?url=${encodeURIComponent(imageUrl)}`,
+        { timeout: 45000, responseType: 'arraybuffer', headers: { 'User-Agent': 'Mozilla/5.0' } }
+      );
+      const buf = Buffer.from(res.data);
+      // Verify it's a real PNG (magic bytes 89 50 4E 47)
+      if (buf.length > 5000 && buf[0] === 0x89 && buf[1] === 0x50) return buf;
+      throw new Error('Not a valid PNG');
+    },
+    // 2. Keith API
+    async () => {
+      const res = await axios.get(
+        `https://apis-keith.vercel.app/tools/removebg?url=${encodeURIComponent(imageUrl)}`,
+        { timeout: 45000, responseType: 'arraybuffer', headers: { 'User-Agent': 'Mozilla/5.0' } }
+      );
+      const buf = Buffer.from(res.data);
+      if (buf.length > 5000 && (buf[0] === 0x89 || buf[0] === 0xff)) return buf;
+      throw new Error('Not a valid image');
+    },
+  ];
+
+  for (const fn of apis) {
+    try {
+      const result = await fn();
+      if (result) return result;
+    } catch {}
+  }
+  return null;
 }
 
 export default {
@@ -59,13 +62,13 @@ export default {
   async execute({ sock, jid, msg, reply, react }) {
     const found = getImageMsg(msg);
     if (!found) return reply(
-      `✂️ *Background Remover*\n\n*Reply* to any image and send *.rembg*.\n\nAI will remove the background and return a transparent PNG.\n\n> 🤖 *AA MD Bot*`
+      `✂️ *Background Remover*\n\n` +
+      `*Reply* to an image or *send an image* with *.rembg* as caption.\n\n` +
+      `AI removes the background and returns a transparent PNG.\n\n` +
+      `> 🤖 *AA MD Bot*`
     );
 
     await react('⏳');
-    fs.ensureDirSync(TEMP);
-    const id = generateId();
-    const imgPath = path.join(TEMP, `${id}_rembg_in.jpg`);
 
     try {
       const { content, quoted, ctx } = found;
@@ -73,27 +76,43 @@ export default {
         ? { message: content, key: { ...msg.key, id: ctx.stanzaId } }
         : msg;
 
-      const buffer = await downloadMediaMessage(msgObj, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
+      // Download image from WhatsApp
+      const buffer = await downloadMediaMessage(
+        msgObj, 'buffer', {},
+        { reuploadRequest: sock.updateMediaMessage }
+      );
       if (!buffer?.length) throw new Error('Image download failed');
-      await fs.writeFile(imgPath, buffer);
 
-      const result = await removeBackground(buffer);
+      // Upload to Catbox to get a public URL (required by the APIs)
+      await react('☁️');
+      const imageUrl = await uploadToCatbox(buffer, 'rembg_input.jpg');
+
+      // Remove background
+      await react('🎨');
+      const result = await removeBgFromUrl(imageUrl);
+
       if (!result) {
         await react('❌');
-        return reply(`❌ *Background removal failed.*\n\nThe server is busy. Please try again in a moment.\n\n> 🤖 *AA MD Bot*`);
+        return reply(
+          `❌ *Background removal failed.*\n\n` +
+          `The server may be busy. Please try again.\n\n` +
+          `> 🤖 *AA MD Bot*`
+        );
       }
 
       await sock.sendMessage(jid, {
         image: result,
         mimetype: 'image/png',
-        caption: `✂️ *Background Removed*\n\n_Use .sticker to turn this into a sticker_\n\n> 🤖 *AA MD Bot*`,
+        caption:
+          `✂️ *Background Removed!*\n\n` +
+          `_💡 Use .sticker to convert to a sticker_\n\n` +
+          `> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
+
     } catch (err) {
       await react('❌');
       reply(`❌ *Error:* ${err.message}\n\n> 🤖 *AA MD Bot*`);
-    } finally {
-      fs.remove(imgPath).catch(() => {});
     }
   },
 };
