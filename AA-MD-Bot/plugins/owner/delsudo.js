@@ -1,3 +1,5 @@
+import { saveNow } from '../../lib/database.js';
+
 export default {
   command: 'delowner',
   alias: ['delsudo', 'delop', 'removeowner'],
@@ -17,6 +19,7 @@ export default {
       if (num && owners.includes(num)) { owners = owners.filter(o => o !== num); removed.push(num); }
     }
     db.settings.setValue('owners', owners);
+    await saveNow('settings');
     reply(`✅ *Owner Removed!*\n\n👑 Removed: +${removed.join(', +')||'none found'}\n👑 Remaining Owners: ${owners.length}`);
   },
 };

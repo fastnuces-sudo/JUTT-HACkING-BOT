@@ -1,3 +1,5 @@
+import { saveNow } from '../../lib/database.js';
+
 export default {
   command: 'addowner',
   alias: ['addsudo', 'addop'],
@@ -17,6 +19,7 @@ export default {
       if (num && !owners.includes(num)) { owners.push(num); added.push(num); }
     }
     db.settings.setValue('owners', owners);
+    await saveNow('settings');
     reply(`✅ *Owner Added!*\n\n👑 +${added.join(', +')} added as owner\n👑 Total Owners: ${owners.length}\n\nThey now have full bot access.`);
   },
 };

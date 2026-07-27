@@ -33,6 +33,10 @@ module.exports = {
       restart_delay: 5000,
       min_uptime   : '30s',
 
+      // Give the process 15 seconds to flush MongoDB writes before SIGKILL.
+      // Default PM2 kill_timeout is 1600ms — too short for async flushOnExit.
+      kill_timeout : 15000,
+
       // Memory guard — restart if over 1.5 GB
       max_memory_restart: '1500M',
 

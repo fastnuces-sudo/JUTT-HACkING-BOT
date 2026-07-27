@@ -3,6 +3,8 @@
 // public = everyone, private = only self-chat
 // ============================================
 
+import { saveNow } from '../../lib/database.js';
+
 export default {
   command: 'mode',
   alias: ['botmode'],
@@ -26,6 +28,7 @@ export default {
     }
 
     sessionSettings.set('botMode', mode);
+    await saveNow('sessionSettings');
 
     const emoji = mode === 'private' ? '🔒' : '🌐';
     const desc  = mode === 'private'

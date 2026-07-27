@@ -4,6 +4,8 @@
 // Works in groups (per-group) and DM (global for owner)
 // ============================================
 
+import { saveNow } from '../../lib/database.js';
+
 export default {
   command: 'antidelete',
   alias: ['antidel', 'nodeletion'],
@@ -35,6 +37,7 @@ export default {
     if (isGroupMsg) {
       const group = db.groups.get(jid) || {};
       db.groups.set(jid, { ...group, antidelete: value });
+      await saveNow('groups');
       return reply(
         `🗑️ *Anti Delete* is now *${value ? 'ON ✅' : 'OFF ❌'}* for this group.\n` +
         (value ? 'Deleted messages will be re-sent automatically.' : 'Deleted messages will stay gone.')
@@ -47,6 +50,7 @@ export default {
     }
 
     db.settings.setValue('antidelete', value);
+    await saveNow('settings');
     return reply(
       `🗑️ *Anti Delete* globally set to *${value ? 'ON ✅' : 'OFF ❌'}*.\n` +
       (value

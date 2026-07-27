@@ -1,3 +1,5 @@
+import { saveNow } from '../../lib/database.js';
+
 export default {
   command: 'banuser',
   alias: ['botban'],
@@ -16,10 +18,12 @@ export default {
     if (action === 'unban') {
       const filtered = banned.filter(b => b !== target && b !== target.split('@')[0]);
       db.settings.setValue('bannedUsers', filtered);
+      await saveNow('settings');
       reply(`✅ @${target.split('@')[0]} has been *unbanned*.`, { mentions: [target] });
     } else {
       if (!banned.includes(target)) banned.push(target);
       db.settings.setValue('bannedUsers', banned);
+      await saveNow('settings');
       reply(`⛔ @${target.split('@')[0]} has been *banned* from the bot.`, { mentions: [target] });
     }
   },

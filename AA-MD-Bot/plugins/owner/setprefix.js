@@ -1,3 +1,5 @@
+import { saveNow } from '../../lib/database.js';
+
 export default {
   command: 'setprefix',
   alias: ['prefix'],
@@ -11,6 +13,7 @@ export default {
     }
     const newPrefix = args[0];
     db.settings.setValue('prefix', [newPrefix]);
+    await saveNow('settings');
     reply(`✅ Prefix changed to: *${newPrefix}*\n\nNow use *${newPrefix}menu* to see commands.`);
   },
 };

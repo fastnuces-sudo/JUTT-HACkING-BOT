@@ -3,6 +3,8 @@
 // Block/reject incoming calls + custom reply
 // ============================================
 
+import { saveNow } from '../../lib/database.js';
+
 export default {
   command: 'anticall',
   alias: ['blockCall', 'callblock'],
@@ -30,6 +32,7 @@ export default {
         );
       }
       sessionSettings.set('antiCallMsg', newMsg);
+      await saveNow('sessionSettings');
       return reply(
         `✅ *Anti-Call Message Updated!*\n\n` +
         `📩 Callers will now receive:\n\n_${newMsg}_`
@@ -39,6 +42,7 @@ export default {
     // ── .anticall msgreset — clear custom message ────────────────
     if (toggle === 'msgreset') {
       sessionSettings.set('antiCallMsg', '');
+      await saveNow('sessionSettings');
       return reply(`🔄 Anti-call message reset to *default* for this number.`);
     }
 
@@ -59,6 +63,7 @@ export default {
 
     const val = toggle === 'on';
     sessionSettings.set('antiCall', val);
+    await saveNow('sessionSettings');
     return reply(
       `📞 *Anti-Call* is now *${val ? 'ON ✅' : 'OFF ❌'}* for this number.\n\n` +
       (val

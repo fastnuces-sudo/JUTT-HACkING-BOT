@@ -131,8 +131,10 @@ async function flushCollection(name) {
   }
 }
 
-const DEBOUNCE_MS      = { sessionSettings: 3_000 };
-const DEFAULT_DEBOUNCE = 10_000;
+// ── Debounce: 2s for everything — short enough that a crash/restart rarely
+// loses data, long enough to avoid hammering MongoDB on rapid successive writes.
+const DEBOUNCE_MS      = {};
+const DEFAULT_DEBOUNCE = 2_000;
 
 function scheduleSave(name) {
   clearTimeout(saveTimers[name]);
@@ -140,6 +142,14 @@ function scheduleSave(name) {
     () => flushCollection(name).catch(e => console.error('[DB] flush error:', e.message)),
     DEBOUNCE_MS[name] ?? DEFAULT_DEBOUNCE
   );
+}
+
+// Immediate save — cancels any pending debounce and writes right now.
+// Call this after critical writes (prefix change, mode, owner add/remove, etc.)
+export async function saveNow(name) {
+  if (!getMongoUri()) return;
+  clearTimeout(saveTimers[name]);
+  await flushCollection(name).catch(e => console.error('[DB] saveNow error:', e.message));
 }
 
 // ── Public init: load all data from MongoDB ───────────────────────────────────

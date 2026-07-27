@@ -43,8 +43,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const startTime = Date.now();
 const dashboardPath = path.join(__dirname, 'dashboard.html');
 
-process.on('uncaughtException', err => logger.error({ err: err.message }, '💥 Uncaught Exception'));
-process.on('unhandledRejection', err => logger.error({ err: String(err) }, '💥 Unhandled Rejection'));
+// Flush pending MongoDB writes before crashing so no settings are lost.
+// flushAll is imported lazily to avoid circular import at module init time.
+async function _emergencyFlush(label, err) {
+  logger.error({ err: String(err?.message || err) }, label);
+  try {
+    const { flushAll } = await import('./lib/database.js');
+    await flushAll();
+  } catch {}
+}
+process.on('uncaughtException',   err => _emergencyFlush('💥 Uncaught Exception',    err));
+process.on('unhandledRejection',  err => _emergencyFlush('💥 Unhandled Rejection',   err));
 
 // SSE clients
 const sseClients = new Set();

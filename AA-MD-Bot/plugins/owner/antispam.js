@@ -1,4 +1,4 @@
-import { db } from '../../lib/database.js';
+import { db, saveNow } from '../../lib/database.js';
 
 export default {
   command: 'antispam',
@@ -25,6 +25,7 @@ export default {
 
     const val = toggle === 'on';
     database.settings.setValue('antiSpam', val);
+    await saveNow('settings');
     return reply(
       `🛡️ *Anti-Spam* is now *${val ? 'ON ✅' : 'OFF ❌'}*\n\n` +
       (val
