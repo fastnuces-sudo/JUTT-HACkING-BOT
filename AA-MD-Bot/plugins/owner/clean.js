@@ -29,8 +29,8 @@ function unwrap(m) {
 }
 
 export default {
-  command: 'clean',
-  alias: ['nofwd', 'notag', 'removetag', 'clearmsg'],
+  command: 'stripfwd',
+  alias: ['rmfwd', 'cleanfwd', 'removefwd', 'notags'],
   description: 'Reply to any message — re-sends it without "View Channel" and "Forwarded" tags',
   category: 'owner',
   ownerOnly: true,
