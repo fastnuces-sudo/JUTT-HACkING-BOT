@@ -46,7 +46,7 @@ const FOOTER = `\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*`;
 const CAT_CFG = {
   download:  { e: '⬇️',  n: 'DOWNLOADS',      max: 14 },
   search:    { e: '🔍',  n: 'SEARCH & AI',     max: 18 },
-  media:     { e: '🎨',  n: 'MEDIA TOOLS',     max: 16 },
+  media:     { e: '🎨',  n: 'MEDIA TOOLS',     max: 25 },
   fun:       { e: '🎮',  n: 'FUN & GAMES',     max: 20 },
   group:     { e: '👥',  n: 'GROUP',           max: 18 },
   admin:     { e: '🛡️', n: 'GROUP ADMIN',     max: 20 },

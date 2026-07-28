@@ -382,14 +382,42 @@ export async function handleMessage(sock, msg, sessionId) {
       },
     };
 
+    // .rmfwd / stripfwd and any other plugin with noChannelCtx:true must NOT
+    // receive forwarding/channel tags on their own replies — those commands exist
+    // specifically to strip those tags, so their own responses should be tag-free.
+    const _replyFn = plugin.noChannelCtx
+      ? (t, opts = {}) => {
+          const fullText = typeof t === 'string' ? t + WATERMARK : t;
+          return sock.sendMessage(msg.key.remoteJid, { text: fullText, ...opts }, { quoted: msg });
+        }
+      : (t, opts) => reply(sock, msg, t, opts);
+
+    const _sendFn = plugin.noChannelCtx
+      ? (t, opts = {}) => {
+          if (typeof t === 'string') {
+            return sock.sendMessage(jid, { text: t + WATERMARK, ...opts });
+          }
+          if (t.caption && !t.caption.includes('AA MD Bot')) t.caption += WATERMARK;
+          return sock.sendMessage(jid, { ...t, ...opts });
+        }
+      : (t, opts) => sendMsg(sock, jid, t, opts);
+
+    const _sendMediaFn = plugin.noChannelCtx
+      ? (content) => {
+          const payload = { ...content };
+          delete payload.contextInfo; // strip any existing ctx too
+          return sock.sendMessage(jid, payload, { quoted: msg });
+        }
+      : (content) => sendMedia(sock, jid, msg, content);
+
     await plugin.execute({
       sock, msg, jid, senderJid, fromMe, isGroupMsg,
       command, args, text: argText, prefix, sessionId,
       isOwner: owner, isSudo: owner,
-      reply: (t, opts) => reply(sock, msg, t, opts),
+      reply: _replyFn,
       react: (e) => react(sock, msg, e),
-      send: (t, opts) => sendMsg(sock, jid, t, opts),
-      sendMedia: (content) => sendMedia(sock, jid, msg, content),
+      send: _sendFn,
+      sendMedia: _sendMediaFn,
       db: scopedDb, config,
       sessionSettings,
       quoted,

@@ -73,6 +73,10 @@ export default {
   description: 'Re-sends a message without "View Channel" and "Forwarded many times" tags',
   category: 'owner',
   ownerOnly: true,
+  // Bot's own reply() calls for this command must NOT carry forwarding/channel ctx —
+  // this command exists specifically to strip those tags, so its own responses
+  // should be tag-free too.
+  noChannelCtx: true,
 
   async execute({ sock, msg, jid, reply, react, getQuoted }) {
     const quotedMsg = getQuoted();
