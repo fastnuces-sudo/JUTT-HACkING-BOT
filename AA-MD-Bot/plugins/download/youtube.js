@@ -500,6 +500,15 @@ async function tryNexrayMp3(ytUrl) {
 // Returns a publicly-accessible CDN URL so WhatsApp downloads the video directly.
 // No buffer in RAM, no ffmpeg transcode — fast and works on low-memory servers.
 async function tryVideoApiUrl(ytUrl) {
+  // 0. ootaizumi — fastest, returns direct CDN download URL at 720p
+  try {
+    const { data: d } = await axios.get(
+      `https://api.ootaizumi.web.id/downloader/youtube?url=${encodeURIComponent(ytUrl)}&format=720`,
+      { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
+    );
+    const u = d?.result?.download;
+    if (d?.status && u && typeof u === 'string' && u.startsWith('http')) return u;
+  } catch {}
   // 1. davidcyriltech — confirmed working, returns yt-dl.click CDN URL
   try {
     const { data: d } = await axios.get(
