@@ -254,6 +254,12 @@ export default {
       menu += `│  ▸ *${pref}nice* — reply to view-once\n`;
       menu += `│     _Silent reveal, no reply to sender_\n`;
       menu += `│\n`;
+      menu += `│  🧹 *Message Tools*\n`;
+      menu += `│\n`;
+      menu += `│  ▸ *${pref}stripfwd* — reply to any message\n`;
+      menu += `│     _Re-send without "View Channel" & "Forwarded" tags_\n`;
+      menu += `│     _Aliases: .rmfwd  .cleanfwd  .removefwd  .notags_\n`;
+      menu += `│\n`;
       menu += `│  🗑️ *Deleted Messages*\n`;
       menu += `│\n`;
       menu += `│  ▸ *${pref}antidelete on/off*\n`;

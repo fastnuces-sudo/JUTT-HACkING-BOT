@@ -6,6 +6,7 @@
 // ╚══════════════════════════════════════════════════════════════════╝
 
 import TelegramBot from 'node-telegram-bot-api';
+import os          from 'os';
 import { logger }  from './logger.js';
 
 const TOKEN    = process.env.TELEGRAM_BOT_TOKEN;
@@ -375,13 +376,14 @@ export function initTelegramAdmin({ createSession, deleteSession, getAllSessions
         break;
 
       default: {
-        // "Copy Code" button — show code in a pop-up alert (tap to dismiss)
+        // "Copy Code" button — send code as separate copyable message
         if (query.data.startsWith('copy_code_')) {
           const code = query.data.slice('copy_code_'.length);
-          await bot.answerCallbackQuery(query.id, {
-            text: `Your code: ${code}\n\nTap & hold the code in the message above to copy it.`,
-            show_alert: true,
-          }).catch(() => {});
+          await bot.answerCallbackQuery(query.id, { text: '✅ Code sent — tap it to copy!' }).catch(() => {});
+          await bot.sendMessage(chatId,
+            `🔑 <b>Your Pairing Code</b>\n\n<code>${esc(code)}</code>\n\n<i>👆 Tap the code above to copy it automatically</i>`,
+            HTML
+          ).catch(() => {});
           return;
         }
 
@@ -392,6 +394,66 @@ export function initTelegramAdmin({ createSession, deleteSession, getAllSessions
           return doPair(bot, chatId, phone, msgId);
         }
       }
+    }
+  });
+
+  // ── /ping — open to everyone ─────────────────────────────────────────────
+  bot.onText(/\/ping/, async (msg) => {
+    const t0   = Date.now();
+    const sent = await bot.sendMessage(msg.chat.id, '🏓 <i>Pinging...</i>', HTML).catch(() => null);
+    if (!sent) return;
+    const ms   = Date.now() - t0;
+    const upSec = Math.floor(process.uptime());
+    const up = upSec > 3600
+      ? `${Math.floor(upSec/3600)}h ${Math.floor((upSec%3600)/60)}m`
+      : `${Math.floor(upSec/60)}m ${upSec%60}s`;
+    bot.editMessageText(
+      `🏓 <b>Pong!</b>  <code>${ms}ms</code>\n${DIV}\n\n` +
+      `⏱ <b>Uptime:</b> ${esc(up)}\n` +
+      `💾 <b>RAM:</b> ${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB\n` +
+      `📦 <b>Node:</b> ${esc(process.version)}` + FOOTER,
+      { chat_id: msg.chat.id, message_id: sent.message_id, parse_mode: 'HTML' }
+    ).catch(() => {});
+  });
+
+  // ── /status — open to everyone ────────────────────────────────────────────
+  bot.onText(/\/status/, async (msg) => {
+    try {
+      const sessions = _getAllSessions ? await _getAllSessions() : [];
+      const connected = sessions.filter(s => s.status === 'connected' || s.connected).length;
+      const upSec = Math.floor(process.uptime());
+      const up = upSec > 3600
+        ? `${Math.floor(upSec/3600)}h ${Math.floor((upSec%3600)/60)}m`
+        : `${Math.floor(upSec/60)}m ${upSec%60}s`;
+      sendText(bot, msg.chat.id,
+        `📊 <b>Bot Status</b>\n${DIV}\n\n` +
+        `🟢 <b>Online</b> — Bot is running\n` +
+        `⏱ <b>Uptime:</b> ${esc(up)}\n` +
+        `💾 <b>RAM:</b> ${Math.round(process.memoryUsage().heapUsed/1024/1024)}MB / ${Math.round(os.totalmem()/1024/1024)}MB\n` +
+        `📱 <b>Sessions:</b> ${sessions.length} total, ${connected} connected\n` +
+        `📦 <b>Node.js:</b> ${esc(process.version)}` + FOOTER
+      );
+    } catch {
+      sendText(bot, msg.chat.id, `📊 Bot is online.\n\nUptime: ${Math.floor(process.uptime())}s` + FOOTER);
+    }
+  });
+
+  // ── /disconnect — admin only ──────────────────────────────────────────────
+  bot.onText(/\/disconnect(?:\s+(\S+))?/, async (msg, match) => {
+    if (msg.chat.id !== OWNER_ID) return;
+    const phone = (match[1] || '').replace(/[^0-9]/g, '');
+    if (!phone) return sendText(bot, msg.chat.id,
+      `📵 <b>Disconnect Session</b>\n${DIV}\n\nUsage: <code>/disconnect 923001234567</code>\n\nUse /sessions to see active sessions.` + FOOTER
+    );
+    try {
+      const sessionId = phone.startsWith('tg_') ? phone : `tg_${phone}`;
+      if (!_deleteSession) throw new Error('Session manager not ready');
+      await _deleteSession(sessionId);
+      sendText(bot, msg.chat.id,
+        `✅ <b>Session Disconnected</b>\n\n📱 Number: <code>+${esc(phone)}</code>\n\nThe session has been removed.` + FOOTER
+      );
+    } catch (e) {
+      sendText(bot, msg.chat.id, `❌ Failed: ${esc(e.message)}` + FOOTER);
     }
   });
 

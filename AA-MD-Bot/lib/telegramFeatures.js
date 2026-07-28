@@ -1884,7 +1884,7 @@ export function initTelegramFeatures() {
   });
 
   // ── /pin ──────────────────────────────────────────────────────────────────────
-  bot.onText(/\/(?:pin|pinterest)(?:\s+(.+))?/, async (msg, match) => {
+  bot.onText(/\/(?:pin|pinterest)\b(?:\s+(.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
     let url = (match[1] || '').trim();
     if (!url) return sendText(bot, chatId,
