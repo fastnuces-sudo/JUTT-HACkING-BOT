@@ -130,11 +130,16 @@ export async function checkChatbotResponse(msg, sock, sessionId) {
     return;
   }
 
-  // ── DM: trigger on ALL messages when chatbot is enabled for this DM ───────
+  // ── DM: trigger on ALL messages when chatbot is enabled (session-wide) ──────
   if (isDM) {
-    // Check if DM chatbot is enabled for this session
-    const dmChatbot = db.sessionSettings.getValue(sessionId, `dmChatbot:${chatJid}`);
+    // Session-wide flag — one .chatbot on covers all incoming DMs
+    const dmChatbot = db.sessionSettings.getValue(sessionId, 'dmChatbot');
     if (!dmChatbot) return;
+
+    // Don't reply to owner's own self-chat
+    const botNumber = (sock.user?.id || '').split(':')[0].split('@')[0];
+    const senderNum = chatJid.split('@')[0];
+    if (senderNum === botNumber) return;
 
     await showTyping(sock, chatJid);
     try {
@@ -165,7 +170,7 @@ export default {
         const grp = scopedDb.groups.get(jid) || {};
         statusLine = `Group: *${grp.chatbot ? 'ON ✅' : 'OFF ❌'}*`;
       } else {
-        const dmOn = db.sessionSettings.getValue(sessionId, `dmChatbot:${jid}`);
+        const dmOn = db.sessionSettings.getValue(sessionId, 'dmChatbot');
         statusLine = `DM mode: *${dmOn ? 'ON ✅' : 'OFF ❌'}*`;
       }
       return reply(
@@ -213,9 +218,8 @@ export default {
           `> 🤖 *AA MD Bot*`
         );
       } else {
-        const key = `dmChatbot:${jid}`;
-        if (db.sessionSettings.getValue(sessionId, key)) return reply('✅ *DM Chatbot is already ON.*');
-        db.sessionSettings.set(sessionId, key, true);
+        if (db.sessionSettings.getValue(sessionId, 'dmChatbot')) return reply('✅ *DM Chatbot is already ON.*');
+        db.sessionSettings.setValue(sessionId, 'dmChatbot', true);
         await react('✅');
         return reply(
           `✅ *DM Chatbot ENABLED!*\n\n` +
@@ -236,9 +240,8 @@ export default {
         await react('✅');
         return reply('❌ *Group Chatbot DISABLED.*\n\n> 🤖 *AA MD Bot*');
       } else {
-        const key = `dmChatbot:${jid}`;
-        if (!db.sessionSettings.getValue(sessionId, key)) return reply('❌ *DM Chatbot is already OFF.*');
-        db.sessionSettings.set(sessionId, key, false);
+        if (!db.sessionSettings.getValue(sessionId, 'dmChatbot')) return reply('❌ *DM Chatbot is already OFF.*');
+        db.sessionSettings.setValue(sessionId, 'dmChatbot', false);
         await react('✅');
         return reply('❌ *DM Chatbot DISABLED.*\n\n> 🤖 *AA MD Bot*');
       }
