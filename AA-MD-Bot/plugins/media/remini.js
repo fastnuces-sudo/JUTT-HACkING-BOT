@@ -1,13 +1,13 @@
 // ============================================
 // AA MD Bot - Remini AI Image Enhancer
-// Chain: davidcyriltech → aiapis.io → nexray → sharp local
-// Enhances blurry/low-res photos using AI
+// Primary: sharp local (guaranteed, no upload needed)
+// Bonus: API chain if upload works (better quality)
 // ============================================
 
 import axios from 'axios';
 import sharp from 'sharp';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
-import { uploadToCatbox } from '../../lib/imageUpload.js';
+import { uploadImage } from '../../lib/imageUpload.js';
 
 function getImageMsg(msg) {
   const ctx    = msg.message?.extendedTextMessage?.contextInfo;
@@ -17,53 +17,52 @@ function getImageMsg(msg) {
   return null;
 }
 
-// ── API fallback chain ────────────────────────────────────────────────────────
+// ── Local sharp enhance (PRIMARY — instant, no network, guaranteed) ───────────
+async function sharpEnhance(imageBuffer) {
+  const meta = await sharp(imageBuffer).metadata();
+  const w = Math.min((meta.width  || 400) * 2, 3000);
+  const h = Math.min((meta.height || 400) * 2, 3000);
+  return sharp(imageBuffer)
+    .resize(w, h, { kernel: sharp.kernel.lanczos3 })
+    .sharpen({ sigma: 1.5, m1: 2.0, m2: 0.5 })
+    .modulate({ brightness: 1.05, saturation: 1.1 })
+    .jpeg({ quality: 92, mozjpeg: true })
+    .toBuffer();
+}
+
+// ── API chain (bonus — only attempted if image upload works) ─────────────────
 async function enhanceWithApi(imageUrl) {
   const apis = [
-    // 1. davidcyriltech — returns raw JPEG bytes
+    // davidcyriltech — returns raw JPEG bytes
     async () => {
       const res = await axios.get(
         `https://apis.davidcyriltech.my.id/remini?url=${encodeURIComponent(imageUrl)}`,
-        { timeout: 55000, responseType: 'arraybuffer', headers: { 'User-Agent': 'Mozilla/5.0' } }
+        { timeout: 50000, responseType: 'arraybuffer', headers: { 'User-Agent': 'Mozilla/5.0' } }
       );
       const buf = Buffer.from(res.data);
       if (buf.length > 5000 && buf[0] === 0xff && buf[1] === 0xd8) return buf;
       throw new Error('Not a valid JPEG');
     },
 
-    // 2. aiapis.io — free remini-like enhancer
+    // aiapis.io
     async () => {
       const res = await axios.get(
         `https://aiapis.io/api/remini?url=${encodeURIComponent(imageUrl)}`,
-        { timeout: 55000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+        { timeout: 50000, headers: { 'User-Agent': 'Mozilla/5.0' } }
       );
       const url = res.data?.result || res.data?.url || res.data?.image;
-      if (!url) throw new Error('No URL in response');
+      if (!url) throw new Error('No URL');
       const img = await axios.get(url, { timeout: 30000, responseType: 'arraybuffer' });
-      const buf = Buffer.from(img.data);
-      if (buf.length > 5000) return buf;
-      throw new Error('Image too small');
-    },
-
-    // 3. nexray enhancer
-    async () => {
-      const res = await axios.get(
-        `https://api.nexray.web.id/enhancer/remini?url=${encodeURIComponent(imageUrl)}`,
-        { timeout: 55000, headers: { 'User-Agent': 'Mozilla/5.0' } }
-      );
-      const u = res.data?.result?.url || res.data?.url;
-      if (!u) throw new Error('No URL');
-      const img = await axios.get(u, { timeout: 30000, responseType: 'arraybuffer' });
       const buf = Buffer.from(img.data);
       if (buf.length > 5000) return buf;
       throw new Error('Too small');
     },
 
-    // 4. princetechn — returns JSON with result.image_url
+    // princetechn
     async () => {
       const res = await axios.get(
         `https://api.princetechn.com/api/tools/remini?apikey=prince_tech_api_azfsbshfb&url=${encodeURIComponent(imageUrl)}`,
-        { timeout: 55000, headers: { 'User-Agent': 'Mozilla/5.0' } }
+        { timeout: 50000, headers: { 'User-Agent': 'Mozilla/5.0' } }
       );
       if (!res.data?.success) throw new Error(res.data?.message || 'API failure');
       const imgUrl = res.data?.result?.image_url;
@@ -71,7 +70,7 @@ async function enhanceWithApi(imageUrl) {
       const img = await axios.get(imgUrl, { timeout: 30000, responseType: 'arraybuffer' });
       const buf = Buffer.from(img.data);
       if (buf.length > 5000) return buf;
-      throw new Error('Downloaded image too small');
+      throw new Error('Too small');
     },
   ];
 
@@ -82,20 +81,6 @@ async function enhanceWithApi(imageUrl) {
     } catch {}
   }
   return null;
-}
-
-// ── Local sharp enhance — guaranteed fallback ─────────────────────────────────
-async function sharpEnhance(imageBuffer) {
-  // Upscale 2x + unsharp mask + contrast boost
-  const meta = await sharp(imageBuffer).metadata();
-  const w = Math.min((meta.width  || 400) * 2, 3000);
-  const h = Math.min((meta.height || 400) * 2, 3000);
-  return sharp(imageBuffer)
-    .resize(w, h, { kernel: sharp.kernel.lanczos3 })
-    .sharpen({ sigma: 1.5, m1: 2.0, m2: 0.5 })
-    .modulate({ brightness: 1.05, saturation: 1.1 })
-    .jpeg({ quality: 92, mozjpeg: true })
-    .toBuffer();
 }
 
 export default {
@@ -109,7 +94,7 @@ export default {
     if (!found) return reply(
       `✨ *Remini AI Enhancer*\n\n` +
       `*Reply* to an image or *send an image* with *.remini* as caption.\n\n` +
-      `AI sharpens blurry, low-res, or old photos.\n\n` +
+      `Sharpens blurry, low-res, or old photos.\n\n` +
       `*Aliases:* .hdimage .unblur\n\n` +
       `> 🤖 *AA MD Bot*`
     );
@@ -128,24 +113,24 @@ export default {
       );
       if (!buffer?.length) throw new Error('Image download failed');
 
-      // Try AI APIs first
+      // ── Step 1: sharp local enhance (always works, instant) ─────────────────
       await react('✨');
-      let result = null;
-      let method = '✨ Image Enhanced (AI)';
+      let result = await sharpEnhance(buffer);
+      let method = '✨ Enhanced (Local AI)';
 
+      // ── Step 2: try API-based enhancement in background (better quality) ────
+      // Only if upload works — don't block on upload failures
       try {
-        await react('☁️');
-        const imageUrl = await uploadToCatbox(buffer, 'remini_input.jpg');
-        result = await enhanceWithApi(imageUrl);
-      } catch {}
-
-      // Guaranteed local fallback
-      if (!result) {
-        result = await sharpEnhance(buffer);
-        method = '✨ Image Enhanced (Local)';
-      }
-
-      if (!result) throw new Error('Enhancement failed');
+        const imageUrl = await Promise.race([
+          uploadImage(buffer, 'remini_input.jpg'),
+          new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 20000)),
+        ]);
+        const apiResult = await enhanceWithApi(imageUrl);
+        if (apiResult) {
+          result = apiResult;
+          method = '✨ Enhanced (Remini AI)';
+        }
+      } catch {} // API enhancement is optional — fall through with sharp result
 
       await sock.sendMessage(jid, {
         image: result,

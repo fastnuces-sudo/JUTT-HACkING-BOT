@@ -167,11 +167,13 @@ export default {
     const errors = [];
 
     // Try each method in order until one works
+    // ephoto360-direct is FIRST — confirmed working from Replit (200)
+    // Proxy services (bochil/lolhuman) are 404/400 from Replit IP
     for (const [name, fn] of [
+      ['ephoto360-direct', () => tryEphoto360Direct(chosen.url, logoText)],
       ['mumaker', () => tryMumaker(chosen.url, logoText)],
       ['bochil-proxy', () => tryBochilProxy(chosen.url, logoText)],
       ['lolhuman-proxy', () => tryLolhumanProxy(chosen.url, logoText)],
-      ['ephoto360-direct', () => tryEphoto360Direct(chosen.url, logoText)],
     ]) {
       try {
         imgBuf = await fn();

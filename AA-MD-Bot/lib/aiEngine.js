@@ -105,6 +105,62 @@ async function tryChAt(userMsg) {
   return text;
 }
 
+// ── Backend 4: pollinations alternate models ───────────────────────────────────
+async function tryPollinationsModel(messages, model) {
+  const { data } = await axios.post(
+    'https://text.pollinations.ai/openai',
+    { model, messages, temperature: 0.5, max_tokens: 600 },
+    { headers: { 'Content-Type': 'application/json' }, timeout: 22000 }
+  );
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text || text.length < 2) throw new Error('empty');
+  return text;
+}
+
+// ── Backend 5: HuggingFace Inference API (if HF_TOKEN secret is set) ─────────
+async function tryHuggingFace(userMsg, systemPrompt) {
+  const token = process.env.HF_TOKEN;
+  if (!token) throw new Error('no HF_TOKEN');
+  const model = 'mistralai/Mistral-7B-Instruct-v0.3';
+  const prompt = `<s>[INST] ${systemPrompt}\n\n${userMsg} [/INST]`;
+  const { data } = await axios.post(
+    `https://api-inference.huggingface.co/models/${model}`,
+    { inputs: prompt, parameters: { max_new_tokens: 400, temperature: 0.5 } },
+    { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, timeout: 30000 }
+  );
+  const text = data?.[0]?.generated_text?.split('[/INST]')?.pop()?.trim();
+  if (!text || text.length < 2) throw new Error('empty');
+  return text;
+}
+
+// ── Backend 6: Together.ai free tier (if TOGETHER_API_KEY secret is set) ──────
+async function tryTogether(messages) {
+  const token = process.env.TOGETHER_API_KEY;
+  if (!token) throw new Error('no TOGETHER_API_KEY');
+  const { data } = await axios.post(
+    'https://api.together.xyz/v1/chat/completions',
+    { model: 'meta-llama/Llama-3-8b-chat-hf', messages, max_tokens: 500, temperature: 0.5 },
+    { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, timeout: 25000 }
+  );
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text || text.length < 2) throw new Error('empty');
+  return text;
+}
+
+// ── Backend 7: OpenRouter (if OPENROUTER_API_KEY secret is set) ───────────────
+async function tryOpenRouter(messages) {
+  const token = process.env.OPENROUTER_API_KEY;
+  if (!token) throw new Error('no OPENROUTER_API_KEY');
+  const { data } = await axios.post(
+    'https://openrouter.ai/api/v1/chat/completions',
+    { model: 'meta-llama/llama-3.1-8b-instruct:free', messages, max_tokens: 500 },
+    { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://aa-md-bot.replit.app' }, timeout: 25000 }
+  );
+  const text = data?.choices?.[0]?.message?.content?.trim();
+  if (!text || text.length < 2) throw new Error('empty');
+  return text;
+}
+
 // ── Markdown cleanup for WhatsApp ─────────────────────────────────────────────
 function cleanMarkdown(text) {
   return text
@@ -131,7 +187,7 @@ export async function chatAI(jid, userMsg, systemPrompt) {
 
   let reply = null;
 
-  // 1. pollinations POST — primary
+  // 1. pollinations POST — primary (openai-fast model)
   reply = await tryPollinationsPost(messages).catch(() => null);
 
   // 2. pollinations GET — fast single-turn fallback
@@ -144,9 +200,32 @@ export async function chatAI(jid, userMsg, systemPrompt) {
     reply = await tryPollinationsGet(flatCtx).catch(() => null);
   }
 
-  // 3. ch.at — last resort
+  // 3. pollinations alternate models (mistral, claude, openai-large)
+  if (!reply) {
+    for (const model of ['mistral', 'openai-large', 'claude-sonnet-4-5']) {
+      reply = await tryPollinationsModel(messages, model).catch(() => null);
+      if (reply) break;
+    }
+  }
+
+  // 4. HuggingFace (if HF_TOKEN secret is set)
+  if (!reply) {
+    reply = await tryHuggingFace(userMsg, systemPrompt || DEFAULT_SYSTEM).catch(() => null);
+  }
+
+  // 5. ch.at — free no-key fallback
   if (!reply) {
     reply = await tryChAt(userMsg).catch(() => null);
+  }
+
+  // 6. Together.ai (if TOGETHER_API_KEY is set)
+  if (!reply) {
+    reply = await tryTogether(messages).catch(() => null);
+  }
+
+  // 7. OpenRouter free tier (if OPENROUTER_API_KEY is set)
+  if (!reply) {
+    reply = await tryOpenRouter(messages).catch(() => null);
   }
 
   if (!reply) throw new Error('AI unavailable — try again in a moment.');

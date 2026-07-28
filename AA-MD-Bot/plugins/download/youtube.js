@@ -767,25 +767,24 @@ export default {
             ? buildVideoCaption(meta, botName)
             : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
 
-          // ── Step 1: API CDN URL → download buffer → ensure H.264+AAC+faststart ──
-          // Sending a raw CDN URL to WhatsApp often fails on mobile (moov atom at
-          // end, wrong codec, or CDN blocks WA's user agent). Downloading the
-          // buffer and running ensurePlayableMp4 guarantees mobile playback.
-          const videoApiUrl = await withTimeout(35000, tryVideoApiUrl(ytUrl));
-          if (videoApiUrl) {
+          // ── Step 1: yt-dlp stream URL → direct buffer (FASTEST, confirmed working) ──
+          // Format 18 = 360p H.264+AAC progressive — no merge, no transcode needed.
+          // yt-dlp --get-url returns a CDN URL in ~5-8s; we download it and
+          // stream-copy+faststart for guaranteed WhatsApp mobile playback.
+          const streamUrl = await withTimeout(22000,
+            tryYtdlpStreamUrl(ytUrl, '18/22', 'android')
+          );
+          if (streamUrl) {
             try {
-              const rawBuf = await withTimeout(90000, fetchBuf(videoApiUrl));
+              const rawBuf = await withTimeout(120000, fetchBuf(streamUrl));
               if (rawBuf?.length > 50000) {
-                // Pass 1: fast stream-copy+faststart (h264 sources ~3s)
-                // Pass 2: full re-encode if codec isn't h264 (~30-60s)
-                const playable = await withTimeout(120000, ensurePlayableMp4(rawBuf));
+                const playable = await withTimeout(90000, ensurePlayableMp4(rawBuf));
                 const sendBuf  = playable?.length ? playable
                                : isValidVideoBuffer(rawBuf) ? rawBuf : null;
                 if (sendBuf) {
                   const WA_LIMIT = 60 * 1024 * 1024;
                   const finalBuf = sendBuf.length > WA_LIMIT
-                    ? (await compressVideo(sendBuf) || sendBuf)
-                    : sendBuf;
+                    ? (await compressVideo(sendBuf) || sendBuf) : sendBuf;
                   await sock.sendMessage(jid, {
                     video: finalBuf, mimetype: 'video/mp4', caption: vcap,
                   }, { quoted: msg });
@@ -793,10 +792,33 @@ export default {
                   break;
                 }
               }
-            } catch {} // fall through to yt-dlp buffer
+            } catch {} // fall through
           }
 
-          // ── Step 2: yt-dlp buffer fallback (no external APIs needed) ─────────
+          // ── Step 2: third-party API CDN URL → buffer ──────────────────────────
+          const videoApiUrl = await withTimeout(30000, tryVideoApiUrl(ytUrl));
+          if (videoApiUrl) {
+            try {
+              const rawBuf = await withTimeout(90000, fetchBuf(videoApiUrl));
+              if (rawBuf?.length > 50000) {
+                const playable = await withTimeout(120000, ensurePlayableMp4(rawBuf));
+                const sendBuf  = playable?.length ? playable
+                               : isValidVideoBuffer(rawBuf) ? rawBuf : null;
+                if (sendBuf) {
+                  const WA_LIMIT = 60 * 1024 * 1024;
+                  const finalBuf = sendBuf.length > WA_LIMIT
+                    ? (await compressVideo(sendBuf) || sendBuf) : sendBuf;
+                  await sock.sendMessage(jid, {
+                    video: finalBuf, mimetype: 'video/mp4', caption: vcap,
+                  }, { quoted: msg });
+                  await react('✅');
+                  break;
+                }
+              }
+            } catch {} // fall through to full yt-dlp buffer
+          }
+
+          // ── Step 3: yt-dlp full file download ────────────────────────────────
           const vdata = await downloadVideo(ytUrl);
           if (!vdata?.buffer?.length) {
             await react('❌');
