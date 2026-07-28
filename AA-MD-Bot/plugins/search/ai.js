@@ -123,28 +123,28 @@ async function chat(jid, userMsg) {
   let reply = null;
   let lastError = null;
 
-  // 1. Try ch.at (fast, no key) — build a flat prompt from recent history
-  const flatPrompt = messages
-    .filter(m => m.role !== 'system')
-    .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-    .join('\n') + '\nAssistant:';
-  reply = await callChAt(flatPrompt).catch(() => null);
+  // 1. pollinations OpenAI-compatible POST — primary (fastest, multi-turn)
+  for (const model of MODELS) {
+    try {
+      reply = await tryModel(model, messages);
+      break;
+    } catch (e) {
+      lastError = e;
+    }
+  }
 
-  // 2. Try pollinations GET (simple, usually fast)
+  // 2. pollinations GET — simple single-turn fallback
   if (!reply) {
     reply = await callPollinationsGet(userMsg).catch(() => null);
   }
 
-  // 3. Try pollinations OpenAI-compatible POST (most capable)
+  // 3. ch.at — last resort
   if (!reply) {
-    for (const model of MODELS) {
-      try {
-        reply = await tryModel(model, messages);
-        break;
-      } catch (e) {
-        lastError = e;
-      }
-    }
+    const flatPrompt = messages
+      .filter(m => m.role !== 'system')
+      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n') + '\nAssistant:';
+    reply = await callChAt(flatPrompt).catch(() => null);
   }
 
   if (!reply) throw lastError || new Error('All AI models failed');

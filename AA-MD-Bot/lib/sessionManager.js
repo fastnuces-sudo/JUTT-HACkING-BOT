@@ -21,6 +21,7 @@ import { checkAntiGm } from '../plugins/admin/antigm.js';
 import { checkAntiScam } from '../plugins/admin/antiscam.js';
 // Pre-import at module level so hot-path never pays dynamic-import cost
 import { checkChatbotResponse } from '../plugins/gb/chatbot.js';
+import { chatAI, HINGLISH_SYSTEM } from './aiEngine.js';
 import { trackSentMessage } from './msgTracker.js';
 let _getAlertRegistry = null;
 import('../plugins/gb/onlinealert.js')
@@ -608,7 +609,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         const prefix   = db.settings.getValue('prefix') || '.';
         const isCmd    = msgText?.startsWith(prefix);
 
-        if (isDm && !isFromMe && !isCmd) {
+        if (isDm && !isFromMe && !isCmd && msgText) {
           // ── Regular auto-reply (static message) ──
           const autoReplyMsg = db.sessionSettings.getValue(sessionId, 'autoReply')
             ?? db.settings.getValue('autoReply');
@@ -618,6 +619,16 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
             }).catch(() => {});
           }
 
+          // ── AutoAI: reply every DM with AI (per-session, owner-toggled) ──
+          const autoAIEnabled = db.sessionSettings.getValue(sessionId, 'autoAI');
+          if (autoAIEnabled && !autoReplyMsg) {
+            try {
+              const aiReply = await chatAI(msg.key.remoteJid, msgText, HINGLISH_SYSTEM);
+              if (aiReply) {
+                await sock.sendMessage(msg.key.remoteJid, { text: aiReply }).catch(() => {});
+              }
+            } catch {}
+          }
         }
       } catch {}
 

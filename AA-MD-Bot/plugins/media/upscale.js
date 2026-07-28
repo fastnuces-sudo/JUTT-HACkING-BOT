@@ -1,6 +1,8 @@
 // AA MD Bot - AI Image Upscaler
-// Free: HuggingFace swin2SR (no key needed)
+// Primary: HuggingFace swin2SR (no key needed)
+// Fallback: sharp 4x lanczos3 (guaranteed, local)
 import axios from 'axios';
+import sharp from 'sharp';
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import fs from 'fs-extra';
 import path from 'path';
@@ -10,30 +12,29 @@ import { generateId } from '../../lib/helper.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMP = path.join(__dirname, '../../temp');
 
-const MODELS = [
+const HF_MODELS = [
   'caidas/swin2SR-classical-sr-x4-64',
   'caidas/swin2SR-realworld-sr-x4-64',
   'eugenesiow/edsr-base',
 ];
 
-async function upscaleImage(imageBuffer) {
-  for (const model of MODELS) {
+async function tryHuggingFace(imageBuffer) {
+  for (const model of HF_MODELS) {
     const url = `https://api-inference.huggingface.co/models/${model}`;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const res = await axios.post(url, imageBuffer, {
           headers: { 'Content-Type': 'image/jpeg' },
-          timeout: 90000,
+          timeout: 40000,
           responseType: 'arraybuffer',
           maxContentLength: 15 * 1024 * 1024,
         });
         const buf = Buffer.from(res.data);
         if (buf.length > 5000) return buf;
       } catch (err) {
-        let est = null;
-        try { est = JSON.parse(Buffer.from(err.response?.data || '{}').toString())?.estimated_time; } catch {}
-        if (err.response?.status === 503 && est && attempt < 2) {
-          await new Promise(r => setTimeout(r, Math.min(est * 1000, 30000)));
+        // 503 = model loading — wait briefly and retry once
+        if (err.response?.status === 503 && attempt === 0) {
+          await new Promise(r => setTimeout(r, 8000));
           continue;
         }
         break;
@@ -41,6 +42,22 @@ async function upscaleImage(imageBuffer) {
     }
   }
   return null;
+}
+
+async function sharpUpscale(imageBuffer) {
+  const meta = await sharp(imageBuffer).metadata();
+  const w = (meta.width  || 400) * 4;
+  const h = (meta.height || 400) * 4;
+  // Cap at 4000px to keep file size reasonable
+  const scale = Math.min(1, 4000 / Math.max(w, h));
+  return sharp(imageBuffer)
+    .resize(Math.round(w * scale), Math.round(h * scale), {
+      kernel: sharp.kernel.lanczos3,
+      withoutEnlargement: false,
+    })
+    .sharpen({ sigma: 1.2, m1: 1.5, m2: 0.7 })
+    .jpeg({ quality: 95, mozjpeg: true })
+    .toBuffer();
 }
 
 function getImageMsg(msg) {
@@ -59,7 +76,7 @@ export default {
   async execute({ sock, jid, msg, reply, react }) {
     const found = getImageMsg(msg);
     if (!found) return reply(
-      `🔍 *AI Image Upscaler*\n\n*Reply* to any image and send *.upscale*.\n\nAI will convert it to 4x HD resolution.\n\n> 🤖 *AA MD Bot*`
+      `🔍 *Image Upscaler*\n\n*Reply* to any image and send *.upscale*.\n\nConverts to 4x HD resolution.\n\n> 🤖 *AA MD Bot*`
     );
 
     await react('⏳');
@@ -77,16 +94,21 @@ export default {
       if (!buffer?.length) throw new Error('Image download failed');
       await fs.writeFile(imgPath, buffer);
 
-      const result = await upscaleImage(buffer);
+      // Try AI upscale first; fall back to sharp
+      let result = await tryHuggingFace(buffer);
+      let method = '🤖 AI Upscaled (4x HD)';
+
       if (!result) {
-        await react('❌');
-        return reply(`❌ *Upscale failed.*\n\nThe server is busy. Please try again in a moment.\n\n> 🤖 *AA MD Bot*`);
+        result = await sharpUpscale(buffer);
+        method = '🔍 Upscaled (4x HD)';
       }
+
+      if (!result) throw new Error('Upscale failed');
 
       await sock.sendMessage(jid, {
         image: result,
-        mimetype: 'image/png',
-        caption: `🔍 *AI Upscaled (4x HD)*\n\n> 🤖 *AA MD Bot*`,
+        mimetype: 'image/jpeg',
+        caption: `${method}\n\n> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (err) {
