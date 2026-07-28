@@ -1,48 +1,83 @@
 // ============================================
 // AA MD Bot - Anonymous Message Sender
-// Developer: Ahsan Ali | AA Mods
-// .anon @user message      — send an anonymous message to a user
-// .anon +923001234567 msg  — send to number directly
+// Two-way relay: replies come back anonymously
 // ============================================
+
+import {
+  anonSessions,
+  startAnonSession,
+  endAnonSessionBySender,
+} from '../../lib/anonRelay.js';
+
+function norm(jid) {
+  if (!jid) return '';
+  return jid.includes(':') ? jid.split(':')[0] + '@s.whatsapp.net' : jid;
+}
 
 export default {
   command: 'anon',
-  alias: ['anonymous', 'secretmsg', 'hiddenmsg'],
-  description: 'Send an anonymous message to any user (sender hidden)',
+  alias: ['anonymous', 'secretmsg'],
+  description: 'Send anonymous messages — your number is never shown',
   category: 'utility',
 
-  async execute({ sock, jid, msg, reply, args, text, senderJid }) {
+  async execute({ sock, jid, msg, reply, args, text, senderJid, sessionId }) {
+    const senderBase = norm(senderJid);
+
+    // ── .anon end — close active session ────────────────────────────────────
+    if (args[0]?.toLowerCase() === 'end') {
+      const ended = endAnonSessionBySender(senderBase);
+      return reply(
+        ended
+          ? `🔒 *Anonymous session closed.*\n\nThe other person can no longer reply to you anonymously.\n\n> 🤖 *AA MD Bot*`
+          : `ℹ️ You have no active anonymous session.\n\n> 🤖 *AA MD Bot*`
+      );
+    }
+
+    // ── .anon status ─────────────────────────────────────────────────────────
+    if (args[0]?.toLowerCase() === 'status') {
+      let found = false;
+      for (const session of anonSessions.values()) {
+        if (norm(session.senderJid) === senderBase) { found = true; break; }
+      }
+      return reply(
+        found
+          ? `🟢 *Anonymous session ACTIVE.*\n\nReplies from the recipient are being forwarded to you.\nSend *.anon end* to close it.\n\n> 🤖 *AA MD Bot*`
+          : `⚪ No active anonymous session.\n\n> 🤖 *AA MD Bot*`
+      );
+    }
+
     // ── Help ──────────────────────────────────────────────────────────────────
     if (!args.length) {
       return reply(
         `🔒 *Anonymous Message*\n\n` +
-        `Send a message to anyone anonymously — the recipient will not see your name!\n\n` +
+        `Send messages without revealing your number.\n` +
+        `If the recipient replies to the bot, their reply comes back to you — both sides stay anonymous.\n\n` +
         `━━━━━━━━━━━━━━━━━━━━━━\n` +
-        `*Usage:*\n` +
-        `▸ *.anon @user This is a secret message*\n` +
+        `*Send:*\n` +
+        `▸ *.anon @user Your message*\n` +
         `▸ *.anon +923001234567 Hello!*\n\n` +
-        `*Note:*\n` +
-        `• The message will be sent from the bot\n` +
-        `• Your identity will not be revealed\n` +
-        `• Only 1 message per use (no spam)\n\n` +
+        `*Manage:*\n` +
+        `▸ *.anon status* — check if session is active\n` +
+        `▸ *.anon end*    — close session\n\n` +
+        `*How it works:*\n` +
+        `• Recipient sees a plain text message — no "Anonymous" label\n` +
+        `• Your number is never visible\n` +
+        `• Their replies are forwarded to you anonymously\n` +
+        `• Session lasts 24 hours\n\n` +
         `> 🤖 *AA MD Bot*`
       );
     }
 
-    let targetJid  = null;
+    // ── Resolve target ────────────────────────────────────────────────────────
+    let targetJid = null;
     let messageText = '';
 
-    // ── Resolve target ────────────────────────────────────────────────────────
-
-    // Case 1: mentioned user (@)
     const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     if (mentions.length) {
-      targetJid   = mentions[0];
-      // Message = everything after the @mention
+      targetJid   = norm(mentions[0]);
       messageText = text.replace(/@\d+/g, '').trim();
     }
 
-    // Case 2: phone number (+923... or 923...)
     if (!targetJid) {
       const numMatch = args[0]?.match(/^\+?(\d{7,15})$/);
       if (numMatch) {
@@ -53,51 +88,45 @@ export default {
 
     if (!targetJid) {
       return reply(
-        `❌ *Please specify a target.*\n\n` +
-        `▸ *.anon @user Message*\n` +
-        `▸ *.anon +923001234567 Message*\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `❌ *Specify a target.*\n\n▸ *.anon @user Message*\n▸ *.anon +923001234567 Message*\n\n> 🤖 *AA MD Bot*`
       );
     }
 
     if (!messageText) {
-      return reply(`❌ *Please include a message.*\n\nExample: *.anon @user Hello!*\n\n> 🤖 *AA MD Bot*`);
+      return reply(
+        `❌ *Please include a message.*\n\nExample: *.anon @user Assalamualaikum!*\n\n> 🤖 *AA MD Bot*`
+      );
+    }
+
+    if (senderBase === targetJid) {
+      return reply(`❌ You cannot message yourself anonymously.\n\n> 🤖 *AA MD Bot*`);
     }
 
     if (messageText.length > 1000) {
-      return reply(`❌ Message is too long. Maximum 1000 characters.\n\n> 🤖 *AA MD Bot*`);
-    }
-
-    // Prevent self-anon
-    const senderBase = senderJid.includes(':') ? senderJid.split(':')[0] + '@s.whatsapp.net' : senderJid;
-    const targetBase = targetJid.includes(':') ? targetJid.split(':')[0] + '@s.whatsapp.net' : targetJid;
-    if (senderBase === targetBase) {
-      return reply(`❌ You cannot send an anonymous message to yourself.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ Message too long — max 1000 characters.\n\n> 🤖 *AA MD Bot*`);
     }
 
     try {
-      // Send to target — no sender info
-      await sock.sendMessage(targetBase, {
-        text:
-          `🔒 *Anonymous Message*\n\n` +
-          `${messageText}\n\n` +
-          `_— Sent anonymously via AA MD Bot_\n\n` +
-          `> 🤖 *AA MD Bot*`,
-      });
+      // ── Send plain text — no "Anonymous" header, looks like any normal message ──
+      await sock.sendMessage(targetJid, { text: messageText });
 
-      // Confirm to sender (quietly, in same chat)
+      // ── Register relay so their replies come back to sender ──────────────────
+      startAnonSession(senderBase, targetJid, sock, sessionId);
+
       return reply(
-        `✅ *Anonymous message sent!*\n\n` +
-        `👤 To: @${targetBase.split('@')[0]}\n` +
-        `💬 Message: _"${messageText.slice(0, 60)}${messageText.length > 60 ? '...' : ''}"_\n\n` +
-        `The recipient will not know it was you.\n\n> 🤖 *AA MD Bot*`,
-        { mentions: [targetJid] }
+        `✅ *Message sent anonymously!*\n\n` +
+        `📨 To: +${targetJid.split('@')[0]}\n` +
+        `💬 _"${messageText.slice(0, 80)}${messageText.length > 80 ? '...' : ''}"_\n\n` +
+        `↩️ If they reply, it comes back to you here.\n` +
+        `Send *.anon end* to close the session early.\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     } catch (err) {
       return reply(
-        `❌ *Message could not be sent.*\n\n` +
-        `Reason: ${err.message}\n` +
-        `(The user may have privacy settings that block messages.)\n\n> 🤖 *AA MD Bot*`
+        `❌ *Could not deliver message.*\n\n` +
+        `Reason: _${err.message}_\n` +
+        `_(Recipient may have privacy settings blocking unknown numbers.)_\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
   },

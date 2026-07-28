@@ -1,6 +1,7 @@
 import { parseCommand, isGroup } from './helper.js';
 import { getPlugin } from './pluginLoader.js';
 import { db } from './database.js';
+import { checkAnonRelay } from './anonRelay.js';
 import { logger } from './logger.js';
 import config from '../config.js';
 import { readFileSync, existsSync } from 'fs';
@@ -244,6 +245,13 @@ export async function handleMessage(sock, msg, sessionId) {
 
     const text = await getMessageText(msg);
     if (!text) return;
+
+    // ── Anon relay — intercept plain DM replies before command parsing ────────
+    // If the sender received an anon message and replies, forward it back to
+    // the original sender without revealing either party's identity.
+    if (!isGroupMsg && !fromMe) {
+      if (await checkAnonRelay(sock, jid, text)) return;
+    }
 
     const parsed = parseCommand(text);
     if (!parsed) {
