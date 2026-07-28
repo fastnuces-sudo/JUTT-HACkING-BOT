@@ -1,4 +1,7 @@
+// AA MD Bot - Sticker to Image
+// Converts WhatsApp sticker (WebP) → JPEG using ffmpeg or sharp
 import { downloadMediaMessage } from '@whiskeysockets/baileys';
+import sharp from 'sharp';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs-extra';
@@ -9,77 +12,95 @@ const execAsync = promisify(exec);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMP = path.join(__dirname, '../../temp');
 
+// Use system ffmpeg (confirmed working) as primary, sharp as fallback
+const FFMPEG = 'ffmpeg';
+
 export default {
   command: 'sticker2img',
   alias: ['s2img', 'toimage', 'stickertoimage'],
   description: 'Convert WhatsApp sticker to image',
   category: 'media',
 
-  async execute({ reply, sock, jid, msg }) {
-    const quoted     = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-    const stickerMsg = quoted?.stickerMessage || msg.message?.stickerMessage;
+  async execute({ reply, react, sock, jid, msg }) {
+    // Detect sticker in quoted OR direct message
+    const quotedMsg  = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    const stickerMsg = quotedMsg?.stickerMessage || msg.message?.stickerMessage;
 
-    if (!stickerMsg) return reply('❌ Reply to a *sticker* with .sticker2img');
+    if (!stickerMsg) {
+      return reply(
+        `🖼️ *Sticker to Image*\n\n` +
+        `Reply to any *sticker* with *.sticker2img*\n\n` +
+        `> 🤖 *AA MD Bot*`
+      );
+    }
+
+    await react('⏳');
 
     try {
-      // Build a proper WAMessage object for downloadMediaMessage
-      const waMsg = {
-        message: quoted ? { stickerMessage: stickerMsg } : msg.message,
-        key: msg.key,
-      };
+      // Build WAMessage for download
+      const waMsg = quotedMsg
+        ? {
+            message: { stickerMessage: stickerMsg },
+            key: {
+              ...msg.key,
+              id: msg.message?.extendedTextMessage?.contextInfo?.stanzaId || msg.key.id,
+            },
+          }
+        : msg;
 
       const buffer = await downloadMediaMessage(
         waMsg, 'buffer', {},
         { reuploadRequest: sock.updateMediaMessage }
       );
 
-      if (!buffer?.length) throw new Error('Empty buffer from download');
+      if (!buffer?.length) throw new Error('Sticker download failed');
 
-      // ── Convert WebP sticker → JPEG via ffmpeg ─────────────────────────────
-      // WhatsApp stickers are WebP (static or animated). Sending a WebP buffer
-      // with mimetype image/webp often renders as a document, not a photo.
-      // ffmpeg -vframes 1 extracts the first frame (handles animated stickers too).
       await fs.ensureDir(TEMP);
       const id  = Date.now();
       const inp = path.join(TEMP, `s2i_${id}_in.webp`);
       const out = path.join(TEMP, `s2i_${id}_out.jpg`);
 
-      let outBuf = null;
+      let resultBuf = null;
+
+      // ── Method 1: ffmpeg (handles animated stickers — extracts first frame) ──
       try {
         await fs.writeFile(inp, buffer);
         await execAsync(
-          `ffmpeg -i "${inp}" -vframes 1 -q:v 2 -y "${out}" -loglevel error`,
+          `${FFMPEG} -i "${inp}" -vframes 1 -q:v 2 -y "${out}" -loglevel error`,
           { timeout: 30000 }
         );
         if (await fs.pathExists(out)) {
           const tmp = await fs.readFile(out);
-          if (tmp.length > 0) outBuf = tmp;
+          if (tmp.length > 100) resultBuf = tmp;
         }
       } catch (_) {
-        // ffmpeg failed — fall through to webp fallback
+        // fall through to sharp
       } finally {
         await fs.remove(inp).catch(() => {});
         await fs.remove(out).catch(() => {});
       }
 
-      if (outBuf?.length) {
-        // Send as proper JPEG image
-        await sock.sendMessage(jid, {
-          image: outBuf,
-          caption: '✅ Sticker converted to image!',
-          mimetype: 'image/jpeg',
-        }, { quoted: msg });
-      } else {
-        // Fallback: send raw webp — at least the user gets the file
-        await sock.sendMessage(jid, {
-          image: buffer,
-          caption: '✅ Sticker converted to image!',
-          mimetype: 'image/webp',
-        }, { quoted: msg });
+      // ── Method 2: sharp (static WebP only, but always available) ─────────
+      if (!resultBuf) {
+        try {
+          resultBuf = await sharp(buffer)
+            .jpeg({ quality: 90 })
+            .toBuffer();
+        } catch (_) {}
       }
 
+      if (!resultBuf?.length) throw new Error('Conversion failed');
+
+      await sock.sendMessage(jid, {
+        image: resultBuf,
+        caption: `🖼️ *Sticker → Image*\n\n> 🤖 *AA MD Bot*`,
+        mimetype: 'image/jpeg',
+      }, { quoted: msg });
+      await react('✅');
+
     } catch (err) {
-      reply('❌ Conversion failed. Please try again in a few seconds.');
+      await react('❌');
+      reply(`❌ *Error:* ${err.message}\n\nMake sure you replied to a sticker.\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

@@ -1,15 +1,29 @@
 // ── Shared image upload helper ────────────────────────────────────────────────
 // Uploads a buffer to a public host and returns a URL.
 // Tries multiple hosts in order — first success wins.
+// tmpfiles.org confirmed working from Replit (200).
 
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// ── 1. tmpfiles.org (confirmed working from Replit, 24h) ─────────────────────
+async function tryTmpfiles(buffer, filename) {
+  const form = new FormData();
+  form.append('file', new Blob([buffer], { type: 'image/jpeg' }), filename);
+  const res = await fetch('https://tmpfiles.org/api/v1/upload', {
+    method: 'POST',
+    body: form,
+    signal: AbortSignal.timeout(25000),
+  });
+  const j = await res.json();
+  // Response: {"status":"success","data":{"url":"https://tmpfiles.org/XXXXX/filename"}}
+  let url = j?.data?.url;
+  if (url && url.startsWith('https://tmpfiles.org/')) {
+    // Convert to direct download URL
+    url = url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+    return url;
+  }
+  throw new Error('tmpfiles: ' + JSON.stringify(j));
+}
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMP = path.join(__dirname, '../temp');
-
-// ── 1. Catbox.moe (anonymous fileupload) ─────────────────────────────────────
+// ── 2. Catbox.moe (anonymous fileupload) ─────────────────────────────────────
 async function tryCatbox(buffer, filename) {
   const form = new FormData();
   form.append('reqtype', 'fileupload');
@@ -24,7 +38,7 @@ async function tryCatbox(buffer, filename) {
   throw new Error('Catbox: ' + text);
 }
 
-// ── 2. Litterbox (catbox temp, 1h) ───────────────────────────────────────────
+// ── 3. Litterbox (catbox temp, 1h) ───────────────────────────────────────────
 async function tryLitterbox(buffer, filename) {
   const form = new FormData();
   form.append('reqtype', 'fileupload');
@@ -38,23 +52,6 @@ async function tryLitterbox(buffer, filename) {
   const text = await res.text();
   if (text && text.startsWith('https') && !text.toLowerCase().includes('error')) return text.trim();
   throw new Error('Litterbox: ' + text);
-}
-
-// ── 3. ImgBB (no key — uses their public upload endpoint) ────────────────────
-async function tryImgBB(buffer, filename) {
-  // ImgBB free upload via base64
-  const base64 = buffer.toString('base64');
-  const form = new URLSearchParams();
-  form.append('image', base64);
-  const res = await fetch('https://api.imgbb.com/1/upload?expiration=600&key=2d9ffc9dc1e74f39b85e20d8f5dd8e73', {
-    method: 'POST',
-    body: form,
-    signal: AbortSignal.timeout(30000),
-  });
-  const j = await res.json();
-  const url = j?.data?.url;
-  if (url && url.startsWith('https')) return url;
-  throw new Error('ImgBB: ' + JSON.stringify(j?.error || 'unknown'));
 }
 
 // ── 4. Uguu.se (free anonymous, 48h) ─────────────────────────────────────────
@@ -73,15 +70,11 @@ async function tryUguu(buffer, filename) {
   throw new Error('Uguu: ' + JSON.stringify(j?.description || 'unknown'));
 }
 
-// ── 5. Write to temp and serve via local disk (last resort) ──────────────────
-// Not a public URL — only useful if APIs accept base64 directly.
-// This shouldn't be needed normally but ensures uploadToCatbox never throws.
-
 export async function uploadImage(buffer, filename = 'image.jpg') {
   const attempts = [
+    () => tryTmpfiles(buffer, filename),
     () => tryCatbox(buffer, filename),
     () => tryLitterbox(buffer, filename),
-    () => tryImgBB(buffer, filename),
     () => tryUguu(buffer, filename),
   ];
 

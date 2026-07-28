@@ -21,7 +21,8 @@ import { checkAntiGm } from '../plugins/admin/antigm.js';
 import { checkAntiScam } from '../plugins/admin/antiscam.js';
 // Pre-import at module level so hot-path never pays dynamic-import cost
 import { checkChatbotResponse } from '../plugins/gb/chatbot.js';
-import { chatAI, HINGLISH_SYSTEM } from './aiEngine.js';
+import { chatAI } from './aiEngine.js';
+import { CHATBOT_SYSTEM } from '../plugins/gb/chatbot.js';
 import { trackSentMessage } from './msgTracker.js';
 let _getAlertRegistry = null;
 import('../plugins/gb/onlinealert.js')
@@ -623,7 +624,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
           const autoAIEnabled = db.sessionSettings.getValue(sessionId, 'autoAI');
           if (autoAIEnabled && !autoReplyMsg) {
             try {
-              const aiReply = await chatAI(msg.key.remoteJid, msgText, HINGLISH_SYSTEM);
+              const aiReply = await chatAI(msg.key.remoteJid, msgText, CHATBOT_SYSTEM);
               if (aiReply) {
                 await sock.sendMessage(msg.key.remoteJid, { text: aiReply }).catch(() => {});
               }
