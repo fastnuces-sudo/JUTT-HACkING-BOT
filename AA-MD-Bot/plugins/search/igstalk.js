@@ -6,6 +6,7 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 
 function fmtNum(n) {
   if (n === undefined || n === null) return 'N/A';
+  if (typeof n === 'string') return n; // already formatted by a scraper
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
   return String(n);
@@ -31,7 +32,80 @@ async function tryInstagramApi(username) {
   return u;
 }
 
-// Method 2: Dumpor.com public scraper
+// Method 2: storiesig public API
+async function tryStoriesig(username) {
+  const { data } = await axios.get(
+    `https://storiesig.app/api/userinfo/${encodeURIComponent(username)}`,
+    { headers: { 'User-Agent': UA, 'Accept': 'application/json' }, timeout: 12000 }
+  );
+  if (!data?.user) throw new Error('no user');
+  const u = data.user;
+  return {
+    username: u.username || username,
+    fullname: u.full_name || username,
+    bio: u.biography || '—',
+    followers: fmtNum(u.edge_followed_by?.count ?? u.follower_count),
+    following: fmtNum(u.edge_follow?.count ?? u.following_count),
+    posts: fmtNum(u.edge_owner_to_timeline_media?.count ?? u.media_count),
+    is_private: u.is_private,
+    verified: u.is_verified,
+    profile_pic: u.profile_pic_url_hd || u.profile_pic_url,
+  };
+}
+
+// Method 3: Picuki public scraper
+async function tryPicuki(username) {
+  const { data } = await axios.get(
+    `https://www.picuki.com/profile/${encodeURIComponent(username)}`,
+    {
+      headers: { 'User-Agent': UA, 'Referer': 'https://www.picuki.com/' },
+      timeout: 15000,
+    }
+  );
+  const html = typeof data === 'string' ? data : '';
+  if (html.toLowerCase().includes('page not found') || html.length < 500) throw new Error('not found');
+  const followers = html.match(/followers[^<]*<span[^>]*>([\d.,KkMm]+)<\/span>/i)?.[1]
+                 || html.match(/<span[^>]*>([\d.,KkMm]+)<\/span>[^<]*followers/i)?.[1];
+  const following = html.match(/following[^<]*<span[^>]*>([\d.,KkMm]+)<\/span>/i)?.[1]
+                 || html.match(/<span[^>]*>([\d.,KkMm]+)<\/span>[^<]*following/i)?.[1];
+  const posts     = html.match(/posts[^<]*<span[^>]*>([\d.,KkMm]+)<\/span>/i)?.[1]
+                 || html.match(/<span[^>]*>([\d.,KkMm]+)<\/span>[^<]*posts/i)?.[1]
+                 || html.match(/(\d[\d,.]*)\s*posts?/i)?.[1];
+  const bio       = html.match(/<div[^>]*class="[^"]*profile-description[^"]*"[^>]*>([\s\S]{0,300}?)<\/div>/i)?.[1]?.replace(/<[^>]+>/g, '').trim();
+  const fullname  = html.match(/<h1[^>]*class="[^"]*profile-name[^"]*"[^>]*>([^<]+)<\/h1>/i)?.[1]?.trim()
+                 || html.match(/<h1[^>]*>([^<]{2,50})<\/h1>/i)?.[1]?.trim();
+  if (!followers && !posts) throw new Error('parse failed');
+  return {
+    username, fullname: fullname || username,
+    followers: followers || 'N/A', following: following || 'N/A',
+    posts: posts || 'N/A', bio: bio || '—', verified: false,
+    is_private: html.toLowerCase().includes('private account'),
+  };
+}
+
+// Method 4: Imginn.com public viewer
+async function tryImginn(username) {
+  const { data } = await axios.get(
+    `https://imginn.com/${encodeURIComponent(username)}/`,
+    { headers: { 'User-Agent': UA, 'Referer': 'https://imginn.com/' }, timeout: 15000 }
+  );
+  const html = typeof data === 'string' ? data : '';
+  const countsBlock = html.match(/class="counts"[^>]*>([\s\S]{0,500}?)<\/div>/i)?.[1] || '';
+  const followers = countsBlock.match(/([\d.,KkMm]+)\s*followers/i)?.[1];
+  const following = countsBlock.match(/([\d.,KkMm]+)\s*following/i)?.[1];
+  const posts = countsBlock.match(/([\d.,KkMm]+)\s*posts/i)?.[1];
+  const bio = html.match(/<p[^>]*class="[^"]*desc[^"]*"[^>]*>([^<]{5,})<\/p>/i)?.[1];
+  const fullname = html.match(/<h1[^>]*class="[^"]*fullname[^"]*"[^>]*>([^<]+)<\/h1>/i)?.[1];
+  if (!followers && !posts) throw new Error('parse failed');
+  return {
+    username, fullname: fullname?.trim() || username,
+    followers: followers || 'N/A', following: following || 'N/A',
+    posts: posts || 'N/A', bio: bio?.trim() || '—', verified: false,
+    is_private: html.toLowerCase().includes('private'),
+  };
+}
+
+// Method 5: Dumpor.com public scraper
 async function tryDumpor(username) {
   const { data } = await axios.get(
     `https://dumpor.com/v/${encodeURIComponent(username)}`,
@@ -51,24 +125,27 @@ async function tryDumpor(username) {
   };
 }
 
-// Method 3: Imginn.com public viewer
-async function tryImginn(username) {
+// Method 6: Gramhir.com public viewer
+async function tryGramhir(username) {
   const { data } = await axios.get(
-    `https://imginn.com/${encodeURIComponent(username)}/`,
-    { headers: { 'User-Agent': UA, 'Referer': 'https://imginn.com/' }, timeout: 15000 }
+    `https://gramhir.com/profile/${encodeURIComponent(username)}/`,
+    { headers: { 'User-Agent': UA, 'Referer': 'https://gramhir.com/' }, timeout: 15000 }
   );
   const html = typeof data === 'string' ? data : '';
-  const countsBlock = html.match(/class="counts"[^>]*>([\s\S]{0,500}?)<\/div>/i)?.[1] || '';
-  const followers = countsBlock.match(/([\d.,KkMm]+)\s*followers/i)?.[1];
-  const following = countsBlock.match(/([\d.,KkMm]+)\s*following/i)?.[1];
-  const posts = countsBlock.match(/([\d.,KkMm]+)\s*posts/i)?.[1];
-  const bio = html.match(/<p[^>]*class="[^"]*desc[^"]*"[^>]*>([^<]{5,})<\/p>/i)?.[1];
-  const fullname = html.match(/<h1[^>]*class="[^"]*fullname[^"]*"[^>]*>([^<]+)<\/h1>/i)?.[1];
+  if (html.length < 500) throw new Error('empty');
+  const followers = html.match(/followers[^\d<]{0,20}([\d.,KkMm]+)/i)?.[1]
+                 || html.match(/([\d.,KkMm]+)\s*followers/i)?.[1];
+  const following = html.match(/following[^\d<]{0,20}([\d.,KkMm]+)/i)?.[1]
+                 || html.match(/([\d.,KkMm]+)\s*following/i)?.[1];
+  const posts     = html.match(/posts?[^\d<]{0,20}([\d.,KkMm]+)/i)?.[1]
+                 || html.match(/([\d.,KkMm]+)\s*posts?/i)?.[1];
+  const bio       = html.match(/<p[^>]*class="[^"]*biography[^"]*"[^>]*>([\s\S]{0,300}?)<\/p>/i)?.[1]?.replace(/<[^>]+>/g, '').trim()
+                 || html.match(/<meta[^>]*name="description"[^>]*content="([^"]{5,200})"/i)?.[1];
   if (!followers && !posts) throw new Error('parse failed');
   return {
-    username, fullname: fullname?.trim() || username,
+    username, fullname: username,
     followers: followers || 'N/A', following: following || 'N/A',
-    posts: posts || 'N/A', bio: bio?.trim() || '—', verified: false,
+    posts: posts || 'N/A', bio: bio || '—', verified: false,
     is_private: html.toLowerCase().includes('private'),
   };
 }
@@ -99,7 +176,6 @@ export default {
         `📸 *Instagram Profile Lookup*\n\n` +
         `*Usage:* ${prefix}igstalk <username>\n` +
         `*Examples:* ${prefix}igstalk cristiano\n\n` +
-        `⚠️ _Instagram heavily rate-limits lookups from shared IPs._\n\n` +
         `> 📸 *AA MD Bot*`
       );
     }
@@ -110,24 +186,25 @@ export default {
     let profile = null;
     let profilePic = null;
 
-    // Try official API first
-    try {
-      const u = await tryInstagramApi(username);
-      profile = formatApiUser(u, username);
-      profilePic = profile.profile_pic;
-    } catch {}
+    // Try all methods in sequence, stop on first success
+    const methods = [
+      async () => {
+        const u = await tryInstagramApi(username);
+        const p = formatApiUser(u, username);
+        profilePic = p.profile_pic;
+        return p;
+      },
+      () => tryStoriesig(username).then(p => { profilePic = p.profile_pic; return p; }),
+      () => tryPicuki(username),
+      () => tryImginn(username),
+      () => tryDumpor(username),
+      () => tryGramhir(username),
+    ];
 
-    // Try Dumpor
-    if (!profile) {
+    for (const method of methods) {
       try {
-        profile = await tryDumpor(username);
-      } catch {}
-    }
-
-    // Try Imginn
-    if (!profile) {
-      try {
-        profile = await tryImginn(username);
+        profile = await method();
+        if (profile) break;
       } catch {}
     }
 
@@ -135,8 +212,8 @@ export default {
       await react('❌');
       return reply(
         `❌ *Could not fetch @${username}*\n\n` +
-        `Instagram heavily blocks lookups from shared server IPs.\n` +
-        `Try searching directly at:\n` +
+        `All lookup methods failed — Instagram and its viewer sites are blocking this server's IP.\n\n` +
+        `Try directly:\n` +
         `🔗 https://instagram.com/${username}\n\n` +
         `> 📸 *AA MD Bot*`
       );

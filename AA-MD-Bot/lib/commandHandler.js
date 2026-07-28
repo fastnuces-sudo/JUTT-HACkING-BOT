@@ -57,21 +57,9 @@ function getBannerThumb() {
   return _bannerThumb;
 }
 
-// Build contextInfo — always includes newsletter "View Channel" button.
-// Uses global (set at startup / .setnewsletter) with config as hard fallback.
+// Channel context disabled — removes "View Channel" and "Forwarded many times" tags.
 function buildChannelCtx() {
-  const newsletterJid  = global._AA_NEWSLETTER_JID  || config.newsletterJid;
-  const newsletterName = global._AA_NEWSLETTER_NAME || config.newsletterName || CHANNEL_NAME;
-  if (!newsletterJid) return null;
-  return {
-    forwardingScore: 999,
-    isForwarded: true,
-    forwardedNewsletterMessageInfo: {
-      newsletterJid,
-      newsletterName,
-      serverMessageId: Math.floor(Math.random() * 99999) + 1,
-    },
-  };
+  return null;
 }
 
 export function isOwner(jid) {
