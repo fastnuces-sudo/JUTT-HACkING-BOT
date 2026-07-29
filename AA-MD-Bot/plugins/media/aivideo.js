@@ -3,7 +3,7 @@
 // Developer: Ahsan Ali | AA Mods
 //
 // Commands:
-//   .aivideo <prompt>   — text se AI video banao
+//   .aivideo <prompt>   — Generate AI video from text
 //   .aivid <prompt>     — short alias
 //   .videogen <prompt>  — alternate alias
 //
@@ -92,7 +92,7 @@ async function tryAnimateDiff(prompt) {
   const app = await Client.connect("ByteDance/AnimateDiff-Lightning");
   const result = await app.predict("/generate_image", {
     prompt,
-    base: "epiCRealism",
+    base: "epiCrealism",
     motion: "",
     step: 4,
   });
@@ -150,7 +150,7 @@ const MODELS = [
 export default {
   command: "aivideo",
   alias: ["aivid", "videogen", "makevideo"],
-  description: "Text se AI video banao — 4 model fallback chain",
+  description: "Generate AI video from text — 4 model fallback chain",
   category: "media",
   usage: ".aivideo <your prompt in English>",
 
@@ -158,16 +158,16 @@ export default {
     let interval;
     let loadingMsg;
 
-    // Sab kuch ek hi try/catch mein wrap kiya hai taake
-    // koi bhi unexpected error silently poora function crash na kare
-    // aur hamesha user ko koi na koi response mile.
+    // Everything is wrapped in a single try/catch to ensure
+    // any unexpected error doesn't silently crash the entire function
+    // and the user always gets some response.
     try {
       const prompt = (text || "").trim();
 
       if (!prompt) {
         await reply(
           `🎬 *AI Video Generator*\n\n` +
-            `_Apna idea likhoo — AI video bana dega!_\n\n` +
+            `_Write your idea — AI will create a video!_\n\n` +
             `*Usage:*\n` +
             `▸ *.aivideo* <English prompt>\n\n` +
             `*Examples:*\n` +
@@ -199,7 +199,7 @@ export default {
         `📝 *Prompt:* _${prompt.slice(0, 80)}${prompt.length > 80 ? "..." : ""}_\n` +
         `🤖 *Model:* ${modelName}\n\n` +
         `${FRAMES[frame]}\n\n` +
-        `_Please wait, 1-4 minute lag sakte hain..._${FOOTER}`;
+        `_Please wait, may take 1-4 minutes..._${FOOTER}`;
 
       try {
         loadingMsg = await sock.sendMessage(
@@ -341,7 +341,7 @@ export default {
         try {
           await sock.sendMessage(jid, {
             edit: loadingMsg?.key,
-            text: `❌ *AI Video Failed*\n\nSab models fail ho gaye.\n\n_${lastError?.message?.slice(0, 100) || "Unknown error"}_${FOOTER}`,
+            text: `❌ *AI Video Failed*\n\nAll models failed.\n\n_${lastError?.message?.slice(0, 100) || "Unknown error"}_${FOOTER}`,
           });
         } catch {
           /* ignore */
@@ -356,20 +356,20 @@ export default {
           `❌ *AI Video Generation Failed*\n\n` +
             `📝 Prompt: _${prompt}_\n\n` +
             `💡 *Tips:*\n` +
-            `▸ Prompt English mein likho\n` +
-            `▸ Simple, clear description dou\n` +
-            `▸ Thodi der baad dobara try karo\n` +
-            `▸ AI servers kabhi kabhi busy hote hain${FOOTER}`,
+            `▸ Write your prompt in English\n` +
+            `▸ Give a simple, clear description\n` +
+            `▸ Try again after some time\n` +
+            `▸ AI servers might be busy sometimes${FOOTER}`,
         );
       }
     } catch (fatalErr) {
-      // Yeh naya safety net hai — pehle wale code mein ye nahi tha,
-      // isliye koi bhi unexpected crash "no response" ban jata tha.
+      // This is a new safety net — not present in the previous code,
+      // so any unexpected crash would result in "no response".
       console.error("[aivideo] FATAL ERROR:", fatalErr);
       try {
         await reply(
           `❌ *Unexpected Error*\n\n_${fatalErr.message?.slice(0, 150) || "Unknown error"}_\n\n` +
-            `Console log check karein ya dobara try karein.${FOOTER}`,
+            `Check console log or try again.${FOOTER}`,
         );
       } catch {
         /* ignore */
