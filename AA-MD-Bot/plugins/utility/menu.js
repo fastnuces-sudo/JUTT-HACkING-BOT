@@ -297,6 +297,9 @@ export default {
       menu += `│  ▸ *${pref}ai <question>*\n`;
       menu += `│     _Powerful AI chat — multi-model, remembers context_\n`;
       menu += `│\n`;
+      menu += `│  ▸ *${pref}aivideo <prompt>*\n`;
+      menu += `│     _Text se AI video banao (free, no key needed)_\n`;
+      menu += `│\n`;
       menu += `│  ▸ *${pref}chatbot on/off*\n`;
       menu += `│     _Group chatbot — reply when @mentioned (per group)_\n`;
       menu += `│\n`;

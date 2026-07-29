@@ -1,7 +1,7 @@
 // ============================================
-// AA MD Bot - YouTube Downloader (v3)
+// AA MD Bot - YouTube Downloader (v3 - FAST)
 // Flow: command → INSTANT info card (thumbnail+title+channel+duration+views)
-//       → tries ALL provider links until one actually downloads
+//       → races ALL provider links in parallel, first that actually downloads wins
 //       → sends plain audio/video (no ad-card / no attached link)
 // ============================================
 
@@ -47,6 +47,25 @@ function deepFind(obj, regex, depth = 0, seen = new Set()) {
   return undefined;
 }
 
+// ── Race helper: run all promises in parallel, return the FIRST truthy result.
+// Faster than sequential try-one-then-next-then-next.
+function firstSuccess(promises) {
+  return new Promise((resolve) => {
+    let pending = promises.length;
+    if (!pending) return resolve(null);
+    for (const p of promises) {
+      Promise.resolve(p)
+        .then((v) => {
+          if (v) resolve(v);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (--pending === 0) resolve(null);
+        });
+    }
+  });
+}
+
 // ── Buffer downloader with two header strategies (some CDNs want a browser
 // UA, some block anything that looks like a browser — so we try both) ────────
 async function tryDownload(url, timeout) {
@@ -88,14 +107,21 @@ async function tryDownload(url, timeout) {
   return null;
 }
 
-// Try a list of {url, title, filename} candidates in order until one downloads
+// ── Race ALL candidates in parallel — first valid buffer wins (huge speed win
+// over trying them one at a time) ─────────────────────────────────────────────
 async function downloadFirstWorking(candidates, timeout, minSize) {
-  for (const c of candidates) {
-    if (!c?.url) continue;
-    const buf = await tryDownload(c.url, timeout);
-    if (buf && buf.length >= minSize) return { buf, meta: c };
-  }
-  return null;
+  const valid = candidates.filter((c) => c?.url);
+  if (!valid.length) return null;
+
+  const result = await firstSuccess(
+    valid.map(async (c) => {
+      const buf = await tryDownload(c.url, timeout);
+      if (buf && buf.length >= minSize) return { buf, meta: c };
+      return null;
+    }),
+  );
+
+  return result;
 }
 
 // ── Format helpers ─────────────────────────────────────────────────────────────
@@ -239,24 +265,25 @@ async function oEmbedInfo(ytUrl) {
 }
 
 // ── Resolve query → { ytUrl, meta } (search-by-name OR direct link) ───────────
+// oEmbed + search now run IN PARALLEL for direct links instead of sequentially.
 async function resolveMeta(query) {
   const directUrl = extractUrl(query);
 
   if (directUrl) {
-    let meta = await oEmbedInfo(directUrl);
-    // merge in duration/views from the search API if we can match it
-    try {
-      const found = await searchYT(query);
-      if (found) {
-        meta = meta || {};
-        meta.title = meta.title || found.title;
-        meta.author = meta.author || found.author;
-        meta.thumbnail = meta.thumbnail || found.thumbnail;
-        meta.duration = meta.duration || found.duration;
-        meta.views = meta.views || found.views;
-      }
-    } catch {}
-    if (!meta)
+    const [oEmbedResult, found] = await Promise.all([
+      oEmbedInfo(directUrl).catch(() => null),
+      searchYT(query).catch(() => null),
+    ]);
+
+    let meta = oEmbedResult || {};
+    if (found) {
+      meta.title = meta.title || found.title;
+      meta.author = meta.author || found.author;
+      meta.thumbnail = meta.thumbnail || found.thumbnail;
+      meta.duration = meta.duration || found.duration;
+      meta.views = meta.views || found.views;
+    }
+    if (!meta.title && !meta.author && !meta.thumbnail) {
       meta = {
         title: query,
         author: "",
@@ -264,6 +291,7 @@ async function resolveMeta(query) {
         views: "",
         thumbnail: "",
       };
+    }
     return { ytUrl: directUrl, meta };
   }
 
@@ -275,124 +303,142 @@ async function resolveMeta(query) {
   return { ytUrl: found.url, meta: found };
 }
 
-// ── Audio provider candidates (all 3, in priority order) ──────────────────────
+// ── Audio provider candidates (all 3, fetched IN PARALLEL) ───────────────────
 async function getAudioCandidates(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
-  const out = [];
 
-  try {
-    const { data: d } = await axios.get(
-      `https://apis.davidcyriltech.my.id/download/ytmp3?url=${enc}`,
-      { timeout: 30000 },
-    );
-    const r = d?.result || d;
-    const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
-    if (typeof url === "string" && url.startsWith("http"))
-      out.push({
-        url,
-        title: r?.title || d?.title || "",
-        filename: r?.filename || "audio.mp3",
-      });
-  } catch {}
+  const p1 = axios
+    .get(`https://apis.davidcyriltech.my.id/download/ytmp3?url=${enc}`, {
+      timeout: 30000,
+    })
+    .then(({ data: d }) => {
+      const r = d?.result || d;
+      const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
+      if (typeof url === "string" && url.startsWith("http"))
+        return {
+          url,
+          title: r?.title || d?.title || "",
+          filename: r?.filename || "audio.mp3",
+        };
+      return null;
+    })
+    .catch(() => null);
 
-  try {
-    const { data: d } = await axios.get(
-      `https://api-abztech.zone.id/download/ytdlv3?url=${enc}`,
-      { timeout: 30000 },
-    );
-    const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
-    if (
-      d?.status !== false &&
-      typeof url === "string" &&
-      url.startsWith("http")
-    )
-      out.push({
-        url,
-        title: d?.title || "",
-        filename: d?.filename || "audio.mp3",
-      });
-  } catch {}
+  const p2 = axios
+    .get(`https://api-abztech.zone.id/download/ytdlv3?url=${enc}`, {
+      timeout: 30000,
+    })
+    .then(({ data: d }) => {
+      const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
+      if (
+        d?.status !== false &&
+        typeof url === "string" &&
+        url.startsWith("http")
+      )
+        return {
+          url,
+          title: d?.title || "",
+          filename: d?.filename || "audio.mp3",
+        };
+      return null;
+    })
+    .catch(() => null);
 
-  try {
-    const { data: d } = await axios.get(
-      `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp3`,
-      { timeout: 30000 },
-    );
-    const url =
-      d?.downloadURL ||
-      d?.download_url ||
-      d?.url ||
-      d?.result?.url ||
-      d?.result?.download_url;
-    if (typeof url === "string" && url.startsWith("http"))
-      out.push({
-        url,
-        title: d?.title || "",
-        filename: d?.filename || "audio.mp3",
-      });
-  } catch {}
+  const p3 = axios
+    .get(`https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp3`, {
+      timeout: 30000,
+    })
+    .then(({ data: d }) => {
+      const url =
+        d?.downloadURL ||
+        d?.download_url ||
+        d?.url ||
+        d?.result?.url ||
+        d?.result?.download_url;
+      if (typeof url === "string" && url.startsWith("http"))
+        return {
+          url,
+          title: d?.title || "",
+          filename: d?.filename || "audio.mp3",
+        };
+      return null;
+    })
+    .catch(() => null);
 
-  return out;
+  const settled = await Promise.allSettled([p1, p2, p3]);
+  return settled
+    .map((s) => (s.status === "fulfilled" ? s.value : null))
+    .filter(Boolean);
 }
 
-// ── Video provider candidates (eliteprotech FIRST, then others) ──────────────
+// ── Video provider candidates (eliteprotech first-priority, all fetched IN PARALLEL) ─
 async function getVideoCandidates(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
-  const out = [];
 
-  try {
-    const { data: d } = await axios.get(
-      `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp4`,
-      { timeout: 30000 },
-    );
-    const url =
-      d?.downloadURL ||
-      d?.download_url ||
-      d?.url ||
-      d?.result?.url ||
-      d?.result?.download_url;
-    if (typeof url === "string" && url.startsWith("http"))
-      out.push({
-        url,
-        title: d?.title || "",
-        filename: d?.filename || "video.mp4",
-      });
-  } catch {}
+  const pElite = axios
+    .get(`https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp4`, {
+      timeout: 30000,
+    })
+    .then(({ data: d }) => {
+      const url =
+        d?.downloadURL ||
+        d?.download_url ||
+        d?.url ||
+        d?.result?.url ||
+        d?.result?.download_url;
+      if (typeof url === "string" && url.startsWith("http"))
+        return {
+          url,
+          title: d?.title || "",
+          filename: d?.filename || "video.mp4",
+        };
+      return null;
+    })
+    .catch(() => null);
 
-  try {
-    const { data: d } = await axios.get(
-      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${enc}`,
-      { timeout: 30000 },
-    );
-    const r = d?.result || d;
-    const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
-    if (typeof url === "string" && url.startsWith("http"))
-      out.push({
-        url,
-        title: r?.title || d?.title || "",
-        filename: r?.filename || "video.mp4",
-      });
-  } catch {}
+  const pDavid = axios
+    .get(`https://apis.davidcyriltech.my.id/download/ytmp4?url=${enc}`, {
+      timeout: 30000,
+    })
+    .then(({ data: d }) => {
+      const r = d?.result || d;
+      const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
+      if (typeof url === "string" && url.startsWith("http"))
+        return {
+          url,
+          title: r?.title || d?.title || "",
+          filename: r?.filename || "video.mp4",
+        };
+      return null;
+    })
+    .catch(() => null);
 
-  try {
-    const { data: d } = await axios.get(
-      `https://api-abztech.zone.id/download/ytdl4?url=${enc}`,
-      { timeout: 30000 },
-    );
-    const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
-    if (
-      d?.status !== false &&
-      typeof url === "string" &&
-      url.startsWith("http")
-    )
-      out.push({
-        url,
-        title: d?.title || "",
-        filename: d?.filename || "video.mp4",
-      });
-  } catch {}
+  const pAbz = axios
+    .get(`https://api-abztech.zone.id/download/ytdl4?url=${enc}`, {
+      timeout: 30000,
+    })
+    .then(({ data: d }) => {
+      const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
+      if (
+        d?.status !== false &&
+        typeof url === "string" &&
+        url.startsWith("http")
+      )
+        return {
+          url,
+          title: d?.title || "",
+          filename: d?.filename || "video.mp4",
+        };
+      return null;
+    })
+    .catch(() => null);
 
-  return out;
+  // Order preserved: eliteprotech first, david second, abztech third —
+  // but all three network calls already ran in parallel above.
+  const settled = await Promise.allSettled([pElite, pDavid, pAbz]);
+  return settled
+    .map((s) => (s.status === "fulfilled" ? s.value : null))
+    .filter(Boolean);
 }
 
 // ── Quick INFO CARD (sent within 1-2 sec, before any download starts) ─────────
@@ -518,7 +564,7 @@ export default {
         isVideoCmd ? "video" : "audio",
       );
 
-      // 3) Get ALL provider links (not just the first)
+      // 3) Get ALL provider links — fetched in parallel now
       const candidates = isVideoCmd
         ? await getVideoCandidates(ytUrl)
         : await getAudioCandidates(ytUrl);
@@ -534,7 +580,7 @@ export default {
       }
       if (candidates[0].title) meta.title = meta.title || candidates[0].title;
 
-      // 4) Try downloading from each candidate until one actually works
+      // 4) Race downloads from ALL candidates in parallel — first valid buffer wins
       const timeout = isVideoCmd ? 120000 : 90000;
       const minSize = isVideoCmd ? 50000 : 10000;
       const result = await downloadFirstWorking(candidates, timeout, minSize);
