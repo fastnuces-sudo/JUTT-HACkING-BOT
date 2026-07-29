@@ -108,22 +108,23 @@ function buildTimes(count) {
   return times;
 }
 
-// ── SVG tail paths ────────────────────────────────────────────────────────────
-// Sent: tail pokes out to the BOTTOM-RIGHT of the bubble
+// ── SVG tail paths — WhatsApp-authentic pointed style ─────────────────────────
+// Sent: pointed tail at bottom-right
 function sentTail(bx, by, bw, bh, color) {
-  const x1 = bx + bw;
-  const y1 = by + bh - TAIL_H;
-  const x2 = bx + bw + TAIL_W;
-  const y2 = by + bh;
-  return `<path d="M${x1},${y1} Q${x2 - 1},${y1 + 4} ${x2},${y2} L${x1},${y2}Z" fill="${color}"/>`;
+  const x1 = bx + bw;           // right edge of bubble
+  const y1 = by + bh - TAIL_H;  // tail start (upper anchor on bubble edge)
+  const x2 = bx + bw + TAIL_W;  // tip of tail
+  const y2 = by + bh;           // bottom of bubble
+  // Straight-line triangle that merges cleanly with the rounded bubble corner
+  return `<path d="M${x1},${y1} L${x2},${y2} L${x1},${y2}Z" fill="${color}"/>`;
 }
-// Received: tail pokes out to the BOTTOM-LEFT
+// Received: pointed tail at bottom-left
 function recvTail(bx, by, bh, color) {
-  const x1 = bx;
-  const y1 = by + bh - TAIL_H;
-  const x2 = bx - TAIL_W;
-  const y2 = by + bh;
-  return `<path d="M${x1},${y1} Q${x2 + 1},${y1 + 4} ${x2},${y2} L${x1},${y2}Z" fill="${color}"/>`;
+  const x1 = bx;                // left edge of bubble
+  const y1 = by + bh - TAIL_H;  // tail start
+  const x2 = bx - TAIL_W;       // tip of tail
+  const y2 = by + bh;           // bottom
+  return `<path d="M${x1},${y1} L${x2},${y2} L${x1},${y2}Z" fill="${color}"/>`;
 }
 
 // ── Double-tick SVG ───────────────────────────────────────────────────────────
@@ -136,8 +137,14 @@ function ticks(x, y, color) {
   return t1 + t2;
 }
 
+// Current time for status bar
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
 // ── Build complete SVG ────────────────────────────────────────────────────────
-function buildSVG(contactName, messages, readAll) {
+function buildSVG(contactName, messages, readAll, statusText) {
   const times = buildTimes(messages.length);
 
   // ── Pre-compute bubble dimensions ────────────────────────────────────────
@@ -162,62 +169,75 @@ function buildSVG(contactName, messages, readAll) {
   contentH += 16;    // bottom padding
   const totalH = SB_H + HDR_H + contentH + INPUT_H;
 
+  const sbTime = nowTime();
+
   // ── Start SVG ─────────────────────────────────────────────────────────────
   let S = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${totalH}">`;
+  S += `<defs>`;
+  // WhatsApp chat background pattern — tiny repeating diamonds
+  S += `<pattern id="waBg" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">`;
+  S += `<rect width="22" height="22" fill="${C.chatBg}"/>`;
+  S += `<path d="M11,2 L20,11 L11,20 L2,11 Z" fill="none" stroke="#D7CFC7" stroke-width="0.6" opacity="0.55"/>`;
+  S += `</pattern>`;
+  S += `</defs>`;
 
-  // Chat background (full canvas)
-  S += `<rect width="${W}" height="${totalH}" fill="${C.chatBg}"/>`;
+  // Chat background with wallpaper pattern
+  S += `<rect width="${W}" height="${totalH}" fill="url(#waBg)"/>`;
 
   // ── Status bar ────────────────────────────────────────────────────────────
   S += `<rect x="0" y="0" width="${W}" height="${SB_H}" fill="${C.statusBg}"/>`;
-  S += `<text x="14" y="18" font-family="Liberation Sans,Arial,sans-serif" font-size="13" font-weight="bold" fill="white">9:41</text>`;
-  // Signal bars (simple rectangles)
-  S += `<rect x="${W - 50}" y="8" width="3" height="10" rx="1" fill="white" opacity="0.5"/>`;
-  S += `<rect x="${W - 45}" y="6" width="3" height="12" rx="1" fill="white" opacity="0.7"/>`;
-  S += `<rect x="${W - 40}" y="4" width="3" height="14" rx="1" fill="white"/>`;
-  S += `<rect x="${W - 35}" y="3" width="3" height="15" rx="1" fill="white"/>`;
+  S += `<text x="14" y="18" font-family="Arial,Liberation Sans,sans-serif" font-size="12" font-weight="bold" fill="white">${esc(sbTime)}</text>`;
+  // WiFi icon
+  S += `<path d="M${W-54},${13} Q${W-50},${9} ${W-46},${13}" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" opacity="0.6"/>`;
+  S += `<path d="M${W-57},${10} Q${W-50},${4} ${W-43},${10}" fill="none" stroke="white" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/>`;
+  S += `<circle cx="${W-50}" cy="${15}" r="1.5" fill="white"/>`;
+  // Signal bars
+  S += `<rect x="${W - 38}" y="9" width="3" height="9" rx="1" fill="white" opacity="0.5"/>`;
+  S += `<rect x="${W - 33}" y="7" width="3" height="11" rx="1" fill="white" opacity="0.7"/>`;
+  S += `<rect x="${W - 28}" y="5" width="3" height="13" rx="1" fill="white"/>`;
   // Battery
-  S += `<rect x="${W - 28}" y="7" width="18" height="11" rx="2" fill="none" stroke="white" stroke-width="1.5"/>`;
-  S += `<rect x="${W - 10}" y="10" width="3" height="5" rx="1" fill="white"/>`;
-  S += `<rect x="${W - 27}" y="8" width="15" height="9" rx="1" fill="white"/>`;
+  S += `<rect x="${W - 22}" y="7" width="16" height="10" rx="2" fill="none" stroke="white" stroke-width="1.4"/>`;
+  S += `<rect x="${W - 7}" y="10" width="2" height="4" rx="0.5" fill="white"/>`;
+  S += `<rect x="${W - 21}" y="8" width="13" height="8" rx="1" fill="white"/>`;
 
   // ── Header ────────────────────────────────────────────────────────────────
   const hY = SB_H;
   S += `<rect x="0" y="${hY}" width="${W}" height="${HDR_H}" fill="${C.headerBg}"/>`;
+  // subtle bottom shadow on header
+  S += `<rect x="0" y="${hY + HDR_H - 1}" width="${W}" height="1" fill="rgba(0,0,0,0.15)"/>`;
 
-  // Back chevron
-  S += `<polyline points="22,${hY + 22} 14,${hY + 31} 22,${hY + 40}" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  // Back chevron + unread badge
+  S += `<polyline points="26,${hY + 20} 17,${hY + 31} 26,${hY + 42}" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
 
-  // Avatar circle (32 px radius)
-  const avCX = 60, avCY = hY + HDR_H / 2;
+  // Avatar circle
+  const avCX = 58, avCY = hY + HDR_H / 2;
   const avColor = avatarColor(contactName);
-  S += `<circle cx="${avCX}" cy="${avCY}" r="22" fill="${avColor}"/>`;
-  S += `<text x="${avCX}" y="${avCY + 7}" font-family="Liberation Sans,Arial,sans-serif" font-size="19" font-weight="bold" fill="white" text-anchor="middle">${esc(contactName.charAt(0).toUpperCase())}</text>`;
+  S += `<circle cx="${avCX}" cy="${avCY}" r="21" fill="${avColor}"/>`;
+  S += `<text x="${avCX}" y="${avCY + 7}" font-family="Arial,Liberation Sans,sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">${esc(contactName.charAt(0).toUpperCase())}</text>`;
 
   // Contact name
-  S += `<text x="91" y="${hY + 31}" font-family="Liberation Sans,Arial,sans-serif" font-size="16" font-weight="bold" fill="white">${esc(contactName)}</text>`;
-  // "online" subtitle
-  S += `<text x="91" y="${hY + 49}" font-family="Liberation Sans,Arial,sans-serif" font-size="12.5" fill="${C.online}">online</text>`;
+  S += `<text x="88" y="${hY + 30}" font-family="Arial,Liberation Sans,sans-serif" font-size="15.5" font-weight="bold" fill="white">${esc(contactName)}</text>`;
+  // Status subtitle
+  const subLabel = statusText || 'online';
+  S += `<text x="88" y="${hY + 48}" font-family="Arial,Liberation Sans,sans-serif" font-size="12" fill="${C.online}">${esc(subLabel)}</text>`;
 
   // Right icons: video call, phone call, menu dots
-  // Video icon (simple camera shape)
-  S += `<rect x="${W - 108}" y="${hY + 22}" width="16" height="12" rx="2" fill="none" stroke="white" stroke-width="1.8"/>`;
-  S += `<polyline points="${W - 92},${hY + 26} ${W - 86},${hY + 23} ${W - 86},${hY + 36} ${W - 92},${hY + 33}" fill="white"/>`;
-
-  // Phone icon
-  const px = W - 68, py = hY + 20;
-  S += `<path d="M${px + 2},${py + 2} C${px + 2},${py + 1} ${px + 4},${py} ${px + 6},${py + 1} L${px + 9},${py + 4} C${px + 10},${py + 5} ${px + 10},${py + 6} ${px + 9},${py + 7} L${px + 8},${py + 8} C${px + 12},${py + 12} ${px + 13},${py + 13} ${px + 14},${py + 12} L${px + 17},${py + 11} C${px + 18},${py + 10} ${px + 19},${py + 10} ${px + 20},${py + 11} L${px + 22},${py + 15} C${px + 23},${py + 16} ${px + 22},${py + 18} ${px + 21},${py + 18} C${px + 14},${py + 22} ${px + 4},${py + 14} ${px},${py + 8} C${px - 1},${py + 5} ${px + 1},${py + 3} ${px + 2},${py + 2}Z" fill="white" opacity="0.9"/>`;
-
+  // Video icon
+  S += `<rect x="${W - 112}" y="${hY + 22}" width="15" height="11" rx="2" fill="none" stroke="white" stroke-width="1.7"/>`;
+  S += `<polyline points="${W - 97},${hY + 25} ${W - 92},${hY + 22} ${W - 92},${hY + 34} ${W - 97},${hY + 31}" fill="white"/>`;
+  // Phone icon (simple circle-based)
+  S += `<text x="${W - 74}" y="${hY + 41}" font-family="Arial,sans-serif" font-size="18" fill="white">📞</text>`;
   // Three dots (menu)
-  const mx = W - 20;
-  S += `<circle cx="${mx}" cy="${hY + 24}" r="2" fill="white"/>`;
+  const mx = W - 18;
+  S += `<circle cx="${mx}" cy="${hY + 23}" r="2" fill="white"/>`;
   S += `<circle cx="${mx}" cy="${hY + 31}" r="2" fill="white"/>`;
-  S += `<circle cx="${mx}" cy="${hY + 38}" r="2" fill="white"/>`;
+  S += `<circle cx="${mx}" cy="${hY + 39}" r="2" fill="white"/>`;
 
   // ── Date separator ────────────────────────────────────────────────────────
   const dateY = CHAT_TOP + 10;
-  S += `<rect x="${(W - 60) / 2}" y="${dateY}" width="60" height="20" rx="10" fill="${C.dateBg}"/>`;
-  S += `<text x="${W / 2}" y="${dateY + 14}" font-family="Liberation Sans,Arial,sans-serif" font-size="11.5" fill="${C.dateText}" text-anchor="middle">Today</text>`;
+  const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  S += `<rect x="${(W - 80) / 2}" y="${dateY}" width="80" height="20" rx="10" fill="${C.dateBg}" opacity="0.92"/>`;
+  S += `<text x="${W / 2}" y="${dateY + 14}" font-family="Arial,Liberation Sans,sans-serif" font-size="11" fill="${C.dateText}" text-anchor="middle">${esc(today)}</text>`;
 
   // ── Messages ──────────────────────────────────────────────────────────────
   let msgY = CHAT_TOP + 46;
@@ -321,9 +341,12 @@ export default {
       `*Keywords:*\n` +
       `▸ \`them:\` or \`they:\` — their message (left, white bubble)\n` +
       `▸ \`me:\` — your message (right, green bubble)\n` +
+      `▸ \`status:online\` — contact status (default: online)\n` +
+      `▸ \`status:typing...\` — shows typing status\n` +
+      `▸ \`status:last seen today\` — last seen text\n` +
       `▸ Add \`| read\` anywhere → blue double ticks\n\n` +
       `*Example:*\n` +
-      `\`${prefix}fakechat Ahmed | them:Assalamualaikum | me:Walikumsalam! | them:Kya haal ha? | me:Alhamdulillah | read\`\n\n` +
+      `\`${prefix}fakechat Ahmed | them:Assalamualaikum | me:Walikumsalam! | them:Kya haal ha? | me:Alhamdulillah | read | status:online\`\n\n` +
       `> 🤖 *AA MD Bot*`
     );
 
@@ -336,15 +359,17 @@ export default {
     if (!contactName) return reply(`❌ Contact name required.\n\n> 🤖 *AA MD Bot*`);
 
     let readAll = false;
+    let statusText = null;
     const messages = [];
 
     for (const p of parts.slice(1)) {
-      if (p.toLowerCase() === 'read') { readAll = true; continue; }
       const lp = p.toLowerCase();
-      if (lp.startsWith('me:'))            messages.push({ who: 'me',   text: p.slice(3).trim(), read: false });
-      else if (lp.startsWith('them:'))     messages.push({ who: 'them', text: p.slice(5).trim() });
-      else if (lp.startsWith('they:'))     messages.push({ who: 'them', text: p.slice(5).trim() });
-      else                                 messages.push({ who: 'them', text: p });
+      if (lp === 'read') { readAll = true; continue; }
+      if (lp.startsWith('status:')) { statusText = p.slice(7).trim(); continue; }
+      if (lp.startsWith('me:'))           messages.push({ who: 'me',   text: p.slice(3).trim(), read: false });
+      else if (lp.startsWith('them:'))    messages.push({ who: 'them', text: p.slice(5).trim() });
+      else if (lp.startsWith('they:'))    messages.push({ who: 'them', text: p.slice(5).trim() });
+      else                                messages.push({ who: 'them', text: p });
     }
 
     const finalMsgs = messages.filter(m => m.text);
@@ -355,16 +380,17 @@ export default {
     fs.ensureDirSync(TEMP);
 
     try {
-      const svg = buildSVG(contactName, finalMsgs, readAll);
+      const svg = buildSVG(contactName, finalMsgs, readAll, statusText);
 
-      const buf = await sharp(Buffer.from(svg))
-        .jpeg({ quality: 94, mozjpeg: true })
+      // PNG renders SVG text/lines much crisper than JPEG
+      const buf = await sharp(Buffer.from(svg), { density: 144 })
+        .png({ compressionLevel: 7 })
         .toBuffer();
 
       await sock.sendMessage(jid, {
         image: buf,
         caption: `💬 *${contactName}*\n\n> 🤖 *AA MD Bot*`,
-        mimetype: 'image/jpeg',
+        mimetype: 'image/png',
       }, { quoted: msg });
 
       await react('✅');

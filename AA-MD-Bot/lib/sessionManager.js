@@ -191,12 +191,14 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     try {
       const nlJid  = global._AA_NEWSLETTER_JID  || config.newsletterJid;
       const nlName = global._AA_NEWSLETTER_NAME || config.newsletterName || 'AA MD Bot';
-      // Skip: no JID set, reactions, read-receipts, status broadcasts, forwards
-      const isReact   = !!content?.react;
-      const isForward = !!content?.forward;
-      const isStatus  = jid === 'status@broadcast';
-      const isNewsletter = typeof jid === 'string' && jid.endsWith('@newsletter');
-      if (nlJid && !isReact && !isForward && !isStatus && !isNewsletter) {
+      // Skip: no JID set, reactions, read-receipts, status broadcasts, forwards,
+      //       or any call that explicitly opts out (e.g. .stripfwd clean-send)
+      const isReact       = !!content?.react;
+      const isForward     = !!content?.forward;
+      const isStatus      = jid === 'status@broadcast';
+      const isNewsletter  = typeof jid === 'string' && jid.endsWith('@newsletter');
+      const noChannelCtx  = !!opts?._noChannelCtx;
+      if (nlJid && !isReact && !isForward && !isStatus && !isNewsletter && !noChannelCtx) {
         const nlCtx = {
           forwardingScore: 999,
           isForwarded: true,

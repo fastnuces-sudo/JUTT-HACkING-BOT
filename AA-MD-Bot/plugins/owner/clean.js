@@ -106,6 +106,10 @@ export default {
         inner?.extendedTextMessage?.text ||
         null;
 
+      // _noChannelCtx: true tells the global sock.sendMessage patch (sessionManager.js)
+      // to skip injecting the newsletter "View Channel" context for these sends.
+      const CLEAN_OPTS = { quoted: msg, _noChannelCtx: true };
+
       if (rawText) {
         // Strip channel footer URLs that trigger "View Channel" link preview
         const cleanText = stripChannelUrls(rawText);
@@ -113,7 +117,7 @@ export default {
           await react('❌');
           return reply(`❌ Message mein sirf channel link tha — strip karne ke baad kuch nahi bacha.\n\n> 🤖 *AA MD Bot*`);
         }
-        await sock.sendMessage(jid, { text: cleanText }, { quoted: msg });
+        await sock.sendMessage(jid, { text: cleanText }, CLEAN_OPTS);
         return await react('✅');
       }
 
@@ -128,8 +132,7 @@ export default {
           image: buf,
           caption: cleanCaption,
           mimetype: 'image/jpeg',
-          contextInfo: { forwardingScore: 0, isForwarded: false },
-        }, { quoted: msg });
+        }, CLEAN_OPTS);
         return await react('✅');
       }
 
@@ -144,8 +147,7 @@ export default {
             gifPlayback: true,
             caption: vm.caption ? stripChannelUrls(vm.caption) : '',
             mimetype: vm.mimetype || 'video/mp4',
-            contextInfo: { forwardingScore: 0, isForwarded: false },
-          }, { quoted: msg });
+          }, CLEAN_OPTS);
           return await react('✅');
         }
         const buf = await dlBuf(vm, 'video');
@@ -153,8 +155,7 @@ export default {
           video: buf,
           caption: vm.caption ? stripChannelUrls(vm.caption) : '',
           mimetype: vm.mimetype || 'video/mp4',
-          contextInfo: { forwardingScore: 0, isForwarded: false },
-        }, { quoted: msg });
+        }, CLEAN_OPTS);
         return await react('✅');
       }
 
@@ -166,8 +167,7 @@ export default {
           audio: buf,
           mimetype: am.mimetype || 'audio/ogg; codecs=opus',
           ptt: am.ptt || false,
-          contextInfo: { forwardingScore: 0, isForwarded: false },
-        }, { quoted: msg });
+        }, CLEAN_OPTS);
         return await react('✅');
       }
 
@@ -180,8 +180,7 @@ export default {
           mimetype: dm.mimetype || 'application/octet-stream',
           fileName: dm.fileName || 'file',
           caption: dm.caption ? stripChannelUrls(dm.caption) : '',
-          contextInfo: { forwardingScore: 0, isForwarded: false },
-        }, { quoted: msg });
+        }, CLEAN_OPTS);
         return await react('✅');
       }
 
@@ -192,7 +191,7 @@ export default {
         await sock.sendMessage(jid, {
           sticker: buf,
           mimetype: sm.mimetype || 'image/webp',
-        }, { quoted: msg });
+        }, { _noChannelCtx: true });
         return await react('✅');
       }
 

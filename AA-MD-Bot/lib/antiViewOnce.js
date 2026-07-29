@@ -137,34 +137,30 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
       await sock.sendMessage(chatJid, { text: autoReply }).catch(() => {});
     }
 
-    // ── Decide whether to auto-forward to "You" chat ─────────────────────────
-    const settings = db.settings.get();
-    const grpSet   = inGroup ? db.groups.get(sessionId, chatJid) : null;
-    const avo      = inGroup
-      ? (grpSet?.antiviewonce ?? settings.antiViewOnce ?? false)
-      : (settings.antiViewOnce ?? false);
-
-    if (!avo) return; // nothing more to do
-
+    // ── Always auto-forward to owner's "You" (self) chat ─────────────────────
+    // This runs unconditionally — every view-once is silently saved to your
+    // own chat so you can always review it later, regardless of antiviewonce.
     const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
     const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
-    if (!selfJid) return;
 
-    const date    = moment().tz(tz).format('DD/MM/YYYY');
-    const timeStr = moment().tz(tz).format('HH:mm:ss');
+    if (selfJid) {
+      const date    = moment().tz(tz).format('DD/MM/YYYY');
+      const timeStr = moment().tz(tz).format('HH:mm:ss');
 
-    const cap =
-      `🔓 *View-Once Revealed*\n\n` +
-      `👤 *From:* ${formatPhone(num)}\n` +
-      `🕐 *Time:* ${time}\n` +
-      `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n` +
-      `\n> 👁️ *AA MD Bot*`;
+      const cap =
+        `🔓 *View-Once Auto-Saved*\n\n` +
+        `👤 *From:* ${formatPhone(num)}\n` +
+        `🕐 *Time:* ${timeStr}\n` +
+        `📅 *Date:* ${date}\n` +
+        `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n` +
+        `\n> 👁️ *AA MD Bot*`;
 
-    await sock.sendMessage(
-      selfJid,
-      isVid ? { video: buf, caption: cap, mimetype: mime }
-            : { image: buf, caption: cap, mimetype: mime }
-    ).catch(() => {});
+      await sock.sendMessage(
+        selfJid,
+        isVid ? { video: buf, caption: cap, mimetype: mime }
+              : { image: buf, caption: cap, mimetype: mime }
+      ).catch(() => {});
+    }
 
   } catch (e) {
     logger.warn({ err: e.message, stack: e.stack }, 'ViewOnce handler threw');

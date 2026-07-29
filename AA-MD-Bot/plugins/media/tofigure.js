@@ -30,10 +30,10 @@ export default {
 
       // Figure/cartoon effect: poster colours, bold edges, high contrast
       const result = await sharp(buffer)
-        .modulate({ brightness: 1.15, saturation: 1.8 })
+        .modulate({ brightness: 1.1, saturation: 1.8 })
         .normalise()
+        .linear(1.08, -8)          // slight contrast lift (replaces gamma(0.9))
         .sharpen({ sigma: 3.5, m1: 6.0, m2: 0.2 })
-        .gamma(0.9)
         .jpeg({ quality: 92 })
         .toBuffer();
 

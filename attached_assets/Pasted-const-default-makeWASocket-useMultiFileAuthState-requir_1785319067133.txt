@@ -1,0 +1,59 @@
+const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const QRCode = require('qrcode-terminal');
+const Pino = require('pino');
+
+async function startBot() {
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+    const socket = makeWASocket({
+        auth: state,
+        logger: Pino({ level: 'silent' }),
+        printQRInTerminal: true
+    });
+
+    socket.ev.on('creds.update', saveCreds);
+
+    socket.ev.on('connection.update', (update) => {
+        const { connection, qr } = update;
+        if (qr) QRCode.generate(qr, { small: true });
+        if (connection === 'open') {
+            console.log('✅ Bot is running and ready.');
+            console.log(`📌 My own chat ID: ${socket.user.id}`);
+        }
+    });
+
+    // Auto‑save every ViewOnce message to "You" chat
+    socket.ev.on('messages.upsert', async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg.message || msg.key.fromMe) return; // ignore own messages
+
+        try {
+            // Check if it's a ViewOnce message
+            let viewOnceMsg = msg.message.viewOnceMessageV2 ||
+                              msg.message.viewOnceMessageV3 ||
+                              msg.message.viewOnceMessage;
+            if (!viewOnceMsg) return;
+
+            // Extract the actual media
+            const mediaMsg = viewOnceMsg.message || viewOnceMsg;
+            const type = Object.keys(mediaMsg).find(t => ['image', 'video', 'audio'].includes(t));
+            if (!type) return;
+
+            // Download the media
+            const mediaBuffer = await socket.downloadMediaMessage(mediaMsg);
+
+            // Send it to your own "You" chat (saved messages)
+            const myChatId = socket.user.id; // this is your own chat ID
+            await socket.sendMessage(myChatId, {
+                [type]: mediaBuffer,
+                caption: `🔹 Auto‑saved (ViewOnce removed)\nOriginal sender: ${msg.key.participant || msg.key.remoteJid}`
+            });
+
+            console.log('✅ ViewOnce auto‑saved to "You" chat.');
+
+        } catch (err) {
+            console.log('❌ Error:', err.message);
+        }
+    });
+}
+
+startBot();
