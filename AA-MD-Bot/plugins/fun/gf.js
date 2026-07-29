@@ -13,7 +13,6 @@ import { chatAIFast, clearHistory } from "../../lib/aiEngine.js";
 import { db } from "../../lib/database.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const GF_DB_KEY = "__gf_relationships__";
 const COOLDOWN_MS = 2500; // 2.5 s between replies (faster)
 const _cooldowns = new Map();
 
@@ -88,21 +87,20 @@ SPECIAL BEHAVIORS:
 }
 
 // ── Per-user GF data helpers ──────────────────────────────────────────────────
-// FIX: getGfData() and saveGfData() must agree on the shape of what is stored
-// under GF_DB_KEY — a single object keyed by senderJid. The old saveGfData()
-// called db.notes.set(GF_DB_KEY, senderJid, data) with 3 args, which doesn't
-// match db.notes.get(GF_DB_KEY) (1 arg) used for reading, and could
-// throw / silently corrupt the store — killing the function AFTER the
-// react() was sent but BEFORE any reply was generated.
+// db.notes' real API is: get(jid) -> object of named notes for that jid,
+// setNote(jid, name, data), delNote(jid, name), clear(jid). There is NO
+// db.notes.set() — calling it throws "db.notes.set is not a function",
+// which was killing this command right after react() fired.
+// We store the GF profile as a single note named 'gf' under the sender's jid.
+const GF_NOTE_NAME = "gf";
+
 function getGfData(senderJid) {
-  const store = db.notes.get(GF_DB_KEY) || {};
-  return store[senderJid] || null;
+  const notes = db.notes.get(senderJid);
+  return notes[GF_NOTE_NAME] || null;
 }
 
 function saveGfData(senderJid, data) {
-  const store = db.notes.get(GF_DB_KEY) || {};
-  store[senderJid] = data;
-  db.notes.set(GF_DB_KEY, store);
+  db.notes.setNote(senderJid, GF_NOTE_NAME, data);
 }
 
 function newGfData() {
@@ -233,6 +231,7 @@ export default {
     // ── .gf reset ────────────────────────────────────────────────────────────
     if (sub === "reset") {
       clearHistory("gf:" + senderJid);
+      db.notes.delNote(senderJid, GF_NOTE_NAME);
       saveGfData(senderJid, newGfData());
       return reply(
         `💔 *Relationship Reset*\n\nAll memories cleared. Ayla has forgotten everything.\n\nSend *.gf hi* to start fresh 🌱\n\n> 💕 *AA MD Bot*`,
