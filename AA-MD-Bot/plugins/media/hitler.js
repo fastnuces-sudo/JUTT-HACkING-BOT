@@ -1,7 +1,33 @@
-// AA MD Bot — Hitler Canvacord Effect
-// Tags or replies to get a profile pic in a Hitler-themed image
+// AA MD Bot — Hitler Effect (local sharp, no external API)
+import sharp from 'sharp';
+import axios from 'axios';
 
-import { Sticker, StickerTypes } from 'wa-sticker-formatter';
+async function fetchBuf(url) {
+  const { data } = await axios.get(url, {
+    responseType: 'arraybuffer', timeout: 15000,
+    headers: { 'User-Agent': 'Mozilla/5.0' },
+  });
+  return Buffer.from(data);
+}
+
+async function hitlerEffect(buf) {
+  const img = sharp(buf);
+  const { width: w = 400, height: h = 400 } = await img.metadata();
+  const svg = Buffer.from(
+    `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="${w}" height="${h}" fill="none" stroke="#333" stroke-width="10"/>
+      <rect x="0" y="${h - 58}" width="${w}" height="58" fill="rgba(0,0,0,0.82)"/>
+      <text x="${w / 2}" y="${h - 16}" text-anchor="middle" font-size="22"
+        fill="#cc0000" font-family="sans-serif" font-weight="bold" letter-spacing="2">WORSE THAN HITLER</text>
+    </svg>`
+  );
+  return img
+    .grayscale()
+    .modulate({ brightness: 0.8 })
+    .composite([{ input: svg, blend: 'over' }])
+    .jpeg({ quality: 88 })
+    .toBuffer();
+}
 
 export default {
   command: 'hitler',
@@ -12,22 +38,19 @@ export default {
   async execute({ sock, msg, jid, react, reply, quoted, senderJid, config }) {
     await react('⌛');
     try {
-      let canvacord = null;
-      try { const cc = await import('canvacord'); canvacord = cc.default ?? cc; } catch {}
-      if (!canvacord?.Canvacord?.hitler) throw new Error('canvacord not available on this server');
-
       const TAG = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
       const targetJid = quoted?.key?.participant || quoted?.key?.remoteJid || TAG[0] || senderJid;
-      let img;
-      try { img = await sock.profilePictureUrl(targetJid, 'image'); }
-      catch { img = 'https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg'; }
+      let imgUrl;
+      try { imgUrl = await sock.profilePictureUrl(targetJid, 'image'); }
+      catch { imgUrl = 'https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg'; }
 
-      const result = await canvacord.Canvacord.hitler(img);
+      const raw = await fetchBuf(imgUrl);
+      const result = await hitlerEffect(raw);
       const botName = config?.botName || 'AA MD Bot';
+
       await sock.sendMessage(jid, {
         image: result,
-        caption:
-          `😈 *Hitler Effect*\n\n> 🤖 *${botName}*`,
+        caption: `😈 *Hitler Effect*\n\n> 🤖 *${botName}*`,
       }, { quoted: msg });
       await react('✅');
     } catch (e) {

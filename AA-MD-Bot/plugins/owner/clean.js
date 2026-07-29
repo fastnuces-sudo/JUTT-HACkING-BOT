@@ -128,6 +128,7 @@ export default {
           image: buf,
           caption: cleanCaption,
           mimetype: 'image/jpeg',
+          contextInfo: { forwardingScore: 0, isForwarded: false },
         }, { quoted: msg });
         return await react('✅');
       }
@@ -143,6 +144,7 @@ export default {
             gifPlayback: true,
             caption: vm.caption ? stripChannelUrls(vm.caption) : '',
             mimetype: vm.mimetype || 'video/mp4',
+            contextInfo: { forwardingScore: 0, isForwarded: false },
           }, { quoted: msg });
           return await react('✅');
         }
@@ -151,6 +153,7 @@ export default {
           video: buf,
           caption: vm.caption ? stripChannelUrls(vm.caption) : '',
           mimetype: vm.mimetype || 'video/mp4',
+          contextInfo: { forwardingScore: 0, isForwarded: false },
         }, { quoted: msg });
         return await react('✅');
       }
@@ -163,6 +166,7 @@ export default {
           audio: buf,
           mimetype: am.mimetype || 'audio/ogg; codecs=opus',
           ptt: am.ptt || false,
+          contextInfo: { forwardingScore: 0, isForwarded: false },
         }, { quoted: msg });
         return await react('✅');
       }
@@ -176,6 +180,7 @@ export default {
           mimetype: dm.mimetype || 'application/octet-stream',
           fileName: dm.fileName || 'file',
           caption: dm.caption ? stripChannelUrls(dm.caption) : '',
+          contextInfo: { forwardingScore: 0, isForwarded: false },
         }, { quoted: msg });
         return await react('✅');
       }

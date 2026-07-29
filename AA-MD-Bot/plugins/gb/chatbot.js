@@ -57,12 +57,11 @@ function addMsg(jid, text) {
   if (m.messages.length > MAX_MSGS) m.messages.shift();
 }
 
-// ── Typing indicator (natural delay 2-4s) ─────────────────────────────────────
+// ── Typing indicator (shows while AI is processing — no artificial delay) ──────
 async function showTyping(sock, chatJid) {
   try {
     await sock.presenceSubscribe(chatJid);
     await sock.sendPresenceUpdate('composing', chatJid);
-    await new Promise(r => setTimeout(r, 2000 + Math.floor(Math.random() * 2000)));
   } catch {}
 }
 
@@ -120,9 +119,10 @@ export async function checkChatbotResponse(msg, sock, sessionId) {
 
     if (!triggered || !cleanedText) return;
 
-    await showTyping(sock, chatJid);
+    showTyping(sock, chatJid).catch(() => {});
     try {
       const response = await getResponse(cleanedText, senderJid);
+      await sock.sendPresenceUpdate('paused', chatJid).catch(() => {});
       if (response) {
         await sock.sendMessage(chatJid, { text: response }, { quoted: msg }).catch(() => {});
       }
@@ -141,9 +141,10 @@ export async function checkChatbotResponse(msg, sock, sessionId) {
     const senderNum = chatJid.split('@')[0];
     if (senderNum === botNumber) return;
 
-    await showTyping(sock, chatJid);
+    showTyping(sock, chatJid).catch(() => {});
     try {
       const response = await getResponse(msgText, chatJid);
+      await sock.sendPresenceUpdate('paused', chatJid).catch(() => {});
       if (response) {
         await sock.sendMessage(chatJid, { text: response }, { quoted: msg }).catch(() => {});
       }
