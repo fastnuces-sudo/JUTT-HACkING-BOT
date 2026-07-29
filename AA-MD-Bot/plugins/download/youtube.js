@@ -216,8 +216,8 @@ export default {
           if (!found?.url) {
             await react('❌');
             return reply(
-              `❌ *"${query}" nahi mila*\n\n` +
-              `💡 Poori title ya YouTube link do:\n` +
+              `❌ *No results found for: "${query}"*\n\n` +
+              `💡 Try the full title or a YouTube link:\n` +
               `• *${prefix}video* Shape of You\n` +
               `• *${prefix}video* https://youtu.be/...`
             );
@@ -231,12 +231,12 @@ export default {
         if (!apiResult?.url) {
           await react('❌');
           return reply(
-            `❌ *Video URL nahi mili*\n\n` +
-            `Teeno video APIs fail ho gayi:\n` +
+            `❌ *Video download failed*\n\n` +
+            `All 3 video APIs unavailable:\n` +
             `• DavidCyrilTech ✗\n` +
             `• EliteProTech ✗\n` +
             `• ABZTech ✗\n\n` +
-            `💡 Thodi der baad try karo ya alag video try karo`
+            `💡 Try again later or use a different video`
           );
         }
 
@@ -277,9 +277,9 @@ export default {
         if (!result?.url) {
           await react('❌');
           return reply(
-            `❌ *Audio download nahi hua*\n\n` +
-            `Teeno audio APIs fail ho gayi — thodi der baad try karo.\n` +
-            `Ya search karo: *${prefix}play* <song name>`
+            `❌ *Audio download failed*\n\n` +
+            `All 3 audio APIs unavailable — try again later.\n` +
+            `Or search: *${prefix}play* <song name>`
           );
         }
 
@@ -288,9 +288,9 @@ export default {
         if (!buf || buf.length < 10000) {
           await react('❌');
           return reply(
-            `❌ *Audio file download nahi hua*\n\n` +
-            `URL mili lekin file nahi aayi — dobara try karo.\n` +
-            `Ya search karo: *${prefix}play* <song name>`
+            `❌ *Audio file download failed*\n\n` +
+            `URL received but file could not be downloaded — try again.\n` +
+            `Or search: *${prefix}play* <song name>`
           );
         }
 
@@ -320,8 +320,8 @@ export default {
         if (!found?.url) {
           await react('❌');
           return reply(
-            `❌ *"${query}" nahi mila*\n\n` +
-            `💡 Alag naam ya YouTube link try karo:\n` +
+            `❌ *No results found for: "${query}"*\n\n` +
+            `💡 Try a different name or a YouTube link:\n` +
             `• *${prefix}play* Shape of You Ed Sheeran\n` +
             `• *${prefix}play* https://youtu.be/...`
           );
@@ -334,9 +334,9 @@ export default {
       if (!result?.url) {
         await react('❌');
         return reply(
-          `❌ *Audio download nahi hua*\n\n` +
-          `Teeno audio APIs fail ho gayi — thodi der baad try karo.\n` +
-          `💡 Video chahiye? *${prefix}video* ${query}`
+          `❌ *Audio download failed*\n\n` +
+          `All 3 audio APIs unavailable — try again later.\n` +
+          `💡 Want video instead? *${prefix}video* ${query}`
         );
       }
 
@@ -348,9 +348,9 @@ export default {
       if (!buf || buf.length < 10000) {
         await react('❌');
         return reply(
-          `❌ *Audio file download nahi hua*\n\n` +
-          `URL mili lekin file nahi aayi — dobara try karo.\n` +
-          `💡 Direct link se try karo: *${prefix}mp3* <YT link>`
+          `❌ *Audio file download failed*\n\n` +
+          `URL received but file could not be downloaded — try again.\n` +
+          `💡 Try with a direct link: *${prefix}mp3* <YT link>`
         );
       }
 
@@ -367,9 +367,9 @@ export default {
       console.error('[ YouTube ]', err.message);
       await react('❌').catch(() => {});
       reply(
-        `❌ *YouTube download fail ho gaya*\n\n` +
-        `Ek baar dobara try karo ya koi aur YouTube link do.\n` +
-        `💡 *${prefix}play* <song name> bhi try kar sakte ho`
+        `❌ *YouTube download failed*\n\n` +
+        `Please try again or use a different YouTube link.\n` +
+        `💡 You can also try: *${prefix}play* <song name>`
       ).catch(() => {});
     }
   },

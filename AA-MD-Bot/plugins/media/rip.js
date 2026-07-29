@@ -2,12 +2,20 @@
 import sharp from 'sharp';
 import axios from 'axios';
 
+// Download any URL to buffer
 async function fetchBuf(url) {
   const { data } = await axios.get(url, {
     responseType: 'arraybuffer', timeout: 15000,
     headers: { 'User-Agent': 'Mozilla/5.0' },
   });
   return Buffer.from(data);
+}
+
+// Generate a gray placeholder when no DP is available
+async function makePlaceholder() {
+  return sharp({
+    create: { width: 400, height: 400, channels: 3, background: { r: 80, g: 80, b: 80 } },
+  }).jpeg({ quality: 80 }).toBuffer();
 }
 
 async function ripEffect(buf) {
@@ -32,22 +40,44 @@ async function ripEffect(buf) {
 export default {
   command: 'rip',
   alias: ['ripcard'],
-  description: 'Put someone\'s DP on a RIP card (tag or reply)',
+  description: 'RIP card effect — reply to image, tag someone, or just send',
   category: 'media',
 
   async execute({ sock, msg, jid, react, reply, quoted, senderJid, config }) {
     await react('⌛');
     try {
-      const TAG = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-      const targetJid = quoted?.key?.participant || quoted?.key?.remoteJid || TAG[0] || senderJid;
-      let imgUrl;
-      try { imgUrl = await sock.profilePictureUrl(targetJid, 'image'); }
-      catch { imgUrl = 'https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg'; }
-
-      const raw = await fetchBuf(imgUrl);
-      const result = await ripEffect(raw);
       const botName = config?.botName || 'AA MD Bot';
 
+      // 1. Quoted image → use directly
+      const quotedImg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+      if (quotedImg) {
+        const stream = await sock.downloadMediaMessage(
+          { message: { imageMessage: quotedImg } },
+          'buffer',
+          {}
+        );
+        const result = await ripEffect(stream);
+        await sock.sendMessage(jid, {
+          image: result,
+          caption: `🪦 *RIP*\n\n> 🤖 *${botName}*`,
+        }, { quoted: msg });
+        return await react('✅');
+      }
+
+      // 2. Tag or reply → get their DP
+      const TAG       = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+      const targetJid = quoted?.key?.participant || quoted?.key?.remoteJid || TAG[0] || senderJid;
+
+      let raw;
+      try {
+        const imgUrl = await sock.profilePictureUrl(targetJid, 'image');
+        raw = await fetchBuf(imgUrl);
+      } catch {
+        // DP unavailable (private) — use gray placeholder
+        raw = await makePlaceholder();
+      }
+
+      const result = await ripEffect(raw);
       await sock.sendMessage(jid, {
         image: result,
         caption: `🪦 *RIP*\n\n> 🤖 *${botName}*`,
@@ -55,7 +85,7 @@ export default {
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(`❌ *RIP effect failed.*\n${e.message}\n\n> 🤖 *AA MD Bot*`);
+      reply(`❌ *RIP effect failed.*\n\n${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };
