@@ -21,8 +21,8 @@ module.exports = {
   apps: [
     {
       name        : 'aa-md-bot',
-      script      : 'index.js',
-      cwd         : __dirname,
+      script: 'index.js',
+      cwd: path.join(__dirname, 'AA-MD-Bot'),
       interpreter : 'node',
       node_args   : '--experimental-vm-modules',
 
