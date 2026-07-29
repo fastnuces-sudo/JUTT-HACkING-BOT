@@ -10,6 +10,12 @@ async function fetchBuf(url) {
   return Buffer.from(data);
 }
 
+async function makePlaceholder() {
+  return sharp({
+    create: { width: 400, height: 400, channels: 3, background: { r: 100, g: 90, b: 90 } },
+  }).jpeg({ quality: 80 }).toBuffer();
+}
+
 async function triggerEffect(buf) {
   const img = sharp(buf);
   const { width: w = 400, height: h = 400 } = await img.metadata();
@@ -39,16 +45,19 @@ export default {
   async execute({ sock, msg, jid, react, reply, quoted, senderJid, config }) {
     await react('⌛');
     try {
-      const TAG = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+      const TAG       = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
       const targetJid = quoted?.key?.participant || quoted?.key?.remoteJid || TAG[0] || senderJid;
-      let imgUrl;
-      try { imgUrl = await sock.profilePictureUrl(targetJid, 'image'); }
-      catch { imgUrl = 'https://telegra.ph/file/9521e9ee2fdbd0d6f4f1c.jpg'; }
+      const botName   = config?.botName || 'AA MD Bot';
 
-      const raw = await fetchBuf(imgUrl);
+      let raw;
+      try {
+        const imgUrl = await sock.profilePictureUrl(targetJid, 'image');
+        raw = await fetchBuf(imgUrl);
+      } catch {
+        raw = await makePlaceholder();
+      }
+
       const result = await triggerEffect(raw);
-      const botName = config?.botName || 'AA MD Bot';
-
       await sock.sendMessage(jid, {
         image: result,
         caption: `😤 *Triggered!*\n\n> 🤖 *${botName}*`,
@@ -56,7 +65,7 @@ export default {
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(`❌ *Trigger effect failed.*\n${e.message}\n\n> 🤖 *AA MD Bot*`);
+      reply(`❌ *Trigger effect failed.*\n\n${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

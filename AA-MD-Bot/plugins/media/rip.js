@@ -1,6 +1,7 @@
 // AA MD Bot — RIP Effect (local sharp, no external API)
 import sharp from 'sharp';
 import axios from 'axios';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 
 // Download any URL to buffer
 async function fetchBuf(url) {
@@ -49,14 +50,15 @@ export default {
       const botName = config?.botName || 'AA MD Bot';
 
       // 1. Quoted image → use directly
-      const quotedImg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+      const quotedMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+      const quotedImg = quotedMsg?.imageMessage;
       if (quotedImg) {
-        const stream = await sock.downloadMediaMessage(
-          { message: { imageMessage: quotedImg } },
-          'buffer',
-          {}
+        const buf = await downloadMediaMessage(
+          { message: { imageMessage: quotedImg }, key: msg.key },
+          'buffer', {},
+          { reuploadRequest: sock.updateMediaMessage }
         );
-        const result = await ripEffect(stream);
+        const result = await ripEffect(buf);
         await sock.sendMessage(jid, {
           image: result,
           caption: `🪦 *RIP*\n\n> 🤖 *${botName}*`,
@@ -80,7 +82,7 @@ export default {
       const result = await ripEffect(raw);
       await sock.sendMessage(jid, {
         image: result,
-        caption: `🪦 *RIP*\n\n> 🤖 *${botName}*`,
+        caption: `🪦 *RIP*\n\n> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (e) {

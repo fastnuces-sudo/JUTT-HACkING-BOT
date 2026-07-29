@@ -1,166 +1,10 @@
 // ============================================
-// AA MD Bot - AI Chat (Powerful Edition)
-// Multi-model fallback: openai → mistral → claude
-// Per-chat memory, intelligent system prompt,
-// WhatsApp markdown formatting
+// AA MD Bot - AI Chat
+// Fast APIs first: ABZTech Gemini → AB Llama → chatAI (pollinations chain)
+// Per-chat memory, smart system prompt, WhatsApp markdown
 // ============================================
 
-import axios from 'axios';
-
-const CHAT_URL = 'https://text.pollinations.ai/openai';
-
-// ── ch.at free AI (primary — no key required) ─────────────────────────────────
-async function callChAt(prompt, retries = 3) {
-  for (let i = 1; i <= retries; i++) {
-    try {
-      const res = await axios.post(
-        'https://ch.at/api/chat',
-        { message: prompt },
-        { headers: { 'Content-Type': 'application/json', 'User-Agent': 'AA-MD-Bot/3.0' }, timeout: 12000 }
-      );
-      // Response: plain text "Q: ...\nA: actual answer"
-      const raw = typeof res.data === 'string' ? res.data
-        : (res.data?.answer || res.data?.reply || res.data?.message || res.data?.response || '');
-      const match = raw.match(/\bA:\s*([\s\S]+)$/);
-      const text = match ? match[1].trim() : (typeof raw === 'string' && raw.trim().length > 4 ? raw.trim() : null);
-      if (text) return text;
-    } catch {}
-    if (i < retries) await new Promise(r => setTimeout(r, 500 * i));
-  }
-  return null;
-}
-
-// ── Pollinations GET (simple, fast) ──────────────────────────────────────────
-async function callPollinationsGet(prompt) {
-  try {
-    const res = await axios.get(
-      'https://text.pollinations.ai/' + encodeURIComponent(prompt.slice(0, 600)) +
-      '?model=openai&seed=' + (Date.now() % 9999),
-      { timeout: 20000 }
-    );
-    return typeof res.data === 'string' ? res.data.trim() : null;
-  } catch { return null; }
-}
-
-// ── System prompt ─────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are AA MD Bot, a WhatsApp AI assistant by AA Mods.
-
-ANSWER LENGTH — match the question:
-- Simple/factual question → 1 to 3 lines, straight answer
-- Needs explanation → explain fully but without padding or repetition
-- Step-by-step/how-to → numbered steps, no extra fluff
-- Code → working code only, explain only if user asks
-
-FORMATTING — WhatsApp markdown strictly:
-- *bold* for headings and key terms
-- _italic_ for examples or emphasis
-- • for bullet lists, 1. 2. 3. for steps
-- No markdown symbols like #, ##, **, __, \`\`\` — these break in WhatsApp
-
-BEHAVIOR:
-- Never repeat the question, never say "Great question!" or similar filler
-- Never add unnecessary intro or outro
-- Match user language exactly (Urdu, English, Roman Urdu, Arabic, etc.)
-- For Islam: answer from Quran/Sunnah accurately
-- If unsure: say so briefly, give best reasoning`;
-
-// ── Model fallback chain ─────────────────────────────────────────────────────
-// pollinations.ai currently only exposes one model under these aliases
-const MODELS = ['openai-fast', 'openai'];
-
-// ── Per-chat conversation memory (LRU, max 300 JIDs, 20 msgs each) ───────────
-const _memory   = new Map();
-const _lastUsed = new Map();
-const MAX_JIDS  = 300;
-const MAX_MSG   = 20;   // keep last 20 messages per chat (10 exchanges)
-
-function evictOldest() {
-  if (_memory.size <= MAX_JIDS) return;
-  let oldest = null, oldestTime = Infinity;
-  for (const [j, t] of _lastUsed.entries()) {
-    if (t < oldestTime) { oldest = j; oldestTime = t; }
-  }
-  if (oldest) { _memory.delete(oldest); _lastUsed.delete(oldest); }
-}
-
-function getHistory(jid) { return _memory.get(jid) || []; }
-
-function addHistory(jid, role, content) {
-  const hist = getHistory(jid);
-  hist.push({ role, content });
-  if (hist.length > MAX_MSG) hist.splice(0, hist.length - MAX_MSG);
-  _memory.set(jid, hist);
-  _lastUsed.set(jid, Date.now());
-  evictOldest();
-}
-
-function clearHistory(jid) { _memory.delete(jid); _lastUsed.delete(jid); }
-
-// ── Attempt one model ────────────────────────────────────────────────────────
-async function tryModel(model, messages) {
-  const { data } = await axios.post(CHAT_URL, {
-    model,
-    messages,
-    temperature: 0.3,
-    max_tokens: 700,
-  }, {
-    headers: { 'Content-Type': 'application/json' },
-    timeout: 18000,
-  });
-  const text = data?.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error('Empty response');
-  return text;
-}
-
-// ── Chat with fallback chain ─────────────────────────────────────────────────
-async function chat(jid, userMsg) {
-  addHistory(jid, 'user', userMsg);
-  const messages = [
-    { role: 'system', content: SYSTEM_PROMPT },
-    ...getHistory(jid),
-  ];
-
-  let reply = null;
-  let lastError = null;
-
-  // 1. pollinations OpenAI-compatible POST — primary (fastest, multi-turn)
-  for (const model of MODELS) {
-    try {
-      reply = await tryModel(model, messages);
-      break;
-    } catch (e) {
-      lastError = e;
-    }
-  }
-
-  // 2. pollinations GET — simple single-turn fallback
-  if (!reply) {
-    reply = await callPollinationsGet(userMsg).catch(() => null);
-  }
-
-  // 3. ch.at — last resort
-  if (!reply) {
-    const flatPrompt = messages
-      .filter(m => m.role !== 'system')
-      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-      .join('\n') + '\nAssistant:';
-    reply = await callChAt(flatPrompt).catch(() => null);
-  }
-
-  if (!reply) throw lastError || new Error('All AI models failed');
-
-  // Clean any leftover raw markdown that shouldn't appear in WhatsApp
-  reply = reply
-    .replace(/^#{1,6}\s+/gm, '*')          // ## headings → *bold
-    .replace(/\*\*(.*?)\*\*/g, '*$1*')      // **bold** → *bold*
-    .replace(/__(.*?)__/g, '_$1_')          // __italic__ → _italic_
-    .replace(/```[\w]*\n?([\s\S]*?)```/g, '$1')  // strip code fences
-    .replace(/`([^`]+)`/g, '$1')            // strip inline code ticks
-    .trim();
-
-  addHistory(jid, 'assistant', reply);
-  return reply;
-}
+import { chatAI, addHistory, clearHistory } from '../../lib/aiEngine.js';
 
 export default {
   command: 'ai',
@@ -194,7 +38,7 @@ export default {
 
     await react('🤖');
     try {
-      const response = await chat(jid, text);
+      const response = await chatAI(jid, text);
       await react('✅').catch(() => {});
       await reply(`🤖 *AI*\n\n${response}\n\n> 🤖 *AA MD Bot*`);
     } catch (e) {
