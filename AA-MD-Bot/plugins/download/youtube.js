@@ -3,7 +3,7 @@
 // Audio : DavidCyrilTech → ABZTech (ytdlv3) → EliteProTech → fetchBuf
 // Video : DavidCyrilTech → EliteProTech → ABZTech ytdl4 → direct URL send
 // Search: DavidCyrilTech
-// Card  : externalAdReply (title + thumbnail via contextInfo only)
+// Card  : thumbnail image + caption (no externalAdReply link card)
 // ============================================
 
 import axios from 'axios';
@@ -12,6 +12,19 @@ const YT_REGEX =
   /(https?:\/\/(?:(?:www|m|music)\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|shorts\/|live\/)|youtu\.be\/)[\w-]+\S*)/i;
 
 const extractUrl = (t) => { if (!t) return null; const m = t.match(YT_REGEX); return m ? m[1] : null; };
+
+// ── Download image to Buffer (for thumbnails) ─────────────────────────────────
+async function fetchThumb(url) {
+  if (!url) return null;
+  try {
+    const res = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    });
+    return Buffer.from(res.data);
+  } catch { return null; }
+}
 
 // ── Download audio URL to Buffer ──────────────────────────────────────────────
 async function fetchBuf(url) {
@@ -241,18 +254,23 @@ export default {
         }
 
         // Fill in metadata from API if search didn't provide it
-        if (apiResult.title)     meta.title     = meta.title     || apiResult.title;
-        if (apiResult.thumbnail) meta.thumbnail = meta.thumbnail || apiResult.thumbnail;
-        if (apiResult.author)    meta.author    = meta.author    || apiResult.author;
+        if (apiResult.title)     meta.title     = apiResult.title     || meta.title;
+        if (apiResult.thumbnail) meta.thumbnail = apiResult.thumbnail || meta.thumbnail;
+        if (apiResult.author)    meta.author    = apiResult.author    || meta.author;
 
-        // 3. Send video via direct URL — Baileys handles the download
-        await sock.sendMessage(jid, {
-          video:       { url: apiResult.url },
-          mimetype:    'video/mp4',
-          fileName:    apiResult.filename || `${meta.title || 'video'}.mp4`,
-          caption:     videoCaption(meta, botName),
-          contextInfo: buildCtx(meta.title, meta.thumbnail, ytUrl),
-        }, { quoted: msg });
+        // 3. Fetch thumbnail buffer so WhatsApp shows it as the video cover
+        const thumbBuf = await fetchThumb(meta.thumbnail);
+
+        // 4. Send video — jpegThumbnail gives the visible cover art; caption has all details
+        const videoPayload = {
+          video:    { url: apiResult.url },
+          mimetype: 'video/mp4',
+          fileName: apiResult.filename || `${meta.title || 'video'}.mp4`,
+          caption:  videoCaption(meta, botName),
+        };
+        if (thumbBuf) videoPayload.jpegThumbnail = thumbBuf;
+
+        await sock.sendMessage(jid, videoPayload, { quoted: msg });
 
         await react('✅');
         return;
@@ -340,8 +358,8 @@ export default {
         );
       }
 
-      if (result.title)     meta.title     = meta.title     || result.title;
-      if (result.thumbnail) meta.thumbnail = meta.thumbnail || result.thumbnail;
+      if (result.title)     meta.title     = result.title     || meta.title;
+      if (result.thumbnail) meta.thumbnail = result.thumbnail || meta.thumbnail;
 
       let buf;
       try { buf = await fetchBuf(result.url); } catch {}
@@ -354,12 +372,23 @@ export default {
         );
       }
 
+      // Send thumbnail + details card first (audio msgs can't carry captions)
+      const thumbBuf = await fetchThumb(meta.thumbnail);
+      if (thumbBuf) {
+        await sock.sendMessage(jid, {
+          image:   thumbBuf,
+          caption: audioCaption(meta, botName),
+        }, { quoted: msg });
+      } else {
+        await reply(audioCaption(meta, botName));
+      }
+
+      // Send clean audio — no YouTube link card
       await sendMedia({
-        audio:       buf,
-        mimetype:    'audio/mpeg',
-        fileName:    result.filename || 'audio.mp3',
-        ptt:         false,
-        contextInfo: buildCtx(meta.title, meta.thumbnail, ytUrl),
+        audio:    buf,
+        mimetype: 'audio/mpeg',
+        fileName: result.filename || 'audio.mp3',
+        ptt:      false,
       });
       await react('✅');
 
