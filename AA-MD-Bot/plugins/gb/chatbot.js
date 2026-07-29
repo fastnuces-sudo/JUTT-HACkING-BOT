@@ -5,6 +5,7 @@
 // AI backend: pollinations.ai (primary), ch.at (fallback)
 // ============================================
 
+import axios from 'axios';
 import { db } from '../../lib/database.js';
 import { chatAI, addHistory, clearHistory } from '../../lib/aiEngine.js';
 
@@ -65,9 +66,32 @@ async function showTyping(sock, chatJid) {
   } catch {}
 }
 
-// ── AI response via aiEngine ──────────────────────────────────────────────────
+// ── AI response — fast APIs first, chatAI as fallback ────────────────────────
 async function getResponse(cleanText, senderJid) {
   addMsg(senderJid, cleanText);
+
+  // 1. ABZTech Gemini — fast GET (usually responds in 2-5s)
+  try {
+    const { data } = await axios.get(
+      `https://api-abztech.zone.id/ai/gemini?message=${encodeURIComponent(cleanText.slice(0, 600))}`,
+      { timeout: 12000 }
+    );
+    const text = data?.data?.answer?.trim() || data?.answer?.trim();
+    if (text && text.length > 1) return text;
+  } catch {}
+
+  // 2. AB Llama — fast GET fallback
+  try {
+    const prompt = CHATBOT_SYSTEM.slice(0, 150) + '\nUser: ' + cleanText;
+    const { data } = await axios.get(
+      `https://ab-llama-ai.abrahamdw882.workers.dev/?q=${encodeURIComponent(prompt.slice(0, 700))}`,
+      { timeout: 12000 }
+    );
+    const text = (data?.response || data?.data || '').trim();
+    if (text && text.length > 1) return text;
+  } catch {}
+
+  // 3. Full chatAI chain fallback (pollinations + others)
   return chatAI(`chatbot:${senderJid}`, cleanText, CHATBOT_SYSTEM);
 }
 

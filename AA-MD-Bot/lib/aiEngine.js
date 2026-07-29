@@ -1,9 +1,10 @@
 // ── AA MD Bot - Shared AI Engine ─────────────────────────────────────────────
 // Single source for all AI chat: .ai command, .chatbot group, .autoai DM relay
-// Fallback chain: pollinations POST → pollinations GET → ch.at
+// Fallback chain:
+//   ABZTech Gemini → AB Llama → pollinations POST → pollinations GET → ch.at
 //
-// All three endpoints are tested working from Replit/Oracle IPs.
-// pollinations POST is primary — fastest, multi-turn, most capable.
+// AB Llama & ABZTech Gemini are fast free GET APIs (confirmed working).
+// pollinations POST is used for multi-turn context (.ai command).
 
 import axios from 'axios';
 
@@ -64,7 +65,29 @@ Rules:
 - If someone is funny → joke back
 - NEVER say you are an AI or a bot`;
 
-// ── Backend 1: pollinations.ai POST (PRIMARY — fastest, multi-turn) ───────────
+// ── Backend 0a: ABZTech Gemini (FAST — free GET, no key) ─────────────────────
+async function tryABZTechGemini(userMsg) {
+  const { data } = await axios.get(
+    `https://api-abztech.zone.id/ai/gemini?message=${encodeURIComponent(String(userMsg).slice(0, 800))}`,
+    { timeout: 15000 }
+  );
+  const text = data?.data?.answer?.trim() || data?.answer?.trim();
+  if (!text || text.length < 2) throw new Error('empty');
+  return text;
+}
+
+// ── Backend 0b: AB Llama (FAST — free GET, no key) ────────────────────────────
+async function tryABLlama(prompt) {
+  const { data } = await axios.get(
+    `https://ab-llama-ai.abrahamdw882.workers.dev/?q=${encodeURIComponent(String(prompt).slice(0, 800))}`,
+    { timeout: 15000 }
+  );
+  const text = (data?.response || data?.data || '').trim();
+  if (!text || text.length < 2) throw new Error('empty');
+  return text;
+}
+
+// ── Backend 1: pollinations.ai POST (PRIMARY — multi-turn, context-aware) ─────
 async function tryPollinationsPost(messages, model = 'openai-fast') {
   const { data } = await axios.post(
     'https://text.pollinations.ai/openai',
@@ -144,10 +167,16 @@ export async function chatAI(jid, userMsg, systemPrompt) {
 
   let reply = null;
 
-  // 1. pollinations POST — primary (openai-fast model)
+  // 1. pollinations POST — primary (multi-turn context, openai-fast model)
   reply = await tryPollinationsPost(messages).catch(() => null);
 
-  // 2. pollinations GET — fast single-turn fallback
+  // 2. ABZTech Gemini — fast free GET fallback
+  if (!reply) reply = await tryABZTechGemini(userMsg).catch(() => null);
+
+  // 3. AB Llama — fast free GET fallback
+  if (!reply) reply = await tryABLlama(userMsg).catch(() => null);
+
+  // 4. pollinations GET — single-turn fallback
   if (!reply) {
     const flatCtx = messages
       .filter(m => m.role !== 'system')
@@ -157,7 +186,7 @@ export async function chatAI(jid, userMsg, systemPrompt) {
     reply = await tryPollinationsGet(flatCtx).catch(() => null);
   }
 
-  // 3. pollinations alternate models (mistral, openai-large, claude)
+  // 5. pollinations alternate models (mistral, openai-large, claude)
   if (!reply) {
     for (const model of ['mistral', 'openai-large', 'claude-sonnet-4-5']) {
       reply = await tryPollinationsModel(messages, model).catch(() => null);
@@ -165,7 +194,7 @@ export async function chatAI(jid, userMsg, systemPrompt) {
     }
   }
 
-  // 4. ch.at — free no-key fallback
+  // 6. ch.at — last resort
   if (!reply) {
     reply = await tryChAt(userMsg).catch(() => null);
   }
