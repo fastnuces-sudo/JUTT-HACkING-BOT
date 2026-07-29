@@ -33,7 +33,7 @@ export default {
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(`╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ ERROR ≪━━━\n├ \n├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`);
+      reply(`❌ *Wasted effect failed.*\n${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

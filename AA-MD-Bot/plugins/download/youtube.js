@@ -1,6 +1,7 @@
 // ============================================
 // AA MD Bot - YouTube Downloader
-// APIs: EliteProTech → ABZTech (ytdl4) → DavidCyrilTech
+// Audio: ABZTech (ytdlv3) → EliteProTech → ABZTech (ytdl4) → DavidCyrilTech
+// Video: ABZTech (ytdl4) → EliteProTech → DavidCyrilTech
 // Search: DavidCyrilTech
 // Buffer: arraybuffer → Buffer.from()
 // Card: externalAdReply (title + thumbnail)
@@ -42,11 +43,23 @@ async function searchYT(query) {
   };
 }
 
-// ── Audio: try 3 APIs, return { url, title, thumbnail, filename } ──────────────
+// ── Audio: try 4 APIs, return { url, title, thumbnail, filename } ──────────────
 async function getAudio(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
 
-  // 1. EliteProTech
+  // 1. ABZTech ytdlv3 (audio-specific, PRIMARY)
+  try {
+    const { data: d } = await axios.get(
+      `https://api-abztech.zone.id/download/ytdlv3?url=${enc}`,
+      { timeout: 30000 }
+    );
+    const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
+    if (d?.status !== false && typeof url === 'string' && url.startsWith('http')) {
+      return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'audio.mp3' };
+    }
+  } catch {}
+
+  // 2. EliteProTech
   try {
     const { data: d } = await axios.get(
       `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp3`,
@@ -58,19 +71,19 @@ async function getAudio(ytUrl) {
     }
   } catch {}
 
-  // 2. ABZTech ytdl4
+  // 3. ABZTech ytdl4
   try {
     const { data: d } = await axios.get(
       `https://api-abztech.zone.id/download/ytdl4?url=${enc}`,
       { timeout: 30000 }
     );
     const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
-    if (typeof url === 'string' && url.startsWith('http')) {
+    if (d?.status !== false && typeof url === 'string' && url.startsWith('http')) {
       return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'audio.mp3' };
     }
   } catch {}
 
-  // 3. DavidCyrilTech
+  // 4. DavidCyrilTech
   try {
     const { data: d } = await axios.get(
       `https://apis.davidcyriltech.my.id/download/ytmp3?url=${enc}`,
@@ -90,25 +103,25 @@ async function getAudio(ytUrl) {
 async function getVideo(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
 
-  // 1. EliteProTech
-  try {
-    const { data: d } = await axios.get(
-      `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp4`,
-      { timeout: 30000 }
-    );
-    const url = d?.downloadURL || d?.download_url || d?.url || d?.result?.url || d?.result?.download_url;
-    if (typeof url === 'string' && url.startsWith('http')) {
-      return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'video.mp4' };
-    }
-  } catch {}
-
-  // 2. ABZTech ytdl4
+  // 1. ABZTech ytdl4 (video, PRIMARY)
   try {
     const { data: d } = await axios.get(
       `https://api-abztech.zone.id/download/ytdl4?url=${enc}`,
       { timeout: 30000 }
     );
     const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
+    if (d?.status !== false && typeof url === 'string' && url.startsWith('http')) {
+      return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'video.mp4' };
+    }
+  } catch {}
+
+  // 2. EliteProTech
+  try {
+    const { data: d } = await axios.get(
+      `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp4`,
+      { timeout: 30000 }
+    );
+    const url = d?.downloadURL || d?.download_url || d?.url || d?.result?.url || d?.result?.download_url;
     if (typeof url === 'string' && url.startsWith('http')) {
       return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'video.mp4' };
     }
