@@ -1,9 +1,9 @@
 // ============================================
 // AA MD Bot - YouTube Downloader
-// 3 APIs only — no yt-dlp, no ffmpeg, no cookies
-// Audio: EliteProTech → ABZTech → DavidCyrilTech
-// Video: EliteProTech → ABZTech → DavidCyrilTech
-// Search: DavidCyrilTech only
+// APIs: EliteProTech → ABZTech → DavidCyrilTech
+// Search: DavidCyrilTech
+// Buffer: arraybuffer → Buffer.from()
+// Card: externalAdReply (title + thumbnail)
 // ============================================
 
 import axios from 'axios';
@@ -11,13 +11,9 @@ import axios from 'axios';
 const YT_REGEX =
   /(https?:\/\/(?:(?:www|m|music)\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|shorts\/|live\/)|youtu\.be\/)[\w-]+\S*)/i;
 
-const extractUrl = (t) => {
-  if (!t) return null;
-  const m = t.match(YT_REGEX);
-  return m ? m[1] : null;
-};
+const extractUrl = (t) => { if (!t) return null; const m = t.match(YT_REGEX); return m ? m[1] : null; };
 
-// ── Fetch a URL as a Buffer ────────────────────────────────────────────────────
+// ── Fetch download URL as Buffer ───────────────────────────────────────────────
 async function fetchBuf(url) {
   const res = await axios.get(url, {
     responseType: 'arraybuffer',
@@ -28,16 +24,7 @@ async function fetchBuf(url) {
   return Buffer.from(res.data);
 }
 
-// ── Extract a download URL from any key path in a response object ─────────────
-function pickUrl(obj, ...paths) {
-  for (const path of paths) {
-    const val = path.split('.').reduce((o, k) => o?.[k], obj);
-    if (typeof val === 'string' && val.startsWith('http')) return val;
-  }
-  return null;
-}
-
-// ── YouTube search (DavidCyrilTech) ──────────────────────────────────────────
+// ── Search (DavidCyrilTech) ────────────────────────────────────────────────────
 async function searchYT(query) {
   const { data } = await axios.get(
     `https://apis.davidcyriltech.my.id/youtube/search?query=${encodeURIComponent(query)}`,
@@ -47,112 +34,136 @@ async function searchYT(query) {
   if (!Array.isArray(results) || !results.length) return null;
   const r = results[0];
   return {
-    url:       r.url       || r.link       || r.videoUrl  || '',
+    url:       r.url       || r.link         || r.videoUrl   || '',
     title:     r.title     || query,
-    thumbnail: r.thumbnail || r.image      || '',
+    thumbnail: r.thumbnail || r.image        || '',
     duration:  r.duration  || '',
     author:    r.channel   || r.channelTitle || '',
   };
 }
 
-// ── Audio: try 3 APIs in order, return download URL ───────────────────────────
-async function getAudioUrl(ytUrl) {
+// ── Audio: try 3 APIs, return { url, title, thumbnail, filename } ──────────────
+async function getAudio(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
 
   // 1. EliteProTech
   try {
-    const { data } = await axios.get(
+    const { data: d } = await axios.get(
       `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp3`,
       { timeout: 30000 }
     );
-    const u = pickUrl(data, 'downloadURL', 'download_url', 'url', 'result.url', 'result.download_url', 'result.downloadUrl');
-    if (u) return u;
+    const url = d?.downloadURL || d?.download_url || d?.url || d?.result?.url || d?.result?.download_url;
+    if (typeof url === 'string' && url.startsWith('http')) {
+      return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'audio.mp3' };
+    }
   } catch {}
 
-  // 2. ABZTech ytdl3
+  // 2. ABZTech ytdlv3
   try {
-    const { data } = await axios.get(
-      `https://api-abztech.zone.id/download/ytdl3?url=${enc}`,
+    const { data: d } = await axios.get(
+      `https://api-abztech.zone.id/download/ytdlv3?url=${enc}`,
       { timeout: 30000 }
     );
-    const u = pickUrl(data, 'result.download_url', 'result.downloadUrl', 'result.url', 'download_url', 'url', 'data.url');
-    if (u) return u;
+    const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
+    if (typeof url === 'string' && url.startsWith('http')) {
+      return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'audio.mp3' };
+    }
   } catch {}
 
   // 3. DavidCyrilTech
   try {
-    const { data } = await axios.get(
+    const { data: d } = await axios.get(
       `https://apis.davidcyriltech.my.id/download/ytmp3?url=${enc}`,
       { timeout: 30000 }
     );
-    const u = pickUrl(data, 'result.download_url', 'result.downloadUrl', 'result.url', 'url', 'link');
-    if (u) return u;
+    const r   = d?.result || d;
+    const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
+    if (typeof url === 'string' && url.startsWith('http')) {
+      return { url, title: r?.title || d?.title || '', thumbnail: r?.thumbnail || d?.thumbnail || '', filename: r?.filename || 'audio.mp3' };
+    }
   } catch {}
 
   return null;
 }
 
-// ── Video: try 3 APIs in order, return download URL ───────────────────────────
-async function getVideoUrl(ytUrl) {
+// ── Video: try 3 APIs, return { url, title, thumbnail, filename } ──────────────
+async function getVideo(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
 
   // 1. EliteProTech
   try {
-    const { data } = await axios.get(
+    const { data: d } = await axios.get(
       `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp4`,
       { timeout: 30000 }
     );
-    const u = pickUrl(data, 'downloadURL', 'download_url', 'url', 'result.url', 'result.download_url', 'result.downloadUrl');
-    if (u) return u;
+    const url = d?.downloadURL || d?.download_url || d?.url || d?.result?.url || d?.result?.download_url;
+    if (typeof url === 'string' && url.startsWith('http')) {
+      return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'video.mp4' };
+    }
   } catch {}
 
   // 2. ABZTech ytdl4
   try {
-    const { data } = await axios.get(
+    const { data: d } = await axios.get(
       `https://api-abztech.zone.id/download/ytdl4?url=${enc}`,
       { timeout: 30000 }
     );
-    const u = pickUrl(data, 'result.download_url', 'result.downloadUrl', 'result.url', 'download_url', 'url', 'data.url');
-    if (u) return u;
+    const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;
+    if (typeof url === 'string' && url.startsWith('http')) {
+      return { url, title: d?.title || '', thumbnail: d?.thumbnail || '', filename: d?.filename || 'video.mp4' };
+    }
   } catch {}
 
   // 3. DavidCyrilTech
   try {
-    const { data } = await axios.get(
+    const { data: d } = await axios.get(
       `https://apis.davidcyriltech.my.id/download/ytmp4?url=${enc}`,
       { timeout: 30000 }
     );
-    const u = pickUrl(data, 'result.download_url', 'result.downloadUrl', 'result.url', 'url', 'link');
-    if (u) return u;
+    const r   = d?.result || d;
+    const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
+    if (typeof url === 'string' && url.startsWith('http')) {
+      return { url, title: r?.title || d?.title || '', thumbnail: r?.thumbnail || d?.thumbnail || '', filename: r?.filename || 'video.mp4' };
+    }
   } catch {}
 
   return null;
+}
+
+// ── externalAdReply card contextInfo ──────────────────────────────────────────
+function buildCtx(title, thumbnail, ytUrl) {
+  return {
+    externalAdReply: {
+      title:                title || 'YouTube',
+      body:                 'AA MD Bot',
+      thumbnailUrl:         thumbnail || '',
+      mediaType:            1,
+      mediaUrl:             ytUrl || '',
+      sourceUrl:            ytUrl || '',
+      renderLargerThumbnail: true,
+      showAdAttribution:    false,
+    },
+  };
 }
 
 // ── Captions ──────────────────────────────────────────────────────────────────
 function audioCaption(meta, botName) {
   return (
-    `✦✦✦✦✦✦✦✦✦✦\n` +
-    `🎵 ${botName} MUSIC\n` +
-    `✦✦✦✦✦✦✦✦✦✦\n\n` +
+    `✦✦✦✦✦✦✦✦✦✦\n🎵 ${botName} MUSIC\n✦✦✦✦✦✦✦✦✦✦\n\n` +
     `🎙 *${meta.title}*\n` +
     `🎤 ${meta.author || 'Unknown'}\n` +
     `⏱ ${meta.duration || '?'}\n\n` +
-    `> 🤖 Powered by ${botName}\n` +
-    `> 👨‍💻 Ahsan Ali Wadani`
+    `> 🤖 Powered by ${botName}\n> 👨‍💻 Ahsan Ali Wadani`
   );
 }
 
 function videoCaption(meta, botName) {
   return (
-    `✦✦✦✦✦✦✦✦✦✦\n` +
-    `🎬 ${botName} VIDEO\n` +
-    `✦✦✦✦✦✦✦✦✦✦\n\n` +
+    `✦✦✦✦✦✦✦✦✦✦\n🎬 ${botName} VIDEO\n✦✦✦✦✦✦✦✦✦✦\n\n` +
     `🎙 *${meta.title}*\n` +
     `🎤 ${meta.author || 'Unknown'}\n` +
     `⏱ ${meta.duration || '?'}\n\n` +
-    `> 🤖 Powered by ${botName}\n` +
-    `> 👨‍💻 Ahsan Ali Wadani`
+    `> 🤖 Powered by ${botName}\n> 👨‍💻 Ahsan Ali Wadani`
   );
 }
 
@@ -163,7 +174,7 @@ export default {
   description: 'Download YouTube audio or video',
   category: 'download',
 
-  execute: async ({ sock, msg, jid, text, command, react, reply, prefix, config }) => {
+  execute: async ({ sock, msg, jid, text, command, react, reply, sendMedia, prefix, config }) => {
     const botName = config?.botName || 'AA MD Bot';
     let query = text?.trim();
 
@@ -200,6 +211,7 @@ export default {
           meta  = found;
         }
 
+        // Show thumbnail card while downloading
         if (meta.thumbnail) {
           await sock.sendMessage(jid, {
             image: { url: meta.thumbnail },
@@ -207,23 +219,29 @@ export default {
           }, { quoted: msg });
         }
 
-        const videoUrl = await getVideoUrl(ytUrl);
-        if (!videoUrl) {
+        const result = await getVideo(ytUrl);
+        if (!result?.url) {
           await react('❌');
           return reply(`❌ *Video download failed*\n\nAll 3 sources unavailable. Try again later.`);
         }
 
-        const buf = await fetchBuf(videoUrl);
+        // Use title/thumbnail from API if search didn't give them
+        if (!meta.title && result.title) meta.title = result.title;
+        if (!meta.thumbnail && result.thumbnail) meta.thumbnail = result.thumbnail;
+
+        const buf = await fetchBuf(result.url);
         if (!buf || buf.length < 50000) {
           await react('❌');
           return reply(`❌ *Video file invalid* — try again or use a different link.`);
         }
 
-        await sock.sendMessage(jid, {
-          video: buf,
-          mimetype: 'video/mp4',
-          caption: videoCaption(meta, botName),
-        }, { quoted: msg });
+        await sendMedia({
+          video:       buf,
+          mimetype:    'video/mp4',
+          fileName:    result.filename || 'video.mp4',
+          caption:     videoCaption(meta, botName),
+          contextInfo: buildCtx(meta.title, meta.thumbnail, ytUrl),
+        });
         await react('✅');
         return;
       }
@@ -239,23 +257,25 @@ export default {
           );
         }
 
-        const audioUrl = await getAudioUrl(ytUrl);
-        if (!audioUrl) {
+        const result = await getAudio(ytUrl);
+        if (!result?.url) {
           await react('❌');
           return reply(`❌ *MP3 download failed*\n\nAll 3 sources unavailable. Try again later.`);
         }
 
-        const buf = await fetchBuf(audioUrl);
+        const buf = await fetchBuf(result.url);
         if (!buf || buf.length < 10000) {
           await react('❌');
           return reply(`❌ *Audio file invalid* — try again.`);
         }
 
-        await sock.sendMessage(jid, {
-          audio: buf,
-          mimetype: 'audio/mpeg',
-          ptt: false,
-        }, { quoted: msg });
+        await sendMedia({
+          audio:       buf,
+          mimetype:    'audio/mpeg',
+          fileName:    result.filename || 'audio.mp3',
+          ptt:         false,
+          contextInfo: buildCtx(result.title, result.thumbnail, ytUrl),
+        });
         await react('✅');
         return;
       }
@@ -274,6 +294,7 @@ export default {
         meta  = found;
       }
 
+      // Show thumbnail card while downloading
       if (meta.thumbnail) {
         await sock.sendMessage(jid, {
           image: { url: meta.thumbnail },
@@ -281,23 +302,28 @@ export default {
         }, { quoted: msg });
       }
 
-      const audioUrl = await getAudioUrl(ytUrl);
-      if (!audioUrl) {
+      const result = await getAudio(ytUrl);
+      if (!result?.url) {
         await react('❌');
         return reply(`❌ *Audio download failed*\n\nAll 3 sources unavailable. Try again later.`);
       }
 
-      const buf = await fetchBuf(audioUrl);
+      if (!meta.title && result.title) meta.title = result.title;
+      if (!meta.thumbnail && result.thumbnail) meta.thumbnail = result.thumbnail;
+
+      const buf = await fetchBuf(result.url);
       if (!buf || buf.length < 10000) {
         await react('❌');
         return reply(`❌ *Audio file invalid* — try again.`);
       }
 
-      await sock.sendMessage(jid, {
-        audio: buf,
-        mimetype: 'audio/mpeg',
-        ptt: false,
-      }, { quoted: msg });
+      await sendMedia({
+        audio:       buf,
+        mimetype:    'audio/mpeg',
+        fileName:    result.filename || 'audio.mp3',
+        ptt:         false,
+        contextInfo: buildCtx(meta.title, meta.thumbnail, ytUrl),
+      });
       await react('✅');
 
     } catch (err) {
