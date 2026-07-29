@@ -12,6 +12,33 @@ import { logger } from './logger.js';
 import { db } from './database.js';
 import config from '../config.js';
 
+// ── Direct-download helper (mirrors reveal.js Step 1) ────────────────────────
+async function dlBufDirect(mediaMsg, type) {
+  const { downloadContentFromMessage } = await import('@whiskeysockets/baileys');
+  const stream = await downloadContentFromMessage(mediaMsg, type);
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
+}
+
+// ── Extract media from a quotedMessage object ─────────────────────────────────
+function extractQuotedMediaForReveal(quotedMsg) {
+  if (!quotedMsg) return null;
+  const inner =
+    quotedMsg?.viewOnceMessageV2?.message ||
+    quotedMsg?.viewOnceMessageV2Extension?.message ||
+    quotedMsg?.viewOnceMessage?.message ||
+    quotedMsg?.ephemeralMessage?.message ||
+    quotedMsg;
+  if (inner?.imageMessage) return { mediaMsg: inner.imageMessage, isVid: false, isAudio: false, mime: inner.imageMessage.mimetype || 'image/jpeg' };
+  if (inner?.videoMessage) return { mediaMsg: inner.videoMessage, isVid: true,  isAudio: false, mime: inner.videoMessage.mimetype || 'video/mp4'  };
+  if (inner?.audioMessage) return { mediaMsg: inner.audioMessage, isVid: false, isAudio: true,  mime: inner.audioMessage.mimetype || 'audio/mp4'  };
+  if (quotedMsg?.imageMessage) return { mediaMsg: quotedMsg.imageMessage, isVid: false, isAudio: false, mime: quotedMsg.imageMessage.mimetype || 'image/jpeg' };
+  if (quotedMsg?.videoMessage) return { mediaMsg: quotedMsg.videoMessage, isVid: true,  isAudio: false, mime: quotedMsg.videoMessage.mimetype || 'video/mp4'  };
+  if (quotedMsg?.audioMessage) return { mediaMsg: quotedMsg.audioMessage, isVid: false, isAudio: true,  mime: quotedMsg.audioMessage.mimetype || 'audio/mp4'  };
+  return null;
+}
+
 // ── Storage ───────────────────────────────────────────────────────────────────
 // All view-once media is kept in memory only — zero disk writes.
 // Map keyed by message ID — stores buffer + metadata for manual/keyword reveal
@@ -349,8 +376,6 @@ export async function handleReplyReveal(msg, sock, sessionId) {
       }
     }
 
-    if (!stored) return; // no cached view-once found
-
     const selfNum = sock.user?.id?.split('@')[0]?.split(':')[0];
     const selfJid = selfNum ? `${selfNum}@s.whatsapp.net` : null;
     if (!selfJid) return;
@@ -358,6 +383,45 @@ export async function handleReplyReveal(msg, sock, sessionId) {
     const tz      = config.timezone || 'Asia/Karachi';
     const date    = moment().tz(tz).format('DD/MM/YYYY');
     const timeStr = moment().tz(tz).format('HH:mm:ss');
+
+    // ── Step 0: Direct download from quotedMessage media keys ────────────────
+    // Works for fresh view-once media (before the key expires).
+    // This is the PRIMARY path and doesn't require the in-memory store.
+    try {
+      const ctxInfoDirect =
+        msg.message?.extendedTextMessage?.contextInfo ||
+        msg.message?.imageMessage?.contextInfo ||
+        msg.message?.videoMessage?.contextInfo ||
+        null;
+      const quotedMsg = ctxInfoDirect?.quotedMessage;
+      if (quotedMsg) {
+        const extracted = extractQuotedMediaForReveal(quotedMsg);
+        if (extracted) {
+          const type = extracted.isAudio ? 'audio' : (extracted.isVid ? 'video' : 'image');
+          const buf  = await dlBufDirect(extracted.mediaMsg, type);
+          if (buf?.length > 0) {
+            const cap =
+              `🔓 *View-Once Revealed*\n\n` +
+              `📅 *Date:* ${date}\n` +
+              `⏰ *Time:* ${timeStr}\n` +
+              `🔑 *Trigger:* ${triggerLabel}\n\n` +
+              `> 👁️ *AA MD Bot*`;
+            if (extracted.isAudio) {
+              await sock.sendMessage(selfJid, { audio: buf, mimetype: extracted.mime, ptt: extracted.mediaMsg?.ptt || false }).catch(() => {});
+            } else if (extracted.isVid) {
+              await sock.sendMessage(selfJid, { video: buf, caption: cap, mimetype: extracted.mime }).catch(() => {});
+            } else {
+              await sock.sendMessage(selfJid, { image: buf, caption: cap, mimetype: extracted.mime }).catch(() => {});
+            }
+            logger.info({ sessionId, trigger: triggerLabel }, '🔑 ViewOnce revealed via emoji trigger (direct)');
+            return;
+          }
+        }
+      }
+    } catch (_) { /* direct download failed — fall through to store */ }
+
+    // ── Step 1+2: In-memory store lookup (fallback) ───────────────────────────
+    if (!stored) return; // no cached view-once found
 
     const cap =
       `🔓 *View-Once Revealed*\n\n` +
@@ -376,7 +440,7 @@ export async function handleReplyReveal(msg, sock, sessionId) {
         : { image: stored.buf, caption: cap, mimetype: stored.mime }
     ).catch(() => {});
 
-    logger.info({ sessionId, stanzaId, trigger: triggerLabel }, '🔑 ViewOnce revealed via reply trigger');
+    logger.info({ sessionId, stanzaId, trigger: triggerLabel }, '🔑 ViewOnce revealed via emoji trigger (store)');
   } catch (e) {
     logger.warn({ err: e.message }, 'handleReplyReveal threw');
   }
