@@ -1,29 +1,19 @@
 // ============================================
 // AA MD Bot - YouTube Downloader
 // Audio : DavidCyrilTech → ABZTech (ytdlv3) → EliteProTech → fetchBuf
-// Video : API fetchBuf → API direct URL → yt-dlp (3-layer)
+// Video : DavidCyrilTech → EliteProTech → ABZTech ytdl4 → direct URL send
 // Search: DavidCyrilTech
 // Card  : externalAdReply (title + thumbnail via contextInfo only)
 // ============================================
 
 import axios from 'axios';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { YTDLP, YTDLP_FLAGS, getCookiesArgs } from '../../lib/ytdlp.js';
-
-const execFileAsync = promisify(execFile);
-const __dirname2    = path.dirname(fileURLToPath(import.meta.url));
-const TEMP          = path.join(__dirname2, '../../temp');
 
 const YT_REGEX =
   /(https?:\/\/(?:(?:www|m|music)\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|shorts\/|live\/)|youtu\.be\/)[\w-]+\S*)/i;
 
 const extractUrl = (t) => { if (!t) return null; const m = t.match(YT_REGEX); return m ? m[1] : null; };
 
-// ── Download URL to Buffer ─────────────────────────────────────────────────────
+// ── Download audio URL to Buffer ──────────────────────────────────────────────
 async function fetchBuf(url) {
   const res = await axios.get(url, {
     responseType: 'arraybuffer',
@@ -32,39 +22,6 @@ async function fetchBuf(url) {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
   });
   return Buffer.from(res.data);
-}
-
-// ── yt-dlp video download (final fallback) ────────────────────────────────────
-async function ytdlpVideo(ytUrl) {
-  await fs.ensureDir(TEMP);
-  const reqId   = `yt_vid_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-  const outFile = path.join(TEMP, `${reqId}.mp4`);
-  const flags   = YTDLP_FLAGS.split(/\s+/).filter(Boolean);
-  const ckArgs  = getCookiesArgs();
-  // Format 18 = 360p combined MP4, 22 = 720p combined MP4
-  const FMTS = [
-    '18/22',
-    'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best',
-    'best',
-  ];
-  for (const fmt of FMTS) {
-    try {
-      await execFileAsync(YTDLP, [
-        ...flags, ytUrl, ...ckArgs,
-        '-f', fmt,
-        '--merge-output-format', 'mp4',
-        '--no-playlist', '-o', outFile,
-        '--quiet', '--no-warnings',
-      ], { timeout: 180000 });
-      if (await fs.pathExists(outFile)) {
-        const buf = await fs.readFile(outFile);
-        await fs.remove(outFile).catch(() => {});
-        if (buf?.length > 50000) return buf;
-      }
-    } catch {}
-  }
-  await fs.remove(outFile).catch(() => {});
-  return null;
 }
 
 // ── Search (DavidCyrilTech) ────────────────────────────────────────────────────
@@ -130,7 +87,7 @@ async function getAudio(ytUrl) {
 }
 
 // ── Video APIs: DavidCyrilTech → EliteProTech → ABZTech ytdl4 ─────────────────
-// Returns { url, title, thumbnail, filename } — url is direct download link
+// Returns { url, title, thumbnail, filename } — url is direct MP4 download link
 async function getVideo(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
 
@@ -244,12 +201,12 @@ export default {
 
       // ════════════════════════════════════════════════════════════════════════
       // VIDEO  (.video / .mp4 / .ytmp4)
-      // Strategy: API fetchBuf → API direct-URL → yt-dlp
+      // API se direct download URL lao → Baileys direct URL send
       // ════════════════════════════════════════════════════════════════════════
       if (command === 'mp4' || command === 'ytmp4' || command === 'video') {
         await react('🎥');
 
-        // 1. Resolve YouTube URL (search if needed)
+        // 1. Resolve YouTube URL (search if name given)
         let ytUrl = extractUrl(query);
         let meta  = { title: query, author: '', duration: '', thumbnail: '' };
 
@@ -269,64 +226,34 @@ export default {
           meta  = found;
         }
 
-        // 2. Get download URL from APIs (title + thumbnail + direct link)
+        // 2. Get direct download URL from APIs
         const apiResult = await getVideo(ytUrl);
-        if (apiResult?.title)     meta.title     = meta.title     || apiResult.title;
-        if (apiResult?.thumbnail) meta.thumbnail = meta.thumbnail || apiResult.thumbnail;
-        if (apiResult?.author)    meta.author    = meta.author    || apiResult.author;
-
-        // 3a. Try API URL → buffer download
-        if (apiResult?.url) {
-          try {
-            const buf = await fetchBuf(apiResult.url);
-            if (buf?.length > 50000) {
-              await sendMedia({
-                video:       buf,
-                mimetype:    'video/mp4',
-                fileName:    apiResult.filename || 'video.mp4',
-                caption:     videoCaption(meta, botName),
-                contextInfo: buildCtx(meta.title, meta.thumbnail, ytUrl),
-              });
-              await react('✅');
-              return;
-            }
-          } catch {}
-
-          // 3b. Buffer failed — send via direct URL (Baileys handles download)
-          try {
-            await sock.sendMessage(jid, {
-              video:       { url: apiResult.url },
-              mimetype:    'video/mp4',
-              fileName:    apiResult.filename || 'video.mp4',
-              caption:     videoCaption(meta, botName),
-              contextInfo: buildCtx(meta.title, meta.thumbnail, ytUrl),
-            }, { quoted: msg });
-            await react('✅');
-            return;
-          } catch {}
-        }
-
-        // 3c. Both API methods failed — fall back to yt-dlp
-        const ytBuf = await ytdlpVideo(ytUrl);
-        if (!ytBuf || ytBuf.length < 50000) {
+        if (!apiResult?.url) {
           await react('❌');
           return reply(
-            `❌ *Video download nahi hua*\n\n` +
-            `Teeno sources fail ho gaye:\n` +
-            `• DavidCyrilTech API ✗\n` +
-            `• EliteProTech API ✗\n` +
-            `• yt-dlp ✗\n\n` +
+            `❌ *Video URL nahi mili*\n\n` +
+            `Teeno video APIs fail ho gayi:\n` +
+            `• DavidCyrilTech ✗\n` +
+            `• EliteProTech ✗\n` +
+            `• ABZTech ✗\n\n` +
             `💡 Thodi der baad try karo ya alag video try karo`
           );
         }
 
-        await sendMedia({
-          video:       ytBuf,
+        // Fill in metadata from API if search didn't provide it
+        if (apiResult.title)     meta.title     = meta.title     || apiResult.title;
+        if (apiResult.thumbnail) meta.thumbnail = meta.thumbnail || apiResult.thumbnail;
+        if (apiResult.author)    meta.author    = meta.author    || apiResult.author;
+
+        // 3. Send video via direct URL — Baileys handles the download
+        await sock.sendMessage(jid, {
+          video:       { url: apiResult.url },
           mimetype:    'video/mp4',
-          fileName:    'video.mp4',
+          fileName:    apiResult.filename || `${meta.title || 'video'}.mp4`,
           caption:     videoCaption(meta, botName),
           contextInfo: buildCtx(meta.title, meta.thumbnail, ytUrl),
-        });
+        }, { quoted: msg });
+
         await react('✅');
         return;
       }
@@ -358,7 +285,6 @@ export default {
 
         let buf;
         try { buf = await fetchBuf(result.url); } catch {}
-
         if (!buf || buf.length < 10000) {
           await react('❌');
           return reply(
@@ -419,7 +345,6 @@ export default {
 
       let buf;
       try { buf = await fetchBuf(result.url); } catch {}
-
       if (!buf || buf.length < 10000) {
         await react('❌');
         return reply(
