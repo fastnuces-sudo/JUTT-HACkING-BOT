@@ -1,10 +1,8 @@
 // ============================================
-// AA MD Bot - YouTube Downloader (FINAL)
-// Flow: command → INSTANT info card (thumbnail+title+author+duration+views)
-//       → download in background → send audio/video
-// Audio : DavidCyrilTech → ABZTech (ytdlv3) → EliteProTech
-// Video : DavidCyrilTech → EliteProTech → ABZTech ytdl4
-// Search: DavidCyrilTech  (+ YouTube oEmbed as fallback for direct links)
+// AA MD Bot - YouTube Downloader (v3)
+// Flow: command → INSTANT info card (thumbnail+title+channel+duration+views)
+//       → tries ALL provider links until one actually downloads
+//       → sends plain audio/video (no ad-card / no attached link)
 // ============================================
 
 import axios from "axios";
@@ -21,18 +19,83 @@ const extractUrl = (t) => {
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
-// ── Generic buffer downloader (audio/video files — these NEED spoofed headers) ─
-async function fetchBuf(url, timeout = 90000) {
-  const res = await axios.get(url, {
-    responseType: "arraybuffer",
-    timeout,
-    maxContentLength: 300 * 1024 * 1024,
-    headers: {
-      "User-Agent": UA,
-      Referer: "https://www.youtube.com/",
+// ── Deep-scan fallback: search an arbitrary API response for a field whose KEY
+// name matches a pattern (title/channel/duration/views/thumbnail), regardless
+// of the exact schema. Used only when the direct known field names don't hit.
+function deepFind(obj, regex, depth = 0, seen = new Set()) {
+  if (!obj || typeof obj !== "object" || depth > 4 || seen.has(obj))
+    return undefined;
+  seen.add(obj);
+  for (const [k, v] of Object.entries(obj)) {
+    if (regex.test(k)) {
+      if (typeof v === "string" && v.trim()) return v.trim();
+      if (typeof v === "number") return v;
+      if (v && typeof v === "object") {
+        if (typeof v.url === "string") return v.url;
+        if (typeof v.name === "string") return v.name;
+        if (typeof v.timestamp === "string") return v.timestamp;
+        if (typeof v.text === "string") return v.text;
+      }
+    }
+  }
+  for (const v of Object.values(obj)) {
+    if (v && typeof v === "object") {
+      const found = deepFind(v, regex, depth + 1, seen);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
+// ── Buffer downloader with two header strategies (some CDNs want a browser
+// UA, some block anything that looks like a browser — so we try both) ────────
+async function tryDownload(url, timeout) {
+  const attempts = [
+    {
+      headers: {
+        "User-Agent": UA,
+        Referer: "https://www.youtube.com/",
+        Accept: "*/*",
+      },
     },
-  });
-  return Buffer.from(res.data);
+    { headers: {} }, // plain, no spoofed headers
+  ];
+
+  for (const cfg of attempts) {
+    try {
+      const res = await axios.get(url, {
+        responseType: "arraybuffer",
+        timeout,
+        maxRedirects: 10,
+        maxContentLength: 300 * 1024 * 1024,
+        validateStatus: (s) => s >= 200 && s < 300,
+        ...cfg,
+      });
+      const ct = String(res.headers?.["content-type"] || "").toLowerCase();
+      // Reject if the server actually returned an HTML/JSON error page instead of media
+      if (ct.includes("text/html") || ct.includes("application/json")) continue;
+      const buf = Buffer.from(res.data);
+      if (buf.length > 0) return buf;
+    } catch (e) {
+      console.error(
+        "[YT download attempt failed]",
+        url,
+        "-",
+        e.response?.status || e.message,
+      );
+    }
+  }
+  return null;
+}
+
+// Try a list of {url, title, filename} candidates in order until one downloads
+async function downloadFirstWorking(candidates, timeout, minSize) {
+  for (const c of candidates) {
+    if (!c?.url) continue;
+    const buf = await tryDownload(c.url, timeout);
+    if (buf && buf.length >= minSize) return { buf, meta: c };
+  }
+  return null;
 }
 
 // ── Format helpers ─────────────────────────────────────────────────────────────
@@ -40,7 +103,7 @@ function formatViews(v) {
   if (v === undefined || v === null || v === "") return "N/A";
   let n = v;
   if (typeof n === "string") n = Number(n.toString().replace(/[^0-9.]/g, ""));
-  if (!n || isNaN(n)) return typeof v === "string" ? v : "N/A"; // API sometimes already sends "1.2M"
+  if (!n || isNaN(n)) return typeof v === "string" ? v : "N/A";
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1) + "B views";
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M views";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K views";
@@ -61,16 +124,14 @@ function formatDuration(d) {
   return String(d);
 }
 
-// ── Search (DavidCyrilTech) — gives title, thumbnail, duration, views, author ──
+// ── Search (DavidCyrilTech) — title, thumbnail, duration, views, channel ──────
 async function searchYT(query) {
   const { data } = await axios.get(
     `https://apis.davidcyriltech.my.id/youtube/search?query=${encodeURIComponent(query)}`,
     { timeout: 15000 },
   );
 
-  // DEBUG: if any field still shows "N/A"/missing after testing, uncomment
-  // the next line once, run a .play command, check console/PM2 logs, and send
-  // me that raw JSON — I'll map the exact field names for you.
+  // DEBUG (uncomment once if fields are still wrong, then send me the output):
   // console.log('[YT SEARCH RAW]', JSON.stringify(data, null, 2));
 
   const results = data?.result || data?.results || data?.data || [];
@@ -79,29 +140,39 @@ async function searchYT(query) {
 
   return {
     url: r.url || r.link || r.videoUrl || "",
-    title: r.title || query,
+    title: r.title || deepFind(r, /title/i) || query,
     thumbnail:
       r.thumbnail ||
       r.image ||
       r.thumbnails?.[0]?.url ||
       r.thumbnails?.[0] ||
+      deepFind(r, /thumb|image|cover/i) ||
       "",
-    duration: r.duration || r.timestamp || r.length || "",
-    views: r.views || r.viewCount || r.view_count || r.viewsCount || "",
+    duration:
+      r.duration ||
+      r.timestamp ||
+      r.length ||
+      deepFind(r, /duration|length|timestamp/i) ||
+      "",
+    views:
+      r.views ||
+      r.viewCount ||
+      r.view_count ||
+      r.viewsCount ||
+      deepFind(r, /view/i) ||
+      "",
     author:
       r.channel ||
       r.channelTitle ||
       r.author?.name ||
       r.author ||
       r.uploader ||
+      deepFind(r, /channel|author|uploader/i) ||
       "",
   };
 }
 
-// ── YouTube oEmbed fallback — used when a direct link is given and/or search
-// API doesn't return enough. Free, official, public endpoint — no key needed.
-// Gives: title, author_name, thumbnail_url. (No duration/views — YT doesn't
-// expose those via oEmbed.)
+// ── YouTube oEmbed fallback (used for direct links). Free, official, no key. ──
 async function oEmbedInfo(ytUrl) {
   try {
     const { data } = await axios.get(
@@ -125,14 +196,19 @@ async function resolveMeta(query) {
   const directUrl = extractUrl(query);
 
   if (directUrl) {
-    // Direct link: try oEmbed (fast + reliable) first, then search API as backup
     let meta = await oEmbedInfo(directUrl);
-    if (!meta?.title) {
-      try {
-        const found = await searchYT(query);
-        if (found?.title) meta = found;
-      } catch {}
-    }
+    // merge in duration/views from the search API if we can match it
+    try {
+      const found = await searchYT(query);
+      if (found) {
+        meta = meta || {};
+        meta.title = meta.title || found.title;
+        meta.author = meta.author || found.author;
+        meta.thumbnail = meta.thumbnail || found.thumbnail;
+        meta.duration = meta.duration || found.duration;
+        meta.views = meta.views || found.views;
+      }
+    } catch {}
     if (!meta)
       meta = {
         title: query,
@@ -144,7 +220,6 @@ async function resolveMeta(query) {
     return { ytUrl: directUrl, meta };
   }
 
-  // Name search
   let found;
   try {
     found = await searchYT(query);
@@ -153,9 +228,10 @@ async function resolveMeta(query) {
   return { ytUrl: found.url, meta: found };
 }
 
-// ── Audio APIs: DavidCyrilTech → ABZTech ytdlv3 → EliteProTech ────────────────
-async function getAudio(ytUrl) {
+// ── Audio provider candidates (all 3, in priority order) ──────────────────────
+async function getAudioCandidates(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
+  const out = [];
 
   try {
     const { data: d } = await axios.get(
@@ -164,13 +240,12 @@ async function getAudio(ytUrl) {
     );
     const r = d?.result || d;
     const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
-    if (typeof url === "string" && url.startsWith("http")) {
-      return {
+    if (typeof url === "string" && url.startsWith("http"))
+      out.push({
         url,
         title: r?.title || d?.title || "",
         filename: r?.filename || "audio.mp3",
-      };
-    }
+      });
   } catch {}
 
   try {
@@ -183,13 +258,12 @@ async function getAudio(ytUrl) {
       d?.status !== false &&
       typeof url === "string" &&
       url.startsWith("http")
-    ) {
-      return {
+    )
+      out.push({
         url,
         title: d?.title || "",
         filename: d?.filename || "audio.mp3",
-      };
-    }
+      });
   } catch {}
 
   try {
@@ -203,21 +277,21 @@ async function getAudio(ytUrl) {
       d?.url ||
       d?.result?.url ||
       d?.result?.download_url;
-    if (typeof url === "string" && url.startsWith("http")) {
-      return {
+    if (typeof url === "string" && url.startsWith("http"))
+      out.push({
         url,
         title: d?.title || "",
         filename: d?.filename || "audio.mp3",
-      };
-    }
+      });
   } catch {}
 
-  return null;
+  return out;
 }
 
-// ── Video APIs: DavidCyrilTech → EliteProTech → ABZTech ytdl4 ─────────────────
-async function getVideo(ytUrl) {
+// ── Video provider candidates (all 3, in priority order) ──────────────────────
+async function getVideoCandidates(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
+  const out = [];
 
   try {
     const { data: d } = await axios.get(
@@ -226,13 +300,12 @@ async function getVideo(ytUrl) {
     );
     const r = d?.result || d;
     const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
-    if (typeof url === "string" && url.startsWith("http")) {
-      return {
+    if (typeof url === "string" && url.startsWith("http"))
+      out.push({
         url,
         title: r?.title || d?.title || "",
         filename: r?.filename || "video.mp4",
-      };
-    }
+      });
   } catch {}
 
   try {
@@ -246,13 +319,12 @@ async function getVideo(ytUrl) {
       d?.url ||
       d?.result?.url ||
       d?.result?.download_url;
-    if (typeof url === "string" && url.startsWith("http")) {
-      return {
+    if (typeof url === "string" && url.startsWith("http"))
+      out.push({
         url,
         title: d?.title || "",
         filename: d?.filename || "video.mp4",
-      };
-    }
+      });
   } catch {}
 
   try {
@@ -265,22 +337,18 @@ async function getVideo(ytUrl) {
       d?.status !== false &&
       typeof url === "string" &&
       url.startsWith("http")
-    ) {
-      return {
+    )
+      out.push({
         url,
         title: d?.title || "",
         filename: d?.filename || "video.mp4",
-      };
-    }
+      });
   } catch {}
 
-  return null;
+  return out;
 }
 
 // ── Quick INFO CARD (sent within 1-2 sec, before any download starts) ─────────
-// Sends thumbnail as an image with title/author/duration/views in the caption.
-// Uses the thumbnail URL directly (YouTube's own CDN — fast & not bot-blocked),
-// so this doesn't wait on any slow download and shows up almost instantly.
 async function sendInfoCard(sock, jid, msg, meta, botName, type) {
   const label = type === "video" ? "🎬 VIDEO" : "🎵 AUDIO";
   const caption =
@@ -289,7 +357,7 @@ async function sendInfoCard(sock, jid, msg, meta, botName, type) {
     `👤 Channel : ${meta.author || "N/A"}\n` +
     `⏱ Duration : ${formatDuration(meta.duration)}\n` +
     `👁 Views    : ${formatViews(meta.views)}\n\n` +
-    `⏳ _Downloading, thoda ruko..._`;
+    `⏳ _Downloading, please wait..._`;
 
   try {
     if (meta.thumbnail) {
@@ -302,14 +370,13 @@ async function sendInfoCard(sock, jid, msg, meta, botName, type) {
       await sock.sendMessage(jid, { text: caption }, { quoted: msg });
     }
   } catch {
-    // Never let the info card break the main flow
     try {
       await sock.sendMessage(jid, { text: caption }, { quoted: msg });
     } catch {}
   }
 }
 
-// ── Final media captions ───────────────────────────────────────────────────────
+// ── Final media caption (plain text, NO contextInfo / NO ad-card / NO link) ──
 function mediaCaption(meta, botName, type) {
   const label = type === "video" ? "🎬 VIDEO" : "🎵 MUSIC";
   return (
@@ -317,21 +384,8 @@ function mediaCaption(meta, botName, type) {
     `🎙 *${meta.title || "Unknown"}*\n` +
     `🎤 ${meta.author || "Unknown"}\n` +
     `⏱ ${formatDuration(meta.duration)}\n\n` +
-    `> 🤖 Powered by ${botName}\n> 👨‍💻 Ahsan Ali Wadani`
+    `> 🤖 Powered by ${botName}`
   );
-}
-
-// clean contextInfo — no mediaUrl/sourceUrl, so no auto-attached clickable link
-function cleanCtx(title) {
-  return {
-    externalAdReply: {
-      title: title || "YouTube",
-      body: "AA MD Bot",
-      mediaType: 1,
-      renderLargerThumbnail: false,
-      showAdAttribution: false,
-    },
-  };
 }
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
@@ -370,7 +424,7 @@ export default {
           `• *${prefix}video* <name or YT link> — video\n` +
           `• *${prefix}mp3* <YT link> — direct audio\n` +
           `• *${prefix}mp4* <YT link> — direct video\n\n` +
-          `💡 Reply to any message containing a YT link also works`,
+          `💡 Replying to a message containing a YT link also works`,
       );
     }
 
@@ -385,18 +439,17 @@ export default {
     try {
       await react(isVideoCmd ? "🎥" : "🎶");
 
-      // mp3/mp4 commands require a direct link (no name search) — keep original behaviour
       if (isDirectOnly && !extractUrl(query)) {
         await react("❌");
         return reply(
-          `❌ *Valid YouTube link do*\n\n` +
-            `Naam se search karne ke liye:\n` +
+          `❌ *Please provide a valid YouTube link.*\n\n` +
+            `To search by name instead, use:\n` +
             `• *${prefix}play* <song name>\n` +
-            `• *${prefix}video* <song name>`,
+            `• *${prefix}video* <video name>`,
         );
       }
 
-      // 1) Resolve URL + metadata (fast: search API / oEmbed)
+      // 1) Resolve URL + metadata
       const { ytUrl, meta } = await resolveMeta(query);
       if (!ytUrl) {
         await react("❌");
@@ -408,7 +461,7 @@ export default {
         );
       }
 
-      // 2) INSTANT info card — fires immediately, before any file download
+      // 2) INSTANT info card
       await sendInfoCard(
         sock,
         jid,
@@ -418,58 +471,53 @@ export default {
         isVideoCmd ? "video" : "audio",
       );
 
-      // 3) Get the actual download link from the API chain
-      const apiResult = isVideoCmd
-        ? await getVideo(ytUrl)
-        : await getAudio(ytUrl);
-      if (!apiResult?.url) {
+      // 3) Get ALL provider links (not just the first)
+      const candidates = isVideoCmd
+        ? await getVideoCandidates(ytUrl)
+        : await getAudioCandidates(ytUrl);
+      if (!candidates.length) {
         await react("❌");
         return reply(
           `❌ *${isVideoCmd ? "Video" : "Audio"} download failed*\n\n` +
-            `All 3 ${isVideoCmd ? "video" : "audio"} APIs unavailable right now — try again later.` +
+            `All 3 ${isVideoCmd ? "video" : "audio"} providers are unavailable right now — please try again later.` +
             (isVideoCmd
               ? ""
               : `\n💡 Want video instead? *${prefix}video* ${query}`),
         );
       }
-      if (apiResult.title) meta.title = meta.title || apiResult.title;
+      if (candidates[0].title) meta.title = meta.title || candidates[0].title;
 
-      // 4) Download the real file ourselves (with spoofed headers — this is
-      // what makes it actually work instead of silently failing)
-      let buf;
-      try {
-        buf = await fetchBuf(apiResult.url, isVideoCmd ? 120000 : 90000);
-      } catch {}
+      // 4) Try downloading from each candidate until one actually works
+      const timeout = isVideoCmd ? 120000 : 90000;
       const minSize = isVideoCmd ? 50000 : 10000;
-      if (!buf || buf.length < minSize) {
+      const result = await downloadFirstWorking(candidates, timeout, minSize);
+
+      if (!result) {
         await react("❌");
         return reply(
-          `❌ *${isVideoCmd ? "Video" : "Audio"} file download failed*\n\n` +
-            `Link mila API se, magar file download nahi ho payi (expired/blocked link).\n` +
-            `Try again or a different ${isVideoCmd ? "video" : "song"}.`,
+          `❌ *${isVideoCmd ? "Video" : "Audio"} download failed*\n\n` +
+            `All provider links were unreachable or expired. Please try again or use a different ${isVideoCmd ? "video" : "song"}.`,
         );
       }
 
-      // 5) Send the actual media
+      // 5) Send the actual media — plain, no ad-card, no contextInfo, no link
       if (isVideoCmd) {
         await sock.sendMessage(
           jid,
           {
-            video: buf,
+            video: result.buf,
             mimetype: "video/mp4",
-            fileName: apiResult.filename || `${meta.title || "video"}.mp4`,
+            fileName: result.meta.filename || `${meta.title || "video"}.mp4`,
             caption: mediaCaption(meta, botName, "video"),
-            contextInfo: cleanCtx(meta.title),
           },
           { quoted: msg },
         );
       } else {
         await sendMedia({
-          audio: buf,
+          audio: result.buf,
           mimetype: "audio/mpeg",
-          fileName: apiResult.filename || "audio.mp3",
+          fileName: result.meta.filename || "audio.mp3",
           ptt: false,
-          contextInfo: cleanCtx(meta.title),
         });
       }
 
@@ -478,7 +526,7 @@ export default {
       console.error("[ YouTube ]", err.message);
       await react("❌").catch(() => {});
       reply(
-        `❌ *YouTube download failed*\n\n` +
+        `❌ *YouTube download failed.*\n\n` +
           `Please try again or use a different YouTube link.\n` +
           `💡 You can also try: *${prefix}play* <song name>`,
       ).catch(() => {});
