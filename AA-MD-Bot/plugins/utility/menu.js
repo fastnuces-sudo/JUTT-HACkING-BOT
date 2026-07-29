@@ -258,7 +258,6 @@ export default {
       menu += `│\n`;
       menu += `│  ▸ *${pref}stripfwd* — reply to any message\n`;
       menu += `│     _Re-send without "View Channel" & "Forwarded" tags_\n`;
-      menu += `│     _Aliases: .rmfwd  .cleanfwd  .removefwd  .notags_\n`;
       menu += `│\n`;
       menu += `│  🗑️ *Deleted Messages*\n`;
       menu += `│\n`;
@@ -357,6 +356,23 @@ export default {
       }
 
       menu += renderCat(cfg.e, cfg.n, cmds, pref, cfg.max || 8, cat);
+
+      // After fun category — show .gf subcommands detail
+      if (cat === 'fun') {
+        menu += `\n╭── 💕  *AI GIRLFRIEND — AYLA*\n`;
+        menu += `│\n`;
+        menu += `│  ▸ *${pref}gf* <message>\n`;
+        menu += `│     _Chat with Ayla — she remembers your convo_\n`;
+        menu += `│\n`;
+        menu += `│  ▸ *${pref}gf mood* — Ayla's current mood\n`;
+        menu += `│  ▸ *${pref}gf level* — your relationship level\n`;
+        menu += `│  ▸ *${pref}gf gift* — send her a virtual gift 🎁\n`;
+        menu += `│  ▸ *${pref}gf reset* — start fresh\n`;
+        menu += `│  ▸ *${pref}gf help* — full command list\n`;
+        menu += `│\n`;
+        menu += `│  _💡 Relationship grows with every message!_\n`;
+        menu += `╰${'─'.repeat(32)}\n`;
+      }
     }
 
     // Footer tips

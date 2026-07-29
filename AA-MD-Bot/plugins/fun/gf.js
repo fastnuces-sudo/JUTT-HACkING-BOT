@@ -9,12 +9,12 @@
 //   .gf help       — show all commands
 // ============================================
 
-import { chatAI, clearHistory } from '../../lib/aiEngine.js';
+import { chatAIFast, clearHistory } from '../../lib/aiEngine.js';
 import { db } from '../../lib/database.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const GF_DB_KEY   = '__gf_relationships__';
-const COOLDOWN_MS = 4000; // 4 s between replies
+const COOLDOWN_MS = 2500; // 2.5 s between replies (faster)
 const _cooldowns  = new Map();
 
 const MOODS   = ['Happy 😊', 'Shy 🥺', 'Excited 🥳', 'Sleepy 😴', 'Playful 😜', 'Romantic 💕', 'Caring 🤗', 'Giggly 😄'];
@@ -224,13 +224,44 @@ export default {
     // Build context-aware system prompt
     const systemPrompt = buildSystemPrompt(data);
 
+    // Show typing indicator while AI thinks
+    await sock.sendPresenceUpdate('composing', jid).catch(() => {});
+
+    // Race with a hard 35s wall-clock timeout so the bot always replies
+    let aiReply = null;
     try {
-      const aiReply = await chatAI('gf:' + senderJid, text, systemPrompt);
-      await react('✅').catch(() => {});
-      await reply(`${aiReply}\n\n> 💕 *Ayla*`);
-    } catch (e) {
+      aiReply = await Promise.race([
+        chatAIFast('gf:' + senderJid, text, systemPrompt),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 35000)),
+      ]);
+    } catch (_) { /* handled below */ }
+
+    await sock.sendPresenceUpdate('available', jid).catch(() => {});
+
+    if (!aiReply) {
+      const fallbacks = [
+        '💕 "Ugh, mera phone lag raha hai abhi... ek second jaan 🥺"',
+        '💕 "Yaar network ne pakad liya mujhe 😅 dobara bolo?"',
+        '💕 "Suno, kuch hua signal ko — phir try karo na 🌸"',
+        '💕 "Ayla offline si ho gayi thi 😴 ab bolo, sun rahi hoon!"',
+      ];
+      const pick = fallbacks[Math.floor(Math.random() * fallbacks.length)];
       await react('❌').catch(() => {});
-      await reply(`💕 "Sorry jaan, I'm not feeling well right now... Try again in a moment? 🥺"\n\n> 💕 *Ayla*`);
+      return reply(`${pick}\n\n> 💕 *Ayla*`);
     }
+
+    await react('✅').catch(() => {});
+
+    // Occasional follow-up questions to keep conversation going
+    const followUps = [
+      '\n\nAur tumhara din kaisa gaya? 🌸',
+      '\n\nTumhara kya khayal hai? 😊',
+      '\n\nAur batao, kya ho raha hai? 💕',
+      '\n\nTumhe kaisa lag raha hai aaj? 🥺',
+    ];
+    // Add follow-up ~20% of the time to keep chat interactive
+    const extra = data.msgCount % 5 === 0 ? followUps[Math.floor(Math.random() * followUps.length)] : '';
+
+    await reply(`${aiReply}${extra}\n\n> 💕 *Ayla*`);
   },
 };

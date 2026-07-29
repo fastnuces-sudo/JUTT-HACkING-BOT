@@ -124,52 +124,99 @@ function formatDuration(d) {
   return String(d);
 }
 
-// ── Search (DavidCyrilTech) — title, thumbnail, duration, views, channel ──────
+// ── Score how well a result title matches the query words (used to pick the
+// best of play-dl's top-5 results instead of blindly trusting result #1) ────
+function scoreMatch(title, query) {
+  if (!title) return 0;
+  const t = title.toLowerCase();
+  const words = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+  if (!words.length) return 0;
+  return words.filter((w) => t.includes(w)).length / words.length;
+}
+
+function fmtViewsShort(n) {
+  if (!n) return "";
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+  return String(n);
+}
+
+// ── Search (top 5 via play-dl → best title match, davidcyriltech fallback) ───
 async function searchYT(query) {
-  const { data } = await axios.get(
-    `https://apis.davidcyriltech.my.id/youtube/search?query=${encodeURIComponent(query)}`,
-    { timeout: 15000 },
-  );
+  // Primary: play-dl (no external API, fastest, and picks the BEST of 5 matches
+  // instead of just trusting whatever result an API puts first)
+  try {
+    const playdl = (await import("play-dl")).default;
+    const res = await playdl.search(query, {
+      source: { youtube: "video" },
+      limit: 5,
+    });
+    if (res?.length) {
+      const scored = res.map((r) => ({ r, score: scoreMatch(r.title, query) }));
+      scored.sort((a, b) => b.score - a.score);
+      const r = scored[0].r;
+      const m = Math.floor((r.durationInSec || 0) / 60);
+      const s = String((r.durationInSec || 0) % 60).padStart(2, "0");
+      return {
+        url: r.url,
+        title: r.title || query,
+        thumbnail: r.thumbnails?.[0]?.url || "",
+        duration: r.durationInSec ? `${m}:${s}` : "",
+        author: r.channel?.name || "",
+        views: fmtViewsShort(r.views),
+      };
+    }
+  } catch {}
 
-  // DEBUG (uncomment once if fields are still wrong, then send me the output):
-  // console.log('[YT SEARCH RAW]', JSON.stringify(data, null, 2));
+  // Fallback: davidcyriltech search (deep-scanned for odd/renamed field keys)
+  try {
+    const { data } = await axios.get(
+      `https://apis.davidcyriltech.my.id/youtube/search?query=${encodeURIComponent(query)}`,
+      { timeout: 15000 },
+    );
+    const results = data?.result || data?.results || data?.data || [];
+    if (Array.isArray(results) && results.length) {
+      const r = results[0];
+      return {
+        url: r.url || r.link || r.videoUrl || "",
+        title: r.title || deepFind(r, /title/i) || query,
+        thumbnail:
+          r.thumbnail ||
+          r.image ||
+          r.thumbnails?.[0]?.url ||
+          r.thumbnails?.[0] ||
+          deepFind(r, /thumb|image|cover/i) ||
+          "",
+        duration:
+          r.duration ||
+          r.timestamp ||
+          r.length ||
+          deepFind(r, /duration|length|timestamp/i) ||
+          "",
+        views:
+          r.views ||
+          r.viewCount ||
+          r.view_count ||
+          r.viewsCount ||
+          deepFind(r, /view/i) ||
+          "",
+        author:
+          r.channel ||
+          r.channelTitle ||
+          r.author?.name ||
+          r.author ||
+          r.uploader ||
+          deepFind(r, /channel|author|uploader/i) ||
+          "",
+      };
+    }
+  } catch {}
 
-  const results = data?.result || data?.results || data?.data || [];
-  if (!Array.isArray(results) || !results.length) return null;
-  const r = results[0];
-
-  return {
-    url: r.url || r.link || r.videoUrl || "",
-    title: r.title || deepFind(r, /title/i) || query,
-    thumbnail:
-      r.thumbnail ||
-      r.image ||
-      r.thumbnails?.[0]?.url ||
-      r.thumbnails?.[0] ||
-      deepFind(r, /thumb|image|cover/i) ||
-      "",
-    duration:
-      r.duration ||
-      r.timestamp ||
-      r.length ||
-      deepFind(r, /duration|length|timestamp/i) ||
-      "",
-    views:
-      r.views ||
-      r.viewCount ||
-      r.view_count ||
-      r.viewsCount ||
-      deepFind(r, /view/i) ||
-      "",
-    author:
-      r.channel ||
-      r.channelTitle ||
-      r.author?.name ||
-      r.author ||
-      r.uploader ||
-      deepFind(r, /channel|author|uploader/i) ||
-      "",
-  };
+  return null;
 }
 
 // ── YouTube oEmbed fallback (used for direct links). Free, official, no key. ──
@@ -288,25 +335,10 @@ async function getAudioCandidates(ytUrl) {
   return out;
 }
 
-// ── Video provider candidates (all 3, in priority order) ──────────────────────
+// ── Video provider candidates (eliteprotech FIRST, then others) ──────────────
 async function getVideoCandidates(ytUrl) {
   const enc = encodeURIComponent(ytUrl);
   const out = [];
-
-  try {
-    const { data: d } = await axios.get(
-      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${enc}`,
-      { timeout: 30000 },
-    );
-    const r = d?.result || d;
-    const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
-    if (typeof url === "string" && url.startsWith("http"))
-      out.push({
-        url,
-        title: r?.title || d?.title || "",
-        filename: r?.filename || "video.mp4",
-      });
-  } catch {}
 
   try {
     const { data: d } = await axios.get(
@@ -324,6 +356,21 @@ async function getVideoCandidates(ytUrl) {
         url,
         title: d?.title || "",
         filename: d?.filename || "video.mp4",
+      });
+  } catch {}
+
+  try {
+    const { data: d } = await axios.get(
+      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${enc}`,
+      { timeout: 30000 },
+    );
+    const r = d?.result || d;
+    const url = r?.download_url || r?.downloadUrl || r?.url || d?.url;
+    if (typeof url === "string" && url.startsWith("http"))
+      out.push({
+        url,
+        title: r?.title || d?.title || "",
+        filename: r?.filename || "video.mp4",
       });
   } catch {}
 

@@ -152,6 +152,17 @@ function cleanMarkdown(text) {
     .trim();
 }
 
+// ── Helper: resolves with first truthy result, or null if all fail/timeout ──────
+function raceSuccess(promises, timeoutMs = 14000) {
+  return new Promise(resolve => {
+    let settled = 0;
+    const total = promises.length;
+    const timer = setTimeout(() => resolve(null), timeoutMs);
+    const done = (v) => { if (v) { clearTimeout(timer); resolve(v); } else if (++settled === total) { clearTimeout(timer); resolve(null); } };
+    promises.forEach(p => Promise.resolve(p).then(done).catch(() => done(null)));
+  });
+}
+
 // ── Main chat function ─────────────────────────────────────────────────────────
 // jid         — unique conversation key (groupJid, userJid, etc.)
 // userMsg     — what the user said
@@ -195,6 +206,56 @@ export async function chatAI(jid, userMsg, systemPrompt) {
   }
 
   // 6. ch.at — last resort
+  if (!reply) {
+    reply = await tryChAt(userMsg).catch(() => null);
+  }
+
+  if (!reply) throw new Error('AI unavailable — try again in a moment.');
+
+  const cleaned = cleanMarkdown(reply);
+  addHistory(jid, 'assistant', cleaned);
+  return cleaned;
+}
+
+// ── Fast chat function for .gf (speed-optimised, parallel GET + POST fallback) ─
+// Tries fast GET APIs in parallel first; falls back to POST only if needed.
+// systemPrompt is used for POST; GET APIs get a compact embedded context.
+export async function chatAIFast(jid, userMsg, systemPrompt) {
+  addHistory(jid, 'user', userMsg);
+
+  // Build compact context string for GET APIs (last 3 exchanges)
+  const hist = getHistory(jid).slice(-6).filter(m => m.role !== 'system');
+  const ctxStr = hist.length
+    ? hist.map(m => `${m.role === 'user' ? 'User' : 'Ayla'}: ${m.content}`).join('\n') + '\n'
+    : '';
+
+  // Compact system instruction embeddable in a single GET prompt
+  const compactSys = `You are Ayla, a warm, playful, caring AI girlfriend chatting on WhatsApp. Reply naturally in 1-3 lines like real texting. Use 1-2 emojis. Be flirty and sweet. Match the user's language exactly (Urdu/Roman Urdu/English). NEVER say you are an AI.`;
+  const getPrompt = `${compactSys}\n\n${ctxStr}User: ${userMsg}\nAyla:`;
+
+  let reply = null;
+
+  // Phase 1: race both fast GET APIs in parallel — take whichever wins first (max 13s)
+  reply = await raceSuccess([
+    tryABZTechGemini(getPrompt).catch(() => null),
+    tryABLlama(getPrompt).catch(() => null),
+  ], 13000);
+
+  // Phase 2: pollinations POST with full system prompt + conversation history
+  if (!reply) {
+    const messages = [
+      { role: 'system', content: systemPrompt || DEFAULT_SYSTEM },
+      ...getHistory(jid),
+    ];
+    reply = await tryPollinationsPost(messages, 'openai-fast').catch(() => null);
+  }
+
+  // Phase 3: pollinations GET (flat context)
+  if (!reply) {
+    reply = await tryPollinationsGet(getPrompt).catch(() => null);
+  }
+
+  // Phase 4: ch.at last resort
   if (!reply) {
     reply = await tryChAt(userMsg).catch(() => null);
   }
