@@ -265,6 +265,19 @@ cd "$BOT_DIR"
 
 # Set npm registry to official (avoids corporate proxy issues)
 npm config set registry "$NPM_REGISTRY" 2>/dev/null || true
+ok "npm registry set: $NPM_REGISTRY"
+
+# ── npm 10 ARM64 bug fix ───────────────────────────────────────────────────────
+# npm 10 on ARM64 (Oracle Cloud) has a known bug: "Exit handler never called"
+# — hangs indefinitely or exits 0 but installs nothing. Fix: downgrade to npm 9.
+_CURRENT_NPM=$(npm --version 2>/dev/null || echo "0")
+if [[ "$_CURRENT_NPM" == 10* ]]; then
+  inf "npm 10 detected — downgrading to npm 9 (ARM64 hang fix)..."
+  npm install -g npm@9 --registry="$NPM_REGISTRY" --silent 2>/dev/null || true
+  ok "npm $(npm --version) ready"
+else
+  ok "npm $_CURRENT_NPM (no downgrade needed)"
+fi
 
 # Hash-based change detection — compare current package.json with last install
 PKG_HASH_FILE="$BOT_DIR/.npm-install-hash"
@@ -281,21 +294,28 @@ else
     inf "node_modules missing — running npm install..."
   fi
 
-  # Helper: run npm install with standard flags (--silent removed: logs must be visible)
+  # Wipe node_modules before install — prevents ENOTEMPTY race errors
+  inf "node_modules clean kar rahe hain (fresh install ke liye)..."
+  rm -rf node_modules package-lock.json
+
+  # Helper: run npm install with all required flags
+  # --legacy-peer-deps : prevents peer-dep conflicts from freezing install
+  # timeout 300        : hard 5-minute kill — never hangs forever
   _npm_install() {
-    npm install --omit=dev \
+    timeout 300 npm install --omit=dev \
       --registry="$NPM_REGISTRY" \
       --no-audit \
-      --no-fund
+      --no-fund \
+      --legacy-peer-deps
   }
 
+  inf "npm install running... (2-5 minute lagenge)"
   if _npm_install; then
-    # Success — save hash for next run
     echo "$CURRENT_PKG_HASH" > "$PKG_HASH_FILE"
     ok "npm install completed"
     _pass "npm" "Packages installed"
   else
-    warn "npm install failed — removing node_modules + package-lock.json and retrying..."
+    warn "npm install failed — node_modules wipe karke retry kar rahe hain..."
     rm -rf node_modules package-lock.json
     if _npm_install; then
       echo "$CURRENT_PKG_HASH" > "$PKG_HASH_FILE"
@@ -303,7 +323,7 @@ else
       _pass "npm" "Packages installed (retry)"
     else
       _fail "npm" "npm install failed"
-      fail "npm install failed after retry.\n\nDebug:\n  cd $BOT_DIR && npm install --registry=$NPM_REGISTRY"
+      fail "npm install failed after retry.\n\nDebug:\n  cd $BOT_DIR && npm install --registry=$NPM_REGISTRY --legacy-peer-deps"
     fi
   fi
 fi
