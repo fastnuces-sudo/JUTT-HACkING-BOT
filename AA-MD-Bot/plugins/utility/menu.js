@@ -357,7 +357,7 @@ export default {
 
       menu += renderCat(cfg.e, cfg.n, cmds, pref, cfg.max || 8, cat);
 
-      // After fun category — show .gf subcommands detail
+      // After fun category — show .gf and .ppcouple subcommands detail
       if (cat === 'fun') {
         menu += `\n╭── 💕  *AI GIRLFRIEND — AYLA*\n`;
         menu += `│\n`;
@@ -371,6 +371,17 @@ export default {
         menu += `│  ▸ *${pref}gf help* — full command list\n`;
         menu += `│\n`;
         menu += `│  _💡 Relationship grows with every message!_\n`;
+        menu += `╰${'─'.repeat(32)}\n`;
+
+        menu += `\n╭── 🌸  *ANIME PROFILE PICTURES*\n`;
+        menu += `│\n`;
+        menu += `│  ▸ *${pref}ppcouple*\n`;
+        menu += `│     _Random anime couple — boy + girl PP_\n`;
+        menu += `│\n`;
+        menu += `│  ▸ *${pref}ppboy* — random anime boy PP\n`;
+        menu += `│  ▸ *${pref}ppgirl* — random anime girl PP\n`;
+        menu += `│\n`;
+        menu += `│  _Aliases: ${pref}ppcp  ${pref}couplepp  ${pref}animepic_\n`;
         menu += `╰${'─'.repeat(32)}\n`;
       }
     }
