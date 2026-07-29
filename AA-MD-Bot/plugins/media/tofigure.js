@@ -1,14 +1,13 @@
-// AA MD Bot — To Figure Filter
-// Applies figure art filter to a replied image
+// AA MD Bot — To Figure / Cartoon Filter
+// Local sharp filter: poster-style, strong edges, bold colours
 
-import axios from 'axios';
+import sharp from 'sharp';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
-import { uploadImage } from '../../lib/imageUpload.js';
 
 export default {
   command: 'tofigure',
   alias: ['figurefilter', 'figure'],
-  description: 'Apply figure art filter to a replied image',
+  description: 'Apply figure/cartoon art filter to a replied image',
   category: 'media',
 
   async execute({ sock, msg, jid, react, reply, quoted }) {
@@ -16,9 +15,10 @@ export default {
     if (!imgMsg) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ TO FIGURE ≪━━━\n├ \n` +
-        `├ Reply to an image to apply\n├ the figure filter.\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `🖼️ *To Figure*\n\n` +
+        `Reply to an image and send *.tofigure*\n` +
+        `to apply the cartoon/figure filter.\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     await react('⌛');
@@ -27,33 +27,27 @@ export default {
       const chunks = [];
       for await (const chunk of stream) chunks.push(chunk);
       const buffer = Buffer.concat(chunks);
-      if (buffer.length > 10 * 1024 * 1024) {
-        await react('❌');
-        return reply('❌ Image too large (max 10MB).');
-      }
-      const imageUrl = await uploadImage(buffer, 'image.png');
-      const apiResp = await axios.get(
-        `https://api.fikmydomainsz.xyz/imagecreator/tofigur?url=${encodeURIComponent(imageUrl)}`,
-        { timeout: 30000 }
-      );
-      if (!apiResp.data?.status || !apiResp.data?.result) throw new Error('API returned no result');
-      const imgBuf = Buffer.from(
-        (await axios.get(apiResp.data.result, { responseType: 'arraybuffer', timeout: 20000 })).data
-      );
+
+      // Figure/cartoon effect: poster colours, bold edges, high contrast
+      const result = await sharp(buffer)
+        .modulate({ brightness: 1.15, saturation: 1.8 })
+        .normalise()
+        .sharpen({ sigma: 3.5, m1: 6.0, m2: 0.2 })
+        .gamma(0.9)
+        .jpeg({ quality: 92 })
+        .toBuffer();
+
       await sock.sendMessage(jid, {
-        image: imgBuf,
+        image: result,
         caption:
-          `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ TO FIGURE ≪━━━\n├ \n` +
-          `├ Figure filter applied!\n` +
-          `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`,
+          `🖼️ *Figure Filter*\n\n` +
+          `_Figure filter applied!_\n\n` +
+          `> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ FIGURE ERROR ≪━━━\n├ \n` +
-        `├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
-      );
+      reply(`❌ *Figure filter failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

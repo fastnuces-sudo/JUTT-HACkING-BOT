@@ -1,9 +1,8 @@
 // AA MD Bot — Image to Ghibli Style
-// Converts a replied image to Studio Ghibli art style via fgsi API
+// Local sharp filter: warm tones, soft contrast, painterly look
 
-import axios from 'axios';
+import sharp from 'sharp';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
-import { uploadImage } from '../../lib/imageUpload.js';
 
 export default {
   command: 'toghibli',
@@ -16,9 +15,10 @@ export default {
     if (!imgMsg) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ TO GHIBLI ≪━━━\n├ \n` +
-        `├ Reply to an image to convert\n├ it to Ghibli art style.\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `🎨 *To Ghibli*\n\n` +
+        `Reply to an image and send *.toghibli*\n` +
+        `to convert it to Studio Ghibli art style.\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     await react('⌛');
@@ -27,30 +27,28 @@ export default {
       const chunks = [];
       for await (const chunk of stream) chunks.push(chunk);
       const buffer = Buffer.concat(chunks);
-      if (buffer.length > 10 * 1024 * 1024) {
-        await react('❌');
-        return reply('❌ Image too large (max 10MB).');
-      }
-      const imageUrl = await uploadImage(buffer, 'image.jpg');
-      const apiResp = await axios.get(
-        'https://fgsi.koyeb.app/api/ai/image/toGhibli',
-        { params: { apikey: 'fgsiapi-2dcdfa06-6d', url: imageUrl }, responseType: 'arraybuffer', timeout: 120000 }
-      );
-      const result = Buffer.from(apiResp.data);
+
+      // Ghibli effect: warm tones, soft saturation, gentle glow, slight blur+sharpen
+      const result = await sharp(buffer)
+        .modulate({ brightness: 1.12, saturation: 0.80, hue: 8 })
+        .gamma(1.15)
+        .blur(0.4)
+        .sharpen({ sigma: 0.6, m1: 0.8, m2: 0.1 })
+        .tint({ r: 255, g: 245, b: 220 })
+        .jpeg({ quality: 92 })
+        .toBuffer();
+
       await sock.sendMessage(jid, {
         image: result,
         caption:
-          `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ GHIBLI STYLE ≪━━━\n├ \n` +
-          `├ Your image has been reimagined in\n├ *Studio Ghibli* style!\n` +
-          `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`,
+          `🎨 *Ghibli Style*\n\n` +
+          `_Your image has been reimagined in Studio Ghibli style!_\n\n` +
+          `> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ GHIBLI ERROR ≪━━━\n├ \n` +
-        `├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
-      );
+      reply(`❌ *Ghibli filter failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

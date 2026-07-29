@@ -9,14 +9,14 @@ export default {
   description: 'Generate fake iPhone chat screenshot with your text',
   category: 'media',
 
-  async execute({ sock, msg, jid, text, react, reply, prefix, senderJid }) {
+  async execute({ sock, msg, jid, text, react, reply, prefix }) {
     if (!text) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ IQC ≪━━━\n├ \n` +
-        `├ Enter text for the fake chat.\n` +
-        `├ Example: ${prefix}iqc Hello there!\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `📱 *iPhone Chat*\n\n` +
+        `Generate a fake iPhone chat screenshot.\n\n` +
+        `*Usage:* ${prefix}iqc Hello there!\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     await react('⌛');
@@ -35,17 +35,15 @@ export default {
       await sock.sendMessage(jid, {
         image: buf,
         caption:
-          `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ IPHONE CHAT ≪━━━\n├ \n` +
-          `├ Your fake chat is ready!\n├ Text: "${text}"\n├ Time: ${now}\n` +
-          `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`,
+          `📱 *iPhone Chat*\n\n` +
+          `✅ Fake chat generated!\n` +
+          `💬 "${text}"\n\n` +
+          `> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ IQC ERROR ≪━━━\n├ \n` +
-        `├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
-      );
+      reply(`❌ *IQC failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

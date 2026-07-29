@@ -1,13 +1,13 @@
-// AA MD Bot — Negro/Blacken Image Filter
-// Applies black filter to a replied image via negro.consulting API
+// AA MD Bot — Dark/Black Filter
+// Local sharp filter: deep darkness + slight cool tint
 
-import axios from 'axios';
+import sharp from 'sharp';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
 
 export default {
   command: 'negro',
   alias: ['blackfilter', 'darkfilter', 'hitam'],
-  description: 'Apply black/dark filter to a replied image',
+  description: 'Apply dark/black filter to a replied image',
   category: 'media',
 
   async execute({ sock, msg, jid, react, reply, quoted }) {
@@ -15,9 +15,10 @@ export default {
     if (!imgMsg) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ NEGRO ≪━━━\n├ \n` +
-        `├ Reply to an image to apply\n├ the black filter.\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `🌑 *Dark Filter*\n\n` +
+        `Reply to an image and send *.negro*\n` +
+        `to apply the black/dark filter.\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     await react('⌛');
@@ -26,30 +27,25 @@ export default {
       const chunks = [];
       for await (const chunk of stream) chunks.push(chunk);
       const buffer = Buffer.concat(chunks);
-      const base64Image = buffer.toString('base64');
-      const response = await axios.post(
-        'https://negro.consulting/api/process-image',
-        { filter: 'hitam', imageData: 'data:image/png;base64,' + base64Image },
-        { timeout: 30000 }
-      );
-      const resultBuffer = Buffer.from(
-        response.data.processedImageUrl.replace('data:image/png;base64,', ''),
-        'base64'
-      );
+
+      // Dark filter: heavy brightness reduction, desaturate, cool blue tint
+      const result = await sharp(buffer)
+        .modulate({ brightness: 0.28, saturation: 0.15 })
+        .tint({ r: 20, g: 25, b: 50 })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+
       await sock.sendMessage(jid, {
-        image: resultBuffer,
+        image: result,
         caption:
-          `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ NEGRO FILTER ≪━━━\n├ \n` +
-          `├ Black filter applied!\n` +
-          `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`,
+          `🌑 *Dark Filter*\n\n` +
+          `_Black filter applied!_\n\n` +
+          `> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ NEGRO ERROR ≪━━━\n├ \n` +
-        `├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
-      );
+      reply(`❌ *Dark filter failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

@@ -14,21 +14,20 @@ export default {
     if (!text) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n` +
-        `├━━━≫ BRAT ≪━━━\n├ \n` +
-        `├ Enter text for the brat sticker.\n` +
-        `├ Example: ${prefix}brat i'm the main character\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `🖊️ *Brat Sticker*\n\n` +
+        `Enter text for the brat sticker.\n\n` +
+        `*Usage:* ${prefix}brat i'm the main character\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     await react('⌛');
     try {
       const resp = await axios.get(
-        `https://api.nexray.web.id/maker/brat?text=${encodeURIComponent(text)}`,
+        `https://api.nexray.eu.cc/maker/brat?text=${encodeURIComponent(text)}`,
         {
           responseType: 'arraybuffer',
-          timeout: 15000,
-          headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'image/*,*/*' },
+          timeout: 20000,
+          headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'image/*,*/*' },
         }
       );
       const buf = Buffer.from(resp.data);
@@ -46,10 +45,7 @@ export default {
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ BRAT ERROR ≪━━━\n├ \n` +
-        `├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
-      );
+      reply(`❌ *Brat sticker failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

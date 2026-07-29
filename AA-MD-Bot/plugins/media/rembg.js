@@ -21,10 +21,10 @@ function getImageMsg(msg) {
 // ── API fallback chain ────────────────────────────────────────────────────────
 async function removeBgFromUrl(imageUrl) {
   const apis = [
-    // 1. Nexray — confirmed working, returns PNG
+    // 1. Nexray — returns PNG
     async () => {
       const res = await axios.get(
-        `https://api.nexray.web.id/tools/removebg?url=${encodeURIComponent(imageUrl)}`,
+        `https://api.nexray.eu.cc/tools/removebg?url=${encodeURIComponent(imageUrl)}`,
         { timeout: 45000, responseType: 'arraybuffer', headers: { 'User-Agent': 'Mozilla/5.0' } }
       );
       const buf = Buffer.from(res.data);

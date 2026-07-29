@@ -13,19 +13,19 @@ export default {
     if (!text) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├≪━━━ LOGO GEN ≪━━━\n├ \n` +
-        `├ Format: ${prefix}logogen Title|Idea|Slogan\n├ \n` +
-        `├ Example:\n├ ${prefix}logogen ToxicTech|AI Services|Innovation First\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `🎨 *AI Logo Generator*\n\n` +
+        `*Format:* ${prefix}logogen Title|Idea|Slogan\n\n` +
+        `*Example:*\n${prefix}logogen ToxicTech|AI Services|Innovation First\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     const [title, idea, slogan] = text.split('|').map(s => s?.trim());
     if (!title || !idea || !slogan) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├≪━━━ LOGO GEN ≪━━━\n├ \n` +
-        `├ Use: ${prefix}logogen Title|Idea|Slogan\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `❌ *Wrong format!*\n\n` +
+        `Use: ${prefix}logogen Title|Idea|Slogan\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     await react('⌛');
@@ -45,18 +45,15 @@ export default {
         await sock.sendMessage(jid, {
           image: { url: logo.logo_thumb },
           caption:
-            `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├≪━━━ LOGO ≪━━━\n├ \n` +
-            `├ Generated logo for *"${title}"*\n` +
-            `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`,
+            `🎨 *AI Logo*\n\n` +
+            `Generated logo for *"${title}"*\n\n` +
+            `> 🤖 *AA MD Bot*`,
         }, { quoted: msg });
       }
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├≪━━━ LOGO ERROR ≪━━━\n├ \n` +
-        `├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
-      );
+      reply(`❌ *Logo generation failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };

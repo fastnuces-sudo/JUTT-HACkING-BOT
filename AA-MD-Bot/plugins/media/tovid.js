@@ -1,9 +1,16 @@
 // AA MD Bot — Sticker to MP4 Video
-// Converts a replied webp sticker to mp4 video via elrayyxml API
+// Converts a replied WebP sticker to MP4 using ffmpeg
 
-import axios from 'axios';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs-extra';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
-import { uploadImage } from '../../lib/imageUpload.js';
+
+const execAsync = promisify(exec);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TEMP = path.join(__dirname, '../../temp');
 
 export default {
   command: 'tomp4',
@@ -16,42 +23,45 @@ export default {
     if (!stickerMsg) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ TO VIDEO ≪━━━\n├ \n` +
-        `├ Reply to a *sticker* to convert\n├ it to MP4 video.\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `🎬 *Sticker to Video*\n\n` +
+        `Reply to a *sticker* and send *.tomp4*\n` +
+        `to convert it to MP4 video.\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     await react('⌛');
+    const id = Date.now();
+    const inp = path.join(TEMP, `stk_${id}.webp`);
+    const out = path.join(TEMP, `stk_${id}.mp4`);
     try {
+      await fs.ensureDir(TEMP);
       const stream = await downloadContentFromMessage(stickerMsg, 'sticker');
       const chunks = [];
       for await (const chunk of stream) chunks.push(chunk);
       const stickerBuffer = Buffer.concat(chunks);
-      const stickerUrl = await uploadImage(stickerBuffer, `sticker_${Date.now()}.webp`);
-      const encodedUrl = encodeURIComponent(stickerUrl);
-      const convertResp = await axios.get(
-        `https://api.elrayyxml.web.id/api/maker/convert?url=${encodedUrl}&format=MP4`,
-        { headers: { accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }, timeout: 30000 }
+      await fs.writeFile(inp, stickerBuffer);
+
+      await execAsync(
+        `ffmpeg -i "${inp}" -vf "scale=512:512:force_original_aspect_ratio=decrease,pad=512:512:(ow-iw)/2:(oh-ih)/2" -c:v libx264 -preset fast -crf 26 -pix_fmt yuv420p -an -movflags +faststart -y "${out}" -loglevel error`,
+        { timeout: 60000 }
       );
-      if (!convertResp.data?.status || !convertResp.data?.result) throw new Error('Converter returned no result');
-      const videoUrl = convertResp.data.result;
-      const videoResp = await axios.get(videoUrl, { responseType: 'arraybuffer', timeout: 20000 });
-      const videoBuffer = Buffer.from(videoResp.data);
+
+      if (!await fs.pathExists(out)) throw new Error('Conversion failed — output not created');
+      const videoBuffer = await fs.readFile(out);
+      if (videoBuffer.length < 1000) throw new Error('Output video too small');
+
       await sock.sendMessage(jid, {
         video: videoBuffer,
         mimetype: 'video/mp4',
-        caption:
-          `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ TO VIDEO ≪━━━\n├ \n` +
-          `├ Sticker converted to video!\n` +
-          `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`,
+        caption: `🎬 *Sticker → Video*\n\n> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ TOVID ERROR ≪━━━\n├ \n` +
-        `├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
-      );
+      reply(`❌ *Conversion failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
+    } finally {
+      fs.remove(inp).catch(() => {});
+      fs.remove(out).catch(() => {});
     }
   },
 };

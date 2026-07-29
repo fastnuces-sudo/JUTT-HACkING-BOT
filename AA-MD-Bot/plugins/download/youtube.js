@@ -1,6 +1,6 @@
 // ============================================
 // AA MD Bot - YouTube Downloader
-// APIs: EliteProTech → ABZTech → DavidCyrilTech
+// APIs: EliteProTech → ABZTech (ytdl4) → DavidCyrilTech
 // Search: DavidCyrilTech
 // Buffer: arraybuffer → Buffer.from()
 // Card: externalAdReply (title + thumbnail)
@@ -58,10 +58,10 @@ async function getAudio(ytUrl) {
     }
   } catch {}
 
-  // 2. ABZTech ytdlv3
+  // 2. ABZTech ytdl4
   try {
     const { data: d } = await axios.get(
-      `https://api-abztech.zone.id/download/ytdlv3?url=${enc}`,
+      `https://api-abztech.zone.id/download/ytdl4?url=${enc}`,
       { timeout: 30000 }
     );
     const url = d?.downloadUrl || d?.download_url || d?.url || d?.result?.url;

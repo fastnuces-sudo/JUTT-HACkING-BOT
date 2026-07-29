@@ -1,9 +1,8 @@
 // AA MD Bot — Image to Anime Style
-// Converts a replied image to anime style via fgsi API
+// Local sharp filter: high saturation, vivid colours, edge-sharpened
 
-import axios from 'axios';
+import sharp from 'sharp';
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
-import { uploadImage } from '../../lib/imageUpload.js';
 
 export default {
   command: 'toanime',
@@ -16,9 +15,10 @@ export default {
     if (!imgMsg) {
       await react('❌');
       return reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ TO ANIME ≪━━━\n├ \n` +
-        `├ Reply to an image to convert\n├ it to anime style.\n` +
-        `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
+        `🎌 *To Anime*\n\n` +
+        `Reply to an image and send *.toanime*\n` +
+        `to convert it to anime art style.\n\n` +
+        `> 🤖 *AA MD Bot*`
       );
     }
     await react('⌛');
@@ -27,30 +27,26 @@ export default {
       const chunks = [];
       for await (const chunk of stream) chunks.push(chunk);
       const buffer = Buffer.concat(chunks);
-      if (buffer.length > 10 * 1024 * 1024) {
-        await react('❌');
-        return reply('❌ Image too large (max 10MB).');
-      }
-      const imageUrl = await uploadImage(buffer, 'image.jpg');
-      const apiResp = await axios.get(
-        'https://fgsi.koyeb.app/api/ai/image/toAnime',
-        { params: { apikey: 'fgsiapi-2dcdfa06-6d', url: imageUrl }, responseType: 'arraybuffer', timeout: 90000 }
-      );
-      const result = Buffer.from(apiResp.data);
+
+      // Anime effect: vivid saturation, high contrast, strong edge sharpening
+      const result = await sharp(buffer)
+        .modulate({ brightness: 1.05, saturation: 2.2 })
+        .normalise()
+        .sharpen({ sigma: 2.5, m1: 4.0, m2: 0.3 })
+        .jpeg({ quality: 92 })
+        .toBuffer();
+
       await sock.sendMessage(jid, {
         image: result,
         caption:
-          `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ ANIME STYLE ≪━━━\n├ \n` +
-          `├ Anime transformation complete!\n` +
-          `╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`,
+          `🎌 *Anime Style*\n\n` +
+          `_Anime transformation complete!_\n\n` +
+          `> 🤖 *AA MD Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(
-        `╭━━━ᕙ    ᖴᗴᗴ-᙭ᗰᗪツ    ᕗ━━━\n├━━━≫ TOANIME ERROR ≪━━━\n├ \n` +
-        `├ ${e.message}\n╰━━━━━━━━━━━━━━━━ᕗ\n> ©𝖕𝖔𝖜𝖊𝖗𝖊𝖉 𝖇𝖞 𝕬𝕬 𝕸𝕯 𝕭𝖔𝖙`
-      );
+      reply(`❌ *Anime filter failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
     }
   },
 };
