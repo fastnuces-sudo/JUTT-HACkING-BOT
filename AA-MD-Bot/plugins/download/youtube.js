@@ -1,701 +1,162 @@
-import axios from 'axios';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import fs from 'fs-extra';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { YTDLP, YTDLP_FLAGS, getCookiesFlag, COOKIES_PATH } from '../../lib/ytdlp.js';
+// ============================================
+// AA MD Bot - YouTube Downloader
+// 3 APIs only — no yt-dlp, no ffmpeg, no cookies
+// Audio: EliteProTech → ABZTech → DavidCyrilTech
+// Video: EliteProTech → ABZTech → DavidCyrilTech
+// Search: DavidCyrilTech only
+// ============================================
 
-const execAsync = promisify(exec);
-let _botCheckWarned = false;
-function warnIfBotCheck(err) {
-  const msg = err?.stderr || err?.message || '';
-  if (/sign in to confirm/i.test(msg) && !_botCheckWarned) {
-    _botCheckWarned = true;
-    console.warn(
-      '[ YouTube ] ⚠️  YouTube is bot-checking download requests from this server.\n' +
-      `  Fix: add a real cookies.txt at ${COOKIES_PATH} (see cookies.txt.example for steps).`
-    );
-  }
-}
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEMP = path.join(__dirname, '../../temp');
+import axios from 'axios';
 
 const YT_REGEX =
-  /^(https?:\/\/)?((www|m|music)\.)?(youtube(-nocookie)?\.com\/(watch\?v=|shorts\/|live\/)|youtu\.be\/)[\w-]+(\S+)?$/i;
+  /(https?:\/\/(?:(?:www|m|music)\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|shorts\/|live\/)|youtu\.be\/)[\w-]+\S*)/i;
 
-const extractUrl = (t) => { if (!t) return null; const m = t.match(YT_REGEX); return m ? m[0] : null; };
-const api = axios.create({ timeout: 20000 });
+const extractUrl = (t) => {
+  if (!t) return null;
+  const m = t.match(YT_REGEX);
+  return m ? m[1] : null;
+};
 
-// ── ffmpeg compress helpers ────────────────────────────────────────────────────
-
-// Always transcode to mp3 — used when source format is unknown (webm, m4a, etc.)
-// Returns a confirmed mp3 Buffer, or null if ffmpeg fails (caller falls through to Step 3).
-async function ensureMp3(inputBuf) {
-  await fs.ensureDir(TEMP);
-  const id  = Date.now();
-  // Give the temp input a .bin extension — ffmpeg auto-probes format regardless of extension
-  const inp = path.join(TEMP, `em_${id}_in.bin`);
-  const out = path.join(TEMP, `em_${id}_out.mp3`);
-  try {
-    await fs.writeFile(inp, inputBuf);
-    await execAsync(
-      `ffmpeg -i "${inp}" -b:a 128k -ar 44100 -ac 2 -y "${out}" -loglevel error`,
-      { timeout: 90000 }
-    );
-    if (await fs.pathExists(out)) {
-      const buf = await fs.readFile(out);
-      if (buf.length > 0) return buf;
-    }
-  } catch {}
-  finally {
-    await fs.remove(inp).catch(() => {});
-    await fs.remove(out).catch(() => {});
-  }
-  return null; // ffmpeg failed — caller must fall through to next step
-}
-
-async function compressAudio(inputBuf) {
-  if (inputBuf.length < 8 * 1024 * 1024) return inputBuf;
-  await fs.ensureDir(TEMP);
-  const id  = Date.now();
-  const inp = path.join(TEMP, `ca_${id}_in.mp3`);
-  const out = path.join(TEMP, `ca_${id}_out.mp3`);
-  try {
-    await fs.writeFile(inp, inputBuf);
-    await execAsync(
-      `ffmpeg -i "${inp}" -b:a 128k -ar 44100 -ac 2 -y "${out}" -loglevel error`,
-      { timeout: 90000 }
-    );
-    if (await fs.pathExists(out)) {
-      const buf = await fs.readFile(out);
-      if (buf.length > 0) return buf;
-    }
-  } catch {}
-  finally {
-    await fs.remove(inp).catch(() => {});
-    await fs.remove(out).catch(() => {});
-  }
-  return inputBuf;
-}
-
-// Ensures the buffer is a real, WhatsApp-playable H.264/AAC mp4.
-//
-// Root cause of "video arrives but won't play":
-//   1. Wrong codec: WebM/VP9/AV1/Opus — WhatsApp needs H.264 video + AAC audio.
-//   2. Missing faststart: moov atom at END of file — WhatsApp can't start playback.
-//      APIs and yt-dlp CDN URLs often return streams where moov is written last.
-//
-// Strategy (two-pass):
-//   Pass 1 — Try stream-copy + faststart (fast, no quality loss).
-//             Works for H.264+AAC sources. Can silently fail on some CDN streams
-//             (ffmpeg exits 0 but writes 0 bytes, or the source has container errors).
-//   Pass 2 — Full re-encode to H.264+AAC+faststart.
-//             Guaranteed output for any decodable input (VP9, AV1, WebM, raw H.264).
-//             Slower but never fails silently.
-async function ensurePlayableMp4(inputBuf) {
-  if (!inputBuf?.length) return null;
-  await fs.ensureDir(TEMP);
-  const id  = Date.now();
-  const inp = path.join(TEMP, `vpc_${id}_in.bin`);
-  const out = path.join(TEMP, `vpc_${id}_out.mp4`);
-  try {
-    await fs.writeFile(inp, inputBuf);
-
-    // ── Pass 1: stream-copy + faststart ─────────────────────────────────────
-    // Fast path — no re-encode. Moves moov atom to front (required by WhatsApp).
-    // Works when source is already H.264+AAC. If it produces a 0-byte file or
-    // throws (malformed container, codec mismatch), we fall straight to Pass 2.
-    try {
-      await execAsync(
-        `ffmpeg -i "${inp}" -c copy -movflags +faststart -y "${out}" -loglevel error`,
-        { timeout: 60000 }
-      );
-      const outBuf = await fs.readFile(out).catch(() => null);
-      if (outBuf && outBuf.length > 50000) {
-        // Verify the output is actually H.264 (stream-copy can silently keep VP9)
-        const { stdout: vc } = await execAsync(
-          `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "${out}"`,
-          { timeout: 10000 }
-        ).catch(() => ({ stdout: '' }));
-        if (vc.trim().toLowerCase() === 'h264') return outBuf;
-        // Codec check failed — fall through to re-encode
-      }
-    } catch {}
-
-    // ── Pass 2: full H.264+AAC re-encode (guaranteed WhatsApp-compatible) ───
-    // Handles: VP9, AV1, WebM, H.265, stream-copy failures, moov-at-end issues.
-    // scale=-2:480 caps at 480p (smaller file, faster transcode, still sharp on mobile).
-    await fs.remove(out).catch(() => {});
-    await execAsync(
-      `ffmpeg -i "${inp}" -c:v libx264 -preset fast -crf 26 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -pix_fmt yuv420p -c:a aac -b:a 128k -ar 44100 -ac 2 -movflags +faststart -y "${out}" -loglevel error`,
-      { timeout: 180000 }
-    );
-    if (await fs.pathExists(out)) {
-      const outBuf = await fs.readFile(out);
-      if (outBuf.length > 50000) return outBuf;
-    }
-  } catch {}
-  finally {
-    await fs.remove(inp).catch(() => {});
-    await fs.remove(out).catch(() => {});
-  }
-  return null;
-}
-
-async function compressVideo(inputBuf) {
-  await fs.ensureDir(TEMP);
-  const id  = Date.now();
-  const inp = path.join(TEMP, `cv_${id}_in.mp4`);
-  const out = path.join(TEMP, `cv_${id}_out.mp4`);
-  try {
-    await fs.writeFile(inp, inputBuf);
-    await execAsync(
-      `ffmpeg -i "${inp}" -vf "scale=-2:360" -c:v libx264 -crf 28 -preset fast -c:a aac -b:a 64k -movflags +faststart -y "${out}" -loglevel error`,
-      { timeout: 180000 }
-    );
-    if (await fs.pathExists(out)) {
-      const buf = await fs.readFile(out);
-      if (buf.length > 0) return buf;
-    }
-  } catch {}
-  finally {
-    await fs.remove(inp).catch(() => {});
-    await fs.remove(out).catch(() => {});
-  }
-  return inputBuf;
-}
-
-// ── Fetch URL → buffer ────────────────────────────────────────────────────────
-
+// ── Fetch a URL as a Buffer ────────────────────────────────────────────────────
 async function fetchBuf(url) {
-  try {
-    const resp = await axios.get(url, {
-      responseType: 'arraybuffer',
-      timeout: 60000,
-      maxContentLength: 200 * 1024 * 1024,
-    });
-    const buf = Buffer.from(resp.data);
-    if (buf.length > 0) return buf;
-  } catch {}
-  return null;
-}
-
-// ── Media validation — reject error pages/JSON masquerading as media ─────────
-// Flaky third-party APIs sometimes return a "success" URL that actually points
-// to an expired link, HTML error page, or JSON blob. Downloading that "works"
-// (non-empty buffer) but produces silent, unplayable media on WhatsApp with no
-// error surfaced. Verify real magic bytes + minimum size before trusting a buffer.
-
-function looksLikeTextError(buf) {
-  const head = buf.slice(0, 32).toString('utf8').trim();
-  return head.startsWith('<') || head.startsWith('{') || head.startsWith('[') || /^(error|not found|forbidden)/i.test(head);
-}
-
-function isValidAudioBuffer(buf) {
-  if (!buf || buf.length < 15000) return false; // real songs are always >15KB
-  if (looksLikeTextError(buf)) return false;
-  // ID3 tag ('ID3') or raw MPEG frame sync (0xFFEx-0xFFFx)
-  if (buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) return true;
-  if (buf[0] === 0xff && (buf[1] & 0xe0) === 0xe0) return true;
-  return false;
-}
-
-// Recognizes ANY real audio container (not just mp3) so we don't throw away
-// valid audio that third-party APIs return in flac/ogg/wav/m4a — we transcode
-// those to mp3 via ffmpeg instead of rejecting them as "invalid".
-function isKnownAudioContainer(buf) {
-  if (!buf || buf.length < 15000) return false;
-  if (looksLikeTextError(buf)) return false;
-  if (isValidAudioBuffer(buf)) return true; // mp3
-  if (buf[0] === 0x66 && buf[1] === 0x4c && buf[2] === 0x61 && buf[3] === 0x43) return true; // FLAC 'fLaC'
-  if (buf[0] === 0x4f && buf[1] === 0x67 && buf[2] === 0x67 && buf[3] === 0x53) return true; // OGG 'OggS'
-  if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) return true; // WAV/RIFF
-  const sig = buf.slice(4, 12).toString('ascii'); // mp4/m4a 'ftyp' box at offset 4
-  if (sig.includes('ftyp')) return true;
-  if (buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) return true; // webm/mkv EBML
-  return false;
-}
-
-// Fetches a URL and returns a guaranteed-mp3 { buffer, mime } — accepts any
-// real audio container from third-party APIs and transcodes to mp3 if needed.
-async function fetchAsMp3(url) {
-  const buf = await fetchBuf(url);
-  if (!buf) return null;
-  if (isValidAudioBuffer(buf)) return { buffer: buf, mime: 'audio/mpeg' };
-  if (isKnownAudioContainer(buf)) {
-    const mp3 = await ensureMp3(buf);
-    if (isValidAudioBuffer(mp3)) return { buffer: mp3, mime: 'audio/mpeg' };
-  }
-  return null;
-}
-
-function isValidVideoBuffer(buf) {
-  if (!buf || buf.length < 50000) return false; // real clips are always >50KB
-  if (looksLikeTextError(buf)) return false;
-  // mp4/mov 'ftyp' box normally sits at byte offset 4
-  const sig = buf.slice(4, 12).toString('ascii');
-  if (sig.includes('ftyp')) return true;
-  // webm/mkv EBML header
-  if (buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) return true;
-  return false;
-}
-
-// ── Title similarity scorer ───────────────────────────────────────────────────
-
-function scoreMatch(title, query) {
-  if (!title) return 0;
-  const t = title.toLowerCase();
-  const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-  if (!words.length) return 0;
-  return words.filter(w => t.includes(w)).length / words.length;
-}
-
-function fmtViews(n) {
-  if (!n) return '';
-  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return String(n);
-}
-
-// ── Search (top 5 → best title match) ────────────────────────────────────────
-
-async function searchYT(query) {
-  // Primary: play-dl (no external API, fastest)
-  try {
-    const playdl = (await import('play-dl')).default;
-    const res = await playdl.search(query, { source: { youtube: 'video' }, limit: 5 });
-    if (res?.length) {
-      const scored = res.map(r => ({ r, score: scoreMatch(r.title, query) }));
-      scored.sort((a, b) => b.score - a.score);
-      const r = scored[0].r;
-      const m = Math.floor((r.durationInSec || 0) / 60);
-      const s = String((r.durationInSec || 0) % 60).padStart(2, '0');
-      return { url: r.url, title: r.title || query, thumbnail: r.thumbnails?.[0]?.url || '', duration: `${m}:${s}`, author: r.channel?.name || '', views: fmtViews(r.views) };
-    }
-  } catch {}
-  // Fallback: davidcyriltech search
-  try {
-    const { data: d } = await axios.get(
-      `https://apis.davidcyriltech.my.id/youtube/search?query=${encodeURIComponent(query)}`,
-      { timeout: 15000 }
-    );
-    const results = d?.result || d?.results || d?.data || [];
-    if (Array.isArray(results) && results.length) {
-      const r = results[0];
-      return {
-        url: r.url || r.link || r.videoUrl,
-        title: r.title || query,
-        thumbnail: r.thumbnail || r.image || '',
-        duration: r.duration || '',
-        author: r.channel || r.channelTitle || '',
-        views: '',
-      };
-    }
-  } catch {}
-  return null;
-}
-
-// ── yt-dlp: fast stream URL (no file download, ~5-8s) ─────────────────────────
-// Returns a direct YouTube CDN URL — WhatsApp fetches it directly. Super fast.
-//
-// IMPORTANT: cookies.txt is only attached to clients that actually support
-// cookie auth (web/mweb). Clients like android/tv_embedded/ios are SKIPPED
-// entirely by yt-dlp when cookies are present ("does not support cookies"),
-// and — worse — attaching a personal-account cookie to a server request can
-// make YouTube serve a degraded/empty format list even to cookie-capable
-// clients if the session looks suspicious from that IP. So: always try the
-// normal no-cookie clients FIRST (fast, reliable for public videos), and
-// only fall back to cookie-based clients for content that actually needs
-// login (age-restricted / private / members-only).
-
-const NO_COOKIE_CLIENTS = ['android', 'tv_embedded', 'ios'];
-// Confirmed by direct testing: 'web' fails ("Requested format is not
-// available") even with valid cookies on this server. 'mweb', 'tv', and
-// 'tv_embedded' all successfully return real formats when cookies are
-// attached (tv_embedded is bot-checked WITHOUT cookies, but works WITH them —
-// it is not cookie-incompatible, contrary to earlier assumption).
-const COOKIE_CLIENTS = ['mweb', 'tv_embedded', 'tv'];
-
-// type: 'audio' uses tv_embedded (supports bestaudio), 'video' uses android (fast, progressive mp4)
-async function tryYtdlpStreamUrl(ytUrl, fmt, clientOverride) {
-  const client = clientOverride || 'android';
-
-  // Tier 1 — no cookies (proven reliable for public videos)
-  try {
-    const { stdout } = await execAsync(
-      `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" --extractor-args "youtube:player_client=${client}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings`,
-      { timeout: 25000 }
-    );
-    const lines = stdout.trim().split('\n').filter(l => l.startsWith('http'));
-    if (lines.length) return lines[0].trim();
-  } catch (e) { warnIfBotCheck(e); }
-
-  // Tier 2 — cookies, only for clients that support them (age-restricted/private videos)
-  const ck = getCookiesFlag();
-  if (ck) {
-    for (const ckClient of COOKIE_CLIENTS) {
-      try {
-        const { stdout } = await execAsync(
-          `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${ckClient}" -f "${fmt}" --get-url --no-playlist --quiet --no-warnings`,
-          { timeout: 25000 }
-        );
-        const lines = stdout.trim().split('\n').filter(l => l.startsWith('http'));
-        if (lines.length) return lines[0].trim();
-      } catch (e) { warnIfBotCheck(e); }
-    }
-  }
-  return null;
-}
-
-// ── yt-dlp: full audio download → buffer (fallback, slower) ──────────────────
-
-async function tryYtdlpAudio(ytUrl) {
-  await fs.ensureDir(TEMP);
-  const out = path.join(TEMP, `yta_${Date.now()}.mp3`);
-
-  const attempt = async (client, ck) => {
-    try {
-      await execAsync(
-        `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${client}" -x --audio-format mp3 --audio-quality 128K --postprocessor-args "ffmpeg:-ar 44100 -ac 2" --no-playlist -o "${out}" --quiet --no-warnings`,
-        { timeout: 180000 }
-      );
-      if (await fs.pathExists(out)) {
-        const buf = await fs.readFile(out);
-        await fs.remove(out).catch(() => {});
-        if (buf.length > 0) return buf;
-      }
-    } catch (e) { warnIfBotCheck(e); }
-    return null;
-  };
-
-  // Tier 1 — no cookies
-  for (const client of NO_COOKIE_CLIENTS) {
-    const buf = await attempt(client, '');
-    if (buf) return buf;
-  }
-
-  // Tier 2 — cookies, cookie-compatible clients only
-  const ck = getCookiesFlag();
-  if (ck) {
-    for (const client of COOKIE_CLIENTS) {
-      const buf = await attempt(client, ck);
-      if (buf) return buf;
-    }
-  }
-
-  await fs.remove(out).catch(() => {});
-  return null;
-}
-
-// ── yt-dlp: full video download → buffer (fallback, slower) ──────────────────
-
-async function tryYtdlpVideo(ytUrl) {
-  await fs.ensureDir(TEMP);
-  const outFile = path.join(TEMP, `ytv_${Date.now()}.mp4`);
-  const FORMATS = [
-    // Format 18 = 360p H.264+AAC progressive (confirmed working, single file, no merge)
-    // Format 22 = 720p H.264+AAC progressive (same, higher quality)
-    // These are the FASTEST path — no ffmpeg merge, just stream-copy + faststart.
-    '18/22',
-    // H.264+AAC DASH — needs merge but guaranteed codec compatibility
-    'bestvideo[vcodec^=avc][height<=480]+bestaudio[acodec=aac]/bestvideo[vcodec^=avc][height<=480]+bestaudio[ext=m4a]',
-    // mp4 container (may have vp9 — ensurePlayableMp4 will transcode)
-    'best[height<=480][ext=mp4]/best[height<=360][ext=mp4]/best[ext=mp4]',
-    // Last resort — any format, ensurePlayableMp4 handles transcode
-    'best[height<=480]/best',
-  ];
-
-  const attempt = async (client, ck) => {
-    for (const fmt of FORMATS) {
-      try {
-        await execAsync(
-          `${YTDLP} ${YTDLP_FLAGS} "${ytUrl}" ${ck} --extractor-args "youtube:player_client=${client}" -f "${fmt}" --merge-output-format mp4 --no-playlist -o "${outFile}" --quiet --no-warnings`,
-          { timeout: 180000 }
-        );
-        if (await fs.pathExists(outFile)) {
-          const buf = await fs.readFile(outFile);
-          await fs.remove(outFile).catch(() => {});
-          if (buf.length > 0) return buf;
-        }
-      } catch (e) { warnIfBotCheck(e); }
-    }
-    return null;
-  };
-
-  // Tier 1 — no cookies
-  for (const client of NO_COOKIE_CLIENTS) {
-    const buf = await attempt(client, '');
-    if (buf) return buf;
-  }
-
-  // Tier 2 — cookies, cookie-compatible clients only
-  const ck = getCookiesFlag();
-  if (ck) {
-    for (const client of COOKIE_CLIENTS) {
-      const buf = await attempt(client, ck);
-      if (buf) return buf;
-    }
-  }
-
-  await fs.remove(outFile).catch(() => {});
-  return null;
-}
-
-// ── Audio API sources ─────────────────────────────────────────────────────────
-
-async function tryKeithMp3(ytUrl) {
-  try {
-    const { data: d } = await api.get(`https://apis-keith.vercel.app/download/dlmp3?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.result?.data?.downloadUrl;
-    if (u) return await fetchAsMp3(u);
-  } catch {}
-  return null;
-}
-
-async function tryY2mateMp3(ytUrl) {
-  // y2mate-style API (yt1s.com) — free, no auth, reliable
-  try {
-    const { data: d } = await axios.post(
-      'https://yt1s.com/api/ajaxSearch',
-      new URLSearchParams({ q: ytUrl, vt: 'mp3' }).toString(),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 15000 }
-    );
-    const link = d?.result?.links?.mp3?.mp3128?.k;
-    if (link) {
-      const { data: d2 } = await axios.post(
-        'https://yt1s.com/api/ajaxConvert',
-        new URLSearchParams({ vid: d.vid, k: link }).toString(),
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 25000 }
-      );
-      if (d2?.dlink) return await fetchAsMp3(d2.dlink);
-    }
-  } catch {}
-  return null;
-}
-
-async function tryDavidMp3(ytUrl) {
-  try {
-    const { data: d } = await axios.get(
-      `https://apis.davidcyriltech.my.id/download/ytmp3?url=${encodeURIComponent(ytUrl)}`,
-      { timeout: 30000 }
-    );
-    const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
-    if (u) return await fetchAsMp3(u);
-  } catch {}
-  return null;
-}
-
-async function tryNexrayMp3(ytUrl) {
-  try {
-    const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp3?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.result?.url;
-    if (u) return await fetchAsMp3(u);
-  } catch {}
-  return null;
-}
-
-// ── URL-based video CDN (silva-md-bot approach) ───────────────────────────────
-// Returns a publicly-accessible CDN URL so WhatsApp downloads the video directly.
-// No buffer in RAM, no ffmpeg transcode — fast and works on low-memory servers.
-async function tryVideoApiUrl(ytUrl) {
-  // 0. ootaizumi — fastest, returns direct CDN download URL at 720p
-  try {
-    const { data: d } = await axios.get(
-      `https://api.ootaizumi.web.id/downloader/youtube?url=${encodeURIComponent(ytUrl)}&format=720`,
-      { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
-    );
-    const u = d?.result?.download;
-    if (d?.status && u && typeof u === 'string' && u.startsWith('http')) return u;
-  } catch {}
-  // 1. davidcyriltech — confirmed working, returns yt-dl.click CDN URL
-  try {
-    const { data: d } = await axios.get(
-      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${encodeURIComponent(ytUrl)}`,
-      { timeout: 30000 }
-    );
-    const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
-    if (u && typeof u === 'string' && u.startsWith('http')) return u;
-  } catch {}
-  // 2. EliteProTech — confirmed working, fast CDN URL
-  try {
-    const { data: d } = await axios.get(
-      `https://eliteprotech-apis.zone.id/ytdown?url=${encodeURIComponent(ytUrl)}&format=mp4`,
-      { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }
-    );
-    if (d?.success && d?.downloadURL && typeof d.downloadURL === 'string' && d.downloadURL.startsWith('http')) {
-      return d.downloadURL;
-    }
-  } catch {}
-  // 3. nexray fallback
-  try {
-    const { data: d } = await api.get(`https://api.nexray.web.id/downloader/ytmp4?url=${encodeURIComponent(ytUrl)}`);
-    const u = d?.result?.url || d?.data?.url;
-    if (u && typeof u === 'string' && u.startsWith('http')) return u;
-  } catch {}
-  return null;
-}
-
-// ── URL-based audio CDN ───────────────────────────────────────────────────────
-// Returns a publicly-accessible CDN audio URL (same approach as video above).
-async function tryAudioApiUrl(ytUrl) {
-  try {
-    const { data: d } = await axios.get(
-      `https://apis.davidcyriltech.my.id/download/ytmp3?url=${encodeURIComponent(ytUrl)}`,
-      { timeout: 30000 }
-    );
-    const u = d?.result?.download_url || d?.result?.downloadUrl || d?.result?.url || d?.url || d?.link;
-    if (u && typeof u === 'string' && u.startsWith('http')) return u;
-  } catch {}
-  return null;
-}
-
-function firstSuccess(promises) {
-  return new Promise(resolve => {
-    let pending = promises.length;
-    if (!pending) return resolve(null);
-    for (const p of promises) {
-      Promise.resolve(p)
-        .then(v => { if (v) resolve(v); })
-        .catch(() => {})
-        .finally(() => { if (--pending === 0) resolve(null); });
-    }
+  const res = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 90000,
+    maxContentLength: 150 * 1024 * 1024,
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
   });
+  return Buffer.from(res.data);
 }
 
-function withTimeout(ms, promise) {
-  return Promise.race([
-    promise,
-    new Promise(r => setTimeout(() => r(null), ms)),
-  ]);
+// ── Extract a download URL from any key path in a response object ─────────────
+function pickUrl(obj, ...paths) {
+  for (const path of paths) {
+    const val = path.split('.').reduce((o, k) => o?.[k], obj);
+    if (typeof val === 'string' && val.startsWith('http')) return val;
+  }
+  return null;
 }
 
-// ── Audio from progressive video stream (~6s total) ──────────────────────────
-// YouTube DASH audio streams are throttled to playback speed (~107s for 3MB).
-// Progressive mp4 streams are NOT throttled — download instantly, then strip
-// the video track with ffmpeg -vn. Tested: 2.7s URL + 0.1s fetch + 3.5s ffmpeg = 6.3s
-//
-// Returns: { buffer, mime } | null
-
-async function downloadAudioFromVideo(ytUrl) {
-  const videoUrl = await withTimeout(18000,
-    tryYtdlpStreamUrl(ytUrl, 'best[height<=360][ext=mp4]/best[height<=360]/best[ext=mp4]/best')
+// ── YouTube search (DavidCyrilTech) ──────────────────────────────────────────
+async function searchYT(query) {
+  const { data } = await axios.get(
+    `https://apis.davidcyriltech.my.id/youtube/search?query=${encodeURIComponent(query)}`,
+    { timeout: 15000 }
   );
-  if (!videoUrl) return null;
+  const results = data?.result || data?.results || data?.data || [];
+  if (!Array.isArray(results) || !results.length) return null;
+  const r = results[0];
+  return {
+    url:       r.url       || r.link       || r.videoUrl  || '',
+    title:     r.title     || query,
+    thumbnail: r.thumbnail || r.image      || '',
+    duration:  r.duration  || '',
+    author:    r.channel   || r.channelTitle || '',
+  };
+}
 
-  const vidBuf = await withTimeout(90000, fetchBuf(videoUrl));
-  if (!vidBuf?.length) return null;
+// ── Audio: try 3 APIs in order, return download URL ───────────────────────────
+async function getAudioUrl(ytUrl) {
+  const enc = encodeURIComponent(ytUrl);
 
-  await fs.ensureDir(TEMP);
-  const id  = Date.now();
-  const inp = path.join(TEMP, `avx_${id}_in.mp4`);
-  const out = path.join(TEMP, `avx_${id}_out.mp3`);
+  // 1. EliteProTech
   try {
-    await fs.writeFile(inp, vidBuf);
-    // -vn: strip video, keep audio only → mp3 at 128k
-    await execAsync(
-      `ffmpeg -i "${inp}" -vn -b:a 128k -ar 44100 -ac 2 -y "${out}" -loglevel error`,
-      { timeout: 60000 }
+    const { data } = await axios.get(
+      `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp3`,
+      { timeout: 30000 }
     );
-    if (await fs.pathExists(out)) {
-      const buf = await fs.readFile(out);
-      if (buf.length > 0) return { buffer: buf, mime: 'audio/mpeg' };
-    }
+    const u = pickUrl(data, 'downloadURL', 'download_url', 'url', 'result.url', 'result.download_url', 'result.downloadUrl');
+    if (u) return u;
   } catch {}
-  finally {
-    await fs.remove(inp).catch(() => {});
-    await fs.remove(out).catch(() => {});
-  }
+
+  // 2. ABZTech ytdl3
+  try {
+    const { data } = await axios.get(
+      `https://api-abztech.zone.id/download/ytdl3?url=${enc}`,
+      { timeout: 30000 }
+    );
+    const u = pickUrl(data, 'result.download_url', 'result.downloadUrl', 'result.url', 'download_url', 'url', 'data.url');
+    if (u) return u;
+  } catch {}
+
+  // 3. DavidCyrilTech
+  try {
+    const { data } = await axios.get(
+      `https://apis.davidcyriltech.my.id/download/ytmp3?url=${enc}`,
+      { timeout: 30000 }
+    );
+    const u = pickUrl(data, 'result.download_url', 'result.downloadUrl', 'result.url', 'url', 'link');
+    if (u) return u;
+  } catch {}
+
   return null;
 }
 
-// ── Audio orchestrator ────────────────────────────────────────────────────────
-// TRUE parallel race — all sources start simultaneously, first valid buffer wins.
-//
-// Fast paths (both ~6s):
-//   A) Progressive video stream → ffmpeg audio extract (never throttled)
-//   B) API sources (Keith/Faa/Nexray) — fastest when online
-//   C) yt-dlp full -x download (handles throttling internally, also ~6s)
-//
-// Returns: { buffer, mime } | null
+// ── Video: try 3 APIs in order, return download URL ───────────────────────────
+async function getVideoUrl(ytUrl) {
+  const enc = encodeURIComponent(ytUrl);
 
-async function downloadAudio(ytUrl) {
-  // All sources run simultaneously — first to return a valid buffer wins
-  const result = await withTimeout(120000, firstSuccess([
-    // Path A (fastest): davidcyriltech API — returns CDN URL, fetch buffer
-    tryDavidMp3(ytUrl),
+  // 1. EliteProTech
+  try {
+    const { data } = await axios.get(
+      `https://eliteprotech-apis.zone.id/ytdown?url=${enc}&format=mp4`,
+      { timeout: 30000 }
+    );
+    const u = pickUrl(data, 'downloadURL', 'download_url', 'url', 'result.url', 'result.download_url', 'result.downloadUrl');
+    if (u) return u;
+  } catch {}
 
-    // Path B: video stream → strip audio (~6s, most reliable on this server)
-    downloadAudioFromVideo(ytUrl),
+  // 2. ABZTech ytdl4
+  try {
+    const { data } = await axios.get(
+      `https://api-abztech.zone.id/download/ytdl4?url=${enc}`,
+      { timeout: 30000 }
+    );
+    const u = pickUrl(data, 'result.download_url', 'result.downloadUrl', 'result.url', 'download_url', 'url', 'data.url');
+    if (u) return u;
+  } catch {}
 
-    // Path C: other third-party API sources
-    firstSuccess([
-      tryKeithMp3(ytUrl),
-      tryY2mateMp3(ytUrl),
-      tryNexrayMp3(ytUrl),
-    ]),
+  // 3. DavidCyrilTech
+  try {
+    const { data } = await axios.get(
+      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${enc}`,
+      { timeout: 30000 }
+    );
+    const u = pickUrl(data, 'result.download_url', 'result.downloadUrl', 'result.url', 'url', 'link');
+    if (u) return u;
+  } catch {}
 
-    // Path D: yt-dlp full download (handles throttling internally, ~6-10s)
-    tryYtdlpAudio(ytUrl).then(raw =>
-      raw ? { buffer: raw, mime: 'audio/mpeg' } : null
-    ),
-  ]));
-
-  if (isValidAudioBuffer(result?.buffer)) return result;
   return null;
 }
 
-// ── Video orchestrator (silva-md-bot approach) ────────────────────────────────
-// Step 1: davidcyriltech URL (tryVideoApiUrl — called by execute handler, not here)
-// Step 2 (this function): yt-dlp full file download — format 18/22 first (360/720p H.264+AAC
-//         progressive, no merge needed), then DASH H.264, then best[mp4].
-// Returns: { buffer } | null
-
-async function downloadVideo(ytUrl) {
-  const raw = await withTimeout(240000, tryYtdlpVideo(ytUrl));
-  if (raw?.length > 50000) {
-    const playable = await withTimeout(120000, ensurePlayableMp4(raw));
-    if (playable?.length) return { buffer: playable };
-    if (isValidVideoBuffer(raw)) return { buffer: raw };
-  }
-  return null;
-}
-
-// ── UI captions ───────────────────────────────────────────────────────────────
-
-function buildAudioCaption(meta, botName) {
-  const views = meta.views ? ` | 👁 ${meta.views}` : '';
+// ── Captions ──────────────────────────────────────────────────────────────────
+function audioCaption(meta, botName) {
   return (
     `✦✦✦✦✦✦✦✦✦✦\n` +
     `🎵 ${botName} MUSIC\n` +
     `✦✦✦✦✦✦✦✦✦✦\n\n` +
     `🎙 *${meta.title}*\n` +
     `🎤 ${meta.author || 'Unknown'}\n` +
-    `⏱ ${meta.duration || '?'}${views}\n\n` +
-    `━━━━━━━━━━━━━━━━\n` +
+    `⏱ ${meta.duration || '?'}\n\n` +
     `> 🤖 Powered by ${botName}\n` +
-    `> 👨‍💻 Developed by Ahsan Ali Wadani`
+    `> 👨‍💻 Ahsan Ali Wadani`
   );
 }
 
-function buildVideoCaption(meta, botName) {
-  const views = meta.views ? ` | 👁 ${meta.views}` : '';
+function videoCaption(meta, botName) {
   return (
     `✦✦✦✦✦✦✦✦✦✦\n` +
     `🎬 ${botName} VIDEO\n` +
     `✦✦✦✦✦✦✦✦✦✦\n\n` +
     `🎙 *${meta.title}*\n` +
     `🎤 ${meta.author || 'Unknown'}\n` +
-    `⏱ ${meta.duration || '?'}${views}\n\n` +
-    `━━━━━━━━━━━━━━━━\n` +
+    `⏱ ${meta.duration || '?'}\n\n` +
     `> 🤖 Powered by ${botName}\n` +
-    `> 👨‍💻 Developed by Ahsan Ali Wadani`
+    `> 👨‍💻 Ahsan Ali Wadani`
   );
 }
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
-
 export default {
   command: 'play',
   alias: ['song', 'yt', 'ytmp3', 'mp3', 'ytmp4', 'video', 'mp4'],
@@ -706,6 +167,7 @@ export default {
     const botName = config?.botName || 'AA MD Bot';
     let query = text?.trim();
 
+    // Also accept quoted message text
     if (!query) {
       const q = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
       if (q) query = (q.conversation || q.extendedTextMessage?.text || '').trim();
@@ -715,214 +177,133 @@ export default {
       return reply(
         `🎬 *YouTube Downloader*\n\n` +
         `📌 *Usage:*\n` +
-        `• ${prefix}play <song name>\n` +
-        `• ${prefix}mp3 <youtube link>\n` +
-        `• ${prefix}video <video name>\n` +
-        `• ${prefix}mp4 <youtube link>\n\n` +
-        `✨ Reply to a link also works`
+        `• *${prefix}play* <song name> — search & download audio\n` +
+        `• *${prefix}mp3* <youtube link> — direct audio\n` +
+        `• *${prefix}video* <name or link> — download video\n` +
+        `• *${prefix}mp4* <youtube link> — direct video\n\n` +
+        `✨ Reply to a YouTube link also works`
       );
     }
 
     try {
-      switch (command) {
+      // ── VIDEO ───────────────────────────────────────────────────────────────
+      if (command === 'mp4' || command === 'ytmp4' || command === 'video') {
+        await react('🎥');
+        let ytUrl = extractUrl(query);
+        let meta  = { title: query, author: '', duration: '', thumbnail: '' };
 
-        // ── VIDEO (silva-md-bot approach) ─────────────────────────────────────
-        case 'mp4':
-        case 'ytmp4':
-        case 'video': {
-          await react('🎥');
-          let ytUrl = extractUrl(query);
-          let meta = null;
-
-          if (!ytUrl) {
-            // Search by name → get URL + metadata together
-            meta = await searchYT(query);
-            if (!meta?.url) return reply(`❌ No video found for: *${query}*`);
-            ytUrl = meta.url;
-          } else {
-            // Direct URL — fetch metadata via play-dl.video_info() (same as silva-md-bot)
-            try {
-              const playdl = (await import('play-dl')).default;
-              const info = await playdl.video_info(ytUrl);
-              const d = info.video_details;
-              const durationSec = d.durationInSec || 0;
-
-              // 10-minute limit (same guard as silva-md-bot ytmp4.js)
-              if (durationSec > 600) {
-                await react('❌');
-                return reply(`❌ *Video too long* (max 10 minutes)\n\nUse *${prefix}play* for audio only.`);
-              }
-
-              const m = Math.floor(durationSec / 60);
-              const s = String(durationSec % 60).padStart(2, '0');
-              meta = {
-                title: d.title || query,
-                author: d.channel?.name || '',
-                duration: durationSec ? `${m}:${s}` : '',
-                thumbnail: d.thumbnails?.[0]?.url || '',
-                views: fmtViews(d.views),
-              };
-            } catch {}
-          }
-
-          if (meta?.thumbnail) {
-            await sock.sendMessage(jid, {
-              image: { url: meta.thumbnail },
-              caption: `${buildVideoCaption(meta, botName)}\n\n⏳ _Downloading video..._`,
-            }, { quoted: msg });
-          }
-
-          const vcap = meta
-            ? buildVideoCaption(meta, botName)
-            : `🎬 *Video Downloaded*\n\n> Powered by ${botName}`;
-
-          // ── Step 1: yt-dlp stream URL → direct buffer (FASTEST, confirmed working) ──
-          // Format 18 = 360p H.264+AAC progressive — no merge, no transcode needed.
-          // yt-dlp --get-url returns a CDN URL in ~5-8s; we download it and
-          // stream-copy+faststart for guaranteed WhatsApp mobile playback.
-          const streamUrl = await withTimeout(22000,
-            tryYtdlpStreamUrl(ytUrl, '18/22', 'android')
-          );
-          if (streamUrl) {
-            try {
-              const rawBuf = await withTimeout(120000, fetchBuf(streamUrl));
-              if (rawBuf?.length > 50000) {
-                const playable = await withTimeout(90000, ensurePlayableMp4(rawBuf));
-                const sendBuf  = playable?.length ? playable
-                               : isValidVideoBuffer(rawBuf) ? rawBuf : null;
-                if (sendBuf) {
-                  const WA_LIMIT = 60 * 1024 * 1024;
-                  const finalBuf = sendBuf.length > WA_LIMIT
-                    ? (await compressVideo(sendBuf) || sendBuf) : sendBuf;
-                  await sock.sendMessage(jid, {
-                    video: finalBuf, mimetype: 'video/mp4', caption: vcap,
-                  }, { quoted: msg });
-                  await react('✅');
-                  break;
-                }
-              }
-            } catch {} // fall through
-          }
-
-          // ── Step 2: third-party API CDN URL → buffer ──────────────────────────
-          const videoApiUrl = await withTimeout(30000, tryVideoApiUrl(ytUrl));
-          if (videoApiUrl) {
-            try {
-              const rawBuf = await withTimeout(90000, fetchBuf(videoApiUrl));
-              if (rawBuf?.length > 50000) {
-                const playable = await withTimeout(120000, ensurePlayableMp4(rawBuf));
-                const sendBuf  = playable?.length ? playable
-                               : isValidVideoBuffer(rawBuf) ? rawBuf : null;
-                if (sendBuf) {
-                  const WA_LIMIT = 60 * 1024 * 1024;
-                  const finalBuf = sendBuf.length > WA_LIMIT
-                    ? (await compressVideo(sendBuf) || sendBuf) : sendBuf;
-                  await sock.sendMessage(jid, {
-                    video: finalBuf, mimetype: 'video/mp4', caption: vcap,
-                  }, { quoted: msg });
-                  await react('✅');
-                  break;
-                }
-              }
-            } catch {} // fall through to full yt-dlp buffer
-          }
-
-          // ── Step 3: yt-dlp full file download ────────────────────────────────
-          const vdata = await downloadVideo(ytUrl);
-          if (!vdata?.buffer?.length) {
-            await react('❌');
-            return reply(
-              `❌ *Video download failed*\n\n` +
-              `All download sources failed.\n\n` +
-              `💡 *Try:*\n` +
-              `• Paste the YouTube link directly: ${prefix}video <link>\n` +
-              `• Try again after a minute`
-            );
-          }
-
-          // WhatsApp rejects videos over ~64 MB — compress to 360p if needed
-          const WA_VIDEO_LIMIT = 60 * 1024 * 1024; // 60 MB safety margin
-          let videoBuffer = vdata.buffer;
-          if (videoBuffer.length > WA_VIDEO_LIMIT) {
-            const compressed = await compressVideo(videoBuffer);
-            if (compressed?.length) videoBuffer = compressed;
-          }
-
-          await sock.sendMessage(jid, { video: videoBuffer, mimetype: 'video/mp4', caption: vcap }, { quoted: msg });
-          await react('✅');
-          break;
+        if (!ytUrl) {
+          await reply(`🔍 _Searching: ${query}..._`);
+          const found = await searchYT(query);
+          if (!found?.url) { await react('❌'); return reply(`❌ No result found for: *${query}*`); }
+          ytUrl = found.url;
+          meta  = found;
         }
 
-        // ── MP3 by direct URL ─────────────────────────────────────────────────
-        case 'mp3':
-        case 'ytmp3': {
-          await react('🎶');
-          const ytUrl = extractUrl(query);
-          if (!ytUrl) return reply(`❌ Please provide a valid YouTube URL.\n\nTo search by name: *${prefix}play <song name>*`);
-          // Step 1: URL-based (fast, silva-md-bot approach)
-          const audioApiUrl = await withTimeout(35000, tryAudioApiUrl(ytUrl));
-          if (audioApiUrl) {
-            try {
-              await sock.sendMessage(jid, { audio: { url: audioApiUrl }, mimetype: 'audio/mpeg', ptt: false }, { quoted: msg });
-              await react('✅');
-              break;
-            } catch {}
-          }
-          // Step 2: buffer fallback
-          const adata = await downloadAudio(ytUrl);
-          if (!adata?.buffer?.length) return reply('❌ MP3 download failed — all sources returned error.');
-          await sock.sendMessage(jid, { audio: adata.buffer, mimetype: adata.mime || 'audio/mpeg', ptt: false }, { quoted: msg });
-          await react('✅');
-          break;
+        if (meta.thumbnail) {
+          await sock.sendMessage(jid, {
+            image: { url: meta.thumbnail },
+            caption: `${videoCaption(meta, botName)}\n\n⏳ _Downloading video..._`,
+          }, { quoted: msg });
         }
 
-        // ── PLAY / SONG / YT — search by name ────────────────────────────────
-        case 'play':
-        case 'song':
-        case 'yt':
-        default: {
-          await react('📥');
-
-          // Direct URL pasted
-          const directUrl = extractUrl(query);
-          if (directUrl) {
-            const adata = await downloadAudio(directUrl);
-            if (!adata?.buffer?.length) return reply('❌ Download failed — all sources returned error.');
-            await sock.sendMessage(jid, { audio: adata.buffer, mimetype: adata.mime || 'audio/mpeg', ptt: false }, { quoted: msg });
-            await react('✅');
-            break;
-          }
-
-          // Search → exact YouTube URL → download
-          const meta = await searchYT(query);
-          if (!meta?.url) return reply(`❌ Could not find: *${query}*`);
-
-          if (meta.thumbnail) {
-            await sock.sendMessage(jid, {
-              image: { url: meta.thumbnail },
-              caption: `${buildAudioCaption(meta, botName)}\n\n⏳ _Downloading audio..._`,
-            }, { quoted: msg });
-          }
-
-          const adata = await downloadAudio(meta.url);
-          if (!adata?.buffer?.length) return reply(`❌ Found *${meta.title}* but download failed — all sources returned error.`);
-
-          await sock.sendMessage(jid, { audio: adata.buffer, mimetype: adata.mime || 'audio/mpeg', ptt: false }, { quoted: msg });
-          await react('✅');
-          break;
+        const videoUrl = await getVideoUrl(ytUrl);
+        if (!videoUrl) {
+          await react('❌');
+          return reply(`❌ *Video download failed*\n\nAll 3 sources unavailable. Try again later.`);
         }
+
+        const buf = await fetchBuf(videoUrl);
+        if (!buf || buf.length < 50000) {
+          await react('❌');
+          return reply(`❌ *Video file invalid* — try again or use a different link.`);
+        }
+
+        await sock.sendMessage(jid, {
+          video: buf,
+          mimetype: 'video/mp4',
+          caption: videoCaption(meta, botName),
+        }, { quoted: msg });
+        await react('✅');
+        return;
       }
+
+      // ── DIRECT MP3 (link only) ──────────────────────────────────────────────
+      if (command === 'mp3' || command === 'ytmp3') {
+        await react('🎶');
+        const ytUrl = extractUrl(query);
+        if (!ytUrl) {
+          return reply(
+            `❌ Please provide a valid YouTube URL.\n\n` +
+            `To search by name: *${prefix}play <song name>*`
+          );
+        }
+
+        const audioUrl = await getAudioUrl(ytUrl);
+        if (!audioUrl) {
+          await react('❌');
+          return reply(`❌ *MP3 download failed*\n\nAll 3 sources unavailable. Try again later.`);
+        }
+
+        const buf = await fetchBuf(audioUrl);
+        if (!buf || buf.length < 10000) {
+          await react('❌');
+          return reply(`❌ *Audio file invalid* — try again.`);
+        }
+
+        await sock.sendMessage(jid, {
+          audio: buf,
+          mimetype: 'audio/mpeg',
+          ptt: false,
+        }, { quoted: msg });
+        await react('✅');
+        return;
+      }
+
+      // ── PLAY / SONG / YT — search by name (or direct URL) ──────────────────
+      await react('📥');
+      const directUrl = extractUrl(query);
+      let ytUrl = directUrl;
+      let meta  = { title: query, author: '', duration: '', thumbnail: '' };
+
+      if (!ytUrl) {
+        await reply(`🔍 _Searching: ${query}..._`);
+        const found = await searchYT(query);
+        if (!found?.url) { await react('❌'); return reply(`❌ Could not find: *${query}*`); }
+        ytUrl = found.url;
+        meta  = found;
+      }
+
+      if (meta.thumbnail) {
+        await sock.sendMessage(jid, {
+          image: { url: meta.thumbnail },
+          caption: `${audioCaption(meta, botName)}\n\n⏳ _Downloading audio..._`,
+        }, { quoted: msg });
+      }
+
+      const audioUrl = await getAudioUrl(ytUrl);
+      if (!audioUrl) {
+        await react('❌');
+        return reply(`❌ *Audio download failed*\n\nAll 3 sources unavailable. Try again later.`);
+      }
+
+      const buf = await fetchBuf(audioUrl);
+      if (!buf || buf.length < 10000) {
+        await react('❌');
+        return reply(`❌ *Audio file invalid* — try again.`);
+      }
+
+      await sock.sendMessage(jid, {
+        audio: buf,
+        mimetype: 'audio/mpeg',
+        ptt: false,
+      }, { quoted: msg });
+      await react('✅');
+
     } catch (err) {
       console.error('[ YouTube ]', err.message);
       await react('❌').catch(() => {});
-      try {
-        await reply('❌ Download failed. Please try again in a few seconds.');
-      } catch (replyErr) {
-        // Last-resort plain send if the watermarked reply() itself fails —
-        // ensures the user is never left with silence and no explanation.
-        console.error('[ YouTube ] reply failed too', replyErr.message);
-        await sock.sendMessage(jid, { text: '❌ Download failed. Please try again in a few seconds.' }, { quoted: msg }).catch(() => {});
-      }
+      reply('❌ Download failed. Please try again.').catch(() => {});
     }
   },
 };
