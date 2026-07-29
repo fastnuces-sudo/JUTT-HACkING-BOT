@@ -1,20 +1,29 @@
 // ============================================
 // AA MD Bot - YouTube Downloader
 // Audio: DavidCyrilTech → ABZTech (ytdlv3) → EliteProTech
-// Video: DavidCyrilTech → EliteProTech → ABZTech (ytdl4)
+// Video: yt-dlp PRIMARY (format 18/22) — API for metadata only
 // Search: DavidCyrilTech
-// Buffer: arraybuffer → Buffer.from()
 // Card: externalAdReply (title + thumbnail)
 // ============================================
 
 import axios from 'axios';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs-extra';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { YTDLP, YTDLP_FLAGS, getCookiesArgs } from '../../lib/ytdlp.js';
+
+const execFileAsync = promisify(execFile);
+const __dirname2 = path.dirname(fileURLToPath(import.meta.url));
+const TEMP = path.join(__dirname2, '../../temp');
 
 const YT_REGEX =
   /(https?:\/\/(?:(?:www|m|music)\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|shorts\/|live\/)|youtu\.be\/)[\w-]+\S*)/i;
 
 const extractUrl = (t) => { if (!t) return null; const m = t.match(YT_REGEX); return m ? m[1] : null; };
 
-// ── Fetch download URL as Buffer ───────────────────────────────────────────────
+// ── Fetch audio URL as Buffer (for audio APIs that return direct CDN links) ────
 async function fetchBuf(url) {
   const res = await axios.get(url, {
     responseType: 'arraybuffer',
@@ -23,6 +32,35 @@ async function fetchBuf(url) {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
   });
   return Buffer.from(res.data);
+}
+
+// ── yt-dlp video download (PRIMARY for YouTube video) ─────────────────────────
+async function ytdlpVideo(ytUrl) {
+  await fs.ensureDir(TEMP);
+  const reqId = `yt_vid_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const outFile = path.join(TEMP, `${reqId}.mp4`);
+  const flags = YTDLP_FLAGS.split(/\s+/).filter(Boolean);
+  const ckArgs = getCookiesArgs();
+  // Format 18 = 360p combined MP4, 22 = 720p combined MP4 — confirmed working on Replit
+  const FMTS = ['18/22', 'best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best', 'best'];
+  for (const fmt of FMTS) {
+    try {
+      await execFileAsync(YTDLP, [
+        ...flags, ytUrl, ...ckArgs,
+        '-f', fmt,
+        '--merge-output-format', 'mp4',
+        '--no-playlist', '-o', outFile,
+        '--quiet', '--no-warnings',
+      ], { timeout: 180000 });
+      if (await fs.pathExists(outFile)) {
+        const buf = await fs.readFile(outFile);
+        await fs.remove(outFile).catch(() => {});
+        if (buf?.length > 50000) return buf;
+      }
+    } catch {}
+  }
+  await fs.remove(outFile).catch(() => {});
+  return null;
 }
 
 // ── Search (DavidCyrilTech) ────────────────────────────────────────────────────
@@ -205,41 +243,27 @@ export default {
         let meta  = { title: query, author: '', duration: '', thumbnail: '' };
 
         if (!ytUrl) {
-          await reply(`🔍 _Searching: ${query}..._`);
           const found = await searchYT(query);
           if (!found?.url) { await react('❌'); return reply(`❌ No result found for: *${query}*`); }
           ytUrl = found.url;
           meta  = found;
         }
 
-        // Show thumbnail card while downloading
-        if (meta.thumbnail) {
-          await sock.sendMessage(jid, {
-            image: { url: meta.thumbnail },
-            caption: `${videoCaption(meta, botName)}\n\n⏳ _Downloading video..._`,
-          }, { quoted: msg });
-        }
+        // Get metadata from API (title/thumbnail) — download via yt-dlp
+        const apiMeta = await getVideo(ytUrl);
+        if (!meta.title && apiMeta?.title) meta.title = apiMeta.title;
+        if (!meta.thumbnail && apiMeta?.thumbnail) meta.thumbnail = apiMeta.thumbnail;
 
-        const result = await getVideo(ytUrl);
-        if (!result?.url) {
-          await react('❌');
-          return reply(`❌ *Video download failed*\n\nAll 3 sources unavailable. Try again later.`);
-        }
-
-        // Use title/thumbnail from API if search didn't give them
-        if (!meta.title && result.title) meta.title = result.title;
-        if (!meta.thumbnail && result.thumbnail) meta.thumbnail = result.thumbnail;
-
-        const buf = await fetchBuf(result.url);
+        const buf = await ytdlpVideo(ytUrl);
         if (!buf || buf.length < 50000) {
           await react('❌');
-          return reply(`❌ *Video file invalid* — try again or use a different link.`);
+          return reply(`❌ *Video download failed* — try again or use a different link.`);
         }
 
         await sendMedia({
           video:       buf,
           mimetype:    'video/mp4',
-          fileName:    result.filename || 'video.mp4',
+          fileName:    'video.mp4',
           caption:     videoCaption(meta, botName),
           contextInfo: buildCtx(meta.title, meta.thumbnail, ytUrl),
         });
@@ -288,19 +312,10 @@ export default {
       let meta  = { title: query, author: '', duration: '', thumbnail: '' };
 
       if (!ytUrl) {
-        await reply(`🔍 _Searching: ${query}..._`);
         const found = await searchYT(query);
         if (!found?.url) { await react('❌'); return reply(`❌ Could not find: *${query}*`); }
         ytUrl = found.url;
         meta  = found;
-      }
-
-      // Show thumbnail card while downloading
-      if (meta.thumbnail) {
-        await sock.sendMessage(jid, {
-          image: { url: meta.thumbnail },
-          caption: `${audioCaption(meta, botName)}\n\n⏳ _Downloading audio..._`,
-        }, { quoted: msg });
       }
 
       const result = await getAudio(ytUrl);
