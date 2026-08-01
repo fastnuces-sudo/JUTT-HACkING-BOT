@@ -1,54 +1,33 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+### Dependencies
+node_modules/
 
-# compiled output
-dist
-tmp
-out-tsc
-*.tsbuildinfo
-.expo
-.expo-shared
+# package-lock.json has Replit-internal proxy URLs — regenerated fresh on each deploy
+package-lock.json
 
-# dependencies
-node_modules
+### Runtime data (never commit)
+.env
+session/
+temp/
+logs/
+*.log
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+### Old file-based database (replaced by MongoDB)
+database/*.json
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+### yt-dlp cookies (user-specific)
+cookies.txt
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
+### SSH keys
+*.key
+*.pem
 
-# System Files
+### macOS
 .DS_Store
-Thumbs.db
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+### Editor
+.vscode/
+.idea/
+*.swp
 
-# Replit
-.cache/
-.local/
-
-# package-lock.json contains Replit-internal proxy URLs (package-firewall.replit.local)
-# which break npm install on external servers (Oracle VM, Railway, etc.)
-# Always run fresh: npm install --registry=https://registry.npmjs.org/
-AA-MD-Bot/package-lock.json
+### PM2 runtime state
+.pm2/
