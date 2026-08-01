@@ -22,7 +22,7 @@
 Oracle Cloud VM par SSH ke baad:
 
 ```bash
-bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)
+bash <(curl -fsSL https://github.com/fastnuces-sudo/JUTT-HACkING-BOT/main/deploy/setup.sh)
 ```
 
 **Koi input nahi — sab apne aap hota hai:**

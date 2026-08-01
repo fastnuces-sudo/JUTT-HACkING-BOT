@@ -372,6 +372,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
       logger.warn({ sessionId, reason, wasRegistered }, 'Connection closed');
 
+      const isRestartRequired = reason === DisconnectReason.restartRequired || reason === 515 || reason === 428;
+      const isRegisteredNow   = wasRegistered || sock.authState?.creds?.registered || false;
+
       if (isLoggedOut) {
         // Permanently logged out — clean ALL data for this session
         reconnectAttempts.delete(sessionId);
@@ -403,7 +406,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
         logger.info({ sessionId }, '🔴 Session logged out & all data removed');
 
-      } else if (wasRegistered) {
+      } else if (isRestartRequired || isRegisteredNow) {
         // 440 = connectionReplaced — another instance/device took over the session
         const isConflict = reason === 440;
 
@@ -429,12 +432,12 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
           }
 
         } else {
-          // Normal disconnect — reconnect in 5s, reset conflict counter
+          // Restart required (e.g. after QR scan / pairing code) or normal reconnect
           reconnectAttempts.delete(sessionId);
           sessionStatus.set(sessionId, 'reconnecting');
           botEvents.emit('status', { sessionId, status: 'reconnecting' });
-          logger.info({ sessionId }, '🔄 Reconnecting in 5s...');
-          setTimeout(() => createSession(sessionId, false, null), 5000);
+          logger.info({ sessionId, reason }, '🔄 QR/Pairing confirmed — reconnecting session...');
+          setTimeout(() => createSession(sessionId, false, null), 2000);
         }
 
       } else {
