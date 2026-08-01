@@ -23,7 +23,7 @@ const _keyCache = {};
 
 // Debounced save timers: { ["{sessionId}:{type}"]: timerHandle }
 const _keySaveTimers = {};
-const KEY_SAVE_DELAY_MS = 2500;
+const KEY_SAVE_DELAY_MS = 200;
 
 function scheduleKeySave(sessionId, type) {
   const timerKey = `${sessionId}:${type}`;

@@ -178,6 +178,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     getMessage: async () => ({ conversation: '' }),
     syncFullHistory: false,
     markOnlineOnConnect: false,
+    connectTimeoutMs: 60000,
+    defaultQueryTimeoutMs: 60000,
+    keepAliveIntervalMs: 15000,
     shouldIgnoreJid: jid => isJidBroadcast(jid),
   });
 
