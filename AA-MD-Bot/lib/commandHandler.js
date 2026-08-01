@@ -35,9 +35,9 @@ async function getCachedGroupMeta(sock, jid) {
   return meta;
 }
 
-const CHANNEL_URL = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
-const CHANNEL_NAME = 'AA MD Bot';
-const WATERMARK = `\n\n> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
+const CHANNEL_URL = '';
+const CHANNEL_NAME = 'Jutts Bot';
+const WATERMARK = `\n\n> 🤖 *Powered by Jutts Bot*  👨‍💻 *Sajid Jutt*`;
 
 // Load banner thumbnail once for channel button
 let _bannerThumb = null;

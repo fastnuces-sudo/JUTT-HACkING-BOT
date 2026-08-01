@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Birthday Auto-Wish System
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Birthday Auto-Wish System
+// Developer: Sajid Jutt | Jutts Mods
 // Exactly midnight wish • custom messages • set for any number
 // ============================================
 
@@ -75,7 +75,7 @@ async function runBirthdayWishes(getSessions) {
 
     try {
       await sock.sendMessage(targetJid, {
-        text: `🎂🎉 *Happy Birthday ${name}!*\n\n${wishText}\n\n> 🤖 *AA MD Bot*`,
+        text: `🎂🎉 *Happy Birthday ${name}!*\n\n${wishText}\n\n> 🤖 *Jutts Bot*`,
         mentions: mention,
       });
     } catch {}
@@ -114,7 +114,7 @@ export default {
         `Example:\n` +
         `*.bday set 15 Aug* — your own birthday\n` +
         `*.bday set 923001234567 15 Aug* — someone else's birthday\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
 
       // Check if first token looks like a phone number (≥7 digits)
@@ -132,11 +132,11 @@ export default {
         targetName = msg.pushName || senderJid.split('@')[0];
       }
 
-      if (!targetJid) return reply(`❌ Invalid number format.\nExample: *923001234567*\n\n> 🤖 *AA MD Bot*`);
-      if (!dateStr)   return reply(`❌ Please provide a date.\nExample: *15 Aug* or *15/8*\n\n> 🤖 *AA MD Bot*`);
+      if (!targetJid) return reply(`❌ Invalid number format.\nExample: *923001234567*\n\n> 🤖 *Jutts Bot*`);
+      if (!dateStr)   return reply(`❌ Please provide a date.\nExample: *15 Aug* or *15/8*\n\n> 🤖 *Jutts Bot*`);
 
       const parsed = parseDate(dateStr);
-      if (!parsed) return reply(`❌ Invalid date format.\nExample: *15 Aug* or *15/8*\n\n> 🤖 *AA MD Bot*`);
+      if (!parsed) return reply(`❌ Invalid date format.\nExample: *15 Aug* or *15/8*\n\n> 🤖 *Jutts Bot*`);
 
       const existing = db_.birthdays.get(targetJid) || {};
       db_.birthdays.set(targetJid, {
@@ -158,19 +158,19 @@ export default {
         (hasMsgs
           ? `✅ Wish message is already set!\n`
           : `⚠️ *No wish message set!*\nThe bot will NOT wish until you add a message:\n*.bday addmsg Happy Birthday! 🎂*\n`) +
-        `\n> 🤖 *AA MD Bot*`
+        `\n> 🤖 *Jutts Bot*`
       );
     }
 
     // ── .bday addmsg <text> ──────────────────────────────────────────────────
     if (sub === 'addmsg') {
-      if (!rest) return reply(`❌ Please write a message.\nExample: *.bday addmsg Happy Birthday! 🎂*\n\n> 🤖 *AA MD Bot*`);
+      if (!rest) return reply(`❌ Please write a message.\nExample: *.bday addmsg Happy Birthday! 🎂*\n\n> 🤖 *Jutts Bot*`);
       const userData = db_.birthdays.get(senderJid) || {};
       const existing = userData.bdayMsgs || [];
-      if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\nDelete one first with *.bday delmsg <number>*.\n\n> 🤖 *AA MD Bot*`);
+      if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\nDelete one first with *.bday delmsg <number>*.\n\n> 🤖 *Jutts Bot*`);
       const updated = [...existing, rest];
       db_.birthdays.set(senderJid, { bdayMsgs: updated });
-      return reply(`✅ *Message #${updated.length} added!*\n\n_"${rest}"_\n\nYou now have ${updated.length} message(s) set. The bot will pick one randomly.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Message #${updated.length} added!*\n\n_"${rest}"_\n\nYou now have ${updated.length} message(s) set. The bot will pick one randomly.\n\n> 🤖 *Jutts Bot*`);
     }
 
     // ── .bday addmsgfor <number> <text> — add msg for another number ─────────
@@ -179,14 +179,14 @@ export default {
       const msgText = msgParts.join(' ').trim();
       const tJid    = toJid(numToken || '');
       if (!tJid || !msgText) return reply(
-        `❌ Format: *.bday addmsgfor <number> <message>*\nExample: *.bday addmsgfor 923001234567 Happy Birthday! 🎂*\n\n> 🤖 *AA MD Bot*`
+        `❌ Format: *.bday addmsgfor <number> <message>*\nExample: *.bday addmsgfor 923001234567 Happy Birthday! 🎂*\n\n> 🤖 *Jutts Bot*`
       );
       const tData    = db_.birthdays.get(tJid) || {};
       const existing = tData.bdayMsgs || [];
-      if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\n\n> 🤖 *AA MD Bot*`);
+      if (existing.length >= 10) return reply(`❌ Max 10 messages allowed.\n\n> 🤖 *Jutts Bot*`);
       const updated = [...existing, msgText];
       db_.birthdays.set(tJid, { bdayMsgs: updated });
-      return reply(`✅ *Message #${updated.length} added!*\n👤 Number: ${numToken}\n_"${msgText}"_\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Message #${updated.length} added!*\n👤 Number: ${numToken}\n_"${msgText}"_\n\n> 🤖 *Jutts Bot*`);
     }
 
     // ── .bday delmsg <num> ───────────────────────────────────────────────────
@@ -195,26 +195,26 @@ export default {
       const idx      = parseInt(rest) - 1;
       const existing = userData.bdayMsgs || [];
       if (isNaN(idx) || idx < 0 || idx >= existing.length) {
-        return reply(`❌ Please enter a valid number (1-${existing.length}).\nSee your list with *.bday msgs*.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ Please enter a valid number (1-${existing.length}).\nSee your list with *.bday msgs*.\n\n> 🤖 *Jutts Bot*`);
       }
       existing.splice(idx, 1);
       db_.birthdays.set(senderJid, { bdayMsgs: existing });
-      return reply(`✅ *Message deleted.*\nYou now have ${existing.length} message(s) remaining.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Message deleted.*\nYou now have ${existing.length} message(s) remaining.\n\n> 🤖 *Jutts Bot*`);
     }
 
     // ── .bday msgs ───────────────────────────────────────────────────────────
     if (sub === 'msgs') {
       const userData = db_.birthdays.get(senderJid) || {};
       const msgs     = userData.bdayMsgs || [];
-      if (!msgs.length) return reply(`📭 No wish messages set.\nAdd one with *.bday addmsg <text>*.\n\n> 🤖 *AA MD Bot*`);
+      if (!msgs.length) return reply(`📭 No wish messages set.\nAdd one with *.bday addmsg <text>*.\n\n> 🤖 *Jutts Bot*`);
       const list = msgs.map((m,i) => `*${i+1}.* ${m}`).join('\n');
-      return reply(`🎂 *Your Wish Messages (${msgs.length}):*\n\n${list}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🎂 *Your Wish Messages (${msgs.length}):*\n\n${list}\n\n> 🤖 *Jutts Bot*`);
     }
 
     // ── .bday del ────────────────────────────────────────────────────────────
     if (sub === 'del') {
       db_.birthdays.set(senderJid, { birthday: null, bdayMsgs: [], bdayGroup: null });
-      return reply(`🗑️ *Birthday removed.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🗑️ *Birthday removed.*\n\n> 🤖 *Jutts Bot*`);
     }
 
     // ── .bday list ───────────────────────────────────────────────────────────
@@ -227,14 +227,14 @@ export default {
         if (isGroupMsg && u.bdayGroup !== jid) continue;
         entries.push({ name: u.bdayName || '?', day: b.day, month: b.month, hasMsgs: (u.bdayMsgs?.length || 0) > 0 });
       }
-      if (!entries.length) return reply(`📭 No birthdays saved.\n\n> 🤖 *AA MD Bot*`);
+      if (!entries.length) return reply(`📭 No birthdays saved.\n\n> 🤖 *Jutts Bot*`);
       entries.sort((a,b) => a.month - b.month || a.day - b.day);
       const today = new Date();
       const txt = entries.map(e => {
         const isToday = e.day === today.getDate() && e.month === today.getMonth()+1;
         return `${isToday ? '🥳' : '🎂'} *${e.name}* — ${e.day} ${MN[e.month]}${!e.hasMsgs ? ' ⚠️' : ''}${isToday ? ' ← *TODAY!* 🎉' : ''}`;
       }).join('\n');
-      return reply(`🎂 *Birthday List (${entries.length}):*\n\n${txt}\n\n⚠️ = no wish message set\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🎂 *Birthday List (${entries.length}):*\n\n${txt}\n\n⚠️ = no wish message set\n\n> 🤖 *Jutts Bot*`);
     }
 
     // ── .bday today ──────────────────────────────────────────────────────────
@@ -243,9 +243,9 @@ export default {
       const d = today.getDate(), m = today.getMonth()+1;
       const allU  = db.birthdays.all();
       const bdays = Object.values(allU).filter(u => u?.birthday?.day === d && u?.birthday?.month === m);
-      if (!bdays.length) return reply(`🎂 No birthdays today.\n\n> 🤖 *AA MD Bot*`);
+      if (!bdays.length) return reply(`🎂 No birthdays today.\n\n> 🤖 *Jutts Bot*`);
       const txt = bdays.map(u => `🥳 *${u.bdayName || '?'}*${!u.bdayMsgs?.length ? ' ⚠️ (no msg)' : ''}`).join('\n');
-      return reply(`🎉 *Today's Birthdays:*\n\n${txt}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🎉 *Today's Birthdays:*\n\n${txt}\n\n> 🤖 *Jutts Bot*`);
     }
 
     // ── .bday — status + help ────────────────────────────────────────────────
@@ -271,7 +271,7 @@ export default {
       `*.bday list*                          — view all saved birthdays\n` +
       `*.bday today*                         — who has a birthday today?\n` +
       `*.bday del*                           — remove your birthday\n\n` +
-      `> 🤖 *AA MD Bot*`
+      `> 🤖 *Jutts Bot*`
     );
   },
 };

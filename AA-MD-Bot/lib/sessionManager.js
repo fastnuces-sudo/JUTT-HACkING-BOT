@@ -3,6 +3,7 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   isJidBroadcast,
+  Browsers,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
@@ -166,6 +167,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
 
   const sock = makeWASocket({
     version,
+    browser: Browsers.ubuntu('Chrome'),
     auth: {
       creds: state.creds,
       keys: makeCacheableSignalKeyStore(state.keys, silentLogger),
@@ -190,7 +192,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     const origContent = content;
     try {
       const nlJid  = global._AA_NEWSLETTER_JID  || config.newsletterJid;
-      const nlName = global._AA_NEWSLETTER_NAME || config.newsletterName || 'AA MD Bot';
+      const nlName = global._AA_NEWSLETTER_NAME || config.newsletterName || 'Jutts Bot';
       // Skip: no JID set, reactions, read-receipts, status broadcasts, forwards,
       //       or any call that explicitly opts out (e.g. .stripfwd clean-send)
       const isReact       = !!content?.react;
@@ -236,10 +238,12 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      sessionQRs.set(sessionId, qr);
-      sessionStatus.set(sessionId, 'qr');
-      botEvents.emit('qr', { sessionId, qr });
-      logger.info({ sessionId }, '📱 QR ready — scan now');
+      if (!usePairingCode) {
+        sessionQRs.set(sessionId, qr);
+        sessionStatus.set(sessionId, 'qr');
+        botEvents.emit('qr', { sessionId, qr });
+        logger.info({ sessionId }, '📱 QR ready — scan now');
+      }
     }
 
     if (connection === 'open') {
@@ -325,7 +329,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
           try {
             await sock.sendMessage(ownJid, {
               text:
-                `🤖 *AA MD Bot Connected!*\n\n` +
+                `🤖 *Jutts Bot Connected!*\n\n` +
                 `✅ Bot successfully linked to your WhatsApp\n` +
                 `📱 *Number:* +${phone}\n` +
                 `🕐 *Time:* ${time}\n` +
@@ -335,7 +339,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
                 `▸ Type *.menu* to see all commands\n` +
                 `▸ *.antiviewonce on* — auto-reveal view-once\n` +
                 `▸ *.help* — guide & tips\n\n` +
-                `> 🤖 *Powered by AA MD Bot | AA Mods*`,
+                `> 🤖 *Powered by Jutts Bot | Jutts Mods*`,
             });
           } catch (_) {}
         }, 3000); // 3s delay so connection fully stabilises first
@@ -735,7 +739,7 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
           ?? db.settings.getValue('antiCallMsg'))?.trim();
         const replyText = customMsg
           ? customMsg
-          : `📵 *Auto Reject*\n\nSorry, this bot cannot receive calls.\n\n> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`;
+          : `📵 *Auto Reject*\n\nSorry, this bot cannot receive calls.\n\n> 🤖 *Jutts Bot*\n> 👨‍💻 *Sajid Jutt*`;
         await sock.sendMessage(call.from, { text: replyText }).catch(() => {});
         logger.info({ from: call.from, sessionId }, '📵 Auto-rejected call');
       }
@@ -800,7 +804,9 @@ export async function createSession(sessionId = 'default', usePairingCode = fals
         // requestPairingCode requires digits only — strip +, spaces, dashes
         const cleanPhone = String(phoneNumber).replace(/\D/g, '');
         const code = await sock.requestPairingCode(cleanPhone);
+        sessionStatus.set(sessionId, 'pairing');
         botEvents.emit('pairingCode', { sessionId, code, phoneNumber });
+        botEvents.emit('status', { sessionId, status: 'pairing' });
         logger.info({ sessionId, code, source }, '📲 Pairing code generated');
       } catch (err) {
         botEvents.emit('pairingCodeError', { sessionId, error: err.message });

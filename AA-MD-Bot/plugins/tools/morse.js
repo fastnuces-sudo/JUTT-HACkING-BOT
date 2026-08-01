@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Morse Code
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Morse Code
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 const ENCODE = {
@@ -40,7 +40,7 @@ export default {
         `📋 *Usage:*\n` +
         `• *.morse encode Hello* — text → morse\n` +
         `• *.morse decode .... . .-.. .-.. ---* — morse → text\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     }
 
@@ -48,21 +48,21 @@ export default {
 
     if (sub === 'encode' || sub === 'e') {
       const result = toMorse(input);
-      return reply(`📡 *Morse Encoded*\n\n*Input:* ${input}\n*Output:* \`${result}\`\n\n> 🤖 *AA MD Bot*`);
+      return reply(`📡 *Morse Encoded*\n\n*Input:* ${input}\n*Output:* \`${result}\`\n\n> 🤖 *Jutts Bot*`);
     }
 
     if (sub === 'decode' || sub === 'd') {
       const result = fromMorse(input);
-      return reply(`📡 *Morse Decoded*\n\n*Input:* \`${input}\`\n*Output:* ${result}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`📡 *Morse Decoded*\n\n*Input:* \`${input}\`\n*Output:* ${result}\n\n> 🤖 *Jutts Bot*`);
     }
 
     // Default: auto-detect (if input has .- characters, decode; else encode)
     const isMorse = /^[.\- /]+$/.test(input.trim());
     if (isMorse) {
       const result = fromMorse(sub + (input ? ' ' + input : ''));
-      return reply(`📡 *Morse Decoded*\n\n*Output:* ${result}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`📡 *Morse Decoded*\n\n*Output:* ${result}\n\n> 🤖 *Jutts Bot*`);
     }
     const result = toMorse(sub + (input ? ' ' + input : ''));
-    return reply(`📡 *Morse Encoded*\n\n*Input:* ${sub + ' ' + input}\n*Output:* \`${result}\`\n\n> 🤖 *AA MD Bot*`);
+    return reply(`📡 *Morse Encoded*\n\n*Input:* ${sub + ' ' + input}\n*Output:* \`${result}\`\n\n> 🤖 *Jutts Bot*`);
   },
 };

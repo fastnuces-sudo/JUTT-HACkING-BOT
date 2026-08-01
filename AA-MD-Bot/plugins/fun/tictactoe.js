@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Tic Tac Toe
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Tic Tac Toe
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 const games = new Map();
@@ -46,27 +46,27 @@ export default {
         `You are ❌, bot is ⭕\n` +
         `Reply with a number (1-9) for your move:\n\n` +
         display(makeBoard()) +
-        `\n\n💡 *.ttt <1-9>* to play, *.ttt quit* to stop\n\n> 🤖 *AA MD Bot*`
+        `\n\n💡 *.ttt <1-9>* to play, *.ttt quit* to stop\n\n> 🤖 *Jutts Bot*`
       );
     }
 
     // Quit
     if (input === 'quit' || input === 'stop') {
       games.delete(senderJid);
-      return reply(`👋 *Game ended!*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`👋 *Game ended!*\n\n> 🤖 *Jutts Bot*`);
     }
 
     const game = games.get(senderJid);
     if (!game?.active) {
-      return reply(`🎮 No active game! Start with *.ttt*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🎮 No active game! Start with *.ttt*\n\n> 🤖 *Jutts Bot*`);
     }
 
     const move = parseInt(input) - 1;
     if (isNaN(move) || move < 0 || move > 8) {
-      return reply(`⚠️ Enter a number 1-9\n\n> 🤖 *AA MD Bot*`);
+      return reply(`⚠️ Enter a number 1-9\n\n> 🤖 *Jutts Bot*`);
     }
     if (game.board[move] !== ' ') {
-      return reply(`⚠️ That cell is taken! Choose another.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`⚠️ That cell is taken! Choose another.\n\n> 🤖 *Jutts Bot*`);
     }
 
     // Player move
@@ -74,11 +74,11 @@ export default {
     if (checkWin(game.board,'X')) {
       games.delete(senderJid);
       await react('🏆');
-      return reply(`🏆 *You won! Congratulations!* 🎉\n\n${display(game.board)}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🏆 *You won! Congratulations!* 🎉\n\n${display(game.board)}\n\n> 🤖 *Jutts Bot*`);
     }
     if (game.board.every(c=>c!==' ')) {
       games.delete(senderJid);
-      return reply(`🤝 *Draw! Good game!*\n\n${display(game.board)}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🤝 *Draw! Good game!*\n\n${display(game.board)}\n\n> 🤖 *Jutts Bot*`);
     }
 
     // Bot move
@@ -87,14 +87,14 @@ export default {
     if (checkWin(game.board,'O')) {
       games.delete(senderJid);
       await react('🤖');
-      return reply(`🤖 *Bot wins!* Better luck next time!\n\n${display(game.board)}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🤖 *Bot wins!* Better luck next time!\n\n${display(game.board)}\n\n> 🤖 *Jutts Bot*`);
     }
     if (game.board.every(c=>c!==' ')) {
       games.delete(senderJid);
-      return reply(`🤝 *Draw! Good game!*\n\n${display(game.board)}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🤝 *Draw! Good game!*\n\n${display(game.board)}\n\n> 🤖 *Jutts Bot*`);
     }
 
     await react('🎯');
-    return reply(`🎮 *Your turn!* (You: ❌ Bot: ⭕)\n\n${display(game.board)}\n\nReply with 1-9\n\n> 🤖 *AA MD Bot*`);
+    return reply(`🎮 *Your turn!* (You: ❌ Bot: ⭕)\n\n${display(game.board)}\n\nReply with 1-9\n\n> 🤖 *Jutts Bot*`);
   },
 };

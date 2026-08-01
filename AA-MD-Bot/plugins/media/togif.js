@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Convert Sticker/Video to GIF
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Convert Sticker/Video to GIF
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
@@ -44,7 +44,7 @@ export default {
       return reply(
         `⚠️ *Reply to a video or animated sticker.*\n\n` +
         `📋 *Usage:* Reply to a video/sticker and send *.togif*\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     }
 
@@ -60,7 +60,7 @@ export default {
       const gifBuf = await fs.readFile(outFile);
       await sock.sendMessage(jid, {
         video: gifBuf, gifPlayback: true, mimetype: 'video/mp4',
-        caption: `🎞️ *GIF Converted!*\n\n> 🤖 *AA MD Bot*`,
+        caption: `🎞️ *GIF Converted!*\n\n> 🤖 *Jutts Bot*`,
       }, { quoted: msg });
       await react('✅');
 
@@ -69,7 +69,7 @@ export default {
       fs.remove(outFile).catch(() => {});
     } catch (e) {
       await react('❌');
-      return reply(`❌ *GIF conversion failed.*\n\nMake sure ffmpeg is installed.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *GIF conversion failed.*\n\nMake sure ffmpeg is installed.\n\n> 🤖 *Jutts Bot*`);
     }
   },
 };

@@ -51,7 +51,7 @@ export default {
           `🗑️ *Cookies Deleted*\n\n` +
           `YouTube cookies have been removed.\n` +
           `Downloads will use standard bypass strategies.\n\n` +
-          `> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`
+          `> 🤖 *Jutts Bot*\n> 👨‍💻 *Sajid Jutt*`
         );
       }
       return reply('❌ No cookies file found.');
@@ -74,7 +74,7 @@ export default {
         `📦 Entries : *${info?.lines || '?'}*\n` +
         `📁 Size    : *${((info?.size || 0) / 1024).toFixed(1)} KB*\n\n` +
         `All YouTube downloads will now use your cookies.\n\n` +
-        `> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`
+        `> 🤖 *Jutts Bot*\n> 👨‍💻 *Sajid Jutt*`
       );
     }
 
@@ -100,7 +100,7 @@ export default {
         `📦 Entries : *${info?.lines || '?'}*\n` +
         `📁 Size    : *${((info?.size || 0) / 1024).toFixed(1)} KB*\n\n` +
         `All YouTube downloads now use your cookies.\n\n` +
-        `> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`
+        `> 🤖 *Jutts Bot*\n> 👨‍💻 *Sajid Jutt*`
       );
     }
 
@@ -113,7 +113,7 @@ export default {
         `✅ *Cookies Saved!*\n\n` +
         `📦 Entries : *${info?.lines || '?'}*\n` +
         `📁 Size    : *${((info?.size || 0) / 1024).toFixed(1)} KB*\n\n` +
-        `> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`
+        `> 🤖 *Jutts Bot*\n> 👨‍💻 *Sajid Jutt*`
       );
     }
 
@@ -134,7 +134,7 @@ export default {
         `*Commands:*\n` +
         `▸ *.cookies* — Check status\n` +
         `▸ *.cookies clear* — Remove cookies\n\n` +
-        `> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`
+        `> 🤖 *Jutts Bot*\n> 👨‍💻 *Sajid Jutt*`
       );
     }
 
@@ -148,7 +148,7 @@ export default {
       `All YouTube downloads use these cookies.\n` +
       `To update: send *.cookies* as reply to new cookies text.\n` +
       `To remove: *.cookies clear*\n\n` +
-      `> 🤖 *AA MD Bot*\n> 👨‍💻 *Ahsan Ali Wadani*`
+      `> 🤖 *Jutts Bot*\n> 👨‍💻 *Sajid Jutt*`
     );
   },
 };

@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Good / Nice / Any4SameEmojis
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Good / Nice / Any4SameEmojis
+// Developer: Sajid Jutt | Jutts Mods
 //
 // .good / .nice  — natural-looking replies that secretly reveal a view-once
 //                  to the owner's "You" chat. Sender only sees "Good 👍" or "Nice! 👌".
@@ -51,7 +51,7 @@ async function doReveal(sock, msg, selfJid, label) {
     `📅 *Date:* ${date}\n` +
     `⏰ *Time:* ${timeStr}\n` +
     `🔑 *Trigger:* ${label}\n\n` +
-    `> 👁️ *AA MD Bot*`;
+    `> 👁️ *Jutts Bot*`;
 
   // ── Step 1: direct download from quotedMessage media keys (same as reveal.js) ─
   const msgContent = msg.message || {};
@@ -127,7 +127,7 @@ export default {
           `📋 *Toggle:*\n` +
           `• *.any4sameemojis on*  — enable\n` +
           `• *.any4sameemojis off* — disable\n\n` +
-          `> 👁️ *AA MD Bot*`
+          `> 👁️ *Jutts Bot*`
         );
       }
 
@@ -136,7 +136,7 @@ export default {
       return reply(
         `${enable ? '✅' : '❌'} *4-Same-Emoji Trigger ${enable ? 'Enabled' : 'Disabled'}*\n\n` +
         `${enable ? 'Replying with 4 same emojis now reveals view-once.' : 'Emoji trigger disabled. Use .avv or .good/.nice to reveal.'}\n\n` +
-        `> 👁️ *AA MD Bot*`
+        `> 👁️ *Jutts Bot*`
       );
     }
 

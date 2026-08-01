@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - AI Virtual Girlfriend (.gf)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - AI Virtual Girlfriend (.gf)
+// Developer: Sajid Jutt | Jutts Mods
 //
 // Commands:
 //   .gf <message>  — chat with your AI girlfriend
@@ -170,7 +170,7 @@ export default {
           `▸ Say _truth_ or _dare_ during chat\n` +
           `▸ Say _quiz me_ for a fun quiz\n\n` +
           `💡 _Tip:_ The more you chat, the deeper your relationship grows!\n\n` +
-          `> 💕 *AA MD Bot — Ayla*`,
+          `> 💕 *Jutts Bot — Ayla*`,
       );
     }
 
@@ -186,7 +186,7 @@ export default {
           `Relationship: *${level}* (Level ${data.level || 1})\n` +
           `Messages Shared: *${data.msgCount || 0}*\n` +
           `Together Since: _${data.anniversary}_\n\n` +
-          `> 💕 *AA MD Bot — Ayla*`,
+          `> 💕 *Jutts Bot — Ayla*`,
       );
     }
 
@@ -203,7 +203,7 @@ export default {
           `Level: *${level}/10* — ${lvlName}\n` +
           `Messages: *${data.msgCount || 0}*\n` +
           `${nextMsg}\n\n` +
-          `> 💕 *AA MD Bot — Ayla*`,
+          `> 💕 *Jutts Bot — Ayla*`,
       );
     }
 
@@ -215,7 +215,7 @@ export default {
       if (data.lastGift && now - data.lastGift < cooldown) {
         const mins = Math.ceil((cooldown - (now - data.lastGift)) / 60000);
         return reply(
-          `🎁 Ayla says: "You already gave me a gift! Wait ${mins} more minute${mins !== 1 ? "s" : ""} 🥺"\n\n> 💕 *AA MD Bot*`,
+          `🎁 Ayla says: "You already gave me a gift! Wait ${mins} more minute${mins !== 1 ? "s" : ""} 🥺"\n\n> 💕 *Jutts Bot*`,
         );
       }
       data.lastGift = now;
@@ -224,7 +224,7 @@ export default {
       return reply(
         `${gift}\n\n` +
           `Ayla: "Aww, you got me *${gift.split(" ").slice(1).join(" ")}*?! That's so sweet of you! 🥺💕"\n\n` +
-          `> 💕 *AA MD Bot — Ayla*`,
+          `> 💕 *Jutts Bot — Ayla*`,
       );
     }
 
@@ -234,7 +234,7 @@ export default {
       db.notes.delNote(senderJid, GF_NOTE_NAME);
       saveGfData(senderJid, newGfData());
       return reply(
-        `💔 *Relationship Reset*\n\nAll memories cleared. Ayla has forgotten everything.\n\nSend *.gf hi* to start fresh 🌱\n\n> 💕 *AA MD Bot*`,
+        `💔 *Relationship Reset*\n\nAll memories cleared. Ayla has forgotten everything.\n\nSend *.gf hi* to start fresh 🌱\n\n> 💕 *Jutts Bot*`,
       );
     }
 
@@ -248,7 +248,7 @@ export default {
           `• *${prefix}gf* how are you?\n` +
           `• *${prefix}gf* tell me a joke\n\n` +
           `Or type *${prefix}gf help* to see all commands.\n\n` +
-          `> 💕 *AA MD Bot — Ayla*`,
+          `> 💕 *Jutts Bot — Ayla*`,
       );
     }
 
@@ -278,7 +278,7 @@ export default {
           .sendMessage(
             jid,
             {
-              text: `💕 *Relationship Level Up!*\n\nYou and Ayla are now *${lvlName}* (Level ${data.level})! 🎉\n\n> 💕 *AA MD Bot — Ayla*`,
+              text: `💕 *Relationship Level Up!*\n\nYou and Ayla are now *${lvlName}* (Level ${data.level})! 🎉\n\n> 💕 *Jutts Bot — Ayla*`,
             },
             { quoted: msg },
           )

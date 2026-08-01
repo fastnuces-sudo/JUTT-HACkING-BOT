@@ -1,5 +1,5 @@
 // ============================================
-// AA MD Bot - Set Newsletter JID (Owner)
+// Jutts Bot - Set Newsletter JID (Owner)
 // Persists JID to db so it survives restarts.
 // ============================================
 
@@ -29,7 +29,7 @@ export default {
         `3. Send: *.setnewsletter <jid@newsletter>*\n\n` +
         `JID format: \`120363xxxxxxxxx@newsletter\`\n\n` +
         `*Example:*\n` +
-        `\`.setnewsletter 120363288818481660@newsletter AA MD Bot\``
+        `\`.setnewsletter 120363288818481660@newsletter Jutts Bot\``
       );
     }
 
@@ -41,7 +41,7 @@ export default {
       );
     }
 
-    const name = args.length > 1 ? args.slice(1).join(' ') : 'AA MD Bot';
+    const name = args.length > 1 ? args.slice(1).join(' ') : 'Jutts Bot';
 
     global._AA_NEWSLETTER_JID  = jid;
     global._AA_NEWSLETTER_NAME = name;

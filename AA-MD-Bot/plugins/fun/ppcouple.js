@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Anime Couple PP
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Anime Couple PP
+// Developer: Sajid Jutt | Jutts Mods
 //
 // Commands:
 //   .ppcouple — random anime couple (boy + girl)
@@ -12,7 +12,7 @@ import https from "https";
 
 const JSON_URL =
   "https://raw.githubusercontent.com/KazukoGans/database/main/anime/ppcouple.json";
-const FOOTER = "\n\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*";
+const FOOTER = "\n\n> 🤖 *Jutts Bot*  •  👨‍💻 *Sajid Jutt*";
 
 // ── Keep-Alive agent (reduces ECONNRESET on repeated requests) ────────────────
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 });

@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Anti ViewOnce Toggle
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Anti ViewOnce Toggle
+// Developer: Sajid Jutt | Jutts Mods
 // Enables/disables automatic view-once reveal
 // ============================================
 
@@ -29,7 +29,7 @@ export default {
         `📋 *Usage:*\n` +
         `• *.antiviewonce on* — enable\n` +
         `• *.antiviewonce off* — disable\n\n` +
-        `> 👁️ *AA MD Bot*`
+        `> 👁️ *Jutts Bot*`
       );
     }
 
@@ -43,7 +43,7 @@ export default {
       return reply(
         `${enable ? '✅' : '❌'} *Anti ViewOnce ${enable ? 'Enabled' : 'Disabled'}*\n\n` +
         `View-once media in this group will ${enable ? 'now be' : 'no longer be'} auto-saved to your chat.\n\n` +
-        `> 👁️ *AA MD Bot*`
+        `> 👁️ *Jutts Bot*`
       );
     }
 
@@ -53,7 +53,7 @@ export default {
       `${enable ? '✅' : '❌'} *Anti ViewOnce ${enable ? 'Enabled' : 'Disabled'}*\n\n` +
       `View-once media will ${enable ? 'now be automatically' : 'no longer be'} revealed to your *"You"* chat.\n\n` +
       `💡 *Tip:* Reply to any view-once with 4 same emojis (e.g. 🔥🔥🔥🔥) to reveal it manually.\n\n` +
-      `> 👁️ *AA MD Bot*`
+      `> 👁️ *Jutts Bot*`
     );
   },
 };

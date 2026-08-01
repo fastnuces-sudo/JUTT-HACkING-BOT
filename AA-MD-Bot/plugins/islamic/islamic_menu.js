@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Islamic Menu Plugin
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Islamic Menu Plugin
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import { plugins } from '../../lib/pluginLoader.js';
@@ -25,8 +25,8 @@ function getBanner() {
   return null;
 }
 
-const CHANNEL_URL  = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
-const CHANNEL_NAME = 'AA MD Bot';
+const CHANNEL_URL  = '';
+const CHANNEL_NAME = 'Jutts Bot';
 
 function getCtx() {
   const newsletterJid = global._AA_NEWSLETTER_JID;
@@ -47,7 +47,7 @@ function getCtx() {
     isForwarded: true,
     externalAdReply: {
       title: CHANNEL_NAME,
-      body: 'AA Mods • Tap to join our channel',
+      body: 'Jutts Mods • Tap to join our channel',
       mediaType: 1,
       renderLargerThumbnail: false,
       showAdAttribution: true,
@@ -116,7 +116,7 @@ export default {
 
     let menu = `╔══════════════════════════════╗\n`;
     menu    += `║  ☪️  *ISLAMIC COMMANDS*  🤲    ║\n`;
-    menu    += `║    *AA MD Bot — AA Mods*      ║\n`;
+    menu    += `║    *Jutts Bot — Jutts Mods*      ║\n`;
     menu    += `╚══════════════════════════════╝\n\n`;
     menu    += `بِسْمِ اللَّهِ الرَّحْمٰنِ الرَّحِيمِ\n\n`;
     menu    += `📦 *Total Islamic Commands:* ${total}\n`;

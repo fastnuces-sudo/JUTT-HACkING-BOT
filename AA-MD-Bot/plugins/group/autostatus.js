@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Auto Status Saver Plugin
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Auto Status Saver Plugin
+// Developer: Sajid Jutt | Jutts Mods
 // Toggle status auto-save & forwarding to owner DM
 // ============================================
 

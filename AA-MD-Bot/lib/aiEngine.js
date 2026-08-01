@@ -34,7 +34,7 @@ export function addHistory(jid, role, content) {
 }
 
 // ── Default system prompt ─────────────────────────────────────────────────────
-export const DEFAULT_SYSTEM = `You are AA MD Bot, a WhatsApp AI assistant by AA Mods.
+export const DEFAULT_SYSTEM = `You are Jutts Bot, a WhatsApp AI assistant by Jutts Mods.
 
 ANSWER LENGTH — match the question:
 - Simple/factual → 1 to 3 lines, straight answer

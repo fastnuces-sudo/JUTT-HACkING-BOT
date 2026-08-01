@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Voice to Text (VTT)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Voice to Text (VTT)
+// Developer: Sajid Jutt | Jutts Mods
 // Free: HuggingFace Whisper (no key needed)
 // Optional: set HF_TOKEN for more requests
 // ============================================
@@ -110,7 +110,7 @@ export default {
       return reply(
         `🎙️ *Voice to Text*\n\n` +
           `*Reply* to any voice or audio message and send *.vtt*.\n\n` +
-          `> 🤖 *AA MD Bot*`,
+          `> 🤖 *Jutts Bot*`,
       );
     }
 
@@ -142,15 +142,15 @@ export default {
       if (!text) {
         await react("❌");
         return reply(
-          `❌ *Transcription failed.*\n\nThe audio was unclear or the server is busy. Please try again in a moment.\n\n> 🤖 *AA MD Bot*`,
+          `❌ *Transcription failed.*\n\nThe audio was unclear or the server is busy. Please try again in a moment.\n\n> 🤖 *Jutts Bot*`,
         );
       }
 
       await react("✅");
-      return reply(`🎙️ *Voice to Text*\n\n${text}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🎙️ *Voice to Text*\n\n${text}\n\n> 🤖 *Jutts Bot*`);
     } catch (err) {
       await react("❌");
-      return reply(`❌ *Error:* ${err.message}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Error:* ${err.message}\n\n> 🤖 *Jutts Bot*`);
     } finally {
       fs.remove(oggPath).catch(() => {});
       fs.remove(wavPath).catch(() => {});

@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Member Report System
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Member Report System
+// Developer: Sajid Jutt | Jutts Mods
 // .report @user <reason>  — report a member to admins
 // .reports                — view pending reports (admin only)
 // .clearreports           — clear all reports (admin only)
@@ -44,7 +44,7 @@ export default [
           `*Examples:*\n` +
           `▸ *.report @ali Sending spam*\n` +
           `▸ *.report @user Sharing links*\n\n` +
-          `> 🤖 *AA MD Bot*`
+          `> 🤖 *Jutts Bot*`
         );
       }
 
@@ -57,7 +57,7 @@ export default [
 
       // Prevent self-report
       if (target === senderJid) {
-        return reply(`❌ You cannot report yourself.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ You cannot report yourself.\n\n> 🤖 *Jutts Bot*`);
       }
 
       // Anti-spam: same reporter can't report same user twice in 5 min
@@ -67,7 +67,7 @@ export default [
         Date.now() - r.time < 5 * 60 * 1000
       );
       if (recentDupe) {
-        return reply(`⚠️ You already reported @${targetNum} 5 minutes ago. Please wait before reporting again.\n\n> 🤖 *AA MD Bot*`, { mentions: [target] });
+        return reply(`⚠️ You already reported @${targetNum} 5 minutes ago. Please wait before reporting again.\n\n> 🤖 *Jutts Bot*`, { mentions: [target] });
       }
 
       // Save report
@@ -90,7 +90,7 @@ export default [
         `👤 Reported: @${targetNum}\n` +
         `📝 Reason: _${reason}_\n` +
         `🔢 Total reports against this user: *${totalReports}*\n\n` +
-        `Admins have been notified.\n\n> 🤖 *AA MD Bot*`,
+        `Admins have been notified.\n\n> 🤖 *Jutts Bot*`,
         { mentions: [target] }
       );
 
@@ -104,7 +104,7 @@ export default [
             `👤 *Reporter:* @${reporterNum}\n` +
             `📝 *Reason:* ${reason}\n` +
             `🔢 *Total Reports:* ${totalReports}\n\n` +
-            `Use *.reports* to see all pending reports.\n\n> 🤖 *AA MD Bot*`,
+            `Use *.reports* to see all pending reports.\n\n> 🤖 *Jutts Bot*`,
           mentions: [...admins, target, senderJid],
         });
       }
@@ -123,7 +123,7 @@ export default [
     async execute({ jid, reply }) {
       const reports = getReports(jid);
       if (!reports.length) {
-        return reply(`📋 *No pending reports.*\n\n> 🤖 *AA MD Bot*`);
+        return reply(`📋 *No pending reports.*\n\n> 🤖 *Jutts Bot*`);
       }
 
       // Group by target
@@ -143,7 +143,7 @@ export default [
         txt += '\n';
       }
 
-      txt += `Use *.clearreports* to clear all.\n\n> 🤖 *AA MD Bot*`;
+      txt += `Use *.clearreports* to clear all.\n\n> 🤖 *Jutts Bot*`;
       return reply(txt);
     },
   },
@@ -160,9 +160,9 @@ export default [
     async execute({ jid, reply }) {
       const reports = getReports(jid);
       const count = reports.length;
-      if (!count) return reply(`📋 *No reports to clear.*\n\n> 🤖 *AA MD Bot*`);
+      if (!count) return reply(`📋 *No reports to clear.*\n\n> 🤖 *Jutts Bot*`);
       reportStore.set(jid, []);
-      return reply(`✅ *${count} report(s) cleared.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *${count} report(s) cleared.*\n\n> 🤖 *Jutts Bot*`);
     },
   },
 ];

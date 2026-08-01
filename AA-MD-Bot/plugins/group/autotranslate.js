@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Auto Translate (Group Feature)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Auto Translate (Group Feature)
+// Developer: Sajid Jutt | Jutts Mods
 // .autotranslate on [lang]   — enable auto-translate in the group
 // .autotranslate off         — disable
 // Passive handler: checkAutoTranslate (imported by sessionManager)
@@ -56,7 +56,7 @@ export async function checkAutoTranslate(msg, sock, sessionId) {
     await sock.sendMessage(chatJid, {
       text:
         `🌐 *Auto Translate (→ ${LANG_NAMES[toLang] || toLang})*\n\n` +
-        `@${senderJid.split('@')[0]}:\n_${translated}_\n\n> 🤖 *AA MD Bot*`,
+        `@${senderJid.split('@')[0]}:\n_${translated}_\n\n> 🤖 *Jutts Bot*`,
       mentions: [senderJid],
     });
   } catch {}
@@ -89,7 +89,7 @@ export default {
         `▸ *.autotranslate on hi* — Translate to Hindi\n` +
         `▸ *.autotranslate off* — Disable\n\n` +
         `*Available langs:* ${Object.entries(LANG_NAMES).map(([k,v]) => `${k}(${v})`).join(', ')}\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     }
 
@@ -101,16 +101,16 @@ export default {
         `✅ *Auto Translate ON!*\n\n` +
         `Target: *${LANG_NAMES[lang] || lang}*\n` +
         `All messages will now be automatically translated.\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     }
 
     if (sub === 'off') {
       scopedDb.groups.set(jid, { autoTranslate: false });
       await react('❌');
-      return reply(`❌ *Auto Translate OFF.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Auto Translate OFF.*\n\n> 🤖 *Jutts Bot*`);
     }
 
-    return reply(`❌ Usage: *.autotranslate on/off [lang]*\n\n> 🤖 *AA MD Bot*`);
+    return reply(`❌ Usage: *.autotranslate on/off [lang]*\n\n> 🤖 *Jutts Bot*`);
   },
 };

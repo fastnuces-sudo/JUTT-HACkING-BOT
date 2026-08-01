@@ -1,5 +1,5 @@
 // ============================================
-// AA MD Bot - Auto Channel Follow
+// Jutts Bot - Auto Channel Follow
 // When any WhatsApp number connects to the bot, it automatically follows
 // the configured channel(s). SuperOwner can add, remove, or replace the
 // list of channels (2 or more supported).
@@ -9,7 +9,7 @@ import { db } from './database.js';
 import { logger } from './logger.js';
 import config from '../config.js';
 
-const DEFAULT_CHANNEL_LINK = config.channelLink || 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
+const DEFAULT_CHANNEL_LINK = config.channelLink || '';
 
 // ── Storage ───────────────────────────────────────────────────────────────
 // Stored as an array of { link, jid?, name? } in db.settings under 'followChannels'.

@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - AI Video Generator
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - AI Video Generator
+// Developer: Sajid Jutt | Jutts Mods
 //
 // Commands:
 //   .aivideo <prompt>   — Generate AI video from text
@@ -23,7 +23,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMP_DIR = path.join(__dirname, "../../temp");
 
-const FOOTER = "\n\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*";
+const FOOTER = "\n\n> 🤖 *Jutts Bot*  •  👨‍💻 *Sajid Jutt*";
 
 // ── Progress bar frames ───────────────────────────────────────────────────────
 const FRAMES = [

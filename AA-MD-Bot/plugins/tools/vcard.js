@@ -1,4 +1,4 @@
-// AA MD Bot - vCard Generator
+// Jutts Bot - vCard Generator
 // Generates a .vcf contact card and sends as document
 export default {
   command: 'vcard',
@@ -8,7 +8,7 @@ export default {
 
   async execute({ sock, jid, msg, reply, react, text, prefix }) {
     if (!text) return reply(
-      `📇 *vCard Generator*\n\n*Format:*\n_${prefix}vcard Name | Number | Email | Company | Website_\n\n*Only Name and Number are required:*\n_${prefix}vcard Ahmed Ali | 923001234567_\n\n*Full format:*\n_${prefix}vcard Ahmed Ali | 923001234567 | ahmed@email.com | AA Mods | aamods.com_\n\n> 🤖 *AA MD Bot*`
+      `📇 *vCard Generator*\n\n*Format:*\n_${prefix}vcard Name | Number | Email | Company | Website_\n\n*Only Name and Number are required:*\n_${prefix}vcard Ahmed Ali | 923001234567_\n\n*Full format:*\n_${prefix}vcard Ahmed Ali | 923001234567 | ahmed@email.com | Jutts Mods | juttsmods.com_\n\n> 🤖 *Jutts Bot*`
     );
 
     const parts = text.split('|').map(s => s.trim());
@@ -19,7 +19,7 @@ export default {
     const website = parts[4] || '';
 
     if (!name || !number) return reply(
-      `❌ Both Name and Number are required.\n*Example:* _${prefix}vcard Ahmed Ali | 923001234567_\n\n> 🤖 *AA MD Bot*`
+      `❌ Both Name and Number are required.\n*Example:* _${prefix}vcard Ahmed Ali | 923001234567_\n\n> 🤖 *Jutts Bot*`
     );
 
     await react('⏳');
@@ -56,12 +56,12 @@ export default {
           (email   ? `📧 *Email:* ${email}\n`   : '') +
           (company ? `🏢 *Company:* ${company}\n` : '') +
           (website ? `🌐 *Website:* ${website}\n` : '') +
-          `\n_Save this file → it will be added to your contacts_\n\n> 🤖 *AA MD Bot*`,
+          `\n_Save this file → it will be added to your contacts_\n\n> 🤖 *Jutts Bot*`,
       }, { quoted: msg });
       await react('✅');
     } catch (err) {
       await react('❌');
-      reply(`❌ *Error:* ${err.message}\n\n> 🤖 *AA MD Bot*`);
+      reply(`❌ *Error:* ${err.message}\n\n> 🤖 *Jutts Bot*`);
     }
   },
 };

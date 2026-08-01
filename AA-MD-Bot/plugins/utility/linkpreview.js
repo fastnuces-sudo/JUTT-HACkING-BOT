@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Link Preview
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Link Preview
+// Developer: Sajid Jutt | Jutts Mods
 // Kisi bhi URL ka title/desc/image dikhao
 // ============================================
 
@@ -74,7 +74,7 @@ export default {
         `*Usage:*\n` +
         `▸ *.preview https://example.com*\n` +
         `▸ Reply to any message containing a link with *.preview*\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     }
 
@@ -107,7 +107,7 @@ export default {
         `📌 *Title:* ${title.slice(0, 200)}\n` +
         `📝 *Description:*\n${desc.slice(0, 400)}\n\n` +
         `🔗 *URL:* ${finalUrl}\n\n` +
-        `> 🤖 *AA MD Bot*`;
+        `> 🤖 *Jutts Bot*`;
 
       // Send with image if available
       if (imageUrl) {
@@ -131,7 +131,7 @@ export default {
 
     } catch (err) {
       await react('❌');
-      return reply(`❌ *Preview failed to load.*\n\n${err.message}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Preview failed to load.*\n\n${err.message}\n\n> 🤖 *Jutts Bot*`);
     }
   },
 };

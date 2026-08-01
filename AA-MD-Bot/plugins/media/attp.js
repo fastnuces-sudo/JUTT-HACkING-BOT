@@ -151,12 +151,12 @@ export default {
 
       if (!gifBuf?.length) {
         await react('❌');
-        return reply(`❌ *ATTP failed* — could not generate sticker.\n\n> ✨ *AA MD Bot*`);
+        return reply(`❌ *ATTP failed* — could not generate sticker.\n\n> ✨ *Jutts Bot*`);
       }
 
       const sticker = new Sticker(gifBuf, {
-        pack:       config.botName || 'AA MD Bot',
-        author:     config.ownerName || 'AA Mods',
+        pack:       config.botName || 'Jutts Bot',
+        author:     config.ownerName || 'Jutts Mods',
         type:       StickerTypes.FULL,
         categories: ['🤩', '✨'],
         quality:    80,

@@ -5,8 +5,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CHANNEL_URL  = 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
-const CHANNEL_NAME = 'AA MD Bot';
+const CHANNEL_URL  = '';
+const CHANNEL_NAME = 'Jutts Bot';
 
 const DIV  = '─────────────────────────────────';
 const SDIV = '─────────────────────';
@@ -42,7 +42,7 @@ function getCtx() {
     isForwarded: true,
     externalAdReply: {
       title: CHANNEL_NAME,
-      body: 'AA Mods • Tap to join our channel',
+      body: 'Jutts Mods • Tap to join our channel',
       mediaType: 1,
       renderLargerThumbnail: false,
       showAdAttribution: true,
@@ -113,8 +113,8 @@ export default {
 
       `${DIV}\n` +
       `> 🌐 ${CHANNEL_URL}\n` +
-      `> 🤖 *Powered by AA MD Bot*\n` +
-      `> 👨‍💻 *Developed by Ahsan Ali Wadani*`;
+      `> 🤖 *Powered by Jutts Bot*\n` +
+      `> 👨‍💻 *Developed by Sajid Jutt*`;
 
     const banner = getBanner();
     const contextInfo = getCtx();

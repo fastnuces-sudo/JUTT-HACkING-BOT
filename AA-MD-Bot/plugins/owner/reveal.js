@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - View-Once Reveal Plugin
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - View-Once Reveal Plugin
+// Developer: Sajid Jutt | Jutts Mods
 //
 // Strategy:
 //  1. PRIMARY  — download directly from the quoted message's media keys
@@ -77,7 +77,7 @@ export default {
           `❌ *View-Once not found*\n\n` +
           `No cached media for that ID.\n\n` +
           `💡 *Better way:* Reply directly to the view-once and send *.reveal* — no ID needed.\n\n` +
-          `> 👁️ *AA MD Bot*`
+          `> 👁️ *Jutts Bot*`
         );
       }
       await handleManualReveal(msgId, sock, selfJid);
@@ -111,7 +111,7 @@ export default {
               `📅 *Date:* ${date}\n` +
               `⏰ *Time:* ${timeStr}\n` +
               `📁 *Type:* ${extracted.isAudio ? 'AUDIO' : extracted.isVid ? 'VIDEO' : 'IMAGE'}\n\n` +
-              `> 👁️ *AA MD Bot*`;
+              `> 👁️ *Jutts Bot*`;
 
             if (extracted.isAudio) {
               await sock.sendMessage(selfJid, {
@@ -161,7 +161,7 @@ export default {
       `• The media has expired from WhatsApp's servers\n` +
       `• You are replying to a forwarded copy, not the original\n\n` +
       `💡 *Tip:* Enable *.antiviewonce on* so the bot auto-saves every view-once as it arrives.\n\n` +
-      `> 👁️ *AA MD Bot*`
+      `> 👁️ *Jutts Bot*`
     );
   },
 };

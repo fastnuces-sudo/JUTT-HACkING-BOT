@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Crypto Prices
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Crypto Prices
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import axios from 'axios';
@@ -53,12 +53,12 @@ export default {
         const chgStr = chg != null ? (chg >= 0 ? `📈 +${chg.toFixed(2)}%` : `📉 ${chg.toFixed(2)}%`) : '';
         text += `*${name}*\n💵 $${usd} | 🇵🇰 ₨${pkr} ${chgStr}\n\n`;
       }
-      text += `> 💰 *AA MD Bot* · Data by CoinGecko`;
+      text += `> 💰 *Jutts Bot* · Data by CoinGecko`;
       return reply(text);
     } catch {
       return reply(
         `💰 *Crypto Prices*\n\n` +
-        `⚠️ Could not fetch prices. Try: *.crypto btc*, *.crypto eth*, *.crypto sol*\n\n> 🤖 *AA MD Bot*`
+        `⚠️ Could not fetch prices. Try: *.crypto btc*, *.crypto eth*, *.crypto sol*\n\n> 🤖 *Jutts Bot*`
       );
     }
   },

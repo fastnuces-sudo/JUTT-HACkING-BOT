@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Anti Fake Numbers (Group)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Anti Fake Numbers (Group)
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import { db } from '../../lib/database.js';
@@ -44,7 +44,7 @@ export async function checkAntiFake(update, sock, sessionId) {
   for (const fake of fakes) {
     try {
       await sock.sendMessage(chatJid, {
-        text: `🚫 *Anti Fake Removed:* @${fake.split('@')[0]}\nInvalid/fake number detected.\n\n> 🤖 *AA MD Bot*`,
+        text: `🚫 *Anti Fake Removed:* @${fake.split('@')[0]}\nInvalid/fake number detected.\n\n> 🤖 *Jutts Bot*`,
         mentions: [fake],
       });
       await sock.groupParticipantsUpdate(chatJid, [fake], 'remove');
@@ -70,17 +70,17 @@ export default {
         `Status: *${grp.antifake ? '✅ ON' : '❌ OFF'}*\n\n` +
         `📌 When enabled, users with invalid/fake phone numbers are auto-kicked on join.\n\n` +
         `📋 *.antifake on* / *.antifake off*\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     }
 
     if (sub === 'on') {
       grp.antifake = true; db.groups.set(jid, grp); await react('✅');
-      return reply(`✅ *Anti Fake enabled!*\nFake numbers will be auto-kicked.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Anti Fake enabled!*\nFake numbers will be auto-kicked.\n\n> 🤖 *Jutts Bot*`);
     }
     if (sub === 'off') {
       grp.antifake = false; db.groups.set(jid, grp); await react('❌');
-      return reply(`❌ *Anti Fake disabled.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Anti Fake disabled.*\n\n> 🤖 *Jutts Bot*`);
     }
   },
 };

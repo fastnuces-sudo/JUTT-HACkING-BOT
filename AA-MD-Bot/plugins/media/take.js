@@ -21,15 +21,15 @@ export default {
         `*Usage:* Reply to a sticker with:\n` +
         `*.take <pack name> | <author>*\n\n` +
         `*Examples:*\n` +
-        `• *.take My Pack | AA Mods*\n` +
+        `• *.take My Pack | Jutts Mods*\n` +
         `• *.take Funny Stickers*\n\n` +
-        `> 🏷️ *AA MD Bot*`
+        `> 🏷️ *Jutts Bot*`
       );
     }
 
     const parts = text.split('|').map(s => s.trim());
-    const packName = parts[0] || config.botName || 'AA MD Bot';
-    const author   = parts[1] || config.ownerName || 'AA Mods';
+    const packName = parts[0] || config.botName || 'Jutts Bot';
+    const author   = parts[1] || config.ownerName || 'Jutts Mods';
 
     await react('⏳');
 

@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - AFK Mode
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - AFK Mode
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 // Per-session AFK state — keyed by sessionId
@@ -37,7 +37,7 @@ export default {
 
     // .back / .afk back → return from AFK
     if (sub === 'back') {
-      if (!state.active) return reply(`✅ *You are not AFK.*\n\n> 👁️ *AA MD Bot*`);
+      if (!state.active) return reply(`✅ *You are not AFK.*\n\n> 👁️ *Jutts Bot*`);
       const dur = formatDuration(Date.now() - state.since);
       afkState.set(sessionId, { active: false, reason: '', since: 0 });
       await react('👋');
@@ -45,7 +45,7 @@ export default {
         `👋 *Welcome back!*\n\n` +
         `⏱️ *You were away for:* ${dur}\n` +
         `📝 *AFK reason was:* _${state.reason}_\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     }
 
@@ -58,7 +58,7 @@ export default {
       `📝 *Reason:* ${reason}\n\n` +
       `💬 Anyone who DMs you will get an auto-reply.\n` +
       `Type *.back* to return.\n\n` +
-      `> 🤖 *AA MD Bot*`
+      `> 🤖 *Jutts Bot*`
     );
   },
 };
@@ -74,7 +74,7 @@ export async function handleAfkMention(msg, sock, sessionId) {
     const dur = formatDuration(Date.now() - state.since);
     afkState.set(sessionId, { active: false, reason: '', since: 0 });
     await sock.sendMessage(msg.key.remoteJid, {
-      text: `👋 *AFK cancelled — welcome back!*\n⏱️ Away for: ${dur}\n\n> 🤖 *AA MD Bot*`,
+      text: `👋 *AFK cancelled — welcome back!*\n⏱️ Away for: ${dur}\n\n> 🤖 *Jutts Bot*`,
     }, { quoted: msg }).catch(() => {});
     return;
   }
@@ -92,6 +92,6 @@ export async function handleAfkMention(msg, sock, sessionId) {
       `😴 *Owner is currently AFK*\n\n` +
       `📝 *Reason:* ${state.reason}\n` +
       `⏱️ *Away for:* ${dur}\n\n` +
-      `> 🤖 *AA MD Bot*`,
+      `> 🤖 *Jutts Bot*`,
   }, { quoted: msg }).catch(() => {});
 }

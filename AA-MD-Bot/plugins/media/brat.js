@@ -32,10 +32,10 @@ export default {
       );
       const buf = Buffer.from(resp.data);
       if (!buf || buf.length < 500) throw new Error('API returned empty image');
-      const botName = config?.botName || 'AA MD Bot';
+      const botName = config?.botName || 'Jutts Bot';
       const sticker = new Sticker(buf, {
         pack: botName,
-        author: 'AA Mods',
+        author: 'Jutts Mods',
         type: StickerTypes.FULL,
         categories: ['🤩', '🎉'],
         quality: 50,
@@ -45,7 +45,7 @@ export default {
       await react('✅');
     } catch (e) {
       await react('❌');
-      reply(`❌ *Brat sticker failed:* ${e.message}\n\n> 🤖 *AA MD Bot*`);
+      reply(`❌ *Brat sticker failed:* ${e.message}\n\n> 🤖 *Jutts Bot*`);
     }
   },
 };

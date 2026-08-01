@@ -40,7 +40,7 @@ function getCtx() {
   };
 }
 
-const FOOTER = `\n> 🤖 *AA MD Bot*  •  👨‍💻 *Ahsan Ali Wadani*`;
+const FOOTER = `\n> 🤖 *Jutts Bot*  •  👨‍💻 *Sajid Jutt*`;
 
 // ── Category display config ───────────────────────────────────────────────────
 const CAT_CFG = {
@@ -191,17 +191,17 @@ export default {
 
     // ── Full menu ───────────────────────────────────────────────────────────
     const greeting = isSuperOwnerUser
-      ? `👑 *${greet()}, Ahsan Bhai!*\n_Super Owner — Full Access_`
+      ? `👑 *${greet()}, Sajid Bhai!*\n_Super Owner — Full Access_`
       : isOwner
         ? `🔑 *${greet()}, Owner!*\n_Bot control panel active_`
-        : `✨ *${greet()}, ${pushName}!*\n_Welcome to AA MD Bot_`;
+        : `✨ *${greet()}, ${pushName}!*\n_Welcome to Jutts Bot_`;
 
     let menu = '';
 
     // Header
     menu += `╔══════════════════════════════════╗\n`;
-    menu += `║  🤖  *A A   M D   B O T*         ║\n`;
-    menu += `║  👨‍💻  Ahsan Ali Wadani | AA Mods  ║\n`;
+    menu += `║  🤖  *J U T T S   B O T*         ║\n`;
+    menu += `║  👨‍💻  Sajid Jutt | Jutts Mods  ║\n`;
     menu += `╚══════════════════════════════════╝\n\n`;
     menu += `${greeting}\n`;
 

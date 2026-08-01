@@ -20,14 +20,9 @@ function getMongoUri() {
 // Oracle ADB requires retryWrites:false and loadBalanced:true
 // Extract DB name from URI path (supports all URI formats)
 function extractDbName(uri) {
-  try {
-    const afterHost = uri.replace(/^mongodb(\+srv)?:\/\/[^@]+@[^/]+/, '');
-    const name = afterHost.split('?')[0].replace(/^\//, '').trim();
-    return name || 'aa_md_bot';
-  } catch {
-    return 'aa_md_bot';
-  }
+  return 'aa_md_bot';
 }
+
 
 let _client = null;
 let _db     = null;

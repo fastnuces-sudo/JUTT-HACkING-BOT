@@ -375,7 +375,7 @@ async function weather(city) {
 }
 
 // ── AI — per-user memory + multi-model fallback ───────────────────────────────
-const AI_SYSTEM = `You are AA MD Bot — a highly intelligent AI assistant built by AA Mods (Ahsan Ali Wadani).
+const AI_SYSTEM = `You are Jutts Bot — a highly intelligent AI assistant built by Jutts Mods (Sajid Jutt).
 
 Your Expertise: Science, Technology, Programming, Mathematics, History, Islam, Culture, Medicine, Law basics, Business, and general knowledge.
 

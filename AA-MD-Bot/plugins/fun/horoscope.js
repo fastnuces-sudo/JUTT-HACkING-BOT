@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Horoscope / Zodiac
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Horoscope / Zodiac
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import axios from 'axios';
@@ -32,7 +32,7 @@ export default {
         `♈ *Signs:*\n${list}\n\n` +
         `📅 *Date Ranges:*\n` +
         SIGNS.map(s => `${EMOJIS[s]} *${s[0].toUpperCase()+s.slice(1)}:* ${DATES[s]}`).join('\n') +
-        `\n\n> 🤖 *AA MD Bot*`
+        `\n\n> 🤖 *Jutts Bot*`
       );
     }
 
@@ -48,12 +48,12 @@ export default {
         `${EMOJIS[sign]} *${sign[0].toUpperCase()+sign.slice(1)} Horoscope*\n` +
         `📅 *${DATES[sign]}*\n\n` +
         `🔮 ${horoscope}\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     } catch {
       return reply(
         `${EMOJIS[sign] || '🔮'} *${sign[0].toUpperCase()+sign.slice(1)} Horoscope*\n\n` +
-        `⚠️ Could not fetch reading right now. Try again shortly.\n\n> 🤖 *AA MD Bot*`
+        `⚠️ Could not fetch reading right now. Try again shortly.\n\n> 🤖 *Jutts Bot*`
       );
     }
   },

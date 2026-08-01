@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Image to Text (OCR)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Image to Text (OCR)
+// Developer: Sajid Jutt | Jutts Mods
 // Free: OCR.Space API (no signup needed)
 // Optional: set OCR_SPACE_KEY for more limits
 // ============================================
@@ -71,7 +71,7 @@ export default {
     const imgMsg  = content?.imageMessage || content?.documentMessage;
 
     if (!imgMsg) {
-      return reply(`🖼️ *Image to Text (OCR)*\n\n*Reply* to any image and send *.ocr*.\n\nSupports Urdu, English, and Arabic.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🖼️ *Image to Text (OCR)*\n\n*Reply* to any image and send *.ocr*.\n\nSupports Urdu, English, and Arabic.\n\n> 🤖 *Jutts Bot*`);
     }
 
     await react('⏳');
@@ -93,15 +93,15 @@ export default {
 
       if (!text) {
         await react('❌');
-        return reply(`❌ *No text found.*\n\nThe text in the image was unclear or the image quality is too low.\n\n> 🤖 *AA MD Bot*`);
+        return reply(`❌ *No text found.*\n\nThe text in the image was unclear or the image quality is too low.\n\n> 🤖 *Jutts Bot*`);
       }
 
       await react('✅');
-      return reply(`🖼️ *OCR Result*\n\n${text}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🖼️ *OCR Result*\n\n${text}\n\n> 🤖 *Jutts Bot*`);
 
     } catch (err) {
       await react('❌');
-      return reply(`❌ *Error:* ${err.message}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Error:* ${err.message}\n\n> 🤖 *Jutts Bot*`);
     } finally {
       fs.remove(imgPath).catch(() => {});
     }

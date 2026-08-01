@@ -1,11 +1,11 @@
 // ============================================
-// AA MD Bot - Report & Support Plugin
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Report & Support Plugin
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import config from '../../config.js';
 
-const LINK = config.channelLink || 'https://whatsapp.com/channel/0029Vb8Yk2LL2AU78HliE617';
+const LINK = config.channelLink || '';
 
 function getOwnerJid() {
   const num = (config.ownerNumber?.[0] || '').replace(/\D/g, '');

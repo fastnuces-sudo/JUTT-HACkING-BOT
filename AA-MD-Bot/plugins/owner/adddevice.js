@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Add New Device (Pairing Code)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Add New Device (Pairing Code)
+// Developer: Sajid Jutt | Jutts Mods
 // Sends pairing code via WhatsApp — no console needed
 // ============================================
 
@@ -29,7 +29,7 @@ export default {
         `Enter your *full number* with country code — no + or spaces.\n` +
         `A pairing code will be sent back here.\n` +
         `Enter it in *WhatsApp → Settings → Linked Devices → Link Device → Link with phone number*.\n\n` +
-        `> 📱 *AA MD Bot*`
+        `> 📱 *Jutts Bot*`
       );
     }
 
@@ -102,7 +102,7 @@ export default {
         `4️⃣ Tap *"Link with phone number instead"*\n` +
         `5️⃣ Enter the code above\n\n` +
         `⏰ Code expires in ~60 seconds\n\n` +
-        `> 📱 *AA MD Bot*`
+        `> 📱 *Jutts Bot*`
       );
     } catch (err) {
       return reply(
@@ -112,7 +112,7 @@ export default {
         `• Number is correct with country code\n` +
         `• Session ID \`${sessionId}\` is not already in use (.devices to check)\n` +
         `• Try: .deldevice ${sessionId} first, then retry\n\n` +
-        `> 📱 *AA MD Bot*`
+        `> 📱 *Jutts Bot*`
       );
     }
   },

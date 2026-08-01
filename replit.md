@@ -42,9 +42,9 @@ admin, download, search, fun, gb, group, owner, islamic, media, tools, and utili
 
 ## User preferences
 
-- Bot name: AA MD Bot
-- Developer: Ahsan Ali Wadani
-- Brand: AA Mods
+- Bot name: Jutts Bot
+- Developer: Sajid Jutt
+- Brand: Jutts Mods
 - Default prefix: `.`
 
 ## Gotchas

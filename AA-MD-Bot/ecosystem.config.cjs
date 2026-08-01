@@ -1,8 +1,8 @@
-// PM2 Ecosystem Config — AA MD Bot (Oracle Cloud / Ubuntu VPS)
+// PM2 Ecosystem Config — Jutts Bot (Oracle Cloud / Ubuntu VPS)
 // Usage:
 //   pm2 start ecosystem.config.cjs          # start
-//   pm2 restart aa-md-bot                   # restart
-//   pm2 logs aa-md-bot                      # view logs
+//   pm2 restart jutts-bot                   # restart
+//   pm2 logs jutts-bot                      # view logs
 //   pm2 monit                               # live monitor
 //   pm2 save                                # save for auto-restart on reboot
 //   pm2 startup                             # generate startup script
@@ -20,9 +20,9 @@ try {
 module.exports = {
   apps: [
     {
-      name        : 'aa-md-bot',
+      name        : 'jutts-bot',
       script: 'index.js',
-      cwd: path.join(__dirname, 'AA-MD-Bot'),
+      cwd: __dirname,
       interpreter : 'node',
       node_args   : '--experimental-vm-modules',
 

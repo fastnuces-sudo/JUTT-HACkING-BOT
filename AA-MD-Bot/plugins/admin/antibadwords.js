@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Anti Bad Words (Group)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Anti Bad Words (Group)
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import { db } from '../../lib/database.js';
@@ -48,7 +48,7 @@ export async function checkBadWords(msg, sock, sessionId) {
     await sock.sendMessage(chatJid, { delete: msg.key });
     // Warn the user
     await sock.sendMessage(chatJid, {
-      text: `⚠️ @${senderJid.split('@')[0]} Bad language is not allowed here. Please be respectful!\n\n> 🤖 *AA MD Bot*`,
+      text: `⚠️ @${senderJid.split('@')[0]} Bad language is not allowed here. Please be respectful!\n\n> 🤖 *Jutts Bot*`,
       mentions: [senderJid],
     });
   } catch {}
@@ -78,32 +78,32 @@ export default {
         `• *.antibadwords off* — disable\n` +
         `• *.antibadwords add <word>* — add custom word\n` +
         `• *.antibadwords remove <word>* — remove custom word\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     }
 
     if (sub === 'on') {
       grp.antibadwords = true; db.groups.set(jid, grp); await react('✅');
-      return reply(`✅ *Anti Bad Words enabled!*\n\nBad language will be auto-deleted.\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Anti Bad Words enabled!*\n\nBad language will be auto-deleted.\n\n> 🤖 *Jutts Bot*`);
     }
     if (sub === 'off') {
       grp.antibadwords = false; db.groups.set(jid, grp); await react('❌');
-      return reply(`❌ *Anti Bad Words disabled.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Anti Bad Words disabled.*\n\n> 🤖 *Jutts Bot*`);
     }
 
     if (sub === 'add') {
       const word = (args[1] || '').toLowerCase().trim();
-      if (!word) return reply(`⚠️ Usage: *.antibadwords add <word>*\n\n> 🤖 *AA MD Bot*`);
+      if (!word) return reply(`⚠️ Usage: *.antibadwords add <word>*\n\n> 🤖 *Jutts Bot*`);
       grp.badWords = [...new Set([...(grp.badWords || []), word])];
       db.groups.set(jid, grp); await react('✅');
-      return reply(`✅ *Word "${word}" added to filter.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Word "${word}" added to filter.*\n\n> 🤖 *Jutts Bot*`);
     }
 
     if (sub === 'remove' || sub === 'rm') {
       const word = (args[1] || '').toLowerCase().trim();
       grp.badWords = (grp.badWords || []).filter(w => w !== word);
       db.groups.set(jid, grp); await react('✅');
-      return reply(`✅ *Word "${word}" removed from filter.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Word "${word}" removed from filter.*\n\n> 🤖 *Jutts Bot*`);
     }
   },
 };

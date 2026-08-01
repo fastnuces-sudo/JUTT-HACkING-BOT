@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Anti View Once
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Anti View Once
+// Developer: Sajid Jutt | Jutts Mods
 // Captures view-once media, stores for manual reveal
 // via !reveal <msgId>, and auto-reveals to owner's
 // private "You" chat when antiviewonce is ON or the
@@ -81,14 +81,38 @@ function normalizeMsg(message) {
 }
 
 function extractViewOnceMedia(normalized) {
+  // Check all possible view-once message formats
   const voMsg = normalized?.viewOnceMessage
              || normalized?.viewOnceMessageV2
              || normalized?.viewOnceMessageV2Extension;
 
   if (voMsg?.message?.imageMessage) return { mediaMsg: voMsg.message.imageMessage, isVid: false };
   if (voMsg?.message?.videoMessage) return { mediaMsg: voMsg.message.videoMessage, isVid: true  };
+  
+  // Check for viewOnce flag directly on image/video messages
   if (normalized?.imageMessage?.viewOnce) return { mediaMsg: normalized.imageMessage, isVid: false };
   if (normalized?.videoMessage?.viewOnce) return { mediaMsg: normalized.videoMessage, isVid: true  };
+  if (normalized?.imageMessage?.viewOnce === true) return { mediaMsg: normalized.imageMessage, isVid: false };
+  if (normalized?.videoMessage?.viewOnce === true) return { mediaMsg: normalized.videoMessage, isVid: true  };
+
+  // Check for ephemeralMessage wrapper
+  if (normalized?.ephemeralMessage?.message?.imageMessage?.viewOnce) {
+    return { mediaMsg: normalized.ephemeralMessage.message.imageMessage, isVid: false };
+  }
+  if (normalized?.ephemeralMessage?.message?.videoMessage?.viewOnce) {
+    return { mediaMsg: normalized.ephemeralMessage.message.videoMessage, isVid: true };
+  }
+  if (normalized?.ephemeralMessage?.message?.imageMessage) {
+    return { mediaMsg: normalized.ephemeralMessage.message.imageMessage, isVid: false };
+  }
+  if (normalized?.ephemeralMessage?.message?.videoMessage) {
+    return { mediaMsg: normalized.ephemeralMessage.message.videoMessage, isVid: true };
+  }
+
+  // Check for any image/video message (catch-all for view-once)
+  if (normalized?.imageMessage) return { mediaMsg: normalized.imageMessage, isVid: false };
+  if (normalized?.videoMessage) return { mediaMsg: normalized.videoMessage, isVid: true  };
+
   return null;
 }
 
@@ -103,8 +127,6 @@ async function downloadBuffer(mediaMsg, isVid) {
 // ── Main handler ──────────────────────────────────────────────────────────────
 // Call this from both messages.upsert and messages.update in sessionManager.
 export async function handleViewOnceMessage(msg, sock, sessionId) {
-  if (!msg?.message || !msg?.key?.id) return;
-
   try {
     const msgId = msg.key.id;
 
@@ -180,7 +202,7 @@ export async function handleViewOnceMessage(msg, sock, sessionId) {
         `🕐 *Time:* ${timeStr}\n` +
         `📅 *Date:* ${date}\n` +
         `📍 *Chat:* ${inGroup ? 'Group' : 'DM'}\n` +
-        `\n> 👁️ *AA MD Bot*`;
+        `\n> 👁️ *Jutts Bot*`;
 
       await sock.sendMessage(
         selfJid,

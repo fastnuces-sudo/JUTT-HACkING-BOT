@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Random Facts
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Random Facts
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import axios from 'axios';
@@ -37,11 +37,11 @@ export default {
       return reply(
         `🧠 *Random Fact*\n\n` +
         `📖 ${fact}\n\n` +
-        `> 🤖 *AA MD Bot*`
+        `> 🤖 *Jutts Bot*`
       );
     } catch {
       const fact = FALLBACK_FACTS[Math.floor(Math.random() * FALLBACK_FACTS.length)];
-      return reply(`🧠 *Random Fact*\n\n📖 ${fact}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🧠 *Random Fact*\n\n📖 ${fact}\n\n> 🤖 *Jutts Bot*`);
     }
   },
 };

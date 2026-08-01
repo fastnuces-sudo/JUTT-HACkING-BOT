@@ -33,6 +33,7 @@ import {
   getAllSessions, botEvents, sessionQRs, sessionStatus,
   createSession, deleteSession,
 } from './lib/sessionManager.js';
+import { deleteMongoAuthState } from './lib/mongoAuthState.js';
 import config from './config.js';
 import { cleanTemp, formatDuration } from './lib/helper.js';
 import { startBirthdayScheduler } from './plugins/utility/birthday.js';
@@ -41,7 +42,7 @@ import { initTelegramFeatures } from './lib/telegramFeatures.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const startTime = Date.now();
-const dashboardPath = path.join(__dirname, 'dashboard.html');
+const dashboardPath = path.join(__dirname, 'functional-dashboard.html');
 
 // Flush pending MongoDB writes before crashing so no settings are lost.
 // flushAll is imported lazily to avoid circular import at module init time.
@@ -80,9 +81,9 @@ function stripApi(p) { return p.replace(/^\/api/, '') || '/'; }
 function printBanner() {
   console.log(chalk.cyan.bold(`
 ╔══════════════════════════════════════╗
-║       AA MD BOT  v${config.version}           ║
-║   Developer: Ahsan Ali Wadani       ║
-║        Brand: AA Mods               ║
+║       JUTTS BOT  v${config.version}           ║
+║   Developer: Sajid Jutt              ║
+║        Brand: Jutts Mods             ║
 ║   Multi-Device WhatsApp Bot         ║
 ╚══════════════════════════════════════╝`));
 }
@@ -264,7 +265,7 @@ async function startServer() {
           // If session already exists and connected, return early; otherwise close it
           if (sessions.has(cleanId)) {
             const sock = sessions.get(cleanId);
-            if (sock.ws?.readyState === 1) {
+            if (sock.ws?.readyState === 1 && method !== 'pairing') {
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify({ ok: true, sessionId: cleanId, info: 'Already connected' }));
               return;
@@ -274,7 +275,15 @@ async function startServer() {
             try { sock.end(new Error('restart')); } catch {}
           }
 
-          latestPairingCodes.delete(cleanId);
+          // For pairing code requests: wipe old auth creds from MongoDB so
+          // stale registered=true state does not block new code generation.
+          if (method === 'pairing') {
+            try { await deleteMongoAuthState(cleanId); } catch {}
+            latestPairingCodes.delete(cleanId);
+          } else {
+            latestPairingCodes.delete(cleanId);
+          }
+
           await createSession(cleanId, method === 'pairing', phoneNumber);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, sessionId: cleanId, method }));
@@ -346,7 +355,7 @@ setConnectionHandler((sessionId, sock) => {
 
 async function main() {
   printBanner();
-  logger.info('🚀 Starting AA MD Bot...');
+  logger.info('🚀 Starting Jutts Bot...');
 
   // Ensure all required directories exist (created on every startup — safe to repeat)
   for (const dir of ['temp', 'logs', 'session', 'downloads', 'database', 'cache']) {
@@ -359,7 +368,7 @@ async function main() {
   // Restore newsletter JID — db first (set via .setnewsletter), then config fallback
   try {
     const savedJid  = db.settings.getValue('newsletterJid') || config.newsletterJid;
-    const savedName = db.settings.getValue('newsletterName') || config.newsletterName || 'AA MD Bot';
+    const savedName = db.settings.getValue('newsletterName') || config.newsletterName || 'Jutts Bot';
     if (savedJid) {
       global._AA_NEWSLETTER_JID  = savedJid;
       global._AA_NEWSLETTER_NAME = savedName;

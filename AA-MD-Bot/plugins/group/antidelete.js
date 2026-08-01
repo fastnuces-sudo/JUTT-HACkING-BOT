@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Anti Delete Plugin
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Anti Delete Plugin
+// Developer: Sajid Jutt | Jutts Mods
 // Works in groups (per-group) and DM (global for owner)
 // ============================================
 

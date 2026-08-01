@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Owner Info Plugin
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Owner Info Plugin
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 import config from '../../config.js';
@@ -20,7 +20,7 @@ export default {
 
     const text =
       `╔══════════════════════════╗\n` +
-      `║  👑 *AA MD Bot — Owner*  ║\n` +
+      `║  👑 *Jutts Bot — Owner*  ║\n` +
       `╚══════════════════════════╝\n\n` +
       `👤 *Name:* ${config.ownerName || config.developer}\n` +
       `🏢 *Brand:* ${config.brand}\n` +
@@ -28,7 +28,7 @@ export default {
       `🔗 *WhatsApp:* ${waLink}\n` +
       `🤖 *Bot:* ${config.botName} v${config.version}\n\n` +
       `💬 _Contact for support, custom bots & features_\n\n` +
-      `> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
+      `> 🤖 *Powered by Jutts Bot*  👨‍💻 *Sajid Jutt*`;
 
     await reply(text);
   },

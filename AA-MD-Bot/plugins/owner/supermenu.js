@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Super Owner Panel (.smenu)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Super Owner Panel (.smenu)
+// Developer: Sajid Jutt | Jutts Mods
 // Only accessible to the superOwner number
 // ============================================
 
@@ -45,7 +45,7 @@ export default {
 
       `🤖 *AI AUTO-REPLY*\n` +
       `▸ *${p}autoai instructions* <context> — Set persona\n` +
-      `   _e.g. I am Ahsan, busy developer from Pakistan_\n` +
+      `   _e.g. I am Sajid, busy developer from Pakistan_\n` +
       `▸ *${p}autoai on/off*         — AI replies as you\n` +
       `▸ *${p}autoreply* <msg>       — Static busy message\n` +
       `▸ *${p}autoreply off*         — Disable auto reply\n\n` +
@@ -109,7 +109,7 @@ export default {
       `   /weather /ai /translate /lyrics /wiki /movie\n` +
       `   /anime /joke /quote /qr /sticker\n\n` +
 
-      `> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
+      `> 🤖 *Powered by Jutts Bot*  👨‍💻 *Sajid Jutt*`;
 
     return reply(text);
   },

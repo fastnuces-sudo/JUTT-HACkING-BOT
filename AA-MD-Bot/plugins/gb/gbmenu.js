@@ -7,7 +7,7 @@ export default {
 
   async execute({ reply, sock, jid, msg, prefix, db }) {
     const p = prefix || '.';
-    const W = `\n\n> 🤖 *Powered by AA MD Bot*  👨‍💻 *Ahsan Ali Wadani*`;
+    const W = `\n\n> 🤖 *Powered by Jutts Bot*  👨‍💻 *Sajid Jutt*`;
 
     const menu =
       `╔══════════════════════════════════╗\n` +

@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Notes System (Firebase-backed)
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Notes System (Firebase-backed)
+// Developer: Sajid Jutt | Jutts Mods
 // All notes stored in Firebase RTDB via db.notes
 // — zero local file writes.
 // ============================================
@@ -22,39 +22,39 @@ export default {
 
     if (!sub || sub === 'list') {
       const keys = Object.keys(notes);
-      if (!keys.length) return reply(`📝 *No notes saved yet.*\n\n💡 Save one: *.note save <name> <text>*\n\n> 🤖 *AA MD Bot*`);
+      if (!keys.length) return reply(`📝 *No notes saved yet.*\n\n💡 Save one: *.note save <name> <text>*\n\n> 🤖 *Jutts Bot*`);
       return reply(
         `📝 *Saved Notes (${keys.length})*\n\n` +
         keys.map((k, i) => `${i + 1}. *${k}*`).join('\n') +
-        `\n\n💡 Get a note: *.note get <name>*\n\n> 🤖 *AA MD Bot*`
+        `\n\n💡 Get a note: *.note get <name>*\n\n> 🤖 *Jutts Bot*`
       );
     }
 
     if (sub === 'save' || sub === 'add' || sub === 'set') {
-      if (!name) return reply(`⚠️ Usage: *.note save <name> <text>*\n\n> 🤖 *AA MD Bot*`);
+      if (!name) return reply(`⚠️ Usage: *.note save <name> <text>*\n\n> 🤖 *Jutts Bot*`);
       const content = args.slice(2).join(' ').trim();
-      if (!content) return reply(`⚠️ Provide note content: *.note save ${name} <text>*\n\n> 🤖 *AA MD Bot*`);
+      if (!content) return reply(`⚠️ Provide note content: *.note save ${name} <text>*\n\n> 🤖 *Jutts Bot*`);
       db.notes.setNote(key, name, { content, by: senderJid, at: Date.now() });
       await react('📝');
-      return reply(`✅ *Note saved!*\n\n📌 Name: *${name}*\n📄 Content: ${content}\n\n> 🤖 *AA MD Bot*`);
+      return reply(`✅ *Note saved!*\n\n📌 Name: *${name}*\n📄 Content: ${content}\n\n> 🤖 *Jutts Bot*`);
     }
 
     if (sub === 'get' || sub === 'show' || sub === '#') {
       const n = notes[name];
-      if (!n) return reply(`❌ *No note named "${name}"*\n\nUse *.note list* to see all notes.\n\n> 🤖 *AA MD Bot*`);
-      return reply(`📝 *Note: ${name}*\n\n${n.content}\n\n> 🤖 *AA MD Bot*`);
+      if (!n) return reply(`❌ *No note named "${name}"*\n\nUse *.note list* to see all notes.\n\n> 🤖 *Jutts Bot*`);
+      return reply(`📝 *Note: ${name}*\n\n${n.content}\n\n> 🤖 *Jutts Bot*`);
     }
 
     if (sub === 'del' || sub === 'delete' || sub === 'remove' || sub === 'rm') {
-      if (!notes[name]) return reply(`❌ *Note "${name}" not found.*\n\n> 🤖 *AA MD Bot*`);
+      if (!notes[name]) return reply(`❌ *Note "${name}" not found.*\n\n> 🤖 *Jutts Bot*`);
       db.notes.delNote(key, name);
       await react('🗑️');
-      return reply(`🗑️ *Note "${name}" deleted.*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`🗑️ *Note "${name}" deleted.*\n\n> 🤖 *Jutts Bot*`);
     }
 
     // Shorthand: .note <name> → get note
     const shortNote = notes[sub];
-    if (shortNote) return reply(`📝 *Note: ${sub}*\n\n${shortNote.content}\n\n> 🤖 *AA MD Bot*`);
+    if (shortNote) return reply(`📝 *Note: ${sub}*\n\n${shortNote.content}\n\n> 🤖 *Jutts Bot*`);
 
     return reply(
       `📝 *Notes Help*\n\n` +
@@ -62,7 +62,7 @@ export default {
       `• *.note get <name>* — get a note\n` +
       `• *.note list* — see all notes\n` +
       `• *.note del <name>* — delete a note\n\n` +
-      `> 🤖 *AA MD Bot*`
+      `> 🤖 *Jutts Bot*`
     );
   },
 };

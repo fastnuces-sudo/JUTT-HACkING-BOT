@@ -1,6 +1,6 @@
 // ============================================
-// AA MD Bot - Word Scramble Game
-// Developer: Ahsan Ali | AA Mods
+// Jutts Bot - Word Scramble Game
+// Developer: Sajid Jutt | Jutts Mods
 // ============================================
 
 const WORDS = [
@@ -42,21 +42,21 @@ export default {
       if (input === existing.word) {
         sessions.delete(chatKey);
         await react('🏆');
-        return reply(`🏆 *Correct! Well done!*\n\n✅ The word was: *${existing.word}*\n\n🎮 Play again? *.ws*\n\n> 🤖 *AA MD Bot*`);
+        return reply(`🏆 *Correct! Well done!*\n\n✅ The word was: *${existing.word}*\n\n🎮 Play again? *.ws*\n\n> 🤖 *Jutts Bot*`);
       }
-      return reply(`❌ *Wrong!* Try again.\n\n🔀 Scrambled: *${existing.scrambled}*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`❌ *Wrong!* Try again.\n\n🔀 Scrambled: *${existing.scrambled}*\n\n> 🤖 *Jutts Bot*`);
     }
 
     // Hint
     if (existing && input === 'hint') {
       const hint = existing.word.slice(0,2) + '*'.repeat(existing.word.length - 2);
-      return reply(`💡 *Hint:* ${hint} (${existing.word.length} letters)\n\n🔀 Scrambled: *${existing.scrambled}*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`💡 *Hint:* ${hint} (${existing.word.length} letters)\n\n🔀 Scrambled: *${existing.scrambled}*\n\n> 🤖 *Jutts Bot*`);
     }
 
     // Skip / reveal
     if (existing && input === 'skip') {
       sessions.delete(chatKey);
-      return reply(`⏭️ *Skipped!*\n\n✅ The word was: *${existing.word}*\n\n> 🤖 *AA MD Bot*`);
+      return reply(`⏭️ *Skipped!*\n\n✅ The word was: *${existing.word}*\n\n> 🤖 *Jutts Bot*`);
     }
 
     // New game
@@ -71,7 +71,7 @@ export default {
       `📝 ${word.length} letters\n\n` +
       `💡 *.ws hint* for a clue\n` +
       `⏭️ *.ws skip* to reveal\n\n` +
-      `> 🤖 *AA MD Bot*`
+      `> 🤖 *Jutts Bot*`
     );
   },
 };

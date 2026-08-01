@@ -1,4 +1,4 @@
-# 🚀 AA MD Bot — Oracle Cloud Free Tier Deploy Guide
+# 🚀 Jutts Bot — Oracle Cloud Free Tier Deploy Guide
 
 > **Total cost: $0** — Oracle Always Free limits ke andar
 
@@ -36,7 +36,7 @@ Oracle Cloud Free Tier (Always Free)
 SSH ke baad sirf yeh ek command:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh)
+bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)
 ```
 
 **Yeh script apne aap karta hai:**
@@ -78,24 +78,24 @@ sudo systemctl restart mongod
 **Step 2 — VM1 ki `.env` se MONGODB_URI copy karo:**
 ```bash
 # VM1 par chalao:
-grep MONGODB_URI /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/.env
+grep MONGODB_URI /home/ubuntu/Jutts-Bot-repo/Jutts-Bot/.env
 ```
 
 URI mein `127.0.0.1` ko VM1 ka **private IP** se replace karo:
 ```
-mongodb://aa_bot_user:PASSWORD@10.0.0.X:27017/aa_md_bot?authSource=aa_md_bot
+mongodb://jutts_bot_user:PASSWORD@10.0.0.X:27017/jutts_bot?authSource=jutts_bot
 ```
 
 **Step 3 — VM2/VM3 par setup chalao:**
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh)
+bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)
 ```
 
 Setup ke baad VM1 ka MongoDB URI set karo:
 ```bash
-nano /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/.env
-# MONGODB_URI=mongodb://aa_bot_user:PASSWORD@10.0.0.X:27017/aa_md_bot?authSource=aa_md_bot
-pm2 restart aa-md-bot
+nano /home/ubuntu/Jutts-Bot-repo/Jutts-Bot/.env
+# MONGODB_URI=mongodb://jutts_bot_user:PASSWORD@10.0.0.X:27017/jutts_bot?authSource=jutts_bot
+pm2 restart jutts-bot
 ```
 
 ---

@@ -1,7 +1,7 @@
-# AA MD Bot
+# Jutts Bot
 
 <p align="center">
-  <img src="banner.webp" alt="AA MD Bot" width="600"/>
+  <img src="banner.webp" alt="Jutts Bot" width="600"/>
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@
 Oracle Cloud VM par SSH ke baad:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/main/deploy/setup.sh)
+bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)
 ```
 
 **Koi input nahi — sab apne aap hota hai:**
@@ -30,7 +30,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ahsanaliwadani/AA-MD-Bot/mai
 | Step | Kya hota hai |
 |---|---|
 | MongoDB 7 | Same VM par install + start |
-| DB User | `aa_bot_user` auto-create, random password |
+| DB User | `jutts_bot_user` auto-create, random password |
 | Node.js 20 | Install |
 | yt-dlp + Deno | Install |
 | PM2 | Install + auto-restart on reboot |
@@ -43,7 +43,7 @@ Script khatam hone par:
 ```
 ✅  Deploy Complete!
 Dashboard  : http://YOUR_IP:5000
-MongoDB URI: mongodb://aa_bot_user:xxxxx@127.0.0.1:27017/aa_md_bot
+MongoDB URI: mongodb://jutts_bot_user:xxxxx@127.0.0.1:27017/jutts_bot
 ```
 
 ---
@@ -92,9 +92,9 @@ VM1 par setup ke baad VM2/VM3 par bhi same command chalao — sirf `.env` mein `
 Deploy ke baad Telegram tokens ya API keys add karne hon to:
 
 ```bash
-nano /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/.env
+nano /home/ubuntu/Jutts-Bot-repo/Jutts-Bot/.env
 # uncomment karo jo chahiye
-pm2 restart aa-md-bot
+pm2 restart jutts-bot
 ```
 
 | Variable | Kya karta hai |
@@ -112,20 +112,20 @@ pm2 restart aa-md-bot
 
 ```bash
 pm2 status                    # bot status
-pm2 logs aa-md-bot            # live logs
-pm2 logs aa-md-bot --err      # sirf errors
-pm2 restart aa-md-bot         # restart
+pm2 logs jutts-bot            # live logs
+pm2 logs jutts-bot --err      # sirf errors
+pm2 restart jutts-bot         # restart
 pm2 monit                     # CPU/RAM monitor
 ```
 
 ## 🔄 Update Karna
 
 ```bash
-cd /home/ubuntu/AA-MD-Bot-repo
+cd /home/ubuntu/Jutts-Bot-repo
 git pull
-cd AA-MD-Bot
+cd Jutts-Bot
 npm install --omit=dev
-pm2 restart aa-md-bot
+pm2 restart jutts-bot
 ```
 
 ---
@@ -134,7 +134,7 @@ pm2 restart aa-md-bot
 
 | Problem | Fix |
 |---|---|
-| Dashboard nahi khulta | `pm2 logs aa-md-bot --err` |
+| Dashboard nahi khulta | `pm2 logs jutts-bot --err` |
 | `MongoDB connection failed` | `sudo systemctl restart mongod` |
 | Port 5000 reachable nahi | Oracle Console → VCN → Security List → port 5000 add karo |
 | YouTube bot-check error | `cookies.txt` file banao — `cookies.txt.example` dekho |
@@ -146,4 +146,4 @@ pm2 restart aa-md-bot
 
 [Baileys](https://github.com/WhiskeySockets/Baileys) · [MongoDB](https://www.mongodb.com/) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [ffmpeg](https://ffmpeg.org/) · [PM2](https://pm2.keymetrics.io/)
 
-**Developer:** Ahsan Ali Wadani — AA Mods
+**Developer:** Sajid Jutt — Jutts Mods
