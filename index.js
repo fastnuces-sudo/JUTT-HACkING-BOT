@@ -75,8 +75,14 @@ botEvents.on('pairingCode', d => {
 });
 botEvents.on('pairingCodeError', d => broadcast('pairingCodeError', d));
 
-// Helper: strip /api prefix
-function stripApi(p) { return p.replace(/^\/api/, '') || '/'; }
+// Helper: strip /api prefix and trailing slashes
+function stripApi(p) {
+  let cleaned = p.replace(/^\/api/, '');
+  if (cleaned.length > 1 && cleaned.endsWith('/')) {
+    cleaned = cleaned.slice(0, -1);
+  }
+  return cleaned || '/';
+}
 
 function printBanner() {
   console.log(chalk.cyan.bold(`
