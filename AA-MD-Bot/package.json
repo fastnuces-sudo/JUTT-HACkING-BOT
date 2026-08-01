@@ -9,9 +9,9 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "start": "node --experimental-vm-modules --env-file .env index.js",
+    "start": "node --experimental-vm-modules index.js",
     "start:noenv": "node --experimental-vm-modules index.js",
-    "dev": "node --experimental-vm-modules --env-file .env index.js",
+    "dev": "node --experimental-vm-modules index.js",
     "pm2": "pm2 start ecosystem.config.cjs",
     "pm2:restart": "pm2 restart aa-md-bot",
     "pm2:logs": "pm2 logs aa-md-bot",

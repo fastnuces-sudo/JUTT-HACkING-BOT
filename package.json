@@ -1,5 +1,10 @@
 {
-  "dependencies": {
-    "play-dl": "^1.9.7"
+  "name": "jutt-hacking-bot",
+  "version": "3.0.0",
+  "type": "module",
+  "scripts": {
+    "postinstall": "cd AA-MD-Bot && npm install",
+    "start": "cd AA-MD-Bot && npm start",
+    "dev": "cd AA-MD-Bot && npm run dev"
   }
 }
