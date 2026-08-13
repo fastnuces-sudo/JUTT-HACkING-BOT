@@ -14,7 +14,7 @@ function getOwnerJid() {
 
 export default {
   command: 'support',
-  alias: ['report', 'bug', 'contact', 'feedback'],
+  alias: ['bug', 'feedback'],
   description: 'Report an issue or contact the owner',
   category: 'utility',
   usage: '.report <message> | .contact | .support',

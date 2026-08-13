@@ -1,5 +1,5 @@
 export default {
-  command: 'calc',
+  command: 'simplecalc',
   alias: ['math', 'calculate'],
   description: 'Calculate a math expression',
   category: 'utility',

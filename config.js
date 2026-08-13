@@ -1,17 +1,27 @@
+const cleanNumber = value => String(value || '').replace(/\D/g, '');
+const envOwners = String(process.env.OWNER_NUMBERS || '')
+  .split(',')
+  .map(cleanNumber)
+  .filter(Boolean);
+const envSuperOwner = cleanNumber(process.env.SUPER_OWNER);
+const configuredOwners = [...new Set([...envOwners, ...(envSuperOwner ? [envSuperOwner] : [])])];
+
 const config = {
   botName: 'Jutts Bot',
   developer: 'Sajid Jutt',
   ownerName: 'Jutts Mods',
   brand: 'Jutts Mods',
   version: '3.0.0',
-  ownerNumber: ['923707872610'],
-  superOwner: '923707872610',
+  // Production operators should set SUPER_OWNER/OWNER_NUMBERS in .env. When
+  // omitted, the first successfully linked WhatsApp session becomes super owner.
+  ownerNumber: configuredOwners,
+  superOwner: envSuperOwner,
   channelLink: '',
   newsletterJid: '',
   newsletterName: 'Jutts Bot',
   prefix: ['.', '!', '#'],
   altPrefixes: [],
-  owners: ['923707872610'],
+  owners: configuredOwners,
   botMode: 'public',
   sessionDir: './session',
   databaseDir: './database',

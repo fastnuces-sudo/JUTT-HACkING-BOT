@@ -154,7 +154,7 @@
       <img src="/logo.webp" class="logo" alt="Jutts Bot" onerror="this.style.display='none'" />
       <h1>Jutts <span>Bot</span></h1>
       <div class="badge-row">
-        <span class="badge"><div class="pulse-dot"></div> System Active (Local)</span>
+        <span class="badge"><div class="pulse-dot"></div> System Active</span>
         <span class="badge">v3.0.0</span>
       </div>
     </div>
@@ -235,11 +235,23 @@
 
     <div class="footer">
       Developer: <strong>Sajid Jutt</strong> | Brand: <strong>Jutts Mods</strong><br/>
-      100% Local &amp; Private — No external servers or remote channel tracking.
+      Self-hosted control panel — protect your dashboard token and session access.
     </div>
 
     <script>
       const API_BASE = window.location.origin;
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>'"]/g, char => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+        })[char]);
+      }
+
+      async function readJson(res) {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) return res.json();
+        return { error: await res.text() };
+      }
 
       function togglePhoneField() {
         const method = document.getElementById('method').value;
@@ -257,20 +269,27 @@
 
           const listEl = document.getElementById('sessionsList');
           if (data.sessions && data.sessions.length > 0) {
-            listEl.innerHTML = data.sessions.map(s => `
-              <div class="session-item">
-                <div>
-                  <div class="session-id">Session: ${s.id}</div>
-                  <div style="font-size:0.78rem; color:var(--text-sub); margin-top:2px;">
-                    ${s.connectedAt ? 'Connected ' + new Date(s.connectedAt).toLocaleTimeString() : 'Status: ' + s.status}
+            listEl.innerHTML = data.sessions.map(s => {
+              const id = escapeHtml(s.id);
+              const status = escapeHtml(s.status || 'unknown');
+              const detail = s.connectedAt
+                ? 'Connected ' + new Date(s.connectedAt).toLocaleTimeString()
+                : 'Status: ' + (s.status || 'unknown');
+              return `
+                <div class="session-item">
+                  <div>
+                    <div class="session-id">Session: ${id}</div>
+                    <div style="font-size:0.78rem; color:var(--text-sub); margin-top:2px;">${escapeHtml(detail)}</div>
                   </div>
-                </div>
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <span class="status-pill ${s.status === 'connected' ? 'status-connected' : 'status-connecting'}">${s.status}</span>
-                  <button class="btn-del" onclick="deleteSession('${s.id}')">Delete</button>
-                </div>
-              </div>
-            `).join('');
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="status-pill ${s.status === 'connected' ? 'status-connected' : 'status-connecting'}">${status}</span>
+                    <button class="btn-del" data-session-id="${id}">Delete</button>
+                  </div>
+                </div>`;
+            }).join('');
+            listEl.querySelectorAll('.btn-del').forEach(button => {
+              button.addEventListener('click', () => deleteSession(button.dataset.sessionId));
+            });
           } else {
             listEl.innerHTML = `<div style="color:var(--text-sub); font-size:0.9rem;">No active WhatsApp sessions connected.</div>`;
           }
@@ -300,12 +319,11 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId, method, phoneNumber }),
           });
+          const data = await readJson(res);
           if (!res.ok) {
-            const errText = await res.text();
-            alert(`Server Error (${res.status}): ${errText}`);
+            alert(`Server Error (${res.status}): ${data.error || 'Request failed'}`);
             return;
           }
-          const data = await res.json();
           if (data.ok) {
             if (method === 'pairing') {
               document.getElementById('pairingCodeWrapper').style.display = 'flex';
@@ -351,7 +369,7 @@
         if (!confirm(`Are you sure you want to disconnect session "${sessionId}"?`)) return;
         try {
           const res = await fetch(`${API_BASE}/session/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
-          const data = await res.json();
+          const data = await readJson(res);
           if (data.ok) { fetchStats(); } else { alert('Error: ' + data.error); }
         } catch (e) { alert('Error: ' + e.message); }
       }

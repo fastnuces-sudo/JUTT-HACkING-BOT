@@ -20,8 +20,8 @@ async function uploadToUguu(filePath) {
 }
 
 export default {
-  command: 'tourl',
-  alias: ['upload', 'geturl', 'uguu'],
+  command: 'uguu',
+  alias: ['upload48', 'geturl48'],
   description: 'Upload any media/file and get a direct download URL',
   category: 'tools',
 
@@ -38,7 +38,7 @@ export default {
       return reply(
         `📎 *File → URL Converter*\n\n` +
         `Reply to any *image, video, audio, document, or sticker* with:\n` +
-        `• *${prefix}tourl*\n\n` +
+        `• *${prefix}uguu*\n\n` +
         `Returns a direct download link _(valid 48 hours)_\n\n` +
         `> 🤖 *AA MD Bot*`
       );

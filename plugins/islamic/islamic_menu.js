@@ -77,7 +77,7 @@ function getGroup(name) {
 
 export default {
   command: 'islamicmenu',
-  alias: ['imenu', 'islamic_menu', 'islamiccmds'],
+  alias: ['imenu', 'islamiccmds'],
   description: 'Show all Islamic commands',
   category: 'islamic',
   usage: '.islamicmenu',

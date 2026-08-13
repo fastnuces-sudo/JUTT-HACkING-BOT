@@ -1,229 +1,174 @@
-# 🚀 Jutts Bot — Oracle Cloud Free Tier Deploy Guide
+# Oracle Cloud deployment guide
 
-> **Total cost: $0** — Oracle Always Free limits ke andar
+The supported default is **one Ubuntu 22.04 VM** running Jutts Bot, MongoDB, PM2, Nginx and HTTPS. It is simpler and safer than exposing MongoDB between machines.
 
----
+## Recommended: one VM
 
-## Architecture
+### 1. Create the VM
 
-```
-Oracle Cloud Free Tier (Always Free)
-│
-├── VM1 — Bot + MongoDB  (ARM, 2 OCPU, 12 GB RAM)   ← sab kuch ek VM par
-├── VM2 — Bot            (ARM, 1 OCPU, 6 GB RAM)    ← VM1 ke MongoDB se connect
-└── VM3 — Bot            (ARM, 1 OCPU, 6 GB RAM)    ← VM1 ke MongoDB se connect
-```
+- Image: Ubuntu 22.04
+- Shape: `VM.Standard.A1.Flex` (ARM64) or an x86_64 shape
+- Save the SSH private key
+- In the Oracle VCN security list, allow inbound TCP:
+  - `22` for SSH
+  - `80` for HTTP/Let's Encrypt
+  - `443` for HTTPS
 
-**Strategy:**
-- **VM1** par MongoDB install hoga — woh shared database server hai
-- **VM2 aur VM3** same MongoDB se connect karte hain (private IP se)
-- Sab bots ka data share hota hai (groups, settings, sessions)
+Do **not** expose ports `5000` or `27017`. Nginx is the public entry point; Node and MongoDB stay private.
 
-**Oracle Always Free resources:**
-
-| Resource | Free Limit | Used |
-|---|---|---|
-| ARM OCPUs | 4 total | 4 (2 VM1 + 1 VM2 + 1 VM3) |
-| ARM RAM | 24 GB total | 24 GB (12+6+6) |
-| Block Storage | 200 GB | ~15 GB |
-
----
-
-## ⚡ Ek Command — Poora Deploy
-
-### VM1 (MongoDB + Bot)
-
-SSH ke baad sirf yeh ek command:
+### 2. Connect
 
 ```bash
-bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)
+chmod 400 your-oracle-key.key
+ssh -i your-oracle-key.key ubuntu@YOUR_PUBLIC_IP
 ```
 
-**Yeh script apne aap karta hai:**
-- ✅ System update
-- ✅ ffmpeg, git, curl install
-- ✅ MongoDB 7 install, start, auth enable
-- ✅ MongoDB user + database auto-create (random password)
-- ✅ Node.js 20 install
-- ✅ yt-dlp + Deno install
-- ✅ PM2 install
-- ✅ Bot code clone
-- ✅ npm install
-- ✅ `.env` auto-write (MONGODB_URI + SESSION_SECRET sab auto)
-- ✅ Firewall set
-- ✅ Bot start + auto-restart on reboot
+### 3. Run setup
 
-**Koi bhi input nahi dena — sab apne aap hota hai.**
-
-Script khatam hone par yeh dikhai dega:
-```
-✅  Deploy Complete!
-Dashboard  : http://YOUR_IP:5000
-MongoDB URI: mongodb://aa_bot_user:xxxxx@127.0.0.1:27017/aa_md_bot
-```
-
----
-
-### VM2 aur VM3 (Sirf Bot — VM1 ka MongoDB use karte hain)
-
-VM1 ka setup complete hone ke baad VM2/VM3 par:
-
-**Step 1 — VM1 par MongoDB ko network access do:**
 ```bash
-# VM1 par chalao:
-sudo sed -i 's/bindIp: 127.0.0.1/bindIp: 127.0.0.1,0.0.0.0/' /etc/mongod.conf
+bash <(curl -fsSL https://raw.githubusercontent.com/fastnuces-sudo/JUTT-HACkING-BOT/main/deploy/setup.sh)
+```
+
+The script is idempotent and performs these steps:
+
+- Updates Ubuntu and installs required system packages
+- Installs MongoDB 7 with authentication and loopback-only binding
+- Installs Node.js 20, PM2, FFmpeg, yt-dlp and Deno
+- Clones to `/home/ubuntu/JUTT-HACkING-BOT`
+- Runs `npm ci --omit=dev` from the committed lockfile
+- Generates `.env` secrets and a protected dashboard token
+- Runs Node on `127.0.0.1:5000`
+- Configures Nginx, a nip.io hostname and Let's Encrypt
+- Opens only SSH/HTTP/HTTPS in the VM firewall
+- Registers the PM2 process for reboot persistence
+
+The final output includes a URL similar to:
+
+```text
+https://203-0-113-10.nip.io/#token=64_HEX_CHARACTERS
+```
+
+The token is in a URL **fragment**, so it is not sent to Nginx access logs. The login page exchanges it for a signed HttpOnly cookie.
+
+## Pair WhatsApp
+
+1. Open the protected dashboard URL printed by setup.
+2. Enter a session ID.
+3. Select QR or phone-number pairing.
+4. For phone pairing, enter digits with country code, such as `923001234567`.
+5. In WhatsApp, open **Settings → Linked Devices → Link a Device → Link with phone number**.
+6. Enter the displayed code.
+
+## Operations
+
+```bash
+pm2 status
+pm2 logs jutts-bot
+pm2 logs jutts-bot --err
+pm2 restart jutts-bot
+bash ~/redeploy.sh
+```
+
+Configuration:
+
+```bash
+nano /home/ubuntu/JUTT-HACkING-BOT/.env
+pm2 delete jutts-bot
+pm2 start /home/ubuntu/JUTT-HACkING-BOT/ecosystem.config.cjs
+pm2 save
+```
+
+Health check:
+
+```bash
+curl -fsS http://127.0.0.1:5000/healthz
+```
+
+Dashboard token recovery:
+
+```bash
+grep '^DASHBOARD_TOKEN=' /home/ubuntu/JUTT-HACkING-BOT/.env
+```
+
+To rotate it:
+
+```bash
+sed -i "s/^DASHBOARD_TOKEN=.*/DASHBOARD_TOKEN=$(openssl rand -hex 32)/" /home/ubuntu/JUTT-HACkING-BOT/.env
+pm2 delete jutts-bot
+pm2 start /home/ubuntu/JUTT-HACkING-BOT/ecosystem.config.cjs
+pm2 save
+```
+
+Existing browser cookies become invalid after rotation.
+
+## Optional: private multi-VM database
+
+Only use this if you understand Oracle VCN routing and firewall rules. Never bind MongoDB to `0.0.0.0` or expose `27017` to the internet.
+
+Example layout:
+
+```text
+VM1 private IP 10.0.0.10: MongoDB + bot
+VM2 private IP 10.0.0.11: bot
+VM3 private IP 10.0.0.12: bot
+```
+
+### VM1: bind MongoDB to its private VCN address
+
+Edit `/etc/mongod.conf`:
+
+```yaml
+net:
+  port: 27017
+  bindIp: 127.0.0.1,10.0.0.10
+```
+
+Then allow only the worker private IPs:
+
+```bash
+sudo ufw allow from 10.0.0.11 to 10.0.0.10 port 27017 proto tcp
+sudo ufw allow from 10.0.0.12 to 10.0.0.10 port 27017 proto tcp
 sudo systemctl restart mongod
 ```
 
-**Step 2 — VM1 ki `.env` se MONGODB_URI copy karo:**
-```bash
-# VM1 par chalao:
-grep MONGODB_URI /home/ubuntu/Jutts-Bot-repo/Jutts-Bot/.env
+Add matching Oracle VCN ingress rules with `/32` source CIDRs for the worker private IPs. Do not use `0.0.0.0/0`.
+
+### VM2/VM3: point the bot to VM1
+
+After running normal setup on each worker, edit its `.env`:
+
+```dotenv
+MONGODB_URI=mongodb://aa_bot_user:URL_ENCODED_PASSWORD@10.0.0.10:27017/aa_md_bot?authSource=aa_md_bot
 ```
 
-URI mein `127.0.0.1` ko VM1 ka **private IP** se replace karo:
-```
-mongodb://jutts_bot_user:PASSWORD@10.0.0.X:27017/jutts_bot?authSource=jutts_bot
-```
-
-**Step 3 — VM2/VM3 par setup chalao:**
-```bash
-bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)
-```
-
-Setup ke baad VM1 ka MongoDB URI set karo:
-```bash
-nano /home/ubuntu/Jutts-Bot-repo/Jutts-Bot/.env
-# MONGODB_URI=mongodb://jutts_bot_user:PASSWORD@10.0.0.X:27017/jutts_bot?authSource=jutts_bot
-pm2 restart jutts-bot
-```
-
----
-
-## Oracle Cloud VMs Banana
-
-### Step 1 — Sign Up
-[cloud.oracle.com](https://cloud.oracle.com) → Free Tier account banao
-
-### Step 2 — VCN (Network)
-Console → **Networking → Virtual Cloud Networks**
-→ **Start VCN Wizard** → Create VCN with Internet Connectivity
-→ Name: `aa-bot-vcn` → Create
-
-### Step 3 — Ports Open Karo
-VCN → **Security Lists → Default Security List → Add Ingress Rules:**
-
-| Source CIDR | Protocol | Port | Use |
-|---|---|---|---|
-| `0.0.0.0/0` | TCP | `22` | SSH |
-| `0.0.0.0/0` | TCP | `5000` | Bot Dashboard |
-
-> Port 27017 (MongoDB) public nahi kholna — VMs private IP se connect karte hain
-
-### Step 4 — VMs Banao
-
-**Compute → Instances → Create Instance** (3 baar):
-
-| Field | VM1 | VM2 | VM3 |
-|---|---|---|---|
-| Name | `aa-bot-server-1` | `aa-bot-server-2` | `aa-bot-server-3` |
-| Image | Ubuntu 22.04 | Ubuntu 22.04 | Ubuntu 22.04 |
-| Shape | VM.Standard.A1.Flex | VM.Standard.A1.Flex | VM.Standard.A1.Flex |
-| OCPU | **2** | **1** | **1** |
-| RAM | **12 GB** | **6 GB** | **6 GB** |
-| SSH Key | Generate → Save |
-
-> VM1 ko zyada resources do — woh MongoDB bhi chala raha hai
-
-### Step 5 — SSH Connect
-```bash
-# Mac/Linux
-chmod 400 aa-bot-server-1.key
-ssh -i aa-bot-server-1.key ubuntu@VM1_PUBLIC_IP
-```
-
-```powershell
-# Windows PowerShell
-icacls "aa-bot-server-1.key" /inheritance:r /grant:r "$env:USERNAME:(R)"
-ssh -i aa-bot-server-1.key ubuntu@VM1_PUBLIC_IP
-```
-
----
-
-## WhatsApp Pair Karna
-
-VM setup ke baad browser mein:
-- VM1: `http://VM1_PUBLIC_IP:5000`
-- VM2: `http://VM2_PUBLIC_IP:5000`
-- VM3: `http://VM3_PUBLIC_IP:5000`
-
-Har VM par:
-1. WhatsApp number enter karo (country code ke saath, e.g. `923316041183`)
-2. **Get Pairing Code** click karo
-3. WhatsApp: **Settings → Linked Devices → Link a Device → Link with phone number**
-4. 8-digit code enter karo
-
----
-
-## Useful Commands
+Then restart PM2 from the ecosystem file:
 
 ```bash
-# Bot
-pm2 status                        # status dekho
-pm2 logs aa-md-bot                # live logs
-pm2 logs aa-md-bot --err          # sirf errors
-pm2 restart aa-md-bot             # restart
-pm2 stop aa-md-bot                # stop
-
-# Update (naya code deploy)
-cd /home/ubuntu/AA-MD-Bot-repo
-git pull
-cd AA-MD-Bot
-npm install --omit=dev
-pm2 restart aa-md-bot
-
-# MongoDB
-sudo systemctl status mongod      # MongoDB status
-sudo systemctl restart mongod     # MongoDB restart
-mongosh -u aa_bot_user -p --authenticationDatabase aa_md_bot   # DB console
-
-# Config edit (Telegram tokens etc.)
-nano /home/ubuntu/AA-MD-Bot-repo/AA-MD-Bot/.env
-pm2 restart aa-md-bot
+pm2 delete jutts-bot
+pm2 start /home/ubuntu/JUTT-HACkING-BOT/ecosystem.config.cjs
+pm2 save
 ```
 
----
+Each VM should use a distinct `SERVER_ID`. Re-running the full setup script on VM1 resets MongoDB to loopback-only; reapply the private `bindIp` afterward.
+
+## Security checklist
+
+- [ ] Ports 5000 and 27017 are not public
+- [ ] `.env` mode is `600`
+- [ ] `DASHBOARD_TOKEN` is random and private
+- [ ] MongoDB password is unique and URL-encoded in the URI
+- [ ] HTTPS works before pairing a real account
+- [ ] Worker database rules use private `/32` source addresses
+- [ ] Old database credentials were rotated if they ever appeared in Git history
+- [ ] `npm audit --omit=dev` reports zero known vulnerabilities
 
 ## Troubleshooting
 
-| Problem | Fix |
+| Problem | Checks |
 |---|---|
-| Dashboard load nahi ho raha | `pm2 logs aa-md-bot --err` dekho |
-| `MongoDB connection failed` | `sudo systemctl status mongod` — start karo |
-| Port 5000 reachable nahi | Oracle Console → VCN → Security List → port 5000 add karo |
-| VM2/VM3 DB connect nahi | VM1 par `bindIp` check karo (`0.0.0.0`), port 27017 private network mein open karo |
-| `pm2 not found` | `source ~/.bashrc` chalao phir dobara try karo |
-| yt-dlp outdated | `sudo yt-dlp -U` |
-| Bot crash on start | `.env` mein `MONGODB_URI` check karo — sahi hai? |
-
----
-
-## Deploy Checklist ✅
-
-**Oracle VMs:**
-- [ ] VCN banaya
-- [ ] Ports 22 + 5000 open
-- [ ] VM1 (2 OCPU, 12 GB) + VM2 + VM3 banaye
-- [ ] SSH keys saved
-
-**VM1 (MongoDB + Bot):**
-- [ ] `bash <(curl ...)` chalaya — koi input nahi diya
-- [ ] Script ne `✅ Deploy Complete!` dikhaya
-- [ ] Dashboard: `http://VM1_IP:5000` open hota hai
-- [ ] WhatsApp paired
-
-**VM2 + VM3:**
-- [ ] VM1 par MongoDB `bindIp` update kiya
-- [ ] Setup script chalaya
-- [ ] VM1 ka MONGODB_URI `.env` mein set kiya
-- [ ] WhatsApp paired
+| Dashboard unavailable | `pm2 logs jutts-bot --err`, `sudo nginx -t`, `sudo systemctl status nginx` |
+| Login rejected | Verify `DASHBOARD_TOKEN` in `.env`; restart PM2 from ecosystem config |
+| MongoDB failed | `sudo systemctl status mongod`, then verify `MONGODB_URI` and `authSource` |
+| Worker cannot reach VM1 | Test private routing and confirm both UFW and Oracle VCN `/32` rules |
+| Bot restart loop | `pm2 logs jutts-bot --lines 100 --nostream` |
+| YouTube bot check | Update yt-dlp and provide a private `cookies.txt` as documented in `cookies.txt.example` |

@@ -27,17 +27,14 @@ const HF_MODELS = [
 ];
 
 async function getFfmpegBin() {
-  // Prefer system ffmpeg (always available on Replit); fall back to ffmpeg-static
   try {
     const { execFile: ef } = await import("child_process");
-    await new Promise((res, rej) => ef("ffmpeg", ["-version"], (e) => e ? rej(e) : res()));
+    await new Promise((resolve, reject) =>
+      ef("ffmpeg", ["-version"], error => error ? reject(error) : resolve())
+    );
     return "ffmpeg";
-  } catch {}
-  try {
-    const m = await import("ffmpeg-static");
-    return m.default || "ffmpeg";
   } catch {
-    return "ffmpeg";
+    throw new Error("FFmpeg is not installed or not available on PATH");
   }
 }
 

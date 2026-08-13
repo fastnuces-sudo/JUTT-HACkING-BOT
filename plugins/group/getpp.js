@@ -1,6 +1,6 @@
 export default {
   command: 'getpp',
-  alias: ['spp', 'pfp', 'profile'],
+  alias: ['spp', 'profile'],
   description: "Get a user's profile picture",
   category: 'group',
   async execute({ sock, jid, msg, reply, senderJid }) {

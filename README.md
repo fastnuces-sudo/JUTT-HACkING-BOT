@@ -5,145 +5,155 @@
 </p>
 
 <p align="center">
-  <b>Multi-Device WhatsApp Bot — 226+ Plugins | Multi-Session | Oracle Cloud</b>
+  <b>Multi-Device WhatsApp Bot — 251 Plugin Files | Multi-Session | Secure Web Dashboard</b>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/Platform-WhatsApp-25D366?logo=whatsapp&logoColor=white" />
-  <img src="https://img.shields.io/badge/DB-MongoDB-47A248?logo=mongodb&logoColor=white" />
-  <img src="https://img.shields.io/badge/Deploy-Oracle_Cloud_Free-F80000?logo=oracle&logoColor=white" />
+  <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white" alt="Node.js 20+" />
+  <img src="https://img.shields.io/badge/Platform-WhatsApp-25D366?logo=whatsapp&logoColor=white" alt="WhatsApp" />
+  <img src="https://img.shields.io/badge/DB-MongoDB-47A248?logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/Deploy-Oracle_Cloud-F80000?logo=oracle&logoColor=white" alt="Oracle Cloud" />
 </p>
 
----
+## One-command Oracle deployment
 
-## ⚡ Deploy — Sirf Ek Command
-
-Oracle Cloud VM par SSH ke baad:
+Ubuntu 22.04 Oracle VM par SSH karne ke baad:
 
 ```bash
-bash <(curl -fsSL https://github.com/fastnuces-sudo/JUTT-HACkING-BOT/main/deploy/setup.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/fastnuces-sudo/JUTT-HACkING-BOT/main/deploy/setup.sh)
 ```
 
-**Koi input nahi — sab apne aap hota hai:**
+Script automatically:
 
-| Step | Kya hota hai |
-|---|---|
-| MongoDB 7 | Same VM par install + start |
-| DB User | `jutts_bot_user` auto-create, random password |
-| Node.js 20 | Install |
-| yt-dlp + Deno | Install |
-| PM2 | Install + auto-restart on reboot |
-| Repo | Clone + `npm install` |
-| `.env` | `MONGODB_URI` + `SESSION_SECRET` auto-write |
-| Firewall | SSH + port 5000 open |
-| Bot | Start |
+- MongoDB 7 ko localhost-only authentication ke saath install karta hai
+- Node.js 20, yt-dlp, Deno, FFmpeg, PM2 aur Nginx install karta hai
+- Repository ko `/home/ubuntu/JUTT-HACkING-BOT` mein clone karta hai
+- Reproducible `npm ci` install chalata hai
+- Random MongoDB password, `SESSION_SECRET`, aur `DASHBOARD_TOKEN` generate karta hai
+- PM2 startup, firewall, Nginx, nip.io domain aur Let's Encrypt configure karta hai
+- Sirf SSH/HTTP/HTTPS ports expose karta hai; Node port 5000 aur MongoDB private rehte hain
 
-Script khatam hone par:
-```
-✅  Deploy Complete!
-Dashboard  : http://YOUR_IP:5000
-MongoDB URI: mongodb://jutts_bot_user:xxxxx@127.0.0.1:27017/jutts_bot
+Deploy ke end par protected dashboard URL print hota hai:
+
+```text
+https://YOUR-IP.nip.io/#token=YOUR_DASHBOARD_TOKEN
 ```
 
----
+`#token` URL fragment server logs ko send nahi hota. Login ke baad browser ko signed, HttpOnly cookie milti hai aur fragment URL se remove ho jata hai.
 
-## 🌐 WhatsApp Pair Karna
+> **Important:** `.env` private rakhein. Agar repository ke kisi purane version mein database credentials use hue thay, un credentials ko provider par rotate karein.
 
-1. Browser mein kholo: `http://YOUR_VM_IP:5000`
-2. WhatsApp number enter karo (country code ke saath, e.g. `923316041183`)
-3. **Get Pairing Code** click karo
-4. WhatsApp → **Settings → Linked Devices → Link a Device → Link with phone number**
-5. 8-digit code enter karo — ho gaya ✅
+## WhatsApp pair karna
 
----
+1. Setup ke end par print hua protected dashboard URL browser mein kholein.
+2. Session ID choose karein aur pairing method select karein.
+3. Phone number country code ke saath enter karein, for example `923001234567`.
+4. **Get Pairing Code** click karein.
+5. WhatsApp → **Settings → Linked Devices → Link a Device → Link with phone number**.
+6. Eight-digit code enter karein.
 
-## 🏗 3 VM Architecture (Oracle Always Free)
+Pairing codes memory mein sirf 2 minutes rehte hain aur connection/delete/logout ke baad clear ho jate hain.
 
-```
-VM1 (2 OCPU, 12 GB) — Bot + MongoDB server
-VM2 (1 OCPU,  6 GB) — Bot  ──┐
-VM3 (1 OCPU,  6 GB) — Bot  ──┴── VM1 ke MongoDB se connect
-```
+## Manual development setup
 
-VM1 par setup ke baad VM2/VM3 par bhi same command chalao — sirf `.env` mein `MONGODB_URI` ka IP change karo VM1 ka private IP daal kar.
+Requirements:
 
-**Full 3-VM guide:** [`deploy/ORACLE-DEPLOY.md`](deploy/ORACLE-DEPLOY.md)
-
----
-
-## ✨ Features
-
-| Category | Plugins |
-|---|---|
-| 📥 Downloads | YouTube, Instagram, TikTok, Twitter, Spotify, Reddit, Pinterest, Threads |
-| 🔍 Search | Google, YouTube, Wikipedia, News, Anime, Lyrics, Stickers |
-| 🎵 Media | Audio convert, video convert, compress, watermark, sticker maker |
-| 👥 Groups | Anti-spam, anti-call, anti-delete, welcome/goodbye, poll, tagall |
-| 🛠 Tools | Calculator, currency, weather, OCR, AI chat, translator |
-| 🕌 Islamic | Prayer times, Quran, Hadith, Dua, Hijri calendar |
-| ⚙️ Admin | Ban, mute, kick, promote, broadcast, session manage |
-| 🤖 Telegram | Mirror bot — download & search commands via Telegram |
-
----
-
-## ⚙️ Optional Settings
-
-Deploy ke baad Telegram tokens ya API keys add karne hon to:
+- Node.js 20.6 or newer
+- npm 9 or newer
+- FFmpeg and yt-dlp for media/download commands
+- MongoDB for persistent sessions and settings (optional during local development)
 
 ```bash
-nano /home/ubuntu/Jutts-Bot-repo/Jutts-Bot/.env
-# uncomment karo jo chahiye
+git clone https://github.com/fastnuces-sudo/JUTT-HACkING-BOT.git
+cd JUTT-HACkING-BOT
+npm ci
+cp .env.example .env
+npm start
+```
+
+Dashboard: `http://localhost:5000`
+
+For a protected local dashboard, generate and add a token:
+
+```bash
+openssl rand -hex 32
+# Add the output as DASHBOARD_TOKEN=... in .env
+```
+
+Without `MONGODB_URI`, settings use memory and WhatsApp auth falls back to the ignored local `session/` directory. Production deployments should always configure MongoDB.
+
+## Environment variables
+
+| Variable | Required | Purpose |
+|---|---:|---|
+| `PORT` | No | Dashboard port; default `5000` |
+| `HOST` | No | Bind host; Oracle setup uses `127.0.0.1` behind Nginx |
+| `MONGODB_URI` | Production | Full MongoDB connection URI including database name |
+| `MONGODB_DB` | No | Database-name override when the URI has no path |
+| `DASHBOARD_TOKEN` | Public deploy | Protects sessions, QR codes, pairing codes and dashboard controls |
+| `DASHBOARD_ALLOWED_ORIGINS` | No | Comma-separated origins for a separate frontend |
+| `SUPER_OWNER` | No | Main privileged WhatsApp number; first linked number is used when blank |
+| `OWNER_NUMBERS` | No | Comma-separated additional owner numbers |
+| `TELEGRAM_BOT_TOKEN` | No | Admin/pairing Telegram bot |
+| `TELEGRAM_ADMIN_ID` | With admin bot | Numeric Telegram user ID allowed to pair/administer |
+| `TELEGRAM_PUBLIC_PAIRING` | No | Defaults false; explicitly enables public Telegram pairing |
+| `TELEGRAM_FEATURES_BOT_TOKEN` | No | Telegram feature mirror bot |
+| `OPENWEATHER_API_KEY` | No | Weather command |
+| `OMDB_API_KEY` | No | Movie command |
+| `OCR_SPACE_KEY` | No | OCR command |
+| `HF_TOKEN` | No | AI commands |
+
+See [`.env.example`](.env.example) for the complete template.
+
+## Features
+
+| Category | Examples |
+|---|---|
+| Downloads | YouTube, Instagram, TikTok, Twitter, Spotify, Reddit, Pinterest, Threads |
+| Search | Google, YouTube, Wikipedia, news, anime, lyrics, stickers |
+| Media | Audio/video conversion, compression, watermark, sticker creation |
+| Groups | Anti-spam, anti-call, anti-delete, welcome/goodbye, polls, tag-all |
+| Tools | Calculator, currency, weather, OCR, AI chat, translator |
+| Islamic | Prayer times, Quran, Hadith, Dua, Hijri calendar |
+| Admin | Ban, mute, kick, promote, broadcast, session management |
+| Telegram | Admin/pairing bot and feature mirror bot |
+
+## Validation
+
+```bash
+npm test               # unit + all-plugin loading tests
+npm run check:syntax   # syntax-check every JS/MJS/CJS file
+npm run smoke          # starts an isolated server and tests HTTP/auth/CORS
+npm run check          # syntax + tests
+npm audit --omit=dev   # dependency vulnerability report
+```
+
+## PM2 and updates
+
+```bash
+pm2 status
+pm2 logs jutts-bot
 pm2 restart jutts-bot
+bash ~/redeploy.sh
 ```
 
-| Variable | Kya karta hai |
-|---|---|
-| `TELEGRAM_BOT_TOKEN` | Admin/pairing Telegram bot |
-| `TELEGRAM_FEATURES_BOT_TOKEN` | Features mirror bot |
-| `OPENWEATHER_API_KEY` | `.weather` command |
-| `OMDB_API_KEY` | `.movie` command |
-| `OCR_SPACE_KEY` | `.ocr` command |
-| `HF_TOKEN` | AI commands |
+The update script preserves `.env`, installs from `package-lock.json`, restarts PM2, and checks `/healthz`.
 
----
-
-## 🔧 PM2 Commands
-
-```bash
-pm2 status                    # bot status
-pm2 logs jutts-bot            # live logs
-pm2 logs jutts-bot --err      # sirf errors
-pm2 restart jutts-bot         # restart
-pm2 monit                     # CPU/RAM monitor
-```
-
-## 🔄 Update Karna
-
-```bash
-cd /home/ubuntu/Jutts-Bot-repo
-git pull
-cd Jutts-Bot
-npm install --omit=dev
-pm2 restart jutts-bot
-```
-
----
-
-## 🛠 Troubleshooting
+## Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| Dashboard nahi khulta | `pm2 logs jutts-bot --err` |
-| `MongoDB connection failed` | `sudo systemctl restart mongod` |
-| Port 5000 reachable nahi | Oracle Console → VCN → Security List → port 5000 add karo |
-| YouTube bot-check error | `cookies.txt` file banao — `cookies.txt.example` dekho |
-| Bot disconnect hota hai | Normal — PM2 auto-reconnect karta hai |
+| Dashboard login fails | Read `DASHBOARD_TOKEN` from `/home/ubuntu/JUTT-HACkING-BOT/.env` |
+| Dashboard does not open | `pm2 logs jutts-bot --err` and `sudo nginx -t` |
+| MongoDB connection fails | Check `MONGODB_URI`, then `sudo systemctl status mongod` |
+| YouTube bot-check error | Export a personal `cookies.txt`; see `cookies.txt.example` |
+| Port 5000 is not public | Expected: Nginx proxies 80/443 to private `127.0.0.1:5000` |
+| Plugin validation fails | Run `npm ci` followed by `npm test` |
 
----
+For advanced Oracle networking and multi-VM notes, see [`deploy/ORACLE-DEPLOY.md`](deploy/ORACLE-DEPLOY.md).
 
 ## Stack
 
-[Baileys](https://github.com/WhiskeySockets/Baileys) · [MongoDB](https://www.mongodb.com/) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [ffmpeg](https://ffmpeg.org/) · [PM2](https://pm2.keymetrics.io/)
+[Baileys](https://github.com/WhiskeySockets/Baileys) · [MongoDB](https://www.mongodb.com/) · [Sharp](https://sharp.pixelplumbing.com/) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [FFmpeg](https://ffmpeg.org/) · [PM2](https://pm2.keymetrics.io/)
 
 **Developer:** Sajid Jutt — Jutts Mods

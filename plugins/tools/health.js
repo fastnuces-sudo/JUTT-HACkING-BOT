@@ -38,7 +38,7 @@ const FOOD_CALS = {
 export default {
   command: 'bmi',
   alias: [
-    'bmicalc','calories','calorie','food','water','hydration',
+    'bmicalc','calories','calorie','water','hydration',
     'heartrate','hr','maxhr','workout','wod','exercise',
     'stretch','yoga','yogapose','bodyfat','bfp',
   ],

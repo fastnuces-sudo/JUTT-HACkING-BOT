@@ -1,6 +1,6 @@
 export default {
   command: 'ship',
-  alias: ['love', 'lovemeter'],
+  alias: ['lovemeter'],
   description: 'Ship two people together',
   category: 'fun',
   async execute({ reply, args, msg }) {

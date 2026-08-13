@@ -12,7 +12,7 @@ export default {
     try {
       const file = db.backup();
       const filename = path.basename(file);
-      reply(`✅ *Database Backup Complete*\n\n📁 Snapshot saved to:\n\`logs/backups/${filename}\`\n\n📦 Collections backed up:\n• users\n• groups\n• settings\n• sessions\n• sessionSettings\n\n☁️ Live data is stored in Firebase Realtime Database.`);
+      reply(`✅ *Database Backup Complete*\n\n📁 Snapshot saved to:\n\`logs/backups/${filename}\`\n\n📦 Collections backed up:\n• groups\n• settings\n• sessions\n• sessionSettings\n• notes, birthdays, reminders\n\n☁️ Live data is stored in MongoDB.`);
     } catch (err) {
       reply(`❌ Backup failed: ${err.message}`);
     }

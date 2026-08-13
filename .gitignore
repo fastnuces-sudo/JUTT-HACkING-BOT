@@ -1,14 +1,17 @@
 ### Dependencies
 node_modules/
 
-# package-lock.json has Replit-internal proxy URLs — regenerated fresh on each deploy
-package-lock.json
+# package-lock.json is intentionally committed for reproducible deployments.
 
 ### Runtime data (never commit)
 .env
 session/
 temp/
 logs/
+downloads/
+cache/
+media/
+.npm-install-hash
 *.log
 
 ### Old file-based database (replaced by MongoDB)

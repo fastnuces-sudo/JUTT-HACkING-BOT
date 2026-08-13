@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 
 export default {
-  command: 'password',
-  alias: ['pass', 'genpass'],
+  command: 'securepass',
+  alias: ['pass'],
   description: 'Generate a secure random password',
   category: 'utility',
   async execute({ reply, args }) {

@@ -1,8 +1,8 @@
-// Change superOwner number — stored in Firebase DB so it applies to ALL servers automatically
+// Change superOwner number — stored in MongoDB so it applies to ALL servers automatically
 export default {
   command: 'setsuperowner',
   alias: ['changesuperowner'],
-  description: 'Change superOwner number (syncs to all servers via Firebase)',
+  description: 'Change superOwner number (syncs to all servers via MongoDB)',
   category: 'owner',
   ownerOnly: true,
   superOwnerOnly: true,
@@ -16,7 +16,7 @@ export default {
     reply(
       `✅ *SuperOwner Updated*\n\n` +
       `👑 New SuperOwner: +${num}\n` +
-      `📡 Saved to Firebase — applies to all servers instantly.\n\n` +
+      `📡 Saved to MongoDB — applies to all servers instantly.\n\n` +
       `> ⚠️ Old SuperOwner loses all superOwner access.`
     );
   },

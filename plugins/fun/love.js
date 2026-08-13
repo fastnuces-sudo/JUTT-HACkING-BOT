@@ -26,7 +26,7 @@ function loveMsg(pct) {
 
 export default {
   command: 'love',
-  alias: ['lovecalc', 'lovestatus', 'ship'],
+  alias: ['lovecalc', 'lovestatus'],
   description: 'Calculate love percentage between two names',
   category: 'fun',
 

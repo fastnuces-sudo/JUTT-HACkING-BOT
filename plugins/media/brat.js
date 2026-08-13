@@ -2,7 +2,7 @@
 // Generates brat-aesthetic text sticker via nexray API
 
 import axios from 'axios';
-import { Sticker, StickerTypes } from 'wa-sticker-formatter';
+import { Sticker, StickerTypes } from '../../lib/sticker.js';
 
 export default {
   command: 'brat',

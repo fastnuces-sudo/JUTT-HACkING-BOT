@@ -8,7 +8,7 @@ function clean(s) { return (s || '').trim(); }
 
 export default {
   command: 'dictionary',
-  alias: ['dict', 'meaning', 'define2', 'wordmeaning'],
+  alias: ['define2', 'wordmeaning'],
   description: 'Full meaning, examples, and synonyms for any English word',
   category: 'search',
 

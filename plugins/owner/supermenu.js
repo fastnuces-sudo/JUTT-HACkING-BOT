@@ -17,7 +17,7 @@ export default {
 
   async execute({ reply }) {
     const p   = '.';
-    // Read from Firebase DB first (shared across all servers), fallback to config.js
+    // Read from MongoDB first (shared across all servers), fallback to config.js
     const num = `+${db.settings.getValue('superOwner') || config.superOwner}`;
 
     const text =

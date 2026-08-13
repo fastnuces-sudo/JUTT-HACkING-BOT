@@ -52,8 +52,8 @@ async function readMsg(s, id) {
 }
 
 export default {
-  command: 'tempmail',
-  alias: ['tmail', 'tmpmail', 'fakemail'],
+  command: 'tempmail-lite',
+  alias: ['tmail'],
   description: 'Create & check a temporary email address',
   category: 'utility',
   usage: '.tempmail | .tempmail new | .tempmail check | .tempmail read 1',
