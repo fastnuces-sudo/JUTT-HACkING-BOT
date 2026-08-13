@@ -4,7 +4,7 @@
 // ============================================
 
 import axios from 'axios';
-import { Sticker, StickerTypes } from 'wa-sticker-formatter';
+import { Sticker, StickerTypes } from '../../lib/sticker.js';
 import config from '../../config.js';
 
 // Emoji Kitchen API (Google's free service)

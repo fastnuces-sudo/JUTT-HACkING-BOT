@@ -4,7 +4,7 @@
 // ============================================
 
 import { downloadContentFromMessage } from '@whiskeysockets/baileys';
-import { Sticker, StickerTypes } from 'wa-sticker-formatter';
+import { Sticker, StickerTypes } from '../../lib/sticker.js';
 import config from '../../config.js';
 
 export default {

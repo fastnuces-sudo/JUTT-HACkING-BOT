@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 // ============================================
 // AA MD Bot - Password Generator
 // Commands: .password .genpass .passwd
@@ -19,22 +21,23 @@ export default {
     const syms    = '!@#$%^&*()-_=+[]{}|;:,.<>?';
     const charset = upper + lower + digits + (noSym ? '' : syms);
 
-    // Guarantee at least one of each type
-    let pwd = [
-      upper[Math.floor(Math.random() * upper.length)],
-      lower[Math.floor(Math.random() * lower.length)],
-      digits[Math.floor(Math.random() * digits.length)],
-      ...(noSym ? [] : [syms[Math.floor(Math.random() * syms.length)]]),
-    ];
-    while (pwd.length < len) pwd.push(charset[Math.floor(Math.random() * charset.length)]);
-    pwd = pwd.sort(() => Math.random() - 0.5).join('');
+    // Guarantee each requested character class and use a cryptographically secure
+    // Fisher-Yates shuffle (Math.random is not suitable for passwords).
+    const pick = chars => chars[crypto.randomInt(chars.length)];
+    const pwd = [pick(upper), pick(lower), pick(digits), ...(noSym ? [] : [pick(syms)])];
+    while (pwd.length < len) pwd.push(pick(charset));
+    for (let i = pwd.length - 1; i > 0; i--) {
+      const j = crypto.randomInt(i + 1);
+      [pwd[i], pwd[j]] = [pwd[j], pwd[i]];
+    }
+    const generated = pwd.join('');
 
     const strength = len >= 24 ? '🟢 *Very Strong*' : len >= 16 ? '🟡 *Strong*' : len >= 10 ? '🟠 *Moderate*' : '🔴 *Weak*';
     const entropy  = Math.floor(len * Math.log2(charset.length));
 
     reply(
       `🔐 *Password Generator*\n\n` +
-      `\`\`\`${pwd}\`\`\`\n\n` +
+      `\`\`\`${generated}\`\`\`\n\n` +
       `📏 Length: *${len}*\n` +
       `💪 Strength: ${strength}\n` +
       `🔢 Entropy: ~${entropy} bits\n\n` +

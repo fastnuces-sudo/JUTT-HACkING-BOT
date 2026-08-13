@@ -36,14 +36,14 @@ echo -e "${RE}    Command: $_err_cmd${R}"
 echo -e "${RE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${R}"
 echo ""
 echo -e "${Y}💡 Debug tips:${R}"
-echo -e "   ${DIM}pm2 logs aa-md-bot --lines 50${R}"
+echo -e "   ${DIM}pm2 logs jutts-bot --lines 50${R}"
 echo -e "   ${DIM}pm2 status${R}"
 echo -e "   ${DIM}cd $REPO_CLONE_DIR && git status${R}"
 echo ""' ERR
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-REPO_CLONE_DIR="/home/ubuntu/AA-MD-Bot-repo"   # git repo root
-PM2_APP_NAME="aa-md-bot"
+REPO_CLONE_DIR="/home/ubuntu/JUTT-HACkING-BOT"   # git repo root
+PM2_APP_NAME="jutts-bot"
 NPM_REGISTRY="https://registry.npmjs.org/"
 SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
 REDEPLOY_START=$(date +%s)
@@ -103,7 +103,7 @@ _check_cmd() {
   if command -v "$cmd" &>/dev/null; then
     ok "$label found: $(command -v "$cmd")"
   else
-    fail "$label is not installed or not on PATH.\n     Run the full setup script first:\n     bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)"
+    fail "$label is not installed or not on PATH.\n     Run the full setup script first:\n     bash <(curl -fsSL https://raw.githubusercontent.com/fastnuces-sudo/JUTT-HACkING-BOT/main/deploy/setup.sh)"
   fi
 }
 
@@ -123,7 +123,7 @@ hdr "2. Repository Check"
 if [ ! -d "$REPO_CLONE_DIR" ]; then
   fail "Repository directory not found: $REPO_CLONE_DIR\n\n" \
        "This script only works on a VM already set up with the full deploy script.\n" \
-       "Run setup first: bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)"
+       "Run setup first: bash <(curl -fsSL https://raw.githubusercontent.com/fastnuces-sudo/JUTT-HACkING-BOT/main/deploy/setup.sh)"
 fi
 
 if [ ! -d "$REPO_CLONE_DIR/.git" ]; then
@@ -267,63 +267,45 @@ cd "$BOT_DIR"
 npm config set registry "$NPM_REGISTRY" 2>/dev/null || true
 ok "npm registry set: $NPM_REGISTRY"
 
-# ── npm 10 ARM64 bug fix ───────────────────────────────────────────────────────
-# npm 10 on ARM64 (Oracle Cloud) has a known bug: "Exit handler never called"
-# — hangs indefinitely or exits 0 but installs nothing. Fix: downgrade to npm 9.
-_CURRENT_NPM=$(npm --version 2>/dev/null || echo "0")
-if [[ "$_CURRENT_NPM" == 10* ]]; then
-  inf "npm 10 detected — downgrading to npm 9 (ARM64 hang fix)..."
-  npm install -g npm@9 --registry="$NPM_REGISTRY" --silent 2>/dev/null || true
-  ok "npm $(npm --version) ready"
-else
-  ok "npm $_CURRENT_NPM (no downgrade needed)"
-fi
-
-# Hash-based change detection — compare current package.json with last install
+# Reinstall when either the manifest or lockfile changes. Keeping package-lock.json
+# gives every VM the same reviewed dependency graph.
 PKG_HASH_FILE="$BOT_DIR/.npm-install-hash"
-CURRENT_PKG_HASH=$(md5sum "$BOT_DIR/package.json" | awk '{print $1}')
+CURRENT_PKG_HASH=$(
+  { sha256sum "$BOT_DIR/package.json"; [ ! -f "$BOT_DIR/package-lock.json" ] || sha256sum "$BOT_DIR/package-lock.json"; } \
+    | sha256sum | awk '{print $1}'
+)
 STORED_PKG_HASH=$(cat "$PKG_HASH_FILE" 2>/dev/null || echo "none")
 
 if [ "$CURRENT_PKG_HASH" = "$STORED_PKG_HASH" ] && [ -d "$BOT_DIR/node_modules" ]; then
-  ok "package.json unchanged — npm install skipped"
-  _skip "npm" "package.json unchanged"
+  ok "Dependencies unchanged — install skipped"
+  _skip "npm" "package files unchanged"
 else
-  if [ "$CURRENT_PKG_HASH" != "$STORED_PKG_HASH" ]; then
-    inf "package.json changed — running npm install..."
-  else
-    inf "node_modules missing — running npm install..."
-  fi
+  inf "Installing production dependencies from the lockfile..."
+  rm -rf node_modules
 
-  # Wipe node_modules before install — prevents ENOTEMPTY race errors
-  inf "node_modules clean kar rahe hain (fresh install ke liye)..."
-  rm -rf node_modules package-lock.json
-
-  # Helper: run npm install with all required flags
-  # --legacy-peer-deps : prevents peer-dep conflicts from freezing install
-  # timeout 300        : hard 5-minute kill — never hangs forever
   _npm_install() {
-    timeout 300 npm install --omit=dev \
-      --registry="$NPM_REGISTRY" \
-      --no-audit \
-      --no-fund \
-      --legacy-peer-deps
+    if [ -f "$BOT_DIR/package-lock.json" ]; then
+      timeout 600 npm ci --omit=dev --registry="$NPM_REGISTRY" --no-audit --no-fund
+    else
+      timeout 600 npm install --omit=dev --registry="$NPM_REGISTRY" --no-audit --no-fund
+    fi
   }
 
-  inf "npm install running... (2-5 minute lagenge)"
   if _npm_install; then
     echo "$CURRENT_PKG_HASH" > "$PKG_HASH_FILE"
-    ok "npm install completed"
-    _pass "npm" "Packages installed"
+    ok "Dependencies installed"
+    _pass "npm" "Packages installed reproducibly"
   else
-    warn "npm install failed — node_modules wipe karke retry kar rahe hain..."
-    rm -rf node_modules package-lock.json
+    warn "Dependency install failed — cleaning npm cache and retrying once..."
+    npm cache verify >/dev/null 2>&1 || true
+    rm -rf node_modules
     if _npm_install; then
       echo "$CURRENT_PKG_HASH" > "$PKG_HASH_FILE"
-      ok "npm install succeeded on retry"
+      ok "Dependency install succeeded on retry"
       _pass "npm" "Packages installed (retry)"
     else
-      _fail "npm" "npm install failed"
-      fail "npm install failed after retry.\n\nDebug:\n  cd $BOT_DIR && npm install --registry=$NPM_REGISTRY --legacy-peer-deps"
+      _fail "npm" "Dependency install failed"
+      fail "npm install failed after retry.\n\nDebug:\n  cd $BOT_DIR && npm ci --omit=dev"
     fi
   fi
 fi
@@ -355,11 +337,10 @@ try {
 
 module.exports = {
   apps: [{
-    name: 'aa-md-bot',
+    name: 'jutts-bot',
     script: 'index.js',
     cwd: __dirname,
     interpreter: 'node',
-    interpreter_args: '--experimental-vm-modules',
     instances: 1,
     autorestart: true,
     watch: false,
@@ -420,7 +401,7 @@ inf "Waiting for bot dashboard on http://127.0.0.1:5000 (max 3 min)..."
 _BOT_ONLINE=false
 for _i in $(seq 1 60); do
   _http=$(curl -s -o /dev/null -w '%{http_code}' \
-     --max-time 3 http://127.0.0.1:5000/ 2>/dev/null || true)
+     --max-time 3 http://127.0.0.1:5000/healthz 2>/dev/null || true)
   _http="${_http:-000}"
   if [[ "$_http" == "200" || "$_http" == "301" || "$_http" == "302" ]]; then
     _BOT_ONLINE=true

@@ -179,7 +179,7 @@ export async function checkChatbotResponse(msg, sock, sessionId) {
 // ── Plugin command interface ───────────────────────────────────────────────────
 export default {
   command: 'chatbot',
-  alias: ['cb', 'groupai', 'dmai'],
+  alias: ['cb', 'groupai'],
   description: 'AI chatbot — groups (when @mentioned) or DMs (all messages)',
   category: 'gb',
 

@@ -453,7 +453,7 @@ function formatSalawat(s) {
 // ── Islamic Menu ─────────────────────────────────────────────
 export const islamicMenu = {
   command: 'islamic_menu',
-  alias: ['islamicmenu', 'islamic'],
+  alias: ['islamic'],
   description: 'Full Islamic commands menu',
   category: 'islamic',
   async execute({ reply }) {

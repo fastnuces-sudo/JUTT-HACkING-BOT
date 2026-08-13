@@ -154,7 +154,7 @@ export default {
     const pushName        = msg.pushName || 'User';
     const pref            = config.prefix?.[0] ?? '.';
     const mode            = (settings.botMode ?? config.botMode ?? 'public').toUpperCase();
-    const isSuperOwnerUser = senderJid?.split('@')[0]?.split(':')[0] === String(config.superOwner);
+    const isSuperOwnerUser = senderJid?.split('@')[0]?.split(':')[0] === String(settings.superOwner || config.superOwner || '');
     const role = isSuperOwnerUser ? '👑 Super Owner' : isOwner ? '🔑 Owner' : '👤 User';
 
     const upSec  = Math.floor(process.uptime());

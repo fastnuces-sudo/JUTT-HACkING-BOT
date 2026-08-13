@@ -1,6 +1,6 @@
 export default {
-  command: 'base64',
-  alias: ['b64'],
+  command: 'base64simple',
+  alias: ['b64simple'],
   description: 'Encode or decode base64',
   category: 'utility',
   async execute({ reply, args, text }) {

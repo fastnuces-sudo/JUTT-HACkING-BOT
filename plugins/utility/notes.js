@@ -1,7 +1,7 @@
 // ============================================
-// Jutts Bot - Notes System (Firebase-backed)
+// Jutts Bot - Notes System (MongoDB-backed)
 // Developer: Sajid Jutt | Jutts Mods
-// All notes stored in Firebase RTDB via db.notes
+// All notes stored in MongoDB via db.notes
 // — zero local file writes.
 // ============================================
 

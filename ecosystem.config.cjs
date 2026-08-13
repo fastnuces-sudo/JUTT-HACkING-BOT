@@ -24,7 +24,6 @@ module.exports = {
       script: 'index.js',
       cwd: __dirname,
       interpreter : 'node',
-      node_args   : '--experimental-vm-modules',
 
       // Restart policy
       autorestart  : true,
@@ -48,10 +47,11 @@ module.exports = {
 
       // Environment — all .env vars are spread here so the app sees them
       env: {
-        NODE_ENV  : 'production',
-        PORT      : dotenvVars.PORT      || process.env.PORT      || '5000',
-        SERVER_ID : dotenvVars.SERVER_ID || process.env.SERVER_ID || 'server-1',
         ...dotenvVars,
+        NODE_ENV  : process.env.NODE_ENV || dotenvVars.NODE_ENV || 'production',
+        PORT      : process.env.PORT      || dotenvVars.PORT      || '5000',
+        HOST      : process.env.HOST      || dotenvVars.HOST      || '0.0.0.0',
+        SERVER_ID : process.env.SERVER_ID || dotenvVars.SERVER_ID || 'server-1',
       },
     },
   ],

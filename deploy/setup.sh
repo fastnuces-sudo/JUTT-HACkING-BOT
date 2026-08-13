@@ -4,14 +4,14 @@
 #  Bot + MongoDB + Nginx + Let's Encrypt — SAME VM, fully automatic
 #
 #  Fresh VM par ek hi baar chalao (ya dobara bhi — idempotent hai):
-#  bash <(curl -fsSL https://github.com/sajidjutt/Jutts-Bot/main/deploy/setup.sh)
+#  bash <(curl -fsSL https://raw.githubusercontent.com/fastnuces-sudo/JUTT-HACkING-BOT/main/deploy/setup.sh)
 #
 #  Features:
 #   ✔ Oracle ARM64 (Ampere) compatible — koi x86 package nahi
 #   ✔ Idempotent — safely re-run on existing deployment
 #   ✔ MongoDB 7 local — localhost only, auth enabled
 #   ✔ Nginx reverse proxy + Let's Encrypt HTTPS (nip.io domain)
-#   ✔ Oracle iptables REJECT fix — ports 80/443/5000 auto-opened
+#   ✔ Oracle iptables REJECT fix — only SSH/HTTP/HTTPS are exposed
 #   ✔ UFW firewall configured automatically
 #   ✔ PM2 with systemd startup
 #   ✔ Auto-detects bot directory (handles nested repo structures)
@@ -29,8 +29,8 @@ trap 'STEP_ERR=$?; echo -e "\n${RE}━━━━━━━━━━━━━━━
   echo -e "${RE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${R}\n"; exit $STEP_ERR' ERR
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-REPO_URL="https://github.com/sajidjutt/Jutts-Bot.git"
-REPO_CLONE_DIR="/home/ubuntu/Jutts-Bot-repo"   # git clone yahan hoga
+REPO_URL="https://github.com/fastnuces-sudo/JUTT-HACkING-BOT.git"
+REPO_CLONE_DIR="/home/ubuntu/JUTT-HACkING-BOT"   # git clone yahan hoga
 NODE_VERSION="20"
 PM2_APP_NAME="jutts-bot"
 NPM_REGISTRY="https://registry.npmjs.org/"
@@ -595,68 +595,34 @@ ok "Bot directory detected: $BOT_DIR"
 hdr "11. Node.js Packages"
 cd "$BOT_DIR"
 
-# npm 10 on ARM64 has a bug: "Exit handler never called" — exits 0 but installs nothing.
-# Fix: downgrade to npm 9 (stable, no bug) + always start from a clean slate.
+# Install exactly the dependency graph committed in package-lock.json.
 npm config set registry "$NPM_REGISTRY"
 ok "npm registry set: $NPM_REGISTRY"
+rm -rf node_modules
 
-# Downgrade to npm 9 to avoid the "Exit handler never called" bug on ARM64 npm 10
-_CURRENT_NPM=$(npm --version 2>/dev/null || echo "0")
-if [[ "$_CURRENT_NPM" == 10* ]]; then
-  inf "npm 10 detected — downgrading to npm 9 (ARM64 bug fix)..."
-  npm install -g npm@9 --registry="$NPM_REGISTRY" --silent 2>/dev/null || true
-  ok "npm $(npm --version) ready"
-fi
+_npm_install() {
+  if [ -f "$BOT_DIR/package-lock.json" ]; then
+    timeout 600 npm ci --omit=dev --registry="$NPM_REGISTRY" --no-audit --no-fund
+  else
+    timeout 600 npm install --omit=dev --registry="$NPM_REGISTRY" --no-audit --no-fund
+  fi
+}
 
-# Always wipe node_modules before install — prevents ENOTEMPTY race errors on re-run
-inf "node_modules clean kar rahe hain (fresh install ke liye)..."
-rm -rf node_modules package-lock.json
-
-inf "npm install running... (2-5 minute lagenge)"
-if ! npm install --omit=dev \
-    --registry="$NPM_REGISTRY" \
-    --no-audit \
-    --no-fund \
-    --legacy-peer-deps; then
-  warn "npm install failed — retry kar rahe hain..."
-  rm -rf node_modules package-lock.json
-  npm install --omit=dev \
-    --registry="$NPM_REGISTRY" \
-    --no-audit \
-    --no-fund \
-    --legacy-peer-deps \
-  || fail "npm install second attempt bhi fail hua — logs check karo: $DEPLOY_LOG"
+inf "Dependencies install ho rahi hain (lockfile se reproducible install)..."
+if ! _npm_install; then
+  warn "Dependency install failed — npm cache verify karke ek baar retry..."
+  npm cache verify >/dev/null 2>&1 || true
+  rm -rf node_modules
+  _npm_install || fail "npm install second attempt bhi fail hua — logs check karo: $DEPLOY_LOG"
 fi
 ok "Node.js packages installed"
 
-# ── Generic dependency verifier ───────────────────────────────────────────────
-# NEVER validates by file path — uses Node.js module resolution only.
-# NEVER aborts deployment — worst case is a WARNING and continue.
-verify_dependency() {
-  local pkg="$1"
-  # Primary: require.resolve() — correct way to check if Node can find it
-  if node -e "require.resolve('${pkg}')" >/dev/null 2>&1; then
-    ok "Dependency verified: ${pkg}"
-    return 0
-  fi
-  # Not resolvable — try installing it once
-  warn "${pkg} resolve nahi hua — npm install ${pkg} --save try kar rahe hain..."
-  npm install "${pkg}" --save --registry="$NPM_REGISTRY" --no-audit --no-fund 2>&1 || true
-  # Re-check after targeted install
-  if node -e "require.resolve('${pkg}')" >/dev/null 2>&1; then
-    ok "Dependency verified after targeted install: ${pkg}"
-    return 0
-  fi
-  # Still not resolvable — WARNING only, never exit
-  warn "WARNING: ${pkg} verify nahi ho saka — deployment jaari rahega"
-  return 0
-}
-
-# Verify critical dependencies using Node.js resolution (not file checks)
-# These NEVER abort deployment — worst case is a WARNING
-verify_dependency fs-extra
-verify_dependency axios
-verify_dependency @whiskeysockets/baileys
+# Fail early when a required runtime dependency is genuinely unavailable.
+for pkg in fs-extra axios @whiskeysockets/baileys sharp node-webpmux; do
+  node -e "require.resolve('${pkg}')" >/dev/null 2>&1 \
+    || fail "Required dependency resolve nahi hui: ${pkg}"
+done
+ok "Critical dependencies verified"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 12 — Required Bot Directories
@@ -704,17 +670,19 @@ _env_merge() {
 }
 
 ENV_FILE="$BOT_DIR/.env"
+GENERATED_DASHBOARD_TOKEN=$(openssl rand -hex 32)
 
 if [ ! -f "$ENV_FILE" ]; then
   # Fresh .env — create it
   cat > "$ENV_FILE" << EOF
 # ══════════════════════════════════════════════════════════════
 #  Jutts Bot — Auto-generated on $(date '+%Y-%m-%d %H:%M:%S')
-#  IMPORTANT: MONGODB_URI aur SESSION_SECRET save kar lo!
+#  IMPORTANT: MONGODB_URI, SESSION_SECRET aur DASHBOARD_TOKEN private rakho!
 # ══════════════════════════════════════════════════════════════
 
 # ── Server ────────────────────────────────────────────────────
 PORT=5000
+HOST=127.0.0.1
 SERVER_ID=server-1
 
 # ── Database — MongoDB on this VM (auto-configured) ──────────
@@ -722,9 +690,14 @@ MONGODB_URI=${MONGODB_URI}
 
 # ── Security — auto-generated ─────────────────────────────────
 SESSION_SECRET=$(openssl rand -hex 32)
+DASHBOARD_TOKEN=${GENERATED_DASHBOARD_TOKEN}
 
 # ── Optional — fill in later if needed ────────────────────────
+# SUPER_OWNER=                 # first linked number is used when blank
+# OWNER_NUMBERS=               # comma-separated international numbers
 # TELEGRAM_BOT_TOKEN=          # @BotFather se lena
+# TELEGRAM_ADMIN_ID=            # your numeric Telegram user ID
+# TELEGRAM_PUBLIC_PAIRING=false # secure default
 # TELEGRAM_FEATURES_BOT_TOKEN= # second bot from @BotFather
 # OPENWEATHER_API_KEY=         # openweathermap.org
 # OMDB_API_KEY=                # omdbapi.com
@@ -738,25 +711,35 @@ else
   ok ".env already exists — merging missing variables only"
   # npm's prepare hook or a manual copy may have left the example placeholders
   # in place. Replace only those placeholders; preserve all real user values.
-  # Logic: replace if URI is not already a real local URI
-  # (i.e. not matching mongodb://aa_bot_user:<realpass>@127.0.0.1:27017/...)
-  # Also replace if the password field is literally "PASSWORD" (example placeholder).
+  # Replace only an empty/example placeholder. Preserve Atlas, Oracle ADB, or a
+  # private multi-VM URI that the operator configured intentionally.
   _current_uri=$(sed -n 's/^MONGODB_URI=//p' "$ENV_FILE" | head -1)
-  if [[ "$_current_uri" != mongodb://aa_bot_user:*@127.0.0.1:27017/* ]] \
-     || [[ "$_current_uri" == *:PASSWORD@* ]]; then
-    sed -i "s#^MONGODB_URI=.*#MONGODB_URI=${MONGODB_URI}#" "$ENV_FILE"
-    ok ".env: MONGODB_URI local URI se set kiya gaya (placeholder ya galat value replace hui)"
+  if [[ -z "$_current_uri" || "$_current_uri" == *:PASSWORD@* || "$_current_uri" == *change_this* ]]; then
+    if grep -q '^MONGODB_URI=' "$ENV_FILE"; then
+      sed -i "s#^MONGODB_URI=.*#MONGODB_URI=${MONGODB_URI}#" "$ENV_FILE"
+    fi
+    ok ".env: MONGODB_URI placeholder replaced with local URI"
   fi
   if grep -q '^SESSION_SECRET=change_this_to_a_random_64_char_string$' "$ENV_FILE"; then
     sed -i "s#^SESSION_SECRET=.*#SESSION_SECRET=$(openssl rand -hex 32)#" "$ENV_FILE"
     ok ".env: placeholder SESSION_SECRET replaced with generated secret"
   fi
   # Merge only keys that are missing
-  _env_merge "PORT"           "5000"             "$ENV_FILE"
-  _env_merge "SERVER_ID"      "server-1"         "$ENV_FILE"
-  _env_merge "MONGODB_URI"    "$MONGODB_URI"     "$ENV_FILE"
-  _env_merge "SESSION_SECRET" "$(openssl rand -hex 32)" "$ENV_FILE"
+  _env_merge "PORT"            "5000"             "$ENV_FILE"
+  _env_merge "HOST"            "127.0.0.1"        "$ENV_FILE"
+  _env_merge "SERVER_ID"       "server-1"         "$ENV_FILE"
+  _env_merge "MONGODB_URI"     "$MONGODB_URI"     "$ENV_FILE"
+  _env_merge "SESSION_SECRET"  "$(openssl rand -hex 32)" "$ENV_FILE"
+  _env_merge "DASHBOARD_TOKEN" "$GENERATED_DASHBOARD_TOKEN" "$ENV_FILE"
 fi
+
+# Empty/placeholder dashboard tokens are unsafe on an internet-facing VM.
+if ! grep -Eq '^DASHBOARD_TOKEN=[A-Za-z0-9_-]{32,}$' "$ENV_FILE"; then
+  sed -i '/^DASHBOARD_TOKEN=/d' "$ENV_FILE"
+  echo "DASHBOARD_TOKEN=${GENERATED_DASHBOARD_TOKEN}" >> "$ENV_FILE"
+  ok ".env: secure DASHBOARD_TOKEN generated"
+fi
+DASHBOARD_TOKEN=$(sed -n 's/^DASHBOARD_TOKEN=//p' "$ENV_FILE" | head -1)
 
 # Optional: Telegram tokens — ask with timeout
 echo ""
@@ -772,6 +755,11 @@ if [ -t 0 ]; then
   read -r -t 30 -p "  TELEGRAM_BOT_TOKEN (Enter to skip): " TELEGRAM_BOT_TOKEN || true
   if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
     _env_merge "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN" "$ENV_FILE"
+    read -r -t 30 -p "  TELEGRAM_ADMIN_ID (numeric ID, Enter to skip): " TELEGRAM_ADMIN_ID || true
+    if [[ "${TELEGRAM_ADMIN_ID:-}" =~ ^[0-9]+$ ]]; then
+      _env_merge "TELEGRAM_ADMIN_ID" "$TELEGRAM_ADMIN_ID" "$ENV_FILE"
+      _env_merge "TELEGRAM_PUBLIC_PAIRING" "false" "$ENV_FILE"
+    fi
     read -r -t 30 -p "  TELEGRAM_FEATURES_BOT_TOKEN (Enter to skip): " TELEGRAM_FEATURES_BOT_TOKEN || true
     [ -n "$TELEGRAM_FEATURES_BOT_TOKEN" ] && \
       _env_merge "TELEGRAM_FEATURES_BOT_TOKEN" "$TELEGRAM_FEATURES_BOT_TOKEN" "$ENV_FILE"
@@ -809,11 +797,10 @@ try {
 
 module.exports = {
   apps: [{
-    name        : 'aa-md-bot',
+    name        : 'jutts-bot',
     script      : path.join(BOT_DIR, 'index.js'),
     cwd         : BOT_DIR,
     interpreter : 'node',
-    node_args   : '--experimental-vm-modules',
 
     // Restart policy
     instances     : 1,
@@ -836,6 +823,7 @@ module.exports = {
     env: {
       NODE_ENV  : 'production',
       PORT      : _dotenvVars.PORT      || '5000',
+      HOST      : _dotenvVars.HOST      || '127.0.0.1',
       SERVER_ID : _dotenvVars.SERVER_ID || 'server-1',
       ..._dotenvVars,
     },
@@ -846,8 +834,8 @@ ok "ecosystem.config.cjs written ($(wc -l < "$ECOSYSTEM_FILE") lines)"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 16 — Oracle Cloud iptables Fix
-# Oracle images have a REJECT rule that blocks ports 80/443/5000
-# We detect the REJECT line number and insert ACCEPT rules BEFORE it
+# Oracle images have a REJECT rule that blocks public web ports.
+# We expose Nginx only; the Node dashboard remains on 127.0.0.1:5000.
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "16. Oracle Cloud iptables Fix"
 
@@ -878,7 +866,10 @@ _iptables_allow_port() {
 _iptables_allow_port 22  tcp   # SSH
 _iptables_allow_port 80  tcp   # HTTP
 _iptables_allow_port 443 tcp   # HTTPS
-_iptables_allow_port 5000 tcp  # Dashboard
+# Remove a legacy public-dashboard rule from earlier versions of this script.
+while sudo iptables -C INPUT -p tcp --dport 5000 -j ACCEPT &>/dev/null; do
+  sudo iptables -D INPUT -p tcp --dport 5000 -j ACCEPT
+done
 
 # Save iptables rules permanently
 inf "iptables rules save ho rahi hain (netfilter-persistent)..."
@@ -889,19 +880,18 @@ ok "iptables rules permanently saved"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 17 — UFW Firewall
-# Allow SSH/HTTP/HTTPS/5000, block MongoDB from internet
+# Allow SSH/HTTP/HTTPS; block Node.js and MongoDB from the internet
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "17. UFW Firewall"
-sudo ufw --force reset >/dev/null 2>&1 || true  # fresh start
+# Do not reset UFW on reruns; preserve unrelated operator-managed firewall rules.
 sudo ufw default deny incoming  >/dev/null
 sudo ufw default allow outgoing >/dev/null
-sudo ufw allow 22/tcp   comment 'SSH'             >/dev/null
-sudo ufw allow 80/tcp   comment 'HTTP'            >/dev/null
-sudo ufw allow 443/tcp  comment 'HTTPS'           >/dev/null
-sudo ufw allow 5000/tcp comment 'AA-MD-Bot dashboard' >/dev/null
-# Port 27017 (MongoDB) is intentionally NOT opened — localhost only
+sudo ufw allow 22/tcp   comment 'SSH'   >/dev/null
+sudo ufw allow 80/tcp   comment 'HTTP'  >/dev/null
+sudo ufw allow 443/tcp  comment 'HTTPS' >/dev/null
+# Ports 5000 (Node) and 27017 (MongoDB) intentionally remain private.
 sudo ufw --force enable >/dev/null
-ok "UFW: SSH(22) HTTP(80) HTTPS(443) Dashboard(5000) open | MongoDB(27017) blocked"
+ok "UFW: SSH(22) HTTP(80) HTTPS(443) open | Node(5000) + MongoDB(27017) private"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STEP 18 — Nginx Configuration (fully idempotent, assumes nothing exists)
@@ -1015,6 +1005,18 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
 
+    location = /events {
+        proxy_pass         http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host              \$host;
+        proxy_set_header X-Real-IP         \$remote_addr;
+        proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 1h;
+    }
+
     location / {
         proxy_pass         http://127.0.0.1:5000;
         proxy_http_version 1.1;
@@ -1030,7 +1032,7 @@ server {
         proxy_read_timeout     60s;
     }
 
-    client_max_body_size 200M;
+    client_max_body_size 64K;
 }
 NGINXCONF
 
@@ -1091,7 +1093,7 @@ inf "Bot ke ready hone ka wait kar rahe hain (max 90s)..."
 _PORT_READY=false
 for i in $(seq 1 30); do
   HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' \
-    --max-time 3 http://127.0.0.1:5000/ 2>/dev/null || true)
+    --max-time 3 http://127.0.0.1:5000/healthz 2>/dev/null || true)
   HTTP_CODE="${HTTP_CODE:-000}"
   if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "301" || "$HTTP_CODE" == "302" ]]; then
     _PORT_READY=true
@@ -1162,7 +1164,7 @@ else
   grep -E "(error|Error|fail|Fail)" /tmp/certbot-output.log 2>/dev/null \
     | while IFS= read -r line; do warn "  $line"; done || true
   warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  warn "Bot HTTP par kaam karta rahega: http://${PUBLIC_IP}:5000"
+  warn "Bot HTTP par kaam karta rahega: http://${DOMAIN}"
   warn "HTTPS baad mein manually add karo: sudo certbot --nginx -d $DOMAIN"
 fi
 
@@ -1175,98 +1177,10 @@ sudo nginx -t >/dev/null 2>&1 && sudo systemctl reload nginx 2>/dev/null || true
 hdr "22. redeploy.sh"
 REDEPLOY_SCRIPT="/home/ubuntu/redeploy.sh"
 
-cat > "$REDEPLOY_SCRIPT" << REDEPLOY_EOF
-#!/usr/bin/env bash
-# ══════════════════════════════════════════════════════════════
-#  Jutts Bot — Redeploy Script (auto-generated by setup.sh)
-#  Usage: bash ~/redeploy.sh
-#  Idempotent — safe to run anytime to update the bot
-# ══════════════════════════════════════════════════════════════
-set -Eeuo pipefail
-
-# ── Colours ──────────────────────────────────────────────────
-G='\033[0;32m'; C='\033[0;36m'; Y='\033[1;33m'; B='\033[1m'; R='\033[0m'; RE='\033[0;31m'
-ok()   { echo -e "\${G}✔  \$*\${R}"; }
-inf()  { echo -e "\${C}▶  \$*\${R}"; }
-warn() { echo -e "\${Y}⚠  \$*\${R}"; }
-hdr()  { echo -e "\n\${B}\${C}━━━  \$*  ━━━\${R}"; }
-
-REPO_CLONE_DIR="${REPO_CLONE_DIR}"
-NPM_REGISTRY="${NPM_REGISTRY}"
-PM2_APP_NAME="${PM2_APP_NAME}"
-
-echo -e "\${B}\${C}"
-echo "╔══════════════════════════════════════════════╗"
-echo "║       Jutts Bot — Redeploy / Update          ║"
-echo "╚══════════════════════════════════════════════╝"
-echo -e "\${R}"
-
-# ── 1. Git pull ───────────────────────────────────────────────
-hdr "1. Git Pull"
-cd "\$REPO_CLONE_DIR"
-git fetch --all --quiet
-git reset --hard "origin/\$(git rev-parse --abbrev-ref HEAD)" --quiet
-git pull --ff-only --quiet
-ok "Code updated: \$(git log -1 --format='%h %s')"
-
-# ── 2. Auto-detect bot directory ─────────────────────────────
-hdr "2. Bot Directory"
-BOT_DIR=""
-[ -f "\$REPO_CLONE_DIR/package.json" ]                && BOT_DIR="\$REPO_CLONE_DIR"
-[ -z "\$BOT_DIR" ] && [ -f "\$REPO_CLONE_DIR/AA-MD-Bot/package.json" ] \
-  && BOT_DIR="\$REPO_CLONE_DIR/AA-MD-Bot"
-[ -z "\$BOT_DIR" ] && [ -f "\$REPO_CLONE_DIR/AA-MD-Bot/AA-MD-Bot/package.json" ] \
-  && BOT_DIR="\$REPO_CLONE_DIR/AA-MD-Bot/AA-MD-Bot"
-[ -z "\$BOT_DIR" ] && {
-  _f=\$(find "\$REPO_CLONE_DIR" -maxdepth 4 -name package.json ! -path '*/node_modules/*' | head -1)
-  [ -n "\$_f" ] && BOT_DIR="\$(dirname "\$_f")"
-}
-[ -z "\$BOT_DIR" ] && { echo -e "\${RE}❌ package.json nahi mila\${R}"; exit 1; }
-ok "Bot dir: \$BOT_DIR"
-
-# ── 3. npm install (only if package.json changed) ────────────
-hdr "3. npm install"
-cd "\$BOT_DIR"
-npm config set registry "\$NPM_REGISTRY"
-npm config set progress false
-
-# Check if package.json changed since last install
-PKG_HASH_FILE="\$BOT_DIR/.npm-install-hash"
-CURRENT_HASH=\$(md5sum "\$BOT_DIR/package.json" | awk '{print \$1}')
-STORED_HASH=\$(cat "\$PKG_HASH_FILE" 2>/dev/null || echo "")
-
-if [ "\$CURRENT_HASH" = "\$STORED_HASH" ] && [ -d "\$BOT_DIR/node_modules" ]; then
-  ok "package.json unchanged — npm install skip kiya"
-else
-  inf "package.json changed — npm install ho raha hai... (2-5 min)"
-  if ! NPM_CONFIG_PROGRESS=false timeout 600 npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --legacy-peer-deps; then
-    warn "npm install failed ya timeout — retry kar rahe hain..."
-    rm -rf node_modules package-lock.json
-    NPM_CONFIG_PROGRESS=false timeout 600 npm install --omit=dev --registry="\$NPM_REGISTRY" --no-audit --no-fund --legacy-peer-deps
-  fi
-  echo "\$CURRENT_HASH" > "\$PKG_HASH_FILE"
-  ok "npm install complete"
+if [ ! -f "$BOT_DIR/deploy/redeploy.sh" ]; then
+  fail "Maintained deploy/redeploy.sh repository mein nahi mili"
 fi
-
-# ── 4. PM2 restart + save ────────────────────────────────────
-hdr "4. PM2 Restart"
-pm2 restart "\$PM2_APP_NAME" 2>/dev/null \
-  || pm2 start "\$BOT_DIR/ecosystem.config.cjs"
-pm2 save >/dev/null 2>&1
-ok "Bot restarted"
-
-# ── 5. Show logs ─────────────────────────────────────────────
-echo ""
-ok "Redeploy complete! Live logs:"
-echo ""
-pm2 logs "\$PM2_APP_NAME" --lines 30
-REDEPLOY_EOF
-
-# Use the maintained repository script instead of leaving the VM with an
-# older generated copy when setup.sh itself is updated.
-if [ -f "$BOT_DIR/deploy/redeploy.sh" ]; then
-  cp "$BOT_DIR/deploy/redeploy.sh" "$REDEPLOY_SCRIPT"
-fi
+cp "$BOT_DIR/deploy/redeploy.sh" "$REDEPLOY_SCRIPT"
 chmod +x "$REDEPLOY_SCRIPT"
 chmod 600 "$ENV_FILE"
 chown ubuntu:ubuntu "$REDEPLOY_SCRIPT"
@@ -1290,9 +1204,12 @@ ELAPSED=$(elapsed)
 # ══════════════════════════════════════════════════════════════════════════════
 # ✅  DEPLOY COMPLETE — Summary
 # ══════════════════════════════════════════════════════════════════════════════
-HTTP_URL="http://${PUBLIC_IP}:5000"
 HTTP_DOMAIN_URL="http://${DOMAIN}"
 HTTPS_URL_DISPLAY="${HTTPS_URL:-"(certbot failed — HTTP only)"}"
+DASHBOARD_BASE_URL="${HTTPS_URL:-$HTTP_DOMAIN_URL}"
+# URL fragments are not sent to web-server access logs. The login page exchanges
+# this token for a signed HttpOnly cookie.
+DASHBOARD_URL="${DASHBOARD_BASE_URL}/#token=${DASHBOARD_TOKEN}"
 
 echo ""
 echo -e "${G}${B}"
@@ -1302,9 +1219,10 @@ echo "╚═══════════════════════�
 echo -e "${R}"
 
 echo -e "  ${B}━━━ Access URLs ━━━${R}"
-echo -e "  Direct IP     : ${C}${HTTP_URL}${R}"
+echo -e "  Dashboard     : ${C}${DASHBOARD_URL}${R}"
 echo -e "  HTTP Domain   : ${C}${HTTP_DOMAIN_URL}${R}"
 echo -e "  HTTPS         : ${C}${HTTPS_URL_DISPLAY}${R}"
+echo -e "  Health check  : ${C}${DASHBOARD_BASE_URL}/healthz${R}"
 echo ""
 
 echo -e "  ${B}━━━ MongoDB ━━━${R}"
@@ -1341,15 +1259,15 @@ echo -e "  ${DIM}sudo tail -f /var/log/nginx/error.log${R}← Nginx logs"
 echo ""
 
 echo -e "  ${B}━━━ WhatsApp Pairing ━━━${R}"
-echo -e "  1. Browser mein kholo: ${C}${HTTP_URL}${R}"
-echo -e "     ya: ${C}${HTTP_DOMAIN_URL}${R}"
+echo -e "  1. Browser mein protected URL kholo:"
+echo -e "     ${C}${DASHBOARD_URL}${R}"
 echo -e "  2. Phone number enter karo (with country code, e.g. 923XXXXXXXXX)"
 echo -e "  3. ${B}Get Pairing Code${R} click karo"
 echo -e "  4. WhatsApp → Settings → Linked Devices → Link with phone number"
 echo -e "  5. 8-digit code enter karo — ho gaya ✅"
 echo ""
 
-echo -e "  ${Y}⚠  MONGODB URI aur SESSION_SECRET .env mein save hain.${R}"
+echo -e "  ${Y}⚠  MONGODB URI, SESSION_SECRET aur DASHBOARD_TOKEN .env mein private rakho.${R}"
 echo -e "  ${DIM}   sudo chmod 600 ${ENV_FILE}${R}"
 echo ""
 echo -e "  ${DIM}Total deploy time: ${ELAPSED}s${R}"

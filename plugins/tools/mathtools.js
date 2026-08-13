@@ -19,7 +19,7 @@ export default {
     'average','avg','mean','percentage','percent','pct',
     'fibonacci','fib','prime','isprime','convert','unitconvert',
     'compound','interest','age','agecalc','hexdec','hex2dec',
-    'dechex','dec2hex','log','logarithm','gcd','lcm','random','rand',
+    'dechex','dec2hex','logarithm','gcd','lcm','random','rand',
   ],
   description: 'Full math toolkit — calculator, converters, number theory',
   category: 'tools',

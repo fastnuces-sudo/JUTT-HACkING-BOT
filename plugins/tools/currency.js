@@ -9,7 +9,7 @@ const API = 'https://open.er-api.com/v6/latest';
 
 export default {
   command: 'currency',
-  alias: ['exchange', 'convert', 'rate'],
+  alias: ['exchange', 'rate'],
   description: 'Convert currency with live exchange rates',
   category: 'tools',
 

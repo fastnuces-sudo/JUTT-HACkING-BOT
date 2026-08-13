@@ -1,6 +1,6 @@
 export default {
   command: 'unmute',
-  alias: ['unlock'],
+  alias: [],
   description: 'Unmute the group (everyone can send)',
   category: 'admin',
   groupOnly: true,

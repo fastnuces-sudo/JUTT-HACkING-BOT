@@ -1,44 +1,42 @@
 @echo off
+setlocal
 title Jutts Bot
 color 0A
-cls
+cd /d "%~dp0"
 
 echo ============================================
 echo    Jutts Bot - Starting...
 echo ============================================
 echo.
 
-cd /d "c:\Users\MS NAEEM\AA-MD-Bot\AA-MD-Bot"
+where node >nul 2>&1 || (
+  echo [ERROR] Node.js 20 or newer is required.
+  echo Download it from https://nodejs.org/
+  pause
+  exit /b 1
+)
 
-echo Creating MongoDB data directory if not exists...
-if not exist "c:\data\db" mkdir "c:\data\db"
+if not exist "node_modules" (
+  echo Installing dependencies...
+  call npm ci
+  if errorlevel 1 (
+    echo [ERROR] npm install failed.
+    pause
+    exit /b 1
+  )
+)
 
-echo Starting MongoDB in background...
-start /min "MongoDB" mongod --dbpath "c:\data\db" --logpath "c:\data\db\mongod.log" --quiet
-timeout /t 3 /nobreak >nul
+if not exist ".env" (
+  copy /y ".env.example" ".env" >nul
+  echo [NOTICE] Created .env from .env.example.
+  echo Configure MONGODB_URI for database persistence.
+  echo.
+)
 
-echo [OK] MongoDB started
+start "" "http://localhost:5000"
+echo Dashboard: http://localhost:5000
+echo Press Ctrl+C to stop the bot.
 echo.
-echo Starting Jutts Bot in background...
-start /min "Jutts Bot" node index.js
-timeout /t 5 /nobreak >nul
+call npm start
 
-echo [OK] Bot started
-echo.
-echo Opening dashboard in browser...
-start http://localhost:5000
-
-echo.
-echo ============================================
-echo    Bot is running in background
-echo    Dashboard: http://localhost:5000
-echo    Press any key to stop the bot...
-echo ============================================
-pause
-
-echo.
-echo Stopping bot...
-taskkill /FI "WINDOWTITLE eq Jutts Bot*" /F >nul 2>&1
-taskkill /FI "WINDOWTITLE eq MongoDB*" /F >nul 2>&1
-echo [OK] Bot stopped
-timeout /t 2 /nobreak >nul
+endlocal

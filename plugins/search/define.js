@@ -7,7 +7,7 @@ import axios from 'axios';
 
 export default {
   command: 'define',
-  alias: ['dict', 'meaning', 'definition', 'dictionary'],
+  alias: ['dict', 'meaning', 'definition'],
   description: 'Look up word definitions, phonetics, synonyms — English dictionary',
   category: 'search',
 

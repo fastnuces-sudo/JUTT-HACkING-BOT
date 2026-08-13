@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 
 export default {
-  command: 'hash',
-  alias: ['md5', 'sha256'],
+  command: 'quickhash',
+  alias: [],
   description: 'Hash text using MD5/SHA256/SHA512',
   category: 'utility',
   async execute({ reply, args, text }) {

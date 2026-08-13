@@ -9,7 +9,7 @@ import { promisify } from 'util';
 import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Sticker, StickerTypes } from 'wa-sticker-formatter';
+import { Sticker, StickerTypes } from '../../lib/sticker.js';
 import config from '../../config.js';
 
 const execAsync = promisify(exec);
