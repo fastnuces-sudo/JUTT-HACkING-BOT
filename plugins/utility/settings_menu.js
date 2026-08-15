@@ -112,7 +112,8 @@ export default {
       `▸ *${pref}broadcast* msg — broadcast\n\n` +
 
       `${DIV}\n` +
-      `> 🌐 ${CHANNEL_URL}\n` +
+      // Only shown when an operator has configured a channel link.
+      (CHANNEL_URL ? `> 🌐 ${CHANNEL_URL}\n` : '') +
       `> 🤖 *Powered by Jutts Bot*\n` +
       `> 👨‍💻 *Developed by Sajid Jutt*`;
 

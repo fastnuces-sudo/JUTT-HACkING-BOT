@@ -139,8 +139,10 @@ export default {
 
     menu += `\n╔══════════════════════════════╗\n`;
     menu += `║  🌙 *JazakAllah Khair* 🤲     ║\n`;
-    menu += `╚══════════════════════════════╝\n`;
-    menu += `📢 ${CHANNEL_URL}`;
+    menu += `╚══════════════════════════════╝`;
+    // CHANNEL_URL is empty until an operator configures one — only render the
+    // line when there is an actual link, never a bare "📢 ".
+    if (CHANNEL_URL) menu += `\n📢 ${CHANNEL_URL}`;
 
     const banner = getBanner();
     try {
