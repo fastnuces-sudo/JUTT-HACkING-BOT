@@ -18,7 +18,7 @@
 #
 #  What this script does NOT touch:
 #    ✘ Ubuntu packages / system dependencies
-#    ✘ MongoDB
+#    ✘ Database (Neon Postgres is managed — nothing to touch here)
 #    ✘ Node.js / npm (only uses existing install)
 #    ✘ Nginx config or SSL certificates
 #    ✘ Firewall / UFW / iptables
@@ -392,7 +392,7 @@ ok "PM2 process list saved"
 # STEP 10 — Wait for dashboard (HTTP 200 on port 5000, max 3 minutes)
 # NOTE: This is informational only — a timeout here does NOT abort the deploy.
 # The code has already been pulled and PM2 has already restarted the bot.
-# The bot may just need more time to connect to MongoDB / load sessions.
+# The bot may just need more time to connect to Neon Postgres / load sessions.
 # ══════════════════════════════════════════════════════════════════════════════
 hdr "10. Dashboard Health Check"
 

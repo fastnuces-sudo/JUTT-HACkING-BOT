@@ -1,0 +1,37 @@
+### Dependencies — reinstalled inside the image via npm ci
+node_modules/
+
+### Secrets — must never be baked into an image layer
+.env
+cookies.txt
+*.key
+*.pem
+
+### Runtime state — all real state lives in Neon Postgres
+session/
+temp/
+logs/
+downloads/
+cache/
+media/
+database/
+.pm2/
+
+### VCS / CI
+.git/
+.github/
+.agents/
+
+### Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+### Docs and deploy scripts not needed at runtime
+deploy/
+*.md
+!README.md
+
+# NOTE: logo.jpeg / banner.jpeg are intentionally NOT excluded — index.js serves
+# them as static routes (/logo.jpeg, /banner.jpeg), so removing them causes 404s.

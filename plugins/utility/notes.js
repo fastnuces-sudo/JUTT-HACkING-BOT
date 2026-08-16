@@ -1,7 +1,7 @@
 // ============================================
-// Jutts Bot - Notes System (MongoDB-backed)
+// Jutts Bot - Notes System (Neon Postgres-backed)
 // Developer: Sajid Jutt | Jutts Mods
-// All notes stored in MongoDB via db.notes
+// All notes stored in Neon Postgres via db.notes
 // — zero local file writes.
 // ============================================
 

@@ -10,7 +10,7 @@ export default {
   ownerOnly: true,
   superOwnerOnly: true,
   async execute({ reply }) {
-    // db.sessions.all() = MongoDB (shared across ALL servers)
+    // db.sessions.all() = Neon Postgres (shared across ALL servers)
     const dbSessions = db.sessions.all();
     const dbIds = Object.keys(dbSessions);
 

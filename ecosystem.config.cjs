@@ -32,7 +32,7 @@ module.exports = {
       restart_delay: 5000,
       min_uptime   : '30s',
 
-      // Give the process 15 seconds to flush MongoDB writes before SIGKILL.
+      // Give the process 15 seconds to flush Postgres writes before SIGKILL.
       // Default PM2 kill_timeout is 1600ms — too short for async flushOnExit.
       kill_timeout : 15000,
 
