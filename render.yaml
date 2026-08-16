@@ -1,0 +1,63 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  Render Blueprint — Jutts Bot
+#
+#  Usage: Render Dashboard → New → Blueprint → point at this repository.
+#
+#  Docker is used (not the native Node runtime) because the bot shells out to
+#  ffmpeg, yt-dlp and deno, which the Node runtime cannot install.
+#
+#  IMPORTANT — this must be a Web Service on a PAID instance type:
+#    • Free instances sleep after ~15 minutes idle, which drops the WhatsApp
+#      socket and makes the bot miss messages until the next HTTP request.
+#    • A WhatsApp bot must hold a persistent connection, so "starter" or higher
+#      is the realistic minimum.
+#  No disk is attached on purpose: all state lives in Neon Postgres.
+# ══════════════════════════════════════════════════════════════════════════════
+services:
+  - type: web
+    name: jutts-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # free tier sleeps and will disconnect WhatsApp
+    region: oregon         # pick the region closest to your Neon project
+    healthCheckPath: /healthz
+    autoDeploy: true
+
+    envVars:
+      # ── Database ───────────────────────────────────────────────────────────
+      # Paste your Neon *pooled* connection string (host contains "-pooler").
+      # Marked sync:false so Render prompts for it instead of storing it in Git.
+      - key: DATABASE_URL
+        sync: false
+
+      # ── Dashboard security ─────────────────────────────────────────────────
+      # Render generates a random value; read it in the dashboard afterwards and
+      # log in via  https://YOUR-APP.onrender.com/#token=THAT_VALUE
+      - key: DASHBOARD_TOKEN
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+
+      # ── Server ─────────────────────────────────────────────────────────────
+      # Render injects PORT itself; the app already binds 0.0.0.0 by default.
+      - key: NODE_ENV
+        value: production
+      - key: SERVER_ID
+        value: render-1
+
+      # ── Optional: WhatsApp owner permissions ───────────────────────────────
+      # Leave unset to let the first linked number become super owner.
+      - key: SUPER_OWNER
+        sync: false
+      - key: OWNER_NUMBERS
+        sync: false
+
+      # ── Optional integrations (safe to leave blank) ────────────────────────
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_ADMIN_ID
+        sync: false
+      - key: OPENWEATHER_API_KEY
+        sync: false
+      - key: OMDB_API_KEY
+        sync: false

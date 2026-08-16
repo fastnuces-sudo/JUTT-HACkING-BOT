@@ -43,6 +43,48 @@ https://YOUR-IP.nip.io/#token=YOUR_DASHBOARD_TOKEN
 
 > **Important:** `.env` private rakhein. Agar repository ke kisi purane version mein database credentials use hue thay, un credentials ko provider par rotate karein.
 
+## Deploy on Render
+
+Render is supported via Docker (`Dockerfile` + `render.yaml`). Docker is used
+instead of Render's native Node runtime because the bot shells out to **ffmpeg,
+yt-dlp and deno**, which the Node runtime cannot install.
+
+1. Create your Neon database first and copy the **pooled** connection string
+   (host contains `-pooler`) — see [Getting your Neon connection string](#getting-your-neon-connection-string).
+2. In Render: **New → Blueprint**, point it at this repository. It reads
+   `render.yaml` automatically.
+3. When prompted, paste your connection string into `DATABASE_URL`.
+   `DASHBOARD_TOKEN` and `SESSION_SECRET` are generated for you.
+4. After the first deploy, open **Environment** in Render, copy the generated
+   `DASHBOARD_TOKEN`, and log in at:
+
+   ```text
+   https://YOUR-APP.onrender.com/#token=YOUR_DASHBOARD_TOKEN
+   ```
+
+5. Pair WhatsApp from the dashboard as described below.
+
+### Render notes
+
+| Topic | What to know |
+|---|---|
+| **Instance type** | Use a **paid** instance. Free instances sleep after ~15 minutes idle, which drops the WhatsApp socket and makes the bot miss messages. A WhatsApp bot needs a persistent connection. |
+| **No disk needed** | Do **not** attach a Render disk. All state (WhatsApp auth, settings, groups, notes) lives in Neon, so a redeploy or container restart reconnects **without a new QR scan**. |
+| **PORT** | Render injects `PORT`; the app already binds `0.0.0.0`. Leave `HOST` unset. |
+| **Health check** | `/healthz` is public and returns 200 without auth — already set as `healthCheckPath`. |
+| **Region** | Pick the Render region closest to your Neon project to keep query latency low. |
+| **YouTube cookies** | For `Sign in to confirm you're not a bot` errors, supply a private `cookies.txt`; see `cookies.txt.example`. |
+
+Run the same image locally:
+
+```bash
+docker build -t jutts-bot .
+docker run --rm -p 5000:5000 \
+  -e DATABASE_URL='postgresql://user:pass@ep-xxxx-pooler.REGION.aws.neon.tech/jutts_bot?sslmode=require' \
+  -e DASHBOARD_TOKEN="$(openssl rand -hex 32)" \
+  jutts-bot
+```
+
 ## WhatsApp pair karna
 
 1. Setup ke end par print hua protected dashboard URL browser mein kholein.
