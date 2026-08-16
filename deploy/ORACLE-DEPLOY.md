@@ -1,6 +1,26 @@
 # Oracle Cloud deployment guide
 
-The supported default is **one Ubuntu 22.04 VM** running Jutts Bot, MongoDB, PM2, Nginx and HTTPS. It is simpler and safer than exposing MongoDB between machines.
+The supported default is **one Ubuntu 22.04 VM** running Jutts Bot, PM2, Nginx and HTTPS, with the database hosted on **[Neon](https://neon.tech)** (serverless Postgres). No database server runs on the VM, so there is nothing to harden, back up or expose between machines.
+
+## Prerequisite: create the Neon database
+
+1. Sign up at [console.neon.tech](https://console.neon.tech) — the free tier is enough to start.
+2. Create a project (choose the region closest to your VM to keep latency low).
+3. Open **Connection Details** and copy the **pooled** connection string — its host contains `-pooler`:
+
+   ```text
+   postgresql://user:password@ep-xxxx-pooler.us-east-2.aws.neon.tech/jutts_bot?sslmode=require
+   ```
+
+Keep it handy: the setup script asks for it. You can also export it beforehand for a fully unattended install:
+
+```bash
+export DATABASE_URL='postgresql://user:password@ep-xxxx-pooler.us-east-2.aws.neon.tech/jutts_bot?sslmode=require'
+```
+
+Tables are created automatically the first time the bot starts — you never need to run SQL by hand.
+
+> **Neon free tier note:** a free project scales to zero after a few minutes idle. The first query afterwards wakes it in under a second, and the bot retries automatically, so this is safe for normal use.
 
 ## Recommended: one VM
 
@@ -14,7 +34,7 @@ The supported default is **one Ubuntu 22.04 VM** running Jutts Bot, MongoDB, PM2
   - `80` for HTTP/Let's Encrypt
   - `443` for HTTPS
 
-Do **not** expose ports `5000` or `27017`. Nginx is the public entry point; Node and MongoDB stay private.
+Do **not** expose port `5000`. Nginx is the public entry point; Node stays private. The database is reached outbound over TLS to Neon, so no inbound database port is ever needed.
 
 ### 2. Connect
 
@@ -32,7 +52,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/fastnuces-sudo/JUTT-HACkING-
 The script is idempotent and performs these steps:
 
 - Updates Ubuntu and installs required system packages
-- Installs MongoDB 7 with authentication and loopback-only binding
+- Asks for (or reuses) your Neon `DATABASE_URL` and validates it
 - Installs Node.js 20, PM2, FFmpeg, yt-dlp and Deno
 - Clones to `/home/ubuntu/JUTT-HACkING-BOT`
 - Runs `npm ci --omit=dev` from the committed lockfile
@@ -101,47 +121,20 @@ pm2 save
 
 Existing browser cookies become invalid after rotation.
 
-## Optional: private multi-VM database
+## Optional: multiple VMs sharing one database
 
-Only use this if you understand Oracle VCN routing and firewall rules. Never bind MongoDB to `0.0.0.0` or expose `27017` to the internet.
-
-Example layout:
-
-```text
-VM1 private IP 10.0.0.10: MongoDB + bot
-VM2 private IP 10.0.0.11: bot
-VM3 private IP 10.0.0.12: bot
-```
-
-### VM1: bind MongoDB to its private VCN address
-
-Edit `/etc/mongod.conf`:
-
-```yaml
-net:
-  port: 27017
-  bindIp: 127.0.0.1,10.0.0.10
-```
-
-Then allow only the worker private IPs:
-
-```bash
-sudo ufw allow from 10.0.0.11 to 10.0.0.10 port 27017 proto tcp
-sudo ufw allow from 10.0.0.12 to 10.0.0.10 port 27017 proto tcp
-sudo systemctl restart mongod
-```
-
-Add matching Oracle VCN ingress rules with `/32` source CIDRs for the worker private IPs. Do not use `0.0.0.0/0`.
-
-### VM2/VM3: point the bot to VM1
-
-After running normal setup on each worker, edit its `.env`:
+Because Neon is a managed service reachable over TLS, running several bot VMs is straightforward: give every VM the **same** `DATABASE_URL` and a **distinct** `SERVER_ID`.
 
 ```dotenv
-MONGODB_URI=mongodb://aa_bot_user:URL_ENCODED_PASSWORD@10.0.0.10:27017/aa_md_bot?authSource=aa_md_bot
+# VM1 .env
+DATABASE_URL=postgresql://user:password@ep-xxxx-pooler.us-east-2.aws.neon.tech/jutts_bot?sslmode=require
+SERVER_ID=server-1
+
+# VM2 .env — same DATABASE_URL, different SERVER_ID
+SERVER_ID=server-2
 ```
 
-Then restart PM2 from the ecosystem file:
+Then restart PM2 from the ecosystem file on each VM:
 
 ```bash
 pm2 delete jutts-bot
@@ -149,16 +142,16 @@ pm2 start /home/ubuntu/JUTT-HACkING-BOT/ecosystem.config.cjs
 pm2 save
 ```
 
-Each VM should use a distinct `SERVER_ID`. Re-running the full setup script on VM1 resets MongoDB to loopback-only; reapply the private `bindIp` afterward.
+Use the pooled (`-pooler`) connection string on every VM so Neon multiplexes the connections. There are no VCN routing rules, firewall openings or `bindIp` edits to manage.
 
 ## Security checklist
 
-- [ ] Ports 5000 and 27017 are not public
+- [ ] Port 5000 is not public
 - [ ] `.env` mode is `600`
 - [ ] `DASHBOARD_TOKEN` is random and private
-- [ ] MongoDB password is unique and URL-encoded in the URI
+- [ ] `DATABASE_URL` ends with `sslmode=require` and its password is URL-encoded
+- [ ] The Neon password has been rotated if it ever appeared in Git history or a screenshot
 - [ ] HTTPS works before pairing a real account
-- [ ] Worker database rules use private `/32` source addresses
 - [ ] Old database credentials were rotated if they ever appeared in Git history
 - [ ] `npm audit --omit=dev` reports zero known vulnerabilities
 
@@ -168,7 +161,7 @@ Each VM should use a distinct `SERVER_ID`. Re-running the full setup script on V
 |---|---|
 | Dashboard unavailable | `pm2 logs jutts-bot --err`, `sudo nginx -t`, `sudo systemctl status nginx` |
 | Login rejected | Verify `DASHBOARD_TOKEN` in `.env`; restart PM2 from ecosystem config |
-| MongoDB failed | `sudo systemctl status mongod`, then verify `MONGODB_URI` and `authSource` |
-| Worker cannot reach VM1 | Test private routing and confirm both UFW and Oracle VCN `/32` rules |
+| Database connection failed | Verify `DATABASE_URL` in `.env`, confirm the Neon project is not suspended, and check the console for the current password |
+| `self-signed certificate` / TLS error | Ensure the URL ends with `sslmode=require` and that the host is the real Neon endpoint |
 | Bot restart loop | `pm2 logs jutts-bot --lines 100 --nostream` |
 | YouTube bot check | Update yt-dlp and provide a private `cookies.txt` as documented in `cookies.txt.example` |

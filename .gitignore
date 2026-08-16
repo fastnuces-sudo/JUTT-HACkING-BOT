@@ -14,7 +14,7 @@ media/
 .npm-install-hash
 *.log
 
-### Old file-based database (replaced by MongoDB)
+### Old file-based database (replaced by Neon Postgres)
 database/*.json
 
 ### yt-dlp cookies (user-specific)

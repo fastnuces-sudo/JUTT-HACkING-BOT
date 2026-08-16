@@ -25,7 +25,7 @@ import {
   getAllSessions, botEvents, sessionQRs, sessionStatus,
   createSession, deleteSession,
 } from './lib/sessionManager.js';
-import { deleteMongoAuthState } from './lib/mongoAuthState.js';
+import { deletePgAuthState } from './lib/pgAuthState.js';
 import config from './config.js';
 import { cleanTemp, formatDuration } from './lib/helper.js';
 import { startBirthdayScheduler } from './plugins/utility/birthday.js';
@@ -36,7 +36,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const startTime = Date.now();
 const dashboardPath = path.join(__dirname, 'functional-dashboard.html');
 
-// Flush pending MongoDB writes before crashing so no settings are lost.
+// Flush pending Postgres writes before crashing so no settings are lost.
 // flushAll is imported lazily to avoid circular import at module init time.
 let fatalShutdownStarted = false;
 async function emergencyFlush(label, error) {
@@ -409,7 +409,7 @@ async function startServer() {
         }
 
         if (pairMethod === 'pairing') {
-          await deleteMongoAuthState(sessionId).catch(error =>
+          await deletePgAuthState(sessionId).catch(error =>
             logger.warn({ err: error.message, sessionId }, 'Old pairing auth cleanup failed')
           );
         }

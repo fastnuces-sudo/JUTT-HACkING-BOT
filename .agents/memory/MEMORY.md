@@ -1,5 +1,5 @@
-- [MongoDB database](mongodb-database.md) — replaced Firebase; URI built from MONGODB_PASSWORD secret; same in-memory cache + debounced bulkWrite pattern; Replit IP is dynamic so Atlas must allow 0.0.0.0/0.
-- [MongoDB Auth State](mongodb-auth-state.md) — Baileys session auth (creds + signal keys) in MongoDB via lib/mongoAuthState.js; auth_creds + auth_keys collections; replaces firebaseAuthState.js completely.
+- [Neon Postgres database](neon-database.md) — replaced MongoDB (which replaced Firebase); DATABASE_URL is the only credential source; key/JSONB tables per collection; same in-memory cache + debounced batched-upsert pattern; schema auto-created, no migrations.
+- [Neon auth state](neon-auth-state.md) — Baileys session auth (creds + signal keys) in Postgres via lib/pgAuthState.js; auth_creds + auth_keys tables; BufferJSON round-trip; dotted key ids need no escaping unlike MongoDB.
 - [Zero disk architecture](zero-disk.md) — bot writes nothing to volume except temp/ (FFmpeg only, cleaned every 30min); auth→Firebase, viewonce→memory-only (60min TTL), notes→db.notes (Firebase), DB backups removed.
 - [Per-session settings architecture](per-session-settings.md) — each connected WhatsApp number has independent settings via db.sessionSettings; group settings are per sessionId|groupJid composite key; proxy in commandHandler injects sessionId automatically so plugins need no changes.
 - [Dashboard and ownership](dashboard-ownership.md) — pairing-code only UI; session ID = phone number; auto-saves owner+superOwner on first connect; isOwner reads db first then config.
@@ -17,4 +17,4 @@
 - [Telegram integration](telegram-integration.md) — two bots: TELEGRAM_BOT_TOKEN=admin/pairing, TELEGRAM_FEATURES_BOT_TOKEN=features; both started from index.js after sessions init.
 - [Emoji reveal requires prefix](viewonce-emoji-reveal.md) — trigger is now .🔥🔥🔥🔥 (prefix + 4 same emojis); bare 4-same-emoji no longer triggers.
 - [SuperOwnerOnly scope](per-session-settings.md) — devices/adddevice/deldevice/setprefix/mode/anticall/antispam/autoreact + all tools plugins are superOwnerOnly.
-- [Oracle deployment reruns](oracle-deploy-reruns.md) — preserve the local MongoDB password, replace only placeholders, and stop before HTTPS when port 5000 is unhealthy.
+- [Oracle deployment reruns](oracle-deploy-reruns.md) — reuse the existing DATABASE_URL from .env, replace only placeholders, and stop before HTTPS when port 5000 is unhealthy.

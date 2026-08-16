@@ -10,7 +10,7 @@ export default {
   async execute({ reply, args }) {
     if (args[0] === 'reload') {
       await db.reload();
-      return reply('✅ Database reloaded from MongoDB.');
+      return reply('✅ Database reloaded from Neon Postgres.');
     }
     const groups   = db.groups.all();
     const settings = db.settings.get();
@@ -25,8 +25,8 @@ export default {
       `📱 Sessions: *${sessCount}*\n` +
       `🎂 Birthdays: *${bdayCount}*\n` +
       `⚙️ Settings: *${Object.keys(settings).length}* keys\n\n` +
-      `☁️ Storage: MongoDB\n` +
-      `Use: *.dbstats reload* to re-fetch from MongoDB`
+      `☁️ Storage: Neon Postgres\n` +
+      `Use: *.dbstats reload* to re-fetch from Neon Postgres`
     );
   },
 };

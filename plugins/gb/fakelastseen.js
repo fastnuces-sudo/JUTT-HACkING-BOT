@@ -7,7 +7,7 @@
 //   then at your chosen time every day it fires one unavailable → WA
 //   records that exact moment as your last seen.
 //
-// Persistence: stored in db.sessionSettings (MongoDB) — survives restarts.
+// Persistence: stored in db.sessionSettings (Neon Postgres) — survives restarts.
 // ============================================
 
 /**

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════════════════════
 #  Jutts Bot — Oracle Cloud Ubuntu 22.04 ARM64 Auto-Deploy Script
-#  Bot + MongoDB + Nginx + Let's Encrypt — SAME VM, fully automatic
+#  Bot + Neon Postgres + Nginx + Let's Encrypt — fully automatic
 #
 #  Fresh VM par ek hi baar chalao (ya dobara bhi — idempotent hai):
 #  bash <(curl -fsSL https://raw.githubusercontent.com/fastnuces-sudo/JUTT-HACkING-BOT/main/deploy/setup.sh)
@@ -9,7 +9,7 @@
 #  Features:
 #   ✔ Oracle ARM64 (Ampere) compatible — koi x86 package nahi
 #   ✔ Idempotent — safely re-run on existing deployment
-#   ✔ MongoDB 7 local — localhost only, auth enabled
+#   ✔ Neon Postgres (managed cloud) — no database server on this VM
 #   ✔ Nginx reverse proxy + Let's Encrypt HTTPS (nip.io domain)
 #   ✔ Oracle iptables REJECT fix — only SSH/HTTP/HTTPS are exposed
 #   ✔ UFW firewall configured automatically
@@ -68,7 +68,7 @@ clear
 echo -e "${B}${C}"
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║        Jutts Bot — Oracle Cloud ARM64 Auto Deploy        ║"
-echo "║   Bot + MongoDB + Nginx + HTTPS — same VM, automatic     ║"
+echo "║   Bot + Neon Postgres + Nginx + HTTPS — automatic        ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${R}"
 echo -e "  ${DIM}Architecture : $ARCH${R}"
@@ -101,151 +101,21 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq \
 ok "System tools + nginx + certbot + iptables-persistent ready"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 3 — MongoDB 7 (ARM64-compatible, localhost only)
+# STEP 3 — Neon Postgres (managed cloud database — nothing installed locally)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "3. MongoDB 7 (local — $ARCH)"
-if ! command -v mongod &>/dev/null; then
-  inf "MongoDB 7 install ho raha hai ($ARCH)..."
-  # Keyring
-  curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc \
-    | sudo gpg --batch --yes -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+hdr "3. Neon Postgres (managed)"
 
-  # Both amd64 and arm64 supported by MongoDB 7 official repo
-  echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] \
-https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" \
-    | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list > /dev/null
+# The database is Neon (https://neon.tech), a serverless Postgres service, so no
+# database server is installed on this VM. We only need a connection string.
+#
+# Resolution order:
+#   1. DATABASE_URL already exported in the environment (non-interactive installs)
+#   2. DATABASE_URL already present in an existing .env (reruns keep it)
+#   3. Prompt the operator to paste it from the Neon Console
+#
+# NEON_DATABASE_URL is accepted as an alias throughout.
+NEON_URL="${DATABASE_URL:-${NEON_DATABASE_URL:-}}"
 
-  sudo apt-get update -qq
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org
-  ok "MongoDB 7 installed"
-else
-  ok "MongoDB already installed — skipping ($(mongod --version 2>/dev/null | head -1 || echo 'unknown version'))"
-fi
-
-# MongoDB config — localhost only, auth enabled, WAL storage engine
-sudo tee /etc/mongod.conf > /dev/null << 'MONGOCFG'
-# Jutts Bot — MongoDB Configuration
-# Binds ONLY to localhost — never exposed to internet
-storage:
-  dbPath: /var/lib/mongodb
-  wiredTiger:
-    engineConfig:
-      journalCompressor: snappy
-
-systemLog:
-  destination: file
-  logAppend: true
-  path: /var/log/mongodb/mongod.log
-
-net:
-  port: 27017
-  bindIp: 127.0.0.1        # localhost only — bot same VM par hai
-
-processManagement:
-  timeZoneInfo: /usr/share/zoneinfo
-
-security:
-  authorization: enabled    # username/password required
-
-operationProfiling:
-  mode: slowOp
-  slowOpThresholdMs: 500
-MONGOCFG
-
-# ── Helper: make MongoDB's filesystem paths systemd-safe (idempotent) ─────────
-# MongoDB's package does not always create these paths on Oracle Ubuntu ARM64.
-# Prepare them before every enable/start/restart so fresh VMs and reruns behave
-# identically.
-_mongod_prepare_paths() {
-  sudo install -d -m 755 -o mongodb -g mongodb /var/log/mongodb
-  sudo touch /var/log/mongodb/mongod.log
-  sudo chown -R mongodb:mongodb /var/log/mongodb
-  sudo chmod 755 /var/log/mongodb
-  sudo chmod 640 /var/log/mongodb/mongod.log
-
-  sudo install -d -o mongodb -g mongodb /var/lib/mongodb
-  sudo chown -R mongodb:mongodb /var/lib/mongodb
-}
-
-# ── Helper: start/restart mongod and wait for systemd Active (running) ────────
-# Prints the last 30 journal lines before returning failure.
-_mongod_service_wait() {
-  local ACTION="${1:-restart}" LABEL="${2:-MongoDB}" i
-
-  _mongod_prepare_paths
-  if ! sudo systemctl "$ACTION" mongod; then
-    warn "$LABEL service command failed — mongod journal:"
-    sudo journalctl -u mongod --no-pager -n 30 2>/dev/null \
-      | while IFS= read -r l; do warn "  $l"; done || true
-    return 1
-  fi
-
-  for i in $(seq 1 30); do
-    if sudo systemctl is-active --quiet mongod; then
-      ok "$LABEL active (running) (attempt $i/30)"
-      return 0
-    fi
-    sleep 1
-  done
-
-  warn "$LABEL did not reach Active (running) — mongod journal:"
-  sudo journalctl -u mongod --no-pager -n 30 2>/dev/null \
-    | while IFS= read -r l; do warn "  $l"; done || true
-  return 1
-}
-
-# Prepare the paths before enabling the service as well as before starting it.
-_mongod_prepare_paths
-if ! sudo systemctl enable mongod; then
-  warn "MongoDB service enable failed — mongod journal:"
-  sudo journalctl -u mongod --no-pager -n 30 2>/dev/null \
-    | while IFS= read -r l; do warn "  $l"; done || true
-  fail "MongoDB service enable nahi hua"
-fi
-_mongod_service_wait restart "MongoDB (auth-on)" \
-  || fail "MongoDB restart nahi hua — 'sudo journalctl -u mongod -n 30' se check karo"
-
-# ── Helper: ping mongod using exit code only (no output parsing) ──────────────
-# Usage: _mongo_ping "mongodb://..." → returns 0 if up, 1 if not
-_mongo_ping() {
-  mongosh --quiet "$1" --eval "db.adminCommand({ping:1})" &>/dev/null
-}
-
-# ── Helper: wait for mongod with timeout + diagnostics on failure ─────────────
-# Usage: _mongo_wait "mongodb://..." <max_attempts> <label>
-_mongo_wait() {
-  local URI="$1" MAX="${2:-15}" LABEL="${3:-MongoDB}" i
-  for i in $(seq 1 "$MAX"); do
-    if _mongo_ping "$URI"; then
-      ok "$LABEL ready (attempt $i/$MAX)"
-      return 0
-    fi
-    inf "  attempt $i/$MAX — waiting 2s..."
-    sleep 2
-  done
-  # Show last 30 lines of mongod journal for diagnosis
-  echo ""
-  warn "$LABEL ${MAX}x2s mein ready nahi hua — mongod journal:"
-  sudo journalctl -u mongod --no-pager -n 30 2>/dev/null \
-    | while IFS= read -r l; do warn "  $l"; done || true
-  return 1
-}
-
-# Wait for mongod to be ready (auth enabled — ping works without creds in MongoDB 7)
-inf "MongoDB start hone ka wait kar rahe hain (max 30s)..."
-_mongo_wait "mongodb://127.0.0.1:27017/admin" 15 "MongoDB (auth-on)" \
-  || fail "MongoDB start nahi hua — 'sudo journalctl -u mongod -n 30' se check karo"
-ok "MongoDB running (data: /var/lib/mongodb)"
-
-# ══════════════════════════════════════════════════════════════════════════════
-# STEP 4 — MongoDB User + Database
-# ══════════════════════════════════════════════════════════════════════════════
-hdr "4. MongoDB User Setup"
-
-# Strong random password (32 hex chars — no special chars, safe in URI).
-# Preserve the existing password on reruns; otherwise the MongoDB user would
-# be reset while the existing .env still contained the old password.
-DB_PASS=""
 _existing_env=""
 for _candidate in \
   "$REPO_CLONE_DIR/AA-MD-Bot/.env" \
@@ -255,160 +125,60 @@ for _candidate in \
     break
   fi
 done
-if [ -n "$_existing_env" ]; then
-  _existing_uri=$(sed -n 's/^MONGODB_URI=//p' "$_existing_env" | head -1)
-  if [[ "$_existing_uri" =~ ^mongodb://aa_bot_user:([^@]+)@127\.0\.0\.1:27017/ ]] \
-     && [ "${BASH_REMATCH[1]}" != "PASSWORD" ]; then
-    DB_PASS="${BASH_REMATCH[1]}"
-    inf "Existing local MongoDB password preserved for safe rerun"
+
+_url_is_valid() {
+  # Must be a postgres URL and must not still contain an example placeholder.
+  [[ "$1" =~ ^postgres(ql)?:// ]] || return 1
+  [[ "$1" == *:PASSWORD@* || "$1" == *change_this* || "$1" == *"<"* ]] && return 1
+  return 0
+}
+
+if [ -z "$NEON_URL" ] && [ -n "$_existing_env" ]; then
+  _existing_url=$(sed -n 's/^DATABASE_URL=//p' "$_existing_env" | head -1)
+  _existing_url="${_existing_url%\"}"; _existing_url="${_existing_url#\"}"
+  if _url_is_valid "$_existing_url"; then
+    NEON_URL="$_existing_url"
+    inf "Existing DATABASE_URL preserved from .env (safe rerun)"
   fi
 fi
-[ -n "$DB_PASS" ] || DB_PASS=$(openssl rand -hex 32)
 
-# ── Strategy: temporarily disable auth via sed on main config,
-#    restart via systemd, create/update user, restore auth.
-# ── No --fork: Oracle ARM64 systemd-managed mongod + --fork = race condition.
-# ── No --directConnection: not a valid mongosh CLI flag (CLI ≠ URI option).
-
-inf "MongoDB auth temporarily disable kar rahe hain (user create karne ke liye)..."
-sudo systemctl stop mongod 2>/dev/null || true
-sleep 1
-
-# Disable auth in mongod.conf
-# The line is:  "  authorization: enabled    # comment"
-# sed matches "authorization: enabled" and replaces in-place — comment stays
-sudo sed -i -E 's/^([[:space:]]*)authorization:[[:space:]]*enabled/\1authorization: disabled/' \
-  /etc/mongod.conf
-inf "mongod.conf auth line after sed: $(grep 'authorization' /etc/mongod.conf || echo '(not found)')"
-
-_mongod_service_wait start "MongoDB (auth-off)" \
-  || fail "MongoDB auth-disable ke baad start nahi hua\n  Debug: sudo journalctl -u mongod -n 30"
-
-# Wait for no-auth mongod to be ready
-inf "No-auth mongod start hone ka wait kar rahe hain (max 60s)..."
-_mongo_wait "mongodb://127.0.0.1:27017/admin" 30 "MongoDB (auth-off)" \
-  || fail "MongoDB auth-disable ke baad start nahi hua\n  Debug: sudo journalctl -u mongod -n 30"
-
-# ── Create or update bot user ─────────────────────────────────────────────────
-_MONGO_BASE="mongodb://127.0.0.1:27017"
-
-# Check if user exists: use exit code + output capture
-UCHECK=$(mongosh --quiet "${_MONGO_BASE}/aa_md_bot" \
-  --eval "print(db.getUser('aa_bot_user') ? 'EXISTS' : 'MISSING')" 2>/dev/null || echo "MISSING")
-
-if echo "$UCHECK" | grep -q "EXISTS"; then
-  inf "User 'aa_bot_user' already exists — password update kar rahe hain..."
-  _UCMD="db.updateUser('aa_bot_user',{pwd:'${DB_PASS}',roles:[{role:'readWrite',db:'aa_md_bot'}]})"
-  _ULABEL="password updated"
-else
-  inf "User 'aa_bot_user' create kar rahe hain..."
-  _UCMD="db.createUser({user:'aa_bot_user',pwd:'${DB_PASS}',roles:[{role:'readWrite',db:'aa_md_bot'}]})"
-  _ULABEL="created"
+if [ -z "$NEON_URL" ]; then
+  echo
+  echo -e "  ${B}${C}Neon Postgres connection string chahiye${R}"
+  echo -e "  ${DIM}1. https://console.neon.tech kholo (free tier kaafi hai)${R}"
+  echo -e "  ${DIM}2. Apna project select karo → 'Connection Details'${R}"
+  echo -e "  ${DIM}3. Pooled connection string copy karo (host mein '-pooler' hota hai)${R}"
+  echo -e "  ${DIM}   e.g. postgresql://user:pass@ep-xxx-pooler.us-east-2.aws.neon.tech/jutts_bot?sslmode=require${R}"
+  echo
+  # Read from the terminal even when the script itself is piped via curl.
+  if [ -r /dev/tty ]; then
+    read -r -p "  DATABASE_URL: " NEON_URL < /dev/tty || true
+  else
+    read -r -p "  DATABASE_URL: " NEON_URL || true
+  fi
+  NEON_URL="$(echo "$NEON_URL" | tr -d '[:space:]')"
 fi
 
-# Run user create/update — capture output + exit code explicitly
-_UTMP=$(mktemp)
-if mongosh --quiet "${_MONGO_BASE}/aa_md_bot" --eval "$_UCMD" >"$_UTMP" 2>&1; then
-  grep -v "^$" "$_UTMP" | while IFS= read -r l; do inf "  $l"; done || true
-  ok "MongoDB user 'aa_bot_user' ${_ULABEL}"
-else
-  # Show error output and fail
-  warn "mongosh user operation failed — output:"
-  cat "$_UTMP" | while IFS= read -r l; do warn "  $l"; done || true
-  rm -f "$_UTMP"
-  fail "MongoDB user create/update fail hua — setup dobara chalao"
-fi
-rm -f "$_UTMP"
+_url_is_valid "$NEON_URL" \
+  || fail "Valid Neon connection string nahi mila.\n  Format: postgresql://user:password@ep-xxx-pooler.region.aws.neon.tech/dbname?sslmode=require\n  Ya pehle export karo: export DATABASE_URL='postgresql://...' aur script dobara chalao"
 
-# ── Verify user was actually created (before re-enabling auth) ────────────────
-UVERIFY=$(mongosh --quiet "${_MONGO_BASE}/aa_md_bot" \
-  --eval "print(db.getUser('aa_bot_user') ? 'OK' : 'MISSING')" 2>/dev/null || echo "MISSING")
-if ! echo "$UVERIFY" | grep -q "OK"; then
-  fail "User create hua hi nahi — MongoDB mein dobara check karo:\n  mongosh mongodb://127.0.0.1:27017/aa_md_bot --eval \"db.getUsers()\""
-fi
-ok "User verification passed — 'aa_bot_user' exists in aa_md_bot db"
-
-# ── Re-enable auth + restart via systemd ─────────────────────────────────────
-inf "MongoDB auth re-enable kar rahe hain..."
-sudo sed -i -E 's/^([[:space:]]*)authorization:[[:space:]]*disabled/\1authorization: enabled/' \
-  /etc/mongod.conf
-inf "mongod.conf auth line after restore: $(grep 'authorization' /etc/mongod.conf || echo '(not found)')"
-
-_mongod_service_wait restart "MongoDB (auth-on, restart)" \
-  || fail "MongoDB auth re-enable ke baad start nahi hua"
-
-# Wait for auth-enabled mongod to be ready
-inf "Auth mongod ready hone ka wait kar rahe hain (max 30s)..."
-_mongo_wait "mongodb://127.0.0.1:27017/admin" 15 "MongoDB (auth-on, restart)" \
-  || fail "MongoDB auth re-enable ke baad start nahi hua"
-
-# ── Final: verify login with bot credentials ──────────────────────────────────
-inf "Bot credentials se login verify kar rahe hain..."
-_AUTH_URI="mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot"
-if _mongo_ping "$_AUTH_URI"; then
-  ok "MongoDB auth verified ✔ — 'aa_bot_user' login successful"
-else
-  # Show what mongosh says for diagnosis
-  warn "Auth login fail — mongosh output:"
-  mongosh --quiet "$_AUTH_URI" --eval "db.stats()" 2>&1 \
-    | tail -10 | while IFS= read -r l; do warn "  $l"; done || true
-  fail "MongoDB bot user login fail hua — credentials sahi nahi hain\n  Manual check: mongosh '${_AUTH_URI}' --eval \"db.stats()\""
+# Neon requires TLS; add sslmode=require when the operator omitted it.
+if [[ "$NEON_URL" != *sslmode=* ]]; then
+  if [[ "$NEON_URL" == *"?"* ]]; then NEON_URL="${NEON_URL}&sslmode=require"
+  else NEON_URL="${NEON_URL}?sslmode=require"; fi
+  inf "sslmode=require connection string mein add kiya gaya"
 fi
 
-# ── Collections + Indexes + Default documents ─────────────────────────────────
-# Bot ki zarurat ke mutabiq sab collections explicitly create karte hain.
-# MongoDB implicit create bhi karta hai, lekin explicit karne se:
-#   ✔ Index already exist karta hai first write se pehle
-#   ✔ Re-run par koi error nahi (idempotent)
-#   ✔ auth_keys.sessionId index — deleteMany({sessionId}) fast hoti hai
-inf "Collections, indexes aur default documents initialize kar rahe hain..."
-mongosh --quiet "$_AUTH_URI" --eval '
-  // ── Collections (no-op agar already exist) ──────────────────────────────
-  var colls = [
-    "groups", "settings", "sessionSettings",
-    "notes", "birthdays", "sessions", "reminders",
-    "auth_creds", "auth_keys"
-  ];
-  for (var c of colls) {
-    try { db.createCollection(c); } catch(e) { /* already exists */ }
-  }
+DATABASE_URL="$NEON_URL"
+export DATABASE_URL
+ok "Neon Postgres connection string ready (host: $(printf '%s' "$DATABASE_URL" | sed -E 's#^postgres(ql)?://[^@]*@([^/?]+).*#\2#'))"
+inf "Tables bot ke pehle start par automatically ban jayengi — koi manual SQL nahi chahiye"
 
-  // ── Indexes ────────────────────────────────────────────────────────────
-  // auth_keys: sessionId index — logout/delete par deleteMany({sessionId}) fast karta hai
-  db.auth_keys.createIndex({ sessionId: 1 }, { name: "sessionId_1", background: true });
-  // auth_creds: sessionId index — multi-session lookup ke liye
-  db.auth_creds.createIndex({ sessionId: 1 }, { name: "sessionId_1", background: true });
-  // groups: sessionId prefix — db.groups.all(sessionId) filter fast
-  db.groups.createIndex({ sessionId: 1 }, { name: "sessionId_1", background: true });
-
-  // ── Default settings document (setOnInsert — kabhi overwrite nahi) ─────
-  db.settings.updateOne(
-    { _id: "__settings__" },
-    { $setOnInsert: { _id: "__settings__", createdAt: new Date() } },
-    { upsert: true }
-  );
-
-  // ── Report ─────────────────────────────────────────────────────────────
-  print("--- collections ---");
-  for (var c of colls) {
-    try {
-      var n = db.getCollection(c).countDocuments();
-      print(c + ": " + n + " docs");
-    } catch(e) { print(c + ": ERROR " + e.message); }
-  }
-  print("--- indexes ---");
-  var idxColls = ["auth_keys","auth_creds","groups"];
-  for (var ic of idxColls) {
-    var idxs = db.getCollection(ic).getIndexes().map(function(i){ return i.name; }).join(", ");
-    print(ic + ": [" + idxs + "]");
-  }
-' 2>&1 | grep -v "^$" | while IFS= read -r l; do inf "  $l"; done || true
-ok "Collections (9), indexes (3) aur default settings document ready"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 5 — Node.js 20
+# STEP 4 — Node.js 20
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "5. Node.js ${NODE_VERSION}"
+hdr "4. Node.js ${NODE_VERSION}"
 _current_node=$(node --version 2>/dev/null || echo "none")
 if echo "$_current_node" | grep -q "^v${NODE_VERSION}"; then
   ok "Node.js $_current_node already installed"
@@ -424,9 +194,9 @@ fi
 npm install -g npm@latest --registry="$NPM_REGISTRY" 2>/dev/null || true
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 6 — yt-dlp (ARM64 aware — uses the universal Python binary)
+# STEP 5 — yt-dlp (ARM64 aware — uses the universal Python binary)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "6. yt-dlp"
+hdr "5. yt-dlp"
 # yt-dlp_linux is x86 only. For ARM64 we install via pip (universal).
 # For x86_64 we can use the prebuilt binary directly.
 if [[ "$ARCH" == "aarch64" ]]; then
@@ -477,9 +247,9 @@ YT_DLP_VERSION=$(yt-dlp --version 2>/dev/null || true)
 ok "yt-dlp ready ($YT_DLP_VERSION)"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 7 — Deno (ARM64 aware)
+# STEP 6 — Deno (ARM64 aware)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "7. Deno (YouTube n-challenge / nsig)"
+hdr "6. Deno (YouTube n-challenge / nsig)"
 DENO_INSTALL_DIR="/home/ubuntu/.deno"
 DENO_BIN="$DENO_INSTALL_DIR/bin/deno"
 
@@ -520,9 +290,9 @@ if [ -f "$DENO_BIN" ] && [ ! -f /usr/local/bin/deno ]; then
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 8 — PM2 (install or update)
+# STEP 7 — PM2 (install or update)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "8. PM2 (Process Manager)"
+hdr "7. PM2 (Process Manager)"
 if command -v pm2 &>/dev/null; then
   inf "PM2 already installed — updating to latest..."
   sudo npm install -g pm2@latest --registry="$NPM_REGISTRY" 2>/dev/null || true
@@ -533,9 +303,9 @@ fi
 ok "PM2 $(pm2 --version 2>/dev/null || echo 'installed') ready"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 9 — Bot Code (git pull or clone)
+# STEP 8 — Bot Code (git pull or clone)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "9. Bot Code"
+hdr "8. Bot Code"
 if [ -d "$REPO_CLONE_DIR/.git" ]; then
   inf "Repository already exists — git pull kar rahe hain..."
   cd "$REPO_CLONE_DIR"
@@ -551,11 +321,11 @@ else
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 10 — Auto-detect Bot Directory
+# STEP 9 — Auto-detect Bot Directory
 # package.json sometimes at:  AA-MD-Bot/package.json
 # and sometimes at:           AA-MD-Bot/AA-MD-Bot/package.json
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "10. Bot Directory Detection"
+hdr "9. Bot Directory Detection"
 
 BOT_DIR=""
 
@@ -590,9 +360,9 @@ fi
 ok "Bot directory detected: $BOT_DIR"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 11 — npm install (with registry fix + auto-retry on failure)
+# STEP 10 — npm install (with registry fix + auto-retry on failure)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "11. Node.js Packages"
+hdr "10. Node.js Packages"
 cd "$BOT_DIR"
 
 # Install exactly the dependency graph committed in package-lock.json.
@@ -625,17 +395,17 @@ done
 ok "Critical dependencies verified"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 12 — Required Bot Directories
+# STEP 11 — Required Bot Directories
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "12. Bot Directories"
+hdr "11. Bot Directories"
 mkdir -p "$BOT_DIR"/{logs,temp,session,downloads,database,cache}
 sudo chown -R ubuntu:ubuntu "$BOT_DIR"
 ok "Bot directories ready: logs temp session downloads database cache"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 13 — Public IP + Domain
+# STEP 12 — Public IP + Domain
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "13. Public IP + Domain"
+hdr "12. Public IP + Domain"
 PUBLIC_IP=$(curl -s --max-time 10 ifconfig.me 2>/dev/null \
   || curl -s --max-time 10 api.ipify.org 2>/dev/null \
   || curl -s --max-time 10 checkip.amazonaws.com 2>/dev/null \
@@ -651,12 +421,11 @@ inf "Domain: $DOMAIN (nip.io — no DNS config needed)"
 ok "IP=$PUBLIC_IP  DOMAIN=$DOMAIN"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 14 — .env Configuration (merge — never overwrite user values)
+# STEP 13 — .env Configuration (merge — never overwrite user values)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "14. .env Configuration"
+hdr "13. .env Configuration"
 
-# MongoDB URI — localhost, auth-enabled
-MONGODB_URI="mongodb://aa_bot_user:${DB_PASS}@127.0.0.1:27017/aa_md_bot?authSource=aa_md_bot"
+# DATABASE_URL was resolved and validated in step 3 (Neon Postgres).
 
 # Helper: add a key=value to .env only if key doesn't already exist
 _env_merge() {
@@ -677,7 +446,7 @@ if [ ! -f "$ENV_FILE" ]; then
   cat > "$ENV_FILE" << EOF
 # ══════════════════════════════════════════════════════════════
 #  Jutts Bot — Auto-generated on $(date '+%Y-%m-%d %H:%M:%S')
-#  IMPORTANT: MONGODB_URI, SESSION_SECRET aur DASHBOARD_TOKEN private rakho!
+#  IMPORTANT: DATABASE_URL, SESSION_SECRET aur DASHBOARD_TOKEN private rakho!
 # ══════════════════════════════════════════════════════════════
 
 # ── Server ────────────────────────────────────────────────────
@@ -685,8 +454,8 @@ PORT=5000
 HOST=127.0.0.1
 SERVER_ID=server-1
 
-# ── Database — MongoDB on this VM (auto-configured) ──────────
-MONGODB_URI=${MONGODB_URI}
+# ── Database — Neon Postgres (managed cloud) ─────────────────
+DATABASE_URL=${DATABASE_URL}
 
 # ── Security — auto-generated ─────────────────────────────────
 SESSION_SECRET=$(openssl rand -hex 32)
@@ -711,14 +480,22 @@ else
   ok ".env already exists — merging missing variables only"
   # npm's prepare hook or a manual copy may have left the example placeholders
   # in place. Replace only those placeholders; preserve all real user values.
-  # Replace only an empty/example placeholder. Preserve Atlas, Oracle ADB, or a
-  # private multi-VM URI that the operator configured intentionally.
-  _current_uri=$(sed -n 's/^MONGODB_URI=//p' "$ENV_FILE" | head -1)
-  if [[ -z "$_current_uri" || "$_current_uri" == *:PASSWORD@* || "$_current_uri" == *change_this* ]]; then
-    if grep -q '^MONGODB_URI=' "$ENV_FILE"; then
-      sed -i "s#^MONGODB_URI=.*#MONGODB_URI=${MONGODB_URI}#" "$ENV_FILE"
+  # Replace only an empty/example placeholder. Preserve a real Neon URL (or any
+  # other Postgres URL) that the operator configured intentionally.
+  _current_url=$(sed -n 's/^DATABASE_URL=//p' "$ENV_FILE" | head -1)
+  if [[ -z "$_current_url" || "$_current_url" == *:PASSWORD@* || "$_current_url" == *change_this* ]]; then
+    if grep -q '^DATABASE_URL=' "$ENV_FILE"; then
+      sed -i "s#^DATABASE_URL=.*#DATABASE_URL=${DATABASE_URL}#" "$ENV_FILE"
+    else
+      echo "DATABASE_URL=${DATABASE_URL}" >> "$ENV_FILE"
     fi
-    ok ".env: MONGODB_URI placeholder replaced with local URI"
+    ok ".env: DATABASE_URL placeholder replaced with the Neon connection string"
+  fi
+  # A leftover MongoDB URI from an older deployment is now unused — drop it so
+  # nobody mistakes it for live configuration.
+  if grep -q '^MONGODB_URI=' "$ENV_FILE"; then
+    sed -i '/^MONGODB_URI=/d;/^MONGODB_DB=/d' "$ENV_FILE"
+    ok ".env: obsolete MONGODB_URI removed (bot ab Neon Postgres use karta hai)"
   fi
   if grep -q '^SESSION_SECRET=change_this_to_a_random_64_char_string$' "$ENV_FILE"; then
     sed -i "s#^SESSION_SECRET=.*#SESSION_SECRET=$(openssl rand -hex 32)#" "$ENV_FILE"
@@ -728,7 +505,7 @@ else
   _env_merge "PORT"            "5000"             "$ENV_FILE"
   _env_merge "HOST"            "127.0.0.1"        "$ENV_FILE"
   _env_merge "SERVER_ID"       "server-1"         "$ENV_FILE"
-  _env_merge "MONGODB_URI"     "$MONGODB_URI"     "$ENV_FILE"
+  _env_merge "DATABASE_URL"    "$DATABASE_URL"    "$ENV_FILE"
   _env_merge "SESSION_SECRET"  "$(openssl rand -hex 32)" "$ENV_FILE"
   _env_merge "DASHBOARD_TOKEN" "$GENERATED_DASHBOARD_TOKEN" "$ENV_FILE"
 fi
@@ -769,11 +546,11 @@ echo ""
 ok ".env configuration complete"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 15 — ecosystem.config.cjs (always write fresh — never keep old)
+# STEP 14 — ecosystem.config.cjs (always write fresh — never keep old)
 # Why: repo version uses complex dotenv-at-ecosystem-load that can fail silently.
 # Setup.sh version uses env_file (PM2 native) + absolute path → always reliable.
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "15. PM2 Ecosystem Config"
+hdr "14. PM2 Ecosystem Config"
 ECOSYSTEM_FILE="$BOT_DIR/ecosystem.config.cjs"
 LOGS_DIR="$BOT_DIR/logs"
 
@@ -833,11 +610,11 @@ ECOSYSTEM
 ok "ecosystem.config.cjs written ($(wc -l < "$ECOSYSTEM_FILE") lines)"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 16 — Oracle Cloud iptables Fix
+# STEP 15 — Oracle Cloud iptables Fix
 # Oracle images have a REJECT rule that blocks public web ports.
 # We expose Nginx only; the Node dashboard remains on 127.0.0.1:5000.
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "16. Oracle Cloud iptables Fix"
+hdr "15. Oracle Cloud iptables Fix"
 
 _iptables_allow_port() {
   local PORT="$1" PROTO="${2:-tcp}"
@@ -879,24 +656,24 @@ sudo netfilter-persistent save >/dev/null 2>&1 \
 ok "iptables rules permanently saved"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 17 — UFW Firewall
-# Allow SSH/HTTP/HTTPS; block Node.js and MongoDB from the internet
+# STEP 16 — UFW Firewall
+# Allow SSH/HTTP/HTTPS; keep the Node.js port off the internet
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "17. UFW Firewall"
+hdr "16. UFW Firewall"
 # Do not reset UFW on reruns; preserve unrelated operator-managed firewall rules.
 sudo ufw default deny incoming  >/dev/null
 sudo ufw default allow outgoing >/dev/null
 sudo ufw allow 22/tcp   comment 'SSH'   >/dev/null
 sudo ufw allow 80/tcp   comment 'HTTP'  >/dev/null
 sudo ufw allow 443/tcp  comment 'HTTPS' >/dev/null
-# Ports 5000 (Node) and 27017 (MongoDB) intentionally remain private.
+# Port 5000 (Node) intentionally remains private — Nginx proxies to it.
 sudo ufw --force enable >/dev/null
-ok "UFW: SSH(22) HTTP(80) HTTPS(443) open | Node(5000) + MongoDB(27017) private"
+ok "UFW: SSH(22) HTTP(80) HTTPS(443) open | Node(5000) private"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 18 — Nginx Configuration (fully idempotent, assumes nothing exists)
+# STEP 17 — Nginx Configuration (fully idempotent, assumes nothing exists)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "18. Nginx Configuration"
+hdr "17. Nginx Configuration"
 
 NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}"
 NGINX_ENABLED="/etc/nginx/sites-enabled/${DOMAIN}"
@@ -1055,10 +832,10 @@ sudo systemctl restart nginx
 ok "Nginx running and enabled"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 19 — PM2 Start Bot
+# STEP 18 — PM2 Start Bot
 # (Start bot BEFORE certbot so certbot can verify port 80)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "19. Bot Start (PM2)"
+hdr "18. Bot Start (PM2)"
 cd "$BOT_DIR"
 
 # Delete existing instance if running (for idempotency)
@@ -1085,9 +862,9 @@ pm2 save >/dev/null 2>&1
 ok "PM2 process list saved"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 20 — Wait for Port 5000 (HTTP 200)
+# STEP 19 — Wait for Port 5000 (HTTP 200)
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "20. Waiting for Bot (port 5000)"
+hdr "19. Waiting for Bot (port 5000)"
 inf "Bot ke ready hone ka wait kar rahe hain (max 90s)..."
 
 _PORT_READY=false
@@ -1106,7 +883,7 @@ done
 
 if [[ "$_PORT_READY" == "false" ]]; then
   # WARNING only — never stop deploy because of port check
-  # Bot may still be loading sessions / connecting to MongoDB
+  # Bot may still be loading sessions / connecting to Neon Postgres
   warn "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   warn "Bot 90 seconds mein port 5000 pe respond nahi kiya."
   warn "Deployment JAARI RAHEGA — certbot skip hoga agar port down hai."
@@ -1117,11 +894,11 @@ if [[ "$_PORT_READY" == "false" ]]; then
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 21 — Let's Encrypt HTTPS (via certbot)
+# STEP 20 — Let's Encrypt HTTPS (via certbot)
 # Uses nip.io domain — no DNS config needed
 # If certbot fails, bot still works over HTTP
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "21. Let's Encrypt HTTPS"
+hdr "20. Let's Encrypt HTTPS"
 HTTPS_URL=""
 CERTBOT_SUCCESS=false
 
@@ -1172,9 +949,9 @@ fi
 sudo nginx -t >/dev/null 2>&1 && sudo systemctl reload nginx 2>/dev/null || true
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 22 — Generate redeploy.sh
+# STEP 21 — Generate redeploy.sh
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "22. redeploy.sh"
+hdr "21. redeploy.sh"
 REDEPLOY_SCRIPT="/home/ubuntu/redeploy.sh"
 
 if [ ! -f "$BOT_DIR/deploy/redeploy.sh" ]; then
@@ -1187,17 +964,25 @@ chown ubuntu:ubuntu "$REDEPLOY_SCRIPT"
 ok "redeploy.sh created: $REDEPLOY_SCRIPT"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 23 — Final Status Check
+# STEP 22 — Final Status Check
 # ══════════════════════════════════════════════════════════════════════════════
-hdr "23. Final Status"
+hdr "22. Final Status"
 inf "PM2 status..."
 pm2 status 2>/dev/null || true
 
 inf "Nginx status..."
 sudo systemctl is-active nginx &>/dev/null && ok "Nginx: running" || warn "Nginx: not running"
 
-inf "MongoDB status..."
-sudo systemctl is-active mongod &>/dev/null && ok "MongoDB: running" || warn "MongoDB: not running"
+inf "Neon Postgres reachability..."
+if node -e '
+  const { Client } = require("pg");
+  const c = new Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: true }, connectionTimeoutMillis: 15000 });
+  c.connect().then(() => c.query("select 1")).then(() => c.end()).then(() => process.exit(0)).catch(() => process.exit(1));
+' --input-type=commonjs 2>/dev/null; then
+  ok "Neon Postgres: reachable"
+else
+  warn "Neon Postgres: not reachable — DATABASE_URL aur Neon project status check karo"
+fi
 
 ELAPSED=$(elapsed)
 
@@ -1225,12 +1010,11 @@ echo -e "  HTTPS         : ${C}${HTTPS_URL_DISPLAY}${R}"
 echo -e "  Health check  : ${C}${DASHBOARD_BASE_URL}/healthz${R}"
 echo ""
 
-echo -e "  ${B}━━━ MongoDB ━━━${R}"
-echo -e "  Status        : $(sudo systemctl is-active mongod 2>/dev/null || echo 'unknown')"
-echo -e "  Data path     : /var/lib/mongodb"
-MASKED_MONGODB_URI=$(printf '%s' "$MONGODB_URI" \
-  | sed -E 's#(mongodb://[^:]+:)[^@]+@#\1********@#')
-echo -e "  URI           : ${C}${MASKED_MONGODB_URI}${R}"
+echo -e "  ${B}━━━ Database (Neon Postgres) ━━━${R}"
+echo -e "  Provider      : Neon — https://console.neon.tech"
+MASKED_DATABASE_URL=$(printf '%s' "$DATABASE_URL" \
+  | sed -E 's#(postgres(ql)?://[^:]+:)[^@]+@#\1********@#')
+echo -e "  URL           : ${C}${MASKED_DATABASE_URL}${R}"
 echo ""
 
 echo -e "  ${B}━━━ Bot ━━━${R}"
@@ -1253,7 +1037,6 @@ echo ""
 
 echo -e "  ${B}━━━ Other Commands ━━━${R}"
 echo -e "  ${DIM}bash ~/redeploy.sh         ${R}← update + restart bot"
-echo -e "  ${DIM}sudo systemctl status mongod${R}← MongoDB status"
 echo -e "  ${DIM}sudo systemctl status nginx ${R}← Nginx status"
 echo -e "  ${DIM}sudo tail -f /var/log/nginx/error.log${R}← Nginx logs"
 echo ""
@@ -1267,7 +1050,7 @@ echo -e "  4. WhatsApp → Settings → Linked Devices → Link with phone numbe
 echo -e "  5. 8-digit code enter karo — ho gaya ✅"
 echo ""
 
-echo -e "  ${Y}⚠  MONGODB URI, SESSION_SECRET aur DASHBOARD_TOKEN .env mein private rakho.${R}"
+echo -e "  ${Y}⚠  DATABASE_URL, SESSION_SECRET aur DASHBOARD_TOKEN .env mein private rakho.${R}"
 echo -e "  ${DIM}   sudo chmod 600 ${ENV_FILE}${R}"
 echo ""
 echo -e "  ${DIM}Total deploy time: ${ELAPSED}s${R}"

@@ -11,7 +11,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white" alt="Node.js 20+" />
   <img src="https://img.shields.io/badge/Platform-WhatsApp-25D366?logo=whatsapp&logoColor=white" alt="WhatsApp" />
-  <img src="https://img.shields.io/badge/DB-MongoDB-47A248?logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/DB-Neon_Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres" />
   <img src="https://img.shields.io/badge/Deploy-Oracle_Cloud-F80000?logo=oracle&logoColor=white" alt="Oracle Cloud" />
 </p>
 
@@ -25,13 +25,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/fastnuces-sudo/JUTT-HACkING-
 
 Script automatically:
 
-- MongoDB 7 ko localhost-only authentication ke saath install karta hai
+- Neon Postgres connection string (`DATABASE_URL`) maangta hai aur validate karta hai
 - Node.js 20, yt-dlp, Deno, FFmpeg, PM2 aur Nginx install karta hai
 - Repository ko `/home/ubuntu/JUTT-HACkING-BOT` mein clone karta hai
 - Reproducible `npm ci` install chalata hai
-- Random MongoDB password, `SESSION_SECRET`, aur `DASHBOARD_TOKEN` generate karta hai
+- Random `SESSION_SECRET` aur `DASHBOARD_TOKEN` generate karta hai
 - PM2 startup, firewall, Nginx, nip.io domain aur Let's Encrypt configure karta hai
-- Sirf SSH/HTTP/HTTPS ports expose karta hai; Node port 5000 aur MongoDB private rehte hain
+- Sirf SSH/HTTP/HTTPS ports expose karta hai; Node port 5000 private rehta hai
 
 Deploy ke end par protected dashboard URL print hota hai:
 
@@ -61,15 +61,28 @@ Requirements:
 - Node.js 20.6 or newer
 - npm 9 or newer
 - FFmpeg and yt-dlp for media/download commands
-- MongoDB for persistent sessions and settings (optional during local development)
+- A [Neon](https://neon.tech) Postgres database for persistent sessions and settings (optional during local development)
 
 ```bash
 git clone https://github.com/fastnuces-sudo/JUTT-HACkING-BOT.git
 cd JUTT-HACkING-BOT
 npm ci
 cp .env.example .env
+# Paste your Neon connection string into DATABASE_URL, then:
 npm start
 ```
+
+### Getting your Neon connection string
+
+1. Create a free project at [console.neon.tech](https://console.neon.tech).
+2. Open **Connection Details** and copy the **pooled** string (its host contains `-pooler`).
+3. Put it in `.env`:
+
+```dotenv
+DATABASE_URL=postgresql://user:password@ep-xxxx-pooler.us-east-2.aws.neon.tech/jutts_bot?sslmode=require
+```
+
+Every table (`groups`, `settings`, `sessions`, `auth_creds`, `auth_keys`, ...) is created automatically on first start — no migrations or manual SQL required.
 
 Dashboard: `http://localhost:5000`
 
@@ -80,7 +93,7 @@ openssl rand -hex 32
 # Add the output as DASHBOARD_TOKEN=... in .env
 ```
 
-Without `MONGODB_URI`, settings use memory and WhatsApp auth falls back to the ignored local `session/` directory. Production deployments should always configure MongoDB.
+Without `DATABASE_URL`, settings use memory and WhatsApp auth falls back to the ignored local `session/` directory. Production deployments should always configure Neon.
 
 ## Environment variables
 
@@ -88,8 +101,9 @@ Without `MONGODB_URI`, settings use memory and WhatsApp auth falls back to the i
 |---|---:|---|
 | `PORT` | No | Dashboard port; default `5000` |
 | `HOST` | No | Bind host; Oracle setup uses `127.0.0.1` behind Nginx |
-| `MONGODB_URI` | Production | Full MongoDB connection URI including database name |
-| `MONGODB_DB` | No | Database-name override when the URI has no path |
+| `DATABASE_URL` | Production | Neon Postgres connection string (`NEON_DATABASE_URL` also accepted) |
+| `PGDATABASE` | No | Database-name override when the URL has no path |
+| `PGPOOL_MAX` | No | Connection pool size; default `10` |
 | `DASHBOARD_TOKEN` | Public deploy | Protects sessions, QR codes, pairing codes and dashboard controls |
 | `DASHBOARD_ALLOWED_ORIGINS` | No | Comma-separated origins for a separate frontend |
 | `SUPER_OWNER` | No | Main privileged WhatsApp number; first linked number is used when blank |
@@ -145,7 +159,7 @@ The update script preserves `.env`, installs from `package-lock.json`, restarts 
 |---|---|
 | Dashboard login fails | Read `DASHBOARD_TOKEN` from `/home/ubuntu/JUTT-HACkING-BOT/.env` |
 | Dashboard does not open | `pm2 logs jutts-bot --err` and `sudo nginx -t` |
-| MongoDB connection fails | Check `MONGODB_URI`, then `sudo systemctl status mongod` |
+| Database connection fails | Check `DATABASE_URL` and confirm the Neon project is active in the console |
 | YouTube bot-check error | Export a personal `cookies.txt`; see `cookies.txt.example` |
 | Port 5000 is not public | Expected: Nginx proxies 80/443 to private `127.0.0.1:5000` |
 | Plugin validation fails | Run `npm ci` followed by `npm test` |
@@ -154,6 +168,6 @@ For advanced Oracle networking and multi-VM notes, see [`deploy/ORACLE-DEPLOY.md
 
 ## Stack
 
-[Baileys](https://github.com/WhiskeySockets/Baileys) · [MongoDB](https://www.mongodb.com/) · [Sharp](https://sharp.pixelplumbing.com/) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [FFmpeg](https://ffmpeg.org/) · [PM2](https://pm2.keymetrics.io/)
+[Baileys](https://github.com/WhiskeySockets/Baileys) · [Neon Postgres](https://neon.tech/) · [Sharp](https://sharp.pixelplumbing.com/) · [yt-dlp](https://github.com/yt-dlp/yt-dlp) · [FFmpeg](https://ffmpeg.org/) · [PM2](https://pm2.keymetrics.io/)
 
 **Developer:** Sajid Jutt — Jutts Mods

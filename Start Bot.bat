@@ -29,7 +29,7 @@ if not exist "node_modules" (
 if not exist ".env" (
   copy /y ".env.example" ".env" >nul
   echo [NOTICE] Created .env from .env.example.
-  echo Configure MONGODB_URI for database persistence.
+  echo Configure DATABASE_URL (Neon) for database persistence.
   echo.
 )
 

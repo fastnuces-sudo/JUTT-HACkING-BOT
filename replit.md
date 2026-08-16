@@ -13,12 +13,12 @@ Dashboard: port `5000` in the Replit web preview.
 
 Recommended Replit Secrets:
 
-- `MONGODB_URI` — persistent settings and WhatsApp authentication
+- `DATABASE_URL` — Neon Postgres connection string for persistent settings and WhatsApp authentication
 - `DASHBOARD_TOKEN` — at least 16 random characters; protects pairing/session controls
 - `SUPER_OWNER` — privileged WhatsApp number, digits only (otherwise first linked number is used)
 - Optional API/Telegram keys from `.env.example`
 
-Without `MONGODB_URI`, settings are in memory and auth falls back to the ignored local `session/` directory. Replit restarts can erase that fallback, so production use needs MongoDB.
+Without `DATABASE_URL`, settings are in memory and auth falls back to the ignored local `session/` directory. Replit restarts can erase that fallback, so production use needs a Neon database. Grab a free connection string at [console.neon.tech](https://console.neon.tech) — tables are created automatically on first start.
 
 ## Structure
 
@@ -42,6 +42,6 @@ npm audit --omit=dev
 
 - Node.js 20.6+ is required.
 - FFmpeg and yt-dlp are required for many media/download commands.
-- Keep `DASHBOARD_TOKEN`, MongoDB credentials, Telegram tokens and `cookies.txt` private.
+- Keep `DASHBOARD_TOKEN`, the Neon `DATABASE_URL`, Telegram tokens and `cookies.txt` private.
 - Telegram pairing is admin-only unless `TELEGRAM_PUBLIC_PAIRING=true` is set explicitly.
 - The Oracle deployment binds Node to `127.0.0.1:5000` behind Nginx; Replit should keep the default `HOST=0.0.0.0`.
